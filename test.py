@@ -24,8 +24,8 @@ def main():
 
     # Commands.TestMode()
 
-    # Commands.BasicT2WS( 'suppliedInput/pT_v5_renamed/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.txt' )
-    # Commands.BasicBestfit( 'workspaces_Apr27/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root' )
+    Commands.BasicT2WS( 'suppliedInput/pT_v5_renamed/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.txt' )
+    Commands.BasicBestfit( 'workspaces_Apr27/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root' )
     
     # Commands.BasicCombineTool(
     #     'workspaces_Apr27/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root',
@@ -36,15 +36,15 @@ def main():
 
 
 
-    Commands.BasicCombineTool(
-        'workspaces_Apr27/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root',
-        POIpattern    = '30_45',
-        nPoints       = 32,
-        nPointsPerJob = 4,
-        # notOnBatch    = True,
-        jobDirectory  = 'test002_{0}'.format(datestr),
-        queue         = '8nh',
-        )
+    # Commands.BasicCombineTool(
+    #     'workspaces_Apr27/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root',
+    #     POIpattern    = '30_45',
+    #     nPoints       = 32,
+    #     nPointsPerJob = 4,
+    #     # notOnBatch    = True,
+    #     jobDirectory  = 'test002_{0}'.format(datestr),
+    #     queue         = '8nh',
+    #     )
 
 
 

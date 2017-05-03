@@ -248,10 +248,29 @@ def BasicCombineTool(
             ]
 
         if not notOnBatch:
-            cmd.extend([
-                '--split-points {0} '.format(nPointsPerJob),
-                '--job-mode lxbatch --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
-                ])
+            cmd.append(
+                '--split-points {0} '.format(nPointsPerJob)
+                )
+
+            if 't3' in os.environ['HOSTNAME']:
+
+                if not queue in [ 'all.q', 'long.q', 'short.q' ]:
+                    print 'Queue \'{0}\' is not available on PSI'.format(queue)
+                    return
+
+                cmd.append(
+                    '--job-mode SGE --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
+                    )
+
+            else:
+
+                if not queue in [ '8nm', '1nh', '8nh', '1nd', '2nd' ]:
+                    print 'Queue \'{0}\' is not available on lxplus'.format(queue)
+                    return
+
+                cmd.append(
+                    '--job-mode lxbatch --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
+                    )
 
         executeCommand( cmd )
 
