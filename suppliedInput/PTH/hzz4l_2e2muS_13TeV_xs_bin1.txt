@@ -1,0 +1,32 @@
+imax 1
+jmax *
+kmax *
+------------
+shapes * * hzz4l_2e2muS_13TeV_xs_SM_125_pT4l_v3.Databin1.root w:$PROCESS 
+------------
+bin hzz_PTH_15_30_cat2e2mu
+observation -1
+------------
+## mass window [105.0,140.0] 
+bin hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu hzz_PTH_15_30_cat2e2mu 
+process smH_PTH_0_15 smH_PTH_15_30 smH_PTH_30_45 smH_PTH_45_85 smH_PTH_85_125 smH_PTH_125_200 smH_PTH_200_350 smH_PTH_GT350 OutsideAcceptance nonResH bkg_qqzz bkg_ggzz bkg_zjets 
+process -1 -2 -3 -4 -5 -6 -7 -8 1 2 3 4 5
+rate 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 26.2607 2.1009 18.411
+------------
+norm_nonResH lnU - - - - - - - - - 10.0 - - -   # [/10, *10]
+lumi_13TeV lnN 1.026 1.026 1.026 1.026 1.026 1.026 1.026 1.026 1.026 1.026 1.026 1.026 - 
+CMS_eff_m lnN 1.025 1.025 1.025 1.025 1.025 1.025 1.025 1.025 1.025 1.025 1.025 1.025 - 
+CMS_eff_e lnN 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 0.96/1.039 - 
+CMS_hzz2e2mu_Zjets lnN - - - - - - - - - - - - 1.152/0.868
+CMS_zz4l_mean_m_sig param 0.0 1.0 
+CMS_zz4l_mean_e_sig param 0.0 1.0 
+CMS_zz4l_sigma_m_sig param 0.0 0.2 
+CMS_zz4l_sigma_e_sig param 0.0 0.2 
+CMS_zz4l_n_sig_3_8 param 0.0 0.05 
+QCDscale_ggVV lnN - - - - - - - - - - - 1.039/0.961 - 
+QCDscale_VV lnN - - - - - - - - - - 1.0325/0.958 - - 
+pdf_gg lnN - - - - - - - - - - - 1.032/0.968 - 
+pdf_qqbar lnN - - - - - - - - - - 1.031/0.966 - - 
+kfactor_ggzz lnN - - - - - - - - - - - 1.1 -
+#JES param 0.0 1.0
+CMS_zjets_bkgdcompo lnN - - - - - - - - - - - - 1.34
