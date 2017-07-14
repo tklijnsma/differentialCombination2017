@@ -50,6 +50,7 @@ def BasicCombineCards(
 def BasicT2WS(
     datacard,
     extraOptions=None,
+    manualMaps=None,
     ):
 
     outputDir = abspath( 'workspaces_{0}'.format(datestr) )
@@ -66,15 +67,21 @@ def BasicT2WS(
     cmd.append( '--PO verbose' )
     cmd.append( '--PO \'higgsMassRange=123,127\'' )
 
-    parRange = [ -1.0, 3.0 ]
-    parName = lambda process: 'r_' + process
+    if manualMaps:
 
-    for process in signalprocesses:
-        cmd.append( '--PO \'map=.*/{0}:{1}[1.0,{2},{3}]\''.format(
-            process,
-            parName( process ),
-            parRange[0], parRange[1],
-            ))
+        for manualMap in manualMaps:
+            cmd.append( manualMap )
+
+    else:
+        parRange = [ -1.0, 3.0 ]
+        parName = lambda process: 'r_' + process
+
+        for process in signalprocesses:
+            cmd.append( '--PO \'map=.*/{0}:{1}[1.0,{2},{3}]\''.format(
+                process,
+                parName( process ),
+                parRange[0], parRange[1],
+                ))
 
     if not extraOptions:
         pass
@@ -86,53 +93,41 @@ def BasicT2WS(
     executeCommand( cmd )
 
 
-def hzz_T2WS(
+def BasicT2WSwithModel(
     datacard,
+    pathToModel,
+    modelName=None,
     extraOptions=None,
     ):
 
+    # ======================================
+    # Copy model to compiled directory
+    # (scram b takes unnecessarily long)
+
+    if not TESTMODE:
+        dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(pathToModel) )
+        print 'Copying\n    {0}\n    to\n    {1}'.format( pathToModel, dst )
+        shutil.copyfile( pathToModel, dst )
+
+
+    # ======================================
+    # Build command
+
     outputDir = abspath( 'workspaces_{0}'.format(datestr) )
     if not isdir( outputDir ): os.makedirs( outputDir )
     outputWS = join( outputDir, basename(datacard).replace( '.txt', '.root' ) )
 
     signalprocesses, processes, bins = ListProcesses( datacard )
-    cats = list(set([ b.split('cat')[1] for b in bins ]))
+
+    moduleName = basename(pathToModel).replace('.py','')
+    if modelName == None:
+        modelName = moduleName[0].lower() + moduleName[1:]
 
     cmd = []
     cmd.append( 'text2workspace.py' )
     cmd.append( datacard )
     cmd.append( '-o {0}'.format(outputWS) )
-    cmd.append( '-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel' )
-    cmd.append( '--PO verbose' )
-    cmd.append( '--PO \'higgsMassRange=123,127\'' )
-
-    parRange = [ -1.0, 3.0 ]
-    parName = lambda process: 'r_' + process
-
-    for iProcess, process in enumerate(signalprocesses):
-
-        # Dummy to create a RooRealVar for r_$PROCESS
-        cmd.append( '--PO \'map=dummy_{parName}:{parName}[1.0,{down},{up}]\''.format(
-            parName = parName(process),
-            down = parRange[0],
-            up = parRange[1],
-            ))
-    
-        # Actual scaling expression that uses r_$PROCESS and the pre-created $PROCESS_$BIN_norm
-        for bin in bins:
-
-            cmd.append((
-                '--PO \'map={binName}/{processName}:'
-                '{scalingParName}=expr::{scalingParName}("@0*@1",'
-                '{parName},{normName})\'').format(
-                    binName        = bin,
-                    processName    = process,
-                    parName        = parName(process),
-                    scalingParName = parName(process) + '_' + bin,
-                    normName       = '{0}_{1}_norm'.format( process, bin.replace('PTH_','').replace('GE','GT') )
-                    )
-                )
-
+    cmd.append( '-P {0}:{1}'.format( moduleName, modelName ) )
 
     if not extraOptions:
         pass
@@ -143,115 +138,7 @@ def hzz_T2WS(
 
     executeCommand( cmd )
 
-
-
-def hzz_manualMapping_T2WS(
-    datacard,
-    extraOptions=None,
-    ):
-
-    outputDir = abspath( 'workspaces_{0}'.format(datestr) )
-    if not isdir( outputDir ): os.makedirs( outputDir )
-    outputWS = join( outputDir, basename(datacard).replace( '.txt', '.root' ) )
-
-    signalprocesses, processes, bins = ListProcesses( datacard )
-    cats = list(set([ b.split('cat')[1] for b in bins ]))
-
-    cmd = []
-    cmd.append( 'text2workspace.py' )
-    cmd.append( datacard )
-    cmd.append( '-o {0}'.format(outputWS) )
-    cmd.append( '-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel' )
-    cmd.append( '--PO verbose' )
-    cmd.append( '--PO \'higgsMassRange=123,127\'' )
-
-    parRange = [ -1.0, 3.0 ]
-    parName = lambda process: 'r_' + process
-    fracParName = lambda process, cat: 'fracVar_{0}_cat{1}'.format( process, cat )
-
-
-    # Create xs_hzz_smH_PTH_GT350 --> This was simply forgotten in the WS from David (now set equal to 200_350)
-    cmd.append( '--PO \'map=dummy_xs_hzz_smH_PTH_GT350:xs_hzz_smH_PTH_GT350[0.0710184,0.0710184,0.0710184]\'' )
-
-    for iProcess, process in enumerate(signalprocesses):
-
-        # cmd += "--PO 'map=dummySqrtTau:sqrtTau[0.1]' "
-        # cmd += "--PO 'map=.*/InsideAcceptance_genNjets2p5_m0p5to0p5:r0=expr::r0(\"@0+@1\",r0u,deltar0)' "
-
-        # (SigmaBin0,fracSM4eBin0,K1Bin0,xs_hzz_smH_PTH_0_15) formula="(@0*@3*@1*@2)"
-
-        # Dummy to create a RooRealVar for r_$PROCESS
-        cmd.append( '--PO \'map=dummy_{parName}:{parName}[1.0,{down},{up}]\''.format(
-            parName = parName(process),
-            down = parRange[0],
-            up = parRange[1],
-            ))
-
-        # Create expression for the fraction
-        cmd.append((
-            '--PO \'map=dummy_{parName}:'
-            '{parName}=expr::{parName}("@0*@1",{fracSM4e},{K1})\'').format(
-                parName  = fracParName(process,'4e'),
-                fracSM4e = 'fracSM4eBin{0}'.format(iProcess),
-                K1       = 'K1Bin{0}'.format(iProcess),
-                )
-            )
-        cmd.append((
-            '--PO \'map=dummy_{parName}:'
-            '{parName}=expr::{parName}('
-            '"((1.0-{fracSM4e}*{K1})*(1.0-{K2}*{fracSM4mu}/(1.0-{fracSM4e})))",'
-            '{fracSM4e},{fracSM4mu},{K1},{K2})\'').format(
-                parName   = fracParName(process,'2e2mu'),
-                fracSM4e  = 'fracSM4eBin{0}'.format(iProcess),
-                fracSM4mu = 'fracSM4muBin{0}'.format(iProcess),
-                K1        = 'K1Bin{0}'.format(iProcess),
-                K2        = 'K2Bin{0}'.format(iProcess),
-                )
-            )
-        cmd.append((
-            '--PO \'map=dummy_{parName}:'
-            '{parName}=expr::{parName}('
-            '"((1.0-{fracSM4e}*{K1})*({K2}*{fracSM4mu}/(1.0-{fracSM4e})))",'
-            '{fracSM4e},{fracSM4mu},{K1},{K2})\'').format(
-                parName   = fracParName(process,'4mu'),
-                fracSM4e  = 'fracSM4eBin{0}'.format(iProcess),
-                fracSM4mu = 'fracSM4muBin{0}'.format(iProcess),
-                K1        = 'K1Bin{0}'.format(iProcess),
-                K2        = 'K2Bin{0}'.format(iProcess),
-                )
-            )
     
-        # Actual scaling expression that uses r_$PROCESS
-        for cat in cats:
-
-            cmd.append((
-                '--PO \'map=.*{cat}.*/{processName}:'
-                '{scalingParName}=expr::{scalingParName}("@0*@1*@2",'
-                '{parName},{xsName},{fractionName})\'').format(
-                    cat            = cat,
-                    processName    = process,
-                    parName        = parName(process),
-                    scalingParName = parName(process) + '_cat' + cat,
-                    xsName         = 'xs_hzz_{0}'.format(process),
-                    fractionName   = fracParName( process, cat ),
-                    )
-                )
-
-        # cmd.append( '--PO \'map=.*/{0}:{1}[1.0,{2},{3}]\''.format(
-        #     process,
-        #     parName( process ),
-        #     parRange[0], parRange[1],
-        #     ))
-
-    if not extraOptions:
-        pass
-    elif isinstance( extraOptions, basestring ):
-        cmd.append( extraOptions )
-    else:
-        cmd.extend( extraOptions )
-
-    executeCommand( cmd )
-
 
 
 def BasicBestfit(
@@ -335,7 +222,7 @@ def BasicBestfit(
 
 
 
-def ListPOIs( datacardRootFile ):
+def ListPOIs( datacardRootFile, nofilter=False ):
 
     datacardFp = ROOT.TFile.Open( datacardRootFile )
     w = datacardFp.Get('w')
@@ -344,11 +231,43 @@ def ListPOIs( datacardRootFile ):
     parNames = []
     for i in xrange( POIlist.getSize() ):
         parName = POIlist[i].GetName()
-        if parName.startswith('r_'):
+        if nofilter:
+            parNames.append( parName )
+        elif parName.startswith('r_'):
             parNames.append( parName )
 
     datacardFp.Close()
     return parNames
+
+
+def ListSet(
+        datacardRootFile,
+        setName='POI',
+        pattern='*',
+        ):
+    
+    datacardFp = ROOT.TFile.Open( datacardRootFile )
+    w = datacardFp.Get('w')
+    argset = w.set(setName)
+    if not argset:
+        print 'No set \'{0}\' in {1}'.format( setName, datacardRootFile )
+        datacardFp.Close()
+        return []
+
+    arglist = ROOT.RooArgList( argset )
+
+    varNames = []
+    for i in xrange( arglist.getSize() ):
+        varName = arglist[i].GetName()
+        if pattern != '*':
+            if re.search( pattern, varName ):
+                varNames.append( varName )
+        else:
+            varNames.append( varName )
+
+    datacardFp.Close()
+    return varNames
+
 
 
 
@@ -399,14 +318,14 @@ def ListProcesses( datacardFile ):
                 break
 
     bins = binline.split()[1:]
-    bins.sort()
 
     processes = list(set(processline.split()[1:]))
     processes.sort()
 
     signalprocesses = [ p for p in processes if p.split('_')[0].endswith('H') and not p == 'nonResH' ]
+    signalprocesses.sort( key = lambda i: InterpretPOI(i)[2][0] )
 
-    return signalprocesses, processes, bins, 
+    return signalprocesses, processes, bins
 
 
 
@@ -442,6 +361,95 @@ def executeCommandOnBatch( cmd ):
     return
     # global TEMPJOBDIR
     # if not isdir(TEMPJOBDIR): os.makedirs(TEMPJOBDIR)
+
+
+
+
+def MultiDimCombineTool(
+        datacard,
+        nPoints       = 100,
+        nPointsPerJob = 3,
+        queue         = '1nh',
+        notOnBatch    = False,
+        jobDirectory  = None,
+        extraOptions  = [],
+    ):
+
+    datacard = abspath( datacard )
+
+    scanName = basename(datacard).replace('.root','')
+    scanName = re.sub( r'\W', '', scanName )
+    scanName = 'SCAN_{0}_{1}_{2}'.format( ''.join(ListPOIs(datacard,nofilter=True)), datestr, scanName )
+
+    currentdir = os.getcwd()
+    if not TESTMODE:
+        if not jobDirectory:
+            jobDirectory = TEMPJOBDIR
+        if not isdir( jobDirectory ):
+            print 'Creating directory {0}'.format( jobDirectory )
+            os.makedirs( jobDirectory )
+        print 'Moving to directory {0}'.format( jobDirectory )
+        os.chdir( jobDirectory )
+
+
+    cmd = [
+        'combineTool.py',
+        datacard,
+        '-n {0}'.format( scanName ),
+        '-M MultiDimFit',
+        '--cminDefaultMinimizerType Minuit2',
+        '--cminDefaultMinimizerAlgo migrad',
+        '--algo=grid',
+        '--floatOtherPOIs=1',
+        # '-P "{0}"'.format( POI ),
+        # '--setPhysicsModelParameterRanges "{0}"={1:.3f},{2:.3f} '.format( POI, POIRange[0], POIRange[1] ),
+        # '--setPhysicsModelParameters {0}'.format( ','.join([ iterPOI + '=1.0' for iterPOI in allPOIs ]) ),
+        '-m 125.00',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--points={0} '.format(nPoints),
+        # '--minimizerStrategy 2',
+        ]
+
+
+    if not extraOptions:
+        pass
+    elif isinstance( extraOptions, basestring ):
+        cmd.append( extraOptions )
+    else:
+        cmd.extend( extraOptions )
+
+
+    if not notOnBatch:
+        cmd.append(
+            '--split-points {0} '.format(nPointsPerJob)
+            )
+
+        if 't3' in os.environ['HOSTNAME']:
+
+            if not queue in [ 'all.q', 'long.q', 'short.q' ]:
+                print 'Queue \'{0}\' is not available on PSI'.format(queue)
+                return
+
+            cmd.append(
+                '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
+                )
+
+        else:
+
+            if not queue in [ '8nm', '1nh', '8nh', '1nd', '2nd' ]:
+                print 'Queue \'{0}\' is not available on lxplus'.format(queue)
+                return
+
+            cmd.append(
+                '--job-mode lxbatch --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
+                )
+
+    executeCommand( cmd )
+
+    os.chdir( currentdir )
+
+    
 
 
 
@@ -538,8 +546,8 @@ def BasicCombineTool(
 
 
 def ConvertTChainToArray(
-    treeName,
     rootFileList,
+    treeName = 'limit',
     variablePattern = '*',
     ):
 
@@ -547,11 +555,53 @@ def ConvertTChainToArray(
         ThrowError( 'rootFileList has length 0' )
         sys.exit()
 
-    # Open first file to get list of all variables
-    rootFp = ROOT.TFile.Open( rootFileList[0] )
-    tree = rootFp.Get( treeName )
+    foundTree = False
+    for rootFile in rootFileList:
 
-    allVarObjArray = tree.GetListOfBranches()
+        rootFp = ROOT.TFile.Open( rootFile )
+        allKeys = rootFp.GetListOfKeys()
+
+        if not allKeys.Contains( 'limit' ):
+            print 'No tree \'{0}\' in \'{1}\''.format( treeName, rootFile )
+            rootFp.Close()
+        else:
+            tree = rootFp.Get( treeName )
+            allVarObjArray = tree.GetListOfBranches()
+            treeLoaded = True
+            print 'Found tree in {0}'.format( rootFile )
+            break
+
+
+    # tryFile = 0
+    # treeLoaded = False
+    # while tryFile < len(rootFileList):
+    #     try:
+    #         # Open first file to get list of all variables
+    #         rootFp = ROOT.TFile.Open( rootFileList[tryFile] )
+    #         allkeys = rootFp.GetListOfKeys()
+
+    #         print rootFileList[tryFile]
+
+    #         allkeys.Print()
+
+    #         print allkeys.Contains( 'limit' )
+    #         sys.exit()
+
+    #         tree = rootFp.Get( treeName )
+    #         allVarObjArray = tree.GetListOfBranches()
+    #         treeLoaded = True
+    #         print 'Found tree in {0}'.format( rootFileList[tryFile] )
+    #     except AttributeError:
+    #         print 'No tree \'{0}\' in \'{1}\''.format( treeName, rootFileList[tryFile] )
+    #         rootFp.Close()
+    #     finally:
+    #         tryFile += 1
+
+    # if not treeLoaded:
+    #     print 'ERROR: Could not load tree \{0}\' for any file'.format( treeName )
+    #     return
+
+
     nAllVars = allVarObjArray.GetEntries()
 
     useVars = []
@@ -566,7 +616,7 @@ def ConvertTChainToArray(
     rootFp.Close()
 
     # Now read the entries from the chain
-    chain = ROOT.TChain( 'limit' )
+    chain = ROOT.TChain( treeName )
     for rootFile in rootFileList:
         chain.Add( rootFile )
 
@@ -585,8 +635,8 @@ def ConvertTChainToArray(
 def InterpretPOI( POI ):
     # Assume it starts with 'r_'
     if not POI.startswith('r_'):
-        print 'ERROR: POI {0} does not start with \'r_\''.format( POI )
-        return
+        print 'WARNING: POI {0} does not start with \'r_\'; Will now try to manually add it'.format( POI )
+        POI = 'r_' + POI
     components = POI.split('_')[1:]
 
     if len(components) <= 2:

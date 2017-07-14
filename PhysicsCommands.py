@@ -8,8 +8,9 @@ Thomas Klijnsma
 ########################################
 
 import Commands
+import TheoryCommands
 
-import os, tempfile, shutil, re, glob, itertools, sys
+import os, tempfile, shutil, re, glob, itertools, sys, numpy, operator
 from os.path import *
 from operator import itemgetter
 from array import array
@@ -40,16 +41,57 @@ c.SetTopMargin( TopMargin )
 
 
 PLOTDIR = 'plots_{0}'.format(datestr)
-def SaveC( outname, PNG=False ):
+def SaveC( outname, PNG=False, asROOT=False ):
     global PLOTDIR
     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
-    outname = join( PLOTDIR, basename(outname).replace('.pdf','').replace('.png','') )
+
+    subdir = ''
+    if len(outname.split('/')) == 2:
+        subdir = outname.split('/')[0]
+        if not isdir( join( PLOTDIR, subdir ) ): os.makedirs( join( PLOTDIR, subdir ) )
+
+    outname = join( PLOTDIR, subdir, basename(outname).replace('.pdf','').replace('.png','') )
     c.SaveAs( outname + '.pdf' )
     if PNG:
         c.SaveAs( outname + '.png' )
+    if asROOT:
+        c.SaveAs( outname + '.root' )
 
 
+########################################
+# Common functions
+########################################
 
+ROOTCOUNTER = 1000
+def GetUniqueRootName():
+    global ROOTCOUNTER
+    name = 'root{0}'.format(ROOTCOUNTER)
+    ROOTCOUNTER += 1
+    return name
+
+
+def GetPlotBase(
+    xMin = 0, xMax = 1,
+    yMin = 0, yMax = 1,
+    xTitle = 'x', yTitle = 'y',
+    ):
+
+    base = ROOT.TH1F()
+    ROOT.SetOwnership( base, False )
+    base.SetName( GetUniqueRootName() )
+    base.GetXaxis().SetLimits( xMin, xMax )
+    base.SetMinimum( yMin )
+    base.SetMaximum( yMax )
+    base.SetMarkerColor(0)
+    base.GetXaxis().SetTitle( xTitle )
+    base.GetYaxis().SetTitle( yTitle )
+
+    return base
+
+
+########################################
+# Dealing with scans in combine
+########################################
 
 def GetScanResults(
     POIs,
@@ -75,8 +117,8 @@ def GetScanResults(
             return
 
         scanResult = Commands.ConvertTChainToArray(
-            'limit',
             scanFiles,
+            'limit',
             r'{0}|deltaNLL'.format( POI )
             )
 
@@ -149,15 +191,55 @@ def BasicDrawScanResults(
     base.GetXaxis().SetTitle( '#mu' )
     base.GetYaxis().SetTitle( '#Delta NLL' )
 
-    leg = ROOT.TLegend( 0.65, 0.5, 1-RightMargin, 1-TopMargin )
+    base.GetXaxis().SetTitleSize( 0.06 )
+    base.GetYaxis().SetTitleSize( 0.06 )
+
+    leg = ROOT.TLegend( 0.5, 0.5, 1-RightMargin, 1-TopMargin )
     leg.SetFillStyle(0)
     leg.SetBorderSize(0)
 
 
     # Create predefined list of colors
     colors = range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 )
-    colors = colors + colors + colors + colors
-    iColor = 0
+    colorCycle = itertools.cycle( colors )
+
+    def GetColor( POI ):
+        # knownPOIs = {
+        #     'r_smH_PTH_0_15'    : ROOT.TColor.GetColor( colors[0] ),
+        #     'r_smH_PTH_15_30'   : ROOT.TColor.GetColor( colors[1] ),
+        #     'r_smH_PTH_30_45'   : ROOT.TColor.GetColor( colors[2] ) - 1,
+        #     'r_smH_PTH_45_85'   : ROOT.TColor.GetColor( colors[2] ) + 1,
+        #     'r_smH_PTH_85_125'  : ROOT.TColor.GetColor( colors[3] ) - 1,
+        #     'r_smH_PTH_125_200' : ROOT.TColor.GetColor( colors[3] ) + 1,
+        #     'r_smH_PTH_200_350' : ROOT.TColor.GetColor( colors[4] ),
+        #     'r_smH_PTH_GT350'   : ROOT.TColor.GetColor( colors[5] ),
+        #     'r_smH_PTH_30_85'   : ROOT.TColor.GetColor( colors[2] ),
+        #     'r_smH_PTH_85_200'  : ROOT.TColor.GetColor( colors[3] ),
+        #     'r_smH_PTH_GT200'   : ROOT.TColor.GetColor( colors[5] ),
+        #     }
+        knownPOIs = {
+            'r_smH_PTH_0_15'    : colorCycle.next(),
+            'r_smH_PTH_15_30'   : colorCycle.next(),
+            'r_smH_PTH_30_45'   : colorCycle.next(),
+            'r_smH_PTH_45_85'   : colorCycle.next(),
+            'r_smH_PTH_85_125'  : colorCycle.next(),
+            'r_smH_PTH_125_200' : colorCycle.next(),
+            'r_smH_PTH_200_350' : colorCycle.next(),
+            'r_smH_PTH_GT350'   : colorCycle.next(),
+            'r_smH_PTH_30_85'   : colorCycle.next(),
+            'r_smH_PTH_85_200'  : colorCycle.next(),
+            # 'r_smH_PTH_GT200'   : colorCycle.next(),
+            }
+        if POI in knownPOIs:
+            return knownPOIs[POI]
+        elif '_GT' in POI:
+            return knownPOIs['r_smH_PTH_GT350'] 
+        else:
+            return 1
+
+
+
+
 
     for POI, scan in zip( POIs, scans ):
 
@@ -178,8 +260,9 @@ def BasicDrawScanResults(
         ROOT.SetOwnership( Tg, False )
         Tg.SetName( 'Tg_' + POI )
 
-        color = colors[iColor]
-        iColor += 1
+        # color = colors[iColor]
+        # iColor += 1
+        color = GetColor(POI)
 
         Tg.SetLineColor(color)
         Tg.SetMarkerColor(color)
@@ -304,6 +387,9 @@ def GetTGraphForSpectrum(
     Tg.POIErrsLeft   = POIErrsLeft
     Tg.POIErrsRight  = POIErrsRight
 
+    Tg.POIErrsSymm   = [ 0.5*(abs(i)+abs(j)) for i, j in zip( POIErrsLeft, POIErrsRight ) ]
+    Tg.POIErrsSymmPerc = [ 100.*err/(val+0.0000000001) for err, val in zip( Tg.POIErrsSymm, Tg.POICenters ) ]
+
     return Tg
 
 
@@ -379,6 +465,27 @@ def BasicCombineSpectra(
         Tgs.append( Tg )
 
 
+    if kwargs.get( 'printTable', False ):
+        for Tg in Tgs:
+
+            line1 = '{0:<15s}'.format( Tg.name )
+            for iBin in xrange(len(Tg.binBoundaries)-2):
+                line1 += '{0:<9s}'.format( '{0}-{1}'.format( int(Tg.binBoundaries[iBin]), int(Tg.binBoundaries[iBin+1]) ) )
+            line1 += '>{0:<8d}'.format( int(Tg.binBoundaries[-2]) )
+            print line1
+
+            line2 = '{0:<15s}'.format( Tg.name )
+            for iBin in xrange(len(Tg.binBoundaries)-1):
+                line2 += '{0:<9.2f}'.format( Tg.POIErrsSymm[iBin] )
+            print line2
+
+            line3 = '{0:<15s}'.format( Tg.name )
+            for iBin in xrange(len(Tg.binBoundaries)-1):
+                line3 += '{0:<+9.2f}'.format( Tg.POICenters[iBin] )
+            print line3
+
+
+
 
     # Use first POI to get production mode and observable name
     productionMode, observableName, dummyRange = Commands.InterpretPOI( POIs[0][0] )
@@ -400,6 +507,9 @@ def BasicCombineSpectra(
     base.SetMarkerColor(0)
     base.GetXaxis().SetTitle( observableName )
     base.GetYaxis().SetTitle( '#mu' )
+
+    base.GetXaxis().SetTitleSize( 0.06 )
+    base.GetYaxis().SetTitleSize( 0.06 )
 
     lineAtOne = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
     lineAtOne.SetLineWidth(3)
@@ -477,10 +587,93 @@ def BasicCombineSpectra(
         else:
             Tg.Draw( TgDrawStr )
 
+
+
+
+    if 'theoryCurves' in kwargs:
+        theoryTgs = kwargs['theoryCurves']
+        colorCycle = itertools.cycle( [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 ) )
+        for Tg in theoryTgs:
+
+            if kwargs.get( 'autocolor', True ):
+                color = next(colorCycle)
+                Tg.SetLineColor(color)
+
+            if 'drawTheoryCurvesAsLines' in kwargs and kwargs['drawTheoryCurvesAsLines']:
+                lines, legendDummy = ConvertToLinesAndBoxes( Tg )
+                for line in lines:
+                    line.Draw()
+                legendDummy.Draw('SAME')
+                leg.AddEntry( legendDummy.GetName(), Tg.name, 'l' )
+            else:
+                Tg.Draw('L X')
+                leg.AddEntry( Tg.GetName(), Tg.name, 'l' )
+
+
     leg.Draw()
 
 
-    SaveC( 'mspectrum_{0}_{1}_{2}'.format( productionMode, observableName, '_'.join(names) ) )
+    outname = 'mspectrum_{0}_{1}_{2}'.format( productionMode, observableName, '_'.join(names) )
+    if 'theoryCurves' in kwargs: outname += '_withTheoryCurves_{0}'.format( TheoryCommands.GetShortTheoryName([Tg.name for Tg in theoryTgs]) )
+    outname += kwargs.get( 'filenameSuffix', '' )
+    SaveC( outname, asROOT=True )
+
+
+
+
+def ConvertToLinesAndBoxes(
+    Tg,
+    noYerrors = True,
+    ):
+    
+    fillColor = Tg.GetFillColor()
+    fillStyle = Tg.GetFillStyle()
+    lineColor = Tg.GetLineColor()
+
+
+    if not hasattr( Tg, 'binValues' ):
+        print 'ERROR: No attribute binValues found, and automatic computation not yet implemented'
+        return
+
+
+    lines = []
+    for iBin in xrange(len(Tg.binBoundaries)-1):
+
+        # Box not necessary as long as no Yerrors are done
+        # box = ROOT.TBox(
+        #     Tg.binBoundaries[iBin], Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin],
+        #     Tg.binBoundaries[iBin+1], Tg.POICenters[iBin]+Tg.POIErrsRight[iBin]
+        #     )
+        # ROOT.SetOwnership( box, False )
+
+        line = ROOT.TLine(
+            Tg.binBoundaries[iBin], Tg.binValues[iBin],
+            Tg.binBoundaries[iBin+1], Tg.binValues[iBin],
+            )
+        ROOT.SetOwnership( line, False )
+
+        line.SetLineColor( lineColor )
+        line.SetLineWidth( Tg.GetLineWidth() )
+
+        lines.append(line)
+
+    # Create a dummy for the legend
+    legendDummy = ROOT.TGraph( 1, array( 'd', [-999.]), array( 'd', [-999.]) )
+    ROOT.SetOwnership( legendDummy, False )
+    legendDummy.SetLineColor( lineColor )
+    legendDummy.SetLineWidth( Tg.GetLineWidth() )
+    legendDummy.SetFillColor( fillColor )
+    if not fillStyle == 0: legendDummy.SetFillStyle( fillStyle )
+    legendDummy.SetMarkerStyle(8)
+    legendDummy.SetMarkerColor( lineColor )
+    legendDummy.SetMarkerSize(0)
+    legendDummy.SetName( Tg.name + '_dummy' )
+
+    return lines, legendDummy
+
+
+
+
 
 
 
@@ -631,7 +824,7 @@ def BasicDrawMultipleParabolas(
             Tg.Draw('SAME')
             leg.AddEntry( Tg.GetName(), '{0}_{1}'.format( Tg.channel, Tg.POI ), 'l' )
 
-        SaveC( 'cparabolas_{0}'.format( finestPOIs[iBin] ) )
+        SaveC( 'compareScans/cparabolas_{0}'.format( finestPOIs[iBin] ) )
 
 
 
