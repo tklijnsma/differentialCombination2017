@@ -1,0 +1,7 @@
+#  8 POIs
+#text2workspace.py hzz4l_comb_13TeV_xs.txt -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel --PO verbose --PO 'higgsMassRange=123,127' --PO 'map=.*/smH_PTH_0_15:r_smH_PTH_0_15[1.0,-1.0,3.0]' --PO 'map=.*/smH_PTH_125_200:r_smH_PTH_125_200[1.0,-1.0,3.0]' --PO 'map=.*/smH_PTH_15_30:r_smH_PTH_15_30[1.0,-1.0,3.0]' --PO 'map=.*/smH_PTH_200_350:r_smH_PTH_200_350[1.0,-1.0,3.0]' --PO 'map=.*/smH_PTH_30_45:r_smH_PTH_30_45[1.0,-1.0,3.0]' --PO 'map=.*/smH_PTH_45_85:r_smH_PTH_45_85[1.0,-1.0,3.0]' --PO 'map=.*/smH_PTH_85_125:r_smH_PTH_85_125[1.0,-1.0,3.0]' --PO 'map=.*/smH_PTH_GT350:r_smH_PTH_GT350[1.0,-1.0,3.0]'
+
+# 5 POIs
+text2workspace.py hzz4l_all_13TeV_xs.txt -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel --PO verbose --PO 'higgsMassRange=123,127' --PO 'map=.*/ggH_PTH_0_15:r_ggH_PTH_0_15[1.0,0.0,3.0]' --PO 'map=.*/ggH_PTH_15_30:r_ggH_PTH_15_30[1.0,0.0,3.0]' --PO 'map=.*/ggH_PTH_30_45:r_ggH_PTH_30_85[1.0,0.0,3.0]' --PO 'map=.*/ggH_PTH_45_85:r_ggH_PTH_30_85[1.0,0.0,3.0]' --PO 'map=.*/ggH_PTH_85_125:r_ggH_PTH_85_200[1.0,0.0,3.0]' --PO 'map=.*/ggH_PTH_125_200:r_ggH_PTH_85_200[1.0,0.0,3.0]' --PO 'map=.*/ggH_PTH_200_350:r_ggH_PTH_GT200[1.0,0.0,3.0]' --PO 'map=.*/ggH_PTH_GT350:r_ggH_PTH_GT200[1.0,0.0,3.0]' 
+
+combine -M MultiDimFit -m 125.09 hzz4l_all_13TeV_xs.root --floatOtherPOIs=1 --freezeNuisances MH
