@@ -88,7 +88,8 @@ def main():
 def TestMethods(
         doWhitening = True,
         doICA       = True,
-        doFastICA   = True
+        doFastICA   = True,
+        verbose     = True
         ):
 
     xPoints, yPoints = GenerateData()
@@ -104,7 +105,7 @@ def TestMethods(
         chap( 'Running FastICA_byThomas' )
         res = FastICA_byThomas( deepcopy(data), n_components=2, w_init=deepcopy(w_init) )
         res.name = 'ICAbyThomas'
-        DrawData( res )
+        DrawData( res, verbose )
 
     if doFastICA:
         chap( 'Running FastICA from scikit package' )
@@ -128,12 +129,12 @@ def TestMethods(
 
         FastICA_res.rotationMatrix = A_
 
-        DrawData( FastICA_res )
+        DrawData( FastICA_res, verbose )
 
     if doWhitening:
         chap( 'Running a basic whitening procedure' )
-        whitening_res = Whitening( deepcopy(data) )
-        DrawData( whitening_res )
+        whitening_res = Whitening( deepcopy(data), verbose=True )
+        DrawData( whitening_res, verbose )
 
 
     # ======================================
@@ -207,6 +208,12 @@ def Whitening( data, verbose=False ):
         print '\nwhiteningMatrix:'
         print whiteningMatrix
 
+        print '\nwhiteningMatrix.T:'
+        print whiteningMatrix.T
+
+        print '\nnumpy.linalg.inv(whiteningMatrix):'
+        print numpy.linalg.inv(whiteningMatrix)
+
 
     xPointsWhitened, yPointsWhitened = applyMatrixOnData(
         whiteningMatrix, xPoints, yPoints
@@ -219,7 +226,13 @@ def Whitening( data, verbose=False ):
     ret.yPointsRotated = yPointsWhitened
 
     # This is still broken
-    ret.xPointsRotatedBack, ret.yPointsRotatedBack = applyMatrixOnData( whiteningMatrix.T, xPointsWhitened, yPointsWhitened, whiten=False )
+    ret.xPointsRotatedBack, ret.yPointsRotatedBack = applyMatrixOnData(
+        numpy.linalg.inv(whiteningMatrix),
+        xPointsWhitened,
+        yPointsWhitened,
+        whiten=False,
+        # verbose=True
+        )
     ret.xPointsRotatedBack = [ x + xMeanMeasured for x in ret.xPointsRotatedBack ]
     ret.yPointsRotatedBack = [ y + yMeanMeasured for y in ret.yPointsRotatedBack ]
 
@@ -244,7 +257,7 @@ def getWhiteningMatrix( eigenValues, eigenVectors ):
     return V
 
 
-def applyMatrixOnData( matrix, xPoints, yPoints, whiten=True ):
+def applyMatrixOnData( matrix, xPoints, yPoints, whiten=True, verbose=False ):
     
     if whiten:
         xMean = mean(xPoints)
@@ -262,6 +275,12 @@ def applyMatrixOnData( matrix, xPoints, yPoints, whiten=True ):
         whitenedPoint = matrix.dot( numpy_column([x, y]) )
         xPointsWhitened.append( whitenedPoint[0][0] )
         yPointsWhitened.append( whitenedPoint[1][0] )
+
+        if verbose:
+            print '-'*70
+            print 'matrix = ', matrix
+            print 'dot vector = ', numpy_column([x, y])
+            print 'outcome = ', whitenedPoint
 
         # print whitenedPoint
 
@@ -456,11 +475,6 @@ def DrawData( res, verbose=False ):
 
     covMatMeasured = numpy.cov( xPoints, yPoints )
 
-    if verbose:
-        print '\nMeasured covariance matrix:'
-        print covMatMeasured
-        print ''
-
     xStdMeasured = sqrt(covMatMeasured[0][0])
     yStdMeasured = sqrt(covMatMeasured[1][1])
 
@@ -468,6 +482,26 @@ def DrawData( res, verbose=False ):
     yMeanMeasured = mean( yPoints )
 
     corr = covMatMeasured[0][1] / ( xStdMeasured * yStdMeasured )
+
+    if verbose:
+
+        print '\nxMeanMeasured:'
+        print xMeanMeasured
+        print '\nxStdMeasured:'
+        print xStdMeasured
+
+        print '\nyMeanMeasured:'
+        print yMeanMeasured
+        print '\nyStdMeasured:'
+        print yStdMeasured
+
+        print '\nMeasured covariance matrix:'
+        print covMatMeasured
+
+        print '\nMeasured correlation matrix:'
+        print corr
+
+        print ''
 
 
     # ======================================
@@ -528,9 +562,18 @@ def DrawData( res, verbose=False ):
 
         TgRotatedBack = ROOT.TGraph(
             len(res.xPointsRotatedBack),
-            array( 'd', res.xPointsRotatedBack ),
-            array( 'd', res.yPointsRotatedBack ),
+            array( 'f', res.xPointsRotatedBack ),
+            array( 'f', res.yPointsRotatedBack )
             )
+
+        # if res.name == 'onlyWhitened':
+        #     x = ROOT.Double(0.)
+        #     y = ROOT.Double(0.)
+        #     for iPoint in xrange( len(res.xPointsRotatedBack) ):
+        #         TgRotatedBack.GetPoint( iPoint, x, y )
+        #         print 'Point {0}: x = {1}, y = {2}'.format( iPoint, x, y )
+
+        ROOT.SetOwnership( TgRotatedBack, False )
         TgRotatedBack.SetMarkerStyle(8)
         TgRotatedBack.SetMarkerSize(0.3)
         TgRotatedBack.SetMarkerColor(2)
@@ -555,7 +598,27 @@ def DrawData( res, verbose=False ):
         yStdRotated   = sqrt(covMatRotated[1][1])
         xMeanRotated  = mean( xPointsRotated )
         yMeanRotated  = mean( yPointsRotated )
-        corr = covMatRotated[0][1] / ( xStdRotated * yStdRotated )
+        corrRotated   = covMatRotated[0][1] / ( xStdRotated * yStdRotated )
+
+        if verbose:
+
+            print '\n----- Rotated system:'
+
+            print '\ncovMatRotated:'
+            print covMatRotated
+
+            print '\nxMeanRotated:'
+            print xMeanRotated
+            print '\nxStdRotated:'
+            print xStdRotated
+
+            print '\nyMeanRotated:'
+            print yMeanRotated
+            print '\nyStdRotated:'
+            print yStdRotated
+
+            print '\ncorrRotated:'
+            print corrRotated
 
 
         xMinRotated = xMeanRotated - 3.*xStdRotated

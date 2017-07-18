@@ -11,16 +11,19 @@ import os, itertools, operator, re, argparse, sys
 from math import isnan, isinf
 from os.path import *
 from glob import glob
+from copy import deepcopy
 
-
+sys.path.append('src')
 import Commands
 import PhysicsCommands
 import OneOfCommands
 import TheoryCommands
+import CorrelationMatrices
 
 
 from time import strftime
 datestr = strftime( '%b%d' )
+
 
 
 ########################################
@@ -47,6 +50,7 @@ def main():
     parser.add_argument( '--createDerivedTheoryFiles', action='store_true' )
     parser.add_argument( '--createDerivedTheoryFiles_Yukawa', action='store_true' )
     parser.add_argument( '--rebinnedTheoryPlot', action='store_true' )
+    parser.add_argument( '--CorrelationMatrices', action='store_true' )
 
     # parser.add_argument( '--list', metavar='N', type=str, nargs='+', help='list of strings' )
     args = parser.parse_args()
@@ -56,19 +60,71 @@ def main():
         Commands.TestMode()
 
 
+
+
+    if args.CorrelationMatrices:
+
+        variationFiles = glob( 'suppliedInput/fromAgnieszka/ScaleVarNNLO_Jul17/*.top' )
+
+        # ======================================
+        # Correlation matrix in theory binning
+
+        variations = [ CorrelationMatrices.ReadVariationFile( variationFile ) for variationFile in variationFiles ]
+        CorrelationMatrices.GetCorrelationMatrix(
+            variations,
+            makeScatterPlots          = False,
+            makeCorrelationMatrixPlot = True,
+            outname                   = 'corrMat_theory',
+            verbose                   = True,
+            )
+
+        # ======================================
+        # Correlation matrix in exp binning
+        
+        print '[fixme] Exp bin boundaries hardcoded'
+        expBinBoundaries    = [ 0., 15., 30., 45., 85., 125., 200., 350., 800. ]
+        expBinCenters       = [ 0.5*(expBinBoundaries[iBin]+expBinBoundaries[iBin+1]) for iBin in xrange(len(expBinBoundaries)-1) ]
+
+        variations_expbinning = []
+        for variation in variations:
+            theoryBinCenters, theoryBinBoundaries, theoryBinWidths = TheoryCommands.BinningHeuristic( variation.binCenters, manualSwitchAt50=True )
+            expBinValues = TheoryCommands.MapFineToCoarse(
+                theoryBinBoundaries = theoryBinBoundaries,
+                theoryBinValues     = variation.binValues,
+                expBinBoundaries    = expBinBoundaries,
+                lastBinIsOverflow   = True,
+                )
+
+            variation_exp = deepcopy( variation )
+            variation_exp.binCenters = expBinCenters
+            variation_exp.binValues  = expBinValues
+            variation_exp.binBoundaries = expBinBoundaries
+
+            variations_expbinning.append( variation_exp )
+
+
+        CorrelationMatrices.GetCorrelationMatrix(
+            variations_expbinning,
+            makeScatterPlots          = True,
+            makeCorrelationMatrixPlot = True,
+            outname                   = 'corrMat_exp',
+            verbose                   = True,
+            )
+
+        CorrelationMatrices.PlotVariationSpectra( variations_expbinning )
+
+
     if args.makeStewartTackmannDatacard:
 
         container = TheoryCommands.ReadDerivedTheoryFile( 'derivedTheoryFiles_Jun22/SM_NNLO.txt', returnContainer=True )
         
         covMat = TheoryCommands.GetStewartTackmannCovarianceMatrix( container )
 
-        TheoryCommands.AddCovarianceMatrixAsNuisanceParameters(
-            'suppliedInput/combinedCard_May15.txt',
-            covMat
-            )
-
-
-
+        # No longer works! Was anyway incorrectly implemented
+        # TheoryCommands.AddCovarianceMatrixAsNuisanceParameters(
+        #     'suppliedInput/combinedCard_May15.txt',
+        #     covMat
+        #     )
 
 
     if args.couplingT2WS:
