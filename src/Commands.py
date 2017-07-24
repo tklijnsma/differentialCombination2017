@@ -115,7 +115,7 @@ def BasicT2WSwithModel(
 
     outputDir = abspath( 'workspaces_{0}'.format(datestr) )
     if not isdir( outputDir ): os.makedirs( outputDir )
-    outputWS = join( outputDir, basename(datacard).replace( '.txt', '.root' ) )
+    outputWS = join( outputDir, basename(datacard).replace( '.txt', '_{0}.root'.format( basename(pathToModel).replace('.py','') ) ) )
 
     signalprocesses, processes, bins = ListProcesses( datacard )
 
@@ -157,7 +157,6 @@ def BasicBestfit(
         # '--saveWorkspace',
         # '--minimizerStrategy 2',
         # '-v 2',
-
         # '-m 125',
         # '--floatOtherPOIs=1',
         ]
@@ -220,6 +219,19 @@ def BasicBestfit(
     else:
         executeCommand( cmd )
 
+
+def ConvertFloatToStr( number ):
+    number = float(number)
+    if number.is_integer():
+        number = int(number)
+    string = str(number).replace('-','m').replace('.','p')
+    return string
+
+def ConvertStrToFloat( string ):
+    string = str(string)
+    number = string.replace('m','-').replace('p','.')
+    number = float(number)
+    return number
 
 
 def ListPOIs( datacardRootFile, nofilter=False ):
@@ -322,7 +334,7 @@ def ListProcesses( datacardFile ):
     processes = list(set(processline.split()[1:]))
     processes.sort()
 
-    signalprocesses = [ p for p in processes if p.split('_')[0].endswith('H') and not p == 'nonResH' ]
+    signalprocesses = [ p for p in processes if p.split('_')[0].endswith('H') and not p == 'nonResH' and not 'OutsideAcceptance' in p ]
     signalprocesses.sort( key = lambda i: InterpretPOI(i)[2][0] )
 
     return signalprocesses, processes, bins

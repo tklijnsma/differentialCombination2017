@@ -19,6 +19,8 @@ class CouplingModel( PhysicsModel ):
         self.SMbinBoundaries = []
         self.SMXS = []
 
+        self.includeLinearTerms = False
+
 
     def chapter( self, text, indent=0 ):
         if self.verbose:
@@ -38,6 +40,7 @@ class CouplingModel( PhysicsModel ):
 
         for line in lines:
             key, value = line.split('=',1)
+            key = key.strip()
             if key == 'binBoundaries':
                 binBoundaries = [ float(v) for v in value.split(',') ]
             elif key == 'crosssection':
@@ -45,7 +48,15 @@ class CouplingModel( PhysicsModel ):
             elif key == 'ratios':
                 ratios = [ float(v) for v in value.split(',') ]
             else:
-                couplings[key] = float(value)
+                try:
+                    couplings[key] = float(value)
+                except ValueError:
+                    # print '[error]: Could not call float(value) for key/value pair:'
+                    # print '    key   : {0}'.format( key )
+                    # print '    value :'
+                    # print value
+                    # sys.exit()
+                    continue
 
         return binBoundaries, ratios, crosssection
 
@@ -112,6 +123,9 @@ class CouplingModel( PhysicsModel ):
             elif optionName == 'higgsMassRange':
                 self.mHRange = [ float(v) for v in optionValue.split(',') ]
 
+
+            elif optionName == 'linearTerms':
+                self.includeLinearTerms = True
 
             else:
                 print 'Unknown option \'{0}\'; skipping'.format(optionName)
@@ -195,16 +209,24 @@ class CouplingModel( PhysicsModel ):
 
         # Get list of squared terms and unique combinations (works as expected also for 1 couplings cases)
         couplingCombinations = []
-        couplingCombinations.extend( [ ( coupling, coupling ) for coupling in couplings ] )
-        couplingCombinations.extend( list(itertools.combinations( couplings, 2 )) )
+        couplingCombinations.extend( [ [ coupling, coupling ] for coupling in couplings ] )
+        couplingCombinations.extend( [ list(couplingTuple) for couplingTuple in itertools.combinations( couplings, 2 ) ] )
+        if self.includeLinearTerms:
+            couplingCombinations.extend( [ [coupling] for coupling in couplings ] )
+            couplingCombinations.append( [] )
+
 
         # Number of theories necessary to perform a parametrization
         nParameters = sum(range(nCouplings+1))
+        if self.includeLinearTerms:
+            nParameters += len(couplings) + 1
+
         if not len(couplingCombinations) == nParameters:
             print 'ERROR: amount of coupling combinations should be equal to number of expected parameters'
             sys.exit()
 
         if len(self.theories) > nParameters:
+            print '[FIXME!] Need to choose {0} theories with DIFFERENT COUPLINGS, otherwise matrix is singular!'.format( nParameters )
             print '\n{0} theories supplied but only {1} needed for parametrization; taking only the first {1} theories:'.format(
                 len(self.theories), nParameters )
             self.theories = self.theories[:nParameters]
@@ -224,8 +246,8 @@ class CouplingModel( PhysicsModel ):
                 '{coupling}[{default},{down},{up}]'.format(
                     coupling = coupling,
                     default  = self.SMDict['couplings'][coupling],
-                    down     = self.SMDict['couplings'][coupling] - 2.0,
-                    up       = self.SMDict['couplings'][coupling] + 2.0,
+                    down     = self.SMDict['couplings'][coupling] - 10.0,
+                    up       = self.SMDict['couplings'][coupling] + 10.0,
                     )
                 )
 
@@ -236,18 +258,26 @@ class CouplingModel( PhysicsModel ):
         # Calculate the coupling matrix
         couplingMat = []
         for theory in self.theories:
-            couplingMat.append(
-                [ theory['couplings'][c1]*theory['couplings'][c2] for c1, c2 in couplingCombinations ]
-                )
-        couplingMat = numpy.array( couplingMat )
-        couplingMatInv = numpy.linalg.inv( couplingMat )
+            if self.includeLinearTerms:
+                row = []
+                for couplingList in couplingCombinations:
+                    product = 1.0
+                    for coupling in couplingList:
+                        product *= theory['couplings'][coupling]
+                    row.append(product)
+                couplingMat.append(row)
+            else:
+                couplingMat.append(
+                    [ theory['couplings'][c1]*theory['couplings'][c2] for c1, c2 in couplingCombinations ]
+                    )
 
+        couplingMat = numpy.array( couplingMat )
         if self.verbose:
             print '\nSquared coupling terms:'
             print '  ', couplingCombinations
             print 'Found the following coupling matrix:'
             print couplingMat
-
+        couplingMatInv = numpy.linalg.inv( couplingMat )
 
         parametrizations = []
 
@@ -287,10 +317,20 @@ class CouplingModel( PhysicsModel ):
             parametrizationNames.append( parametrizationName )
 
             parametrizationString = ''
-            for parameter, (coupling1, coupling2) in zip( parametrization, couplingCombinations ):
-                parametrizationString += '+{0}*{1}*{2}'.format(
-                    parameter, argCoupling[coupling1], argCoupling[coupling2]
-                    )
+            for parameter, couplingList in zip( parametrization, couplingCombinations ):
+                if len(couplingList) == 2:
+                    coupling1, coupling2 = couplingList
+                    parametrizationString += '+{0}*{1}*{2}'.format(
+                        parameter, argCoupling[coupling1], argCoupling[coupling2]
+                        )
+                elif len(couplingList) == 1:
+                    parametrizationString += '+{0}*{1}'.format(
+                        parameter, argCoupling[couplingList[0]]
+                        )
+                elif len(couplingList) == 0:
+                    parametrizationString += '+{0}'.format( parameter )
+
+            # Strip off the '+' at the beginning
             parametrizationString = parametrizationString[1:]
 
             parametrizationExpression = (
@@ -390,6 +430,13 @@ class CouplingModel( PhysicsModel ):
                 print '   Which will carry the following weights:'
                 print '   [ ' + ', '.join([ '{0:.4f}'.format(w) for w in weights ]) + ']'
 
+            if len(weights) == 0:
+                print '  Did not find any theoretical bin boundaries inside this experimental bin'
+                print '   (i.e. can not do a parametrization here)'
+                print '   Yield parameter will be 1.0'
+                self.modelBuilder.doVar( 'r_{0}[1.0]'.format( expBinStr ))
+                continue
+
             weightedParameters = []
             for iParameter in xrange(nParameters):
                 weightedParameter = 0.
@@ -432,8 +479,15 @@ class CouplingModel( PhysicsModel ):
             productNames = []
             for iWeightedParameter, weightedParameter in enumerate(weightedParameters):
 
-                coupling1, coupling2 = couplingCombinations[iWeightedParameter]
-                componentName = coupling1 + coupling2
+                couplingTuple = couplingCombinations[iWeightedParameter]
+
+                if len(couplingTuple) == 2:
+                    coupling1, coupling2 = couplingTuple
+                    componentName = coupling1 + coupling2
+                elif len(couplingTuple) == 1:
+                    componentName = couplingTuple[0]
+                elif len(couplingTuple) == 0:
+                    componentName = 'CONSTANT'
 
 
                 weightedParameterName = 'weight_{signal}_component_{componentName}'.format(

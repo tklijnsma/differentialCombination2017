@@ -11,12 +11,14 @@ import os, re, itertools
 from os.path import *
 from glob import glob
 from sys import exit
+from copy import deepcopy
 from numpy import corrcoef, var, std
 
 from time import strftime
 datestr = strftime( '%b%d' )
 
 
+import Commands
 import TheoryCommands
 
 
@@ -320,7 +322,11 @@ def GetCorrelationMatrix(
 
 
 
-def ReadVariationFile( variationFile ):
+def ReadVariationFile(
+        variationFile,
+        fromAgnieszka=False,
+        fromHqT=False,
+        ):
 
     if not isfile( variationFile ):
         print 'File \'{0}\' does not exist'.format( variationFile )
@@ -339,19 +345,38 @@ def ReadVariationFile( variationFile ):
     for line in lines:
         line = line.strip()
         if len(line) == 0: continue
-        if line.startswith('#'): continue
 
-        components = line.split()
+        if fromAgnieszka:
+            if line.startswith('#'): continue
+            components = line.split()
 
-        if not len(components) == 3:
-            print 'Not understanding the following line:'
-            print line
-            print '    Continuing...'
-            continue
+            if not len(components) == 3:
+                print 'Not understanding the following line:'
+                print line
+                print '    Continuing...'
+                continue
 
-        res.binCenters.append(   float(components[0]) )
-        res.binValues.append(    float(components[1]) )
-        res.binValErrors.append( float(components[2]) )
+            res.binCenters.append(   float(components[0]) )
+            res.binValues.append(    float(components[1]) )
+            res.binValErrors.append( float(components[2]) )
+
+        elif fromHqT:
+            if line.startswith('('): continue
+            components = line.split()
+
+            if not len(components) == 6:
+                print 'Not understanding the following line:'
+                print line
+                print '    Continuing...'
+                continue
+
+            res.binCenters.append(   float(components[0]) )
+            res.binValues.append(    float(components[5]) )
+
+
+    if fromAgnieszka:
+        print '[warning] Dividing by 1/2.27 because of Agnieszka\'s normalization'
+        res.binValues = [ i / 2.27 for i in res.binValues ]
 
     # Try also to get the coupling values from the file name
     variationFile = basename(variationFile)
@@ -360,18 +385,41 @@ def ReadVariationFile( variationFile ):
         res.muF = 1.0
         res.Q   = 1.0
     else:
-        match = re.search( r'HRes_mR([12h])mF([12h]).*\.top', variationFile )
-        if not match:
-            print 'Could not determine couplings from \'{0}\''.format( variationFile )
-        else:
-            res.muR = float( match.group(1).replace( 'h', '0.5' ) )
-            res.muF = float( match.group(2).replace( 'h', '0.5' ) )
 
-        match = re.search( r'Q([12h])\.top', variationFile )
-        if not match:
-            res.Q   = 1.0
-        else:
-            res.Q   = float( match.group(1).replace( 'h', '0.5' ) )
+        if fromAgnieszka:
+            match = re.search( r'HRes_mR([12h])mF([12h]).*\.top', variationFile )
+            if not match:
+                print 'Could not determine couplings from \'{0}\''.format( variationFile )
+            else:
+                res.muR = float( match.group(1).replace( 'h', '0.5' ) )
+                res.muF = float( match.group(2).replace( 'h', '0.5' ) )
+
+            match = re.search( r'Q([12h])\.top', variationFile )
+            if not match:
+                res.Q   = 1.0
+            else:
+                res.Q   = float( match.group(1).replace( 'h', '0.5' ) )
+
+        elif fromHqT:
+            # LO_muR_1_muF_1_Q_1p0_minPt_1_maxPt_51.out
+            match = re.search( r'([NLO]+)_muR_([\dpm]+)_muF_([\dpm]+)_Q_([\dpm]+)_minPt_([\dpm]+)_maxPt_([\dpm]+).out', variationFile )
+            if not match:
+                print 'Could not determine couplings from \'{0}\''.format( variationFile )
+            else:
+                res.order = match.group(1)
+                res.muR   = float( match.group(2).replace('p','.').replace('m','-') )
+                res.muF   = float( match.group(3).replace('p','.').replace('m','-') )
+                res.Q     = float( match.group(4).replace('p','.').replace('m','-') )
+                res.minPt = float( match.group(5).replace('p','.').replace('m','-') )
+                res.maxPt = float( match.group(6).replace('p','.').replace('m','-') )
+
+
+    # Also get some sort of bin boundaries using the heuristic for theory binning
+    heuristicBinCenters, heuristicBinBoundaries, heuristicBinWidths = TheoryCommands.BinningHeuristic(
+        res.binCenters,
+        manualSwitchAt50=( fromAgnieszka or fromHqT )
+        )
+    res.binBoundaries = heuristicBinBoundaries
 
     return res
 
@@ -379,6 +427,7 @@ def ReadVariationFile( variationFile ):
 
 def PlotVariationSpectra(
         variations,
+        suffix=None,
         ):
 
     c.Clear()
@@ -425,11 +474,338 @@ def PlotVariationSpectra(
     leg.Draw()
 
 
+    outname = 'scalevariations'
+    if not suffix == None:
+        outname += '_' + suffix
 
-
-    SaveC( 'scalevariations', asPNG=True )
+    SaveC( outname, asPNG=True )
 
     c.SetLogy(False)
+    yMax = yMax/2.0 * 1.1
+    base.SetMaximum(yMax)
+    SaveC( outname + '_linear', asPNG=True )
+
+
+def PlotWithEnvelop(
+        *args,
+        **kwargs
+        ):
+
+    Tgs = []
+    for name, variations in args:
+
+        binBoundaries = variations[0].binBoundaries
+
+        if 'ptMax' in kwargs:
+            ptMax = kwargs['ptMax']
+            for iBinBoundary, binBoundary in enumerate(binBoundaries):
+                if ptMax < binBoundary:
+                    break
+            else:
+                print '[error] ptMax {0} is beyond the limit of the bin boundaries ({1})'.format( ptMax, binBoundaries[-1] )
+            binBoundaries = binBoundaries[:iBinBoundary+1]
+
+
+        # Mostly for plotting purposes
+        nPoints       = len(binBoundaries)-1
+        binCenters    = [ 0.5*(binBoundaries[i]+binBoundaries[i+1]) for i in xrange(nPoints) ]
+        halfBinWidths = [ 0.5*(binBoundaries[i+1]-binBoundaries[i]) for i in xrange(nPoints) ]
+
+
+        # Get pointer to the SM variation
+        for variation in variations:
+            if variation.muF == 1 and variation.muR == 1 and variation.Q == 1 :
+                SMvariation = variation
+                break
+        else:
+            print '[error] Could not find a SM variation in the supplied list'
+            return
+
+
+        minUncs = []
+        maxUncs = []
+
+        for iPoint in xrange( nPoints ):
+
+            # Min and max variations
+            minVar = min([ variation.binValues[iPoint] for variation in variations ])
+            maxVar = max([ variation.binValues[iPoint] for variation in variations ])
+
+            minUncs.append( abs( minVar - SMvariation.binValues[iPoint] ) )
+            maxUncs.append( abs( maxVar - SMvariation.binValues[iPoint] ) )
+
+
+        Tg = ROOT.TGraphAsymmErrors(
+            nPoints,
+            array( 'd', binCenters ),
+            array( 'd', SMvariation.binValues ),
+            array( 'd', halfBinWidths ),
+            array( 'd', halfBinWidths ),
+            array( 'd', minUncs ),
+            array( 'd', maxUncs ),
+            )
+        ROOT.SetOwnership( Tg, False )
+
+        Tg.xMin = binBoundaries[0]
+        Tg.xMax = binBoundaries[-1]
+        Tg.yMin = min([ center-abs(err) for center, err in zip(SMvariation.binValues, minUncs) ])
+        Tg.yMax = max([ center+abs(err) for center, err in zip(SMvariation.binValues, maxUncs) ])
+        Tg.yMinPositive = min([ center-abs(err) for center, err in zip(SMvariation.binValues, minUncs) if center-abs(err) > 0. ])
+
+        Tg.SetName(name)
+        Tgs.append(Tg)
+
+
+    # ======================================
+    # Make a plot
+
+    xMin = min([ Tg.xMin for Tg in Tgs ])
+    if 'ptMax' in kwargs:
+        xMax = kwargs['ptMax']
+    else:
+        xMax = max([ Tg.xMax for Tg in Tgs ])
+
+    # yMinAbs = min([ Tg.yMin for Tg in Tgs ])
+    yMinAbs = min([ Tg.yMinPositive for Tg in Tgs ]) # Minimal value that is still positive
+    yMaxAbs = max([ Tg.yMax for Tg in Tgs ])
+    yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
+    yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
+
+    base = GetPlotBase(
+        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
+        xTitle = 'pT [GeV]', yTitle='d#sigma/dp_{T} [pb/GeV]'
+        )
+    base.Draw('P')
+
+    leg = ROOT.TLegend( 1-CRightMargin-0.4, 1-CTopMargin-0.5, 1-CRightMargin, 1-CTopMargin )
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+
+    colorCycle = itertools.cycle( range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 ) )
+    for Tg in Tgs:
+        color = next(colorCycle)
+
+        Tg.SetLineColor(color)
+        Tg.SetMarkerColor(color)
+        Tg.SetFillStyle(1001)
+        Tg.SetFillColorAlpha( color, 0.4 )
+
+        # lines, legendDummy = PhysicsCommands.ConvertToLinesAndBoxes( Tg )
+        # for line in lines:
+        #     line.Draw()
+        # legendDummy.Draw('SAME')
+        # leg.AddEntry( legendDummy.GetName(), Tg.name, 'l' )
+
+        ConvertTGraphToLinesAndBoxes( Tg, drawImmediately=True, legendObject=leg )
+
+        # Tg.Draw('PSAME E3')
+
+        # leg.AddEntry( Tg.GetName(), Tg.GetName(), 'fpl' )
+
+    leg.Draw()
+
+    outname = 'multipleSpectra'
+    if 'suffix' in kwargs:
+        outname += '_' + kwargs['suffix']
+
+    SaveC( outname, asPNG=True )
+
+    yMin = 0.5*yMinAbs
+    yMax = 2.*yMaxAbs
+    base.SetMinimum(yMin)
+    base.SetMaximum(yMax)
+
+    c.SetLogy()
+    SaveC( outname + '_logscale', asPNG=True )
+    c.SetLogy(False)
+
+
+
+def PlotRelativeUncertainty(
+        variations,
+        suffix=None,
+        ):
+    
+    binBoundaries = variations[0].binBoundaries
+
+    # Mostly for plotting purposes
+    nPoints       = len(binBoundaries)-1
+    binCenters    = [ 0.5*(binBoundaries[i]+binBoundaries[i+1]) for i in xrange(nPoints) ]
+    halfBinWidths = [ 0.5*(binBoundaries[i+1]-binBoundaries[i]) for i in xrange(nPoints) ]
+
+
+    # Get pointer to the SM variation
+    for variation in variations:
+        if variation.muF == 1 and variation.muR == 1 and variation.Q == 1 :
+            SMvariation = variation
+            break
+    else:
+        print '[error] Could not find a SM variation in the supplied list'
+        return
+
+
+    minRelUncs = []
+    maxRelUncs = []
+
+    for iPoint in xrange( nPoints ):
+
+        # Min and max variations
+        minVar = min([ variation.binValues[iPoint] for variation in variations ])
+        maxVar = max([ variation.binValues[iPoint] for variation in variations ])
+
+        minRelUncs.append( -abs( minVar - SMvariation.binValues[iPoint] ) / SMvariation.binValues[iPoint] )
+        maxRelUncs.append(  abs( maxVar - SMvariation.binValues[iPoint] ) / SMvariation.binValues[iPoint] )
+
+
+    c.Clear()
+    SetCMargins()
+
+    xMin = SMvariation.binBoundaries[0]
+    xMax = SMvariation.binBoundaries[-1]
+
+    yMin = min(minRelUncs) - 0.1*( max(maxRelUncs) - min(minRelUncs) )
+    yMax = max(maxRelUncs) + 0.1*( max(maxRelUncs) - min(minRelUncs) )
+
+
+    base = GetPlotBase(
+        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
+        xTitle = 'pT [GeV]', yTitle='#Delta d#sigma/dp_{T} [pb/GeV]'
+        )
+    base.Draw('P')
+
+
+    Tg = ROOT.TGraphAsymmErrors(
+        nPoints,
+        array( 'd', binCenters ),
+        array( 'd', [ 0. for i in xrange(nPoints) ] ),
+        array( 'd', halfBinWidths ),
+        array( 'd', halfBinWidths ),
+        array( 'd', [ -i for i in minRelUncs ] ),
+        array( 'd', maxRelUncs ),
+        )
+
+    Tg.Draw('PSAME')
+
+
+    outname = 'scaleRelativeUncertainty'
+    if not suffix == None:
+        outname += '_' + suffix
+
+    SaveC( outname, asPNG=True )
+
+
+
+def MergeLowHighPtFilesFromHqT(
+        variations_lowPt,
+        variations_highPt,
+        ):
+
+    HqTvariations = []
+    for variation_lowPt in variations_lowPt:
+        firstPartOfFilename_lowPt = variation_lowPt.variationFile.split('minPt')[0]
+
+        # Find corresponding highPt variation
+        for variation_highPt in variations_highPt:
+            firstPartOfFilename_highPt = variation_highPt.variationFile.split('minPt')[0]
+            if firstPartOfFilename_highPt == firstPartOfFilename_lowPt:
+                break
+        else:
+            print 'Could not find matching high Pt file for \'{0}\''.format( variation_lowPt.variationFile )
+            continue
+
+        variation = deepcopy( variation_lowPt )
+        variation.binCenters = variation_lowPt.binCenters[:-1] + variation_highPt.binCenters
+        variation.binValues  = variation_lowPt.binValues[:-1] + variation_highPt.binValues
+
+        # Also get some sort of bin boundaries using the heuristic for theory binning
+        heuristicBinCenters, heuristicBinBoundaries, heuristicBinWidths = TheoryCommands.BinningHeuristic(
+            variation.binCenters,
+            manualSwitchAt50=True
+            )
+        variation.binBoundaries = heuristicBinBoundaries
+
+        HqTvariations.append( variation )
+
+    return HqTvariations
+
+
+
+def ConvertTGraphToLinesAndBoxes( Tg, drawImmediately=False, legendObject=None, verbose=False ):
+
+    yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
+    xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
+
+    if not xBand or not yBand:
+        Commands.ThrowError( 'Make sure all errors are filled' )
+
+    nPoints = Tg.GetN()
+
+    if verbose: print '[debug] Converting \'{0}\' to lines and boxes ({1} points)'.format( Tg.GetName(), nPoints )
+
+    lineStyle = Tg.GetLineStyle()
+    lineWidth = Tg.GetLineWidth()
+    lineColor = Tg.GetLineColor()
+
+    fillStyle = Tg.GetFillStyle()
+    fillColor = Tg.GetFillColor()
+
+    lines = []
+    boxes = []
+
+    x_Double = ROOT.Double(0)
+    y_Double = ROOT.Double(0)
+    for iPoint in xrange( nPoints ):
+        Tg.GetPoint( iPoint, x_Double, y_Double )
+        x = float(x_Double)
+        y = float(y_Double)
+
+        xMin = abs(Tg.GetErrorXlow(iPoint))
+        xMax = abs(Tg.GetErrorXhigh(iPoint))
+        yMin = abs(Tg.GetErrorYlow(iPoint))
+        yMax = abs(Tg.GetErrorYhigh(iPoint))
+
+        if verbose:
+            print '[debug] Point {0:<3}:'.format( iPoint )
+            print '        x = {0:+8.3f}, xMin = {1:+8.3f}, xMax = {2:+8.3f}'.format( x, xMin, xMax )
+            print '        y = {0:+8.3f}, yMin = {1:+8.3f}, yMax = {2:+8.3f}'.format( y, yMin, yMax )
+
+        line = ROOT.TLine( x-xMin, y, x+xMax, y )
+        ROOT.SetOwnership( line, False )
+        line.SetLineStyle( lineStyle )
+        line.SetLineWidth( lineWidth )
+        line.SetLineColor( lineColor )
+        lines.append(line)
+
+        box  = ROOT.TBox( x-xMin, y-yMin, x+xMax, y+yMax )
+        ROOT.SetOwnership( box, False )
+        box.SetLineWidth(0)
+        if not fillStyle == 0: box.SetFillStyle( fillStyle )
+        box.SetFillColor( fillColor )
+        boxes.append(box)
+
+        if drawImmediately:
+            box.Draw()
+            line.Draw()
+
+
+    # Create a dummy for the legend
+    legendDummy = ROOT.TGraph( 1, array( 'd', [-999.]), array( 'd', [-999.]) )
+    ROOT.SetOwnership( legendDummy, False )
+    legendDummy.SetLineColor( lineColor )
+    legendDummy.SetLineWidth( Tg.GetLineWidth() )
+    legendDummy.SetFillColor( fillColor )
+    if not fillStyle == 0: legendDummy.SetFillStyle( fillStyle )
+    legendDummy.SetMarkerStyle(8)
+    legendDummy.SetMarkerColor( lineColor )
+    legendDummy.SetMarkerSize(0)
+    legendDummy.SetName( Tg.GetName() + '_dummy' )
+
+    if drawImmediately:
+        legendDummy.Draw('PSAME')
+
+        if legendObject:
+            legendObject.AddEntry( legendDummy.GetName(), Tg.GetName(), 'lf' )
+
 
 
 

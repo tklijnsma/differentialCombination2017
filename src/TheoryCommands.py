@@ -14,6 +14,7 @@ from os.path import *
 from operator import itemgetter
 from array import array
 from math import log, exp, sqrt, copysign
+from copy import deepcopy
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -149,6 +150,34 @@ physicsFileDict = {
 
 
 
+def ReadLinesOfYukawaTheoryFile( theoryFile, verbose=False ):
+    # Read lines
+    with open( theoryFile, 'r' ) as theoryFp:
+        lines = [ line.strip() for line in theoryFp.readlines() ]
+    commentlines = [ line.strip() for line in lines if line.startswith('#') ]
+    lines        = [ line for line in lines if not line.startswith('#') and len(line) > 0 ]
+
+    pts          = []
+    matched_xss  = []
+    resummed_xss = []
+
+    for line in lines:
+        components = line.split()
+        pt          = float(components[0])
+        matched_xs  = float(components[1])
+        resummed_xs = float(components[2])
+
+        if verbose:
+            print '    pt = {0:<8.3f} |  matched_xs = {1:<10.6f} |  resummed_xs = {2:<10.6f}'.format(
+                pt, matched_xs, resummed_xs
+                )
+
+        pts.append( pt )
+        matched_xss.append( matched_xs )
+        resummed_xss.append( resummed_xs )
+
+    return pts, matched_xss, resummed_xss
+
 
 def CreateDerivedTheoryFiles_Yukawa(
         verbose = True,
@@ -160,6 +189,58 @@ def CreateDerivedTheoryFiles_Yukawa(
     theoryDir = abspath( 'suppliedInput/theory_Yukawa' )
     theoryFiles = glob.glob( join( theoryDir, '*.res' ) )
 
+
+    # ======================================
+    # Try to find a 'SM' file first so it's possible to calculate ratios
+
+    for theoryFile in theoryFiles:
+        theoryFilename = basename( theoryFile )
+
+        pat = r'H125-LHC13-R04-MSbar-xmur(?P<muR>\d+)-xmuf(?P<muF>\d+)_(?P<kappab>[\-\d]+)_(?P<kappac>[\-\d]+)-xQ(?P<Q>\d+)'
+        match = re.search( pat, theoryFilename )
+
+        if not match: continue
+
+        muR    = float(match.group('muR')) / 50.
+        muF    = float(match.group('muF')) / 50.
+        Q      = float(match.group('Q')) / 50.
+        kappab = float(match.group('kappab'))
+        kappac = float(match.group('kappac'))
+
+        if (
+                muR == 1.0 and
+                muF == 1.0 and
+                Q == 1.0 and
+                kappac == 1.0 and
+                kappab == 1.0
+                ):
+
+            smFound = True
+            pts, matched_xss, resummed_xss = ReadLinesOfYukawaTheoryFile( theoryFile, verbose )
+            newBinCenters, binBoundaries, binWidths = BinningHeuristic( pts, manualSwitchAt50=False )
+
+            SM = Container()
+            SM.pts           = deepcopy(pts)
+            SM.matched_xss   = deepcopy(matched_xss)
+            SM.resummed_xss  = deepcopy(resummed_xss)
+            SM.newBinCenters = deepcopy(newBinCenters)
+            SM.binBoundaries = deepcopy(binBoundaries)
+            SM.binWidths     = deepcopy(binWidths)
+            del pts
+            del matched_xss
+            del resummed_xss
+            del newBinCenters
+            del binBoundaries
+            del binWidths
+
+            break
+    else:
+        print '[info] Did not find a SM file; ratios will be unavailable in the derivedTheoryFile'
+        smFound = False
+
+
+    # ======================================
+    # Process all other files
     
     for theoryFile in theoryFiles:
         theoryFilename = basename( theoryFile )
@@ -179,9 +260,9 @@ def CreateDerivedTheoryFiles_Yukawa(
             print '    ' + pat
             continue
 
-        muR    = float(match.group('muR'))
-        muF    = float(match.group('muF'))
-        Q      = float(match.group('Q'))
+        muR    = float(match.group('muR')) / 50.
+        muF    = float(match.group('muF')) / 50.
+        Q      = float(match.group('Q')) / 50.
         kappab = float(match.group('kappab'))
         kappac = float(match.group('kappac'))
 
@@ -190,31 +271,7 @@ def CreateDerivedTheoryFiles_Yukawa(
                 muR, muF, Q, kappab, kappac
                 )
 
-        # Read lines
-        with open( theoryFile, 'r' ) as theoryFp:
-            lines = [ line.strip() for line in theoryFp.readlines() ]
-        commentlines = [ line.strip() for line in lines if line.startswith('#') ]
-        lines        = [ line for line in lines if not line.startswith('#') and len(line) > 0 ]
-
-        pts          = []
-        matched_xss  = []
-        resummed_xss = []
-
-        for line in lines:
-            components = line.split()
-            pt          = float(components[0])
-            matched_xs  = float(components[1])
-            resummed_xs = float(components[2])
-
-            if verbose:
-                print '    pt = {0:<8.3f} |  matched_xs = {1:<10.6f} |  resummed_xs = {2:<10.6f}'.format(
-                    pt, matched_xs, resummed_xs
-                    )
-
-            pts.append( pt )
-            matched_xss.append( matched_xs )
-            resummed_xss.append( resummed_xs )
-            
+        pts, matched_xss, resummed_xss = ReadLinesOfYukawaTheoryFile( theoryFile, verbose )
         newBinCenters, binBoundaries, binWidths = BinningHeuristic( pts, manualSwitchAt50=False )
 
 
@@ -245,8 +302,14 @@ def CreateDerivedTheoryFiles_Yukawa(
             w( 'resummed_crosssection={0}'.format( ','.join( map(str, resummed_xss ) ) ) )
             w( 'matched_crosssection={0}'.format(  ','.join( map(str, matched_xss ) ) ) )
 
+            if smFound:
+                # print '[FIXME] Also add ratio to derived theory file'
+                ratios = [ xs / SMxs for xs, SMxs in zip( resummed_xss, SM.resummed_xss ) ]
+                w( 'ratios={0}'.format( ','.join( map(str, ratios ) ) ) )
 
 
+                print ratios
+                print
 
 
 
@@ -367,6 +430,8 @@ def ReadDerivedTheoryFile(
 
             try:
                 value = [ float(v) for v in value.split(',') ]
+                if len(value) == 1:
+                    value = value[0]
             except ValueError:
                 try:
                     value = float(value)
@@ -571,7 +636,11 @@ def GetTheoryTGraph(
         # Default setting; supplied pt points are bin centers
 
         if not len(ptPoints) == len(muPoints):
-            Commands.ThrowError( 'Length of input lists are not the same' )
+            Commands.ThrowError(
+                'Length of input lists are not set right\n'
+                '    len(ptPoints) = {0} is not equal to len(muPoints) = {1}'.format(
+                    len(ptPoints), len(muPoints) )
+                )
             return
 
         # ======================================
@@ -586,7 +655,11 @@ def GetTheoryTGraph(
         # Supplied pt points are bin boundaries
 
         if not len(ptPoints)-1 == len(muPoints):
-            Commands.ThrowError( 'Length of input lists are not set right' )
+            Commands.ThrowError(
+                'Length of input lists are not set right\n'
+                '    len(ptPoints)-1 = {0} is not equal to len(muPoints) = {1}'.format(
+                    len(ptPoints)-1, len(muPoints) )
+                )
             return
 
         # ======================================
@@ -1299,7 +1372,11 @@ def TestParametrizationsInWorkspace(
     yPerCoupling = []
     for newcouplings in testcouplings:
 
-        print '\nSetting ct = {0}, cg = {1}'.format( newcouplings['ct'], newcouplings['cg'] )
+        # print '\nSetting ct = {0}, cg = {1}'.format( newcouplings['ct'], newcouplings['cg'] )
+        print '\nSetting:'
+        for coupling in couplings:
+            couplingName = coupling.GetName()
+            print '    {0} = {1}'.format( couplingName, newcouplings[couplingName] )
 
         print '\nCouplings:'
         for coupling in couplings:
