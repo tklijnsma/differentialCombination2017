@@ -21,9 +21,14 @@ import TheoryCommands
 import CorrelationMatrices
 import MergeHGGWDatacards
 
-
 from time import strftime
 datestr = strftime( '%b%d' )
+
+import ROOT
+from TheoryCommands import c
+from TheoryCommands import SaveC
+from TheoryCommands import GetPlotBase
+from TheoryCommands import SetCMargins
 
 
 ########################################
@@ -63,22 +68,23 @@ def main( args ):
 
         if args.latest:
 
-            wsToCheck = 'workspaces_Jul24/combinedCard_Jul21_CouplingModel.root'
+            wsToCheck = 'workspaces_Jul25/combinedCard_Jul21_CouplingModel.root'
 
 
             yukawaDerivedTheoryFiles = glob( 'derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_*.txt' )
-            yukawaDerivedTheoryFiles = yukawaDerivedTheoryFiles[:4]
+            # yukawaDerivedTheoryFiles = yukawaDerivedTheoryFiles[:10]
 
             nBins = len( TheoryCommands.ReadDerivedTheoryFile( yukawaDerivedTheoryFiles[0], returnContainer=True ).binBoundaries ) - 1
 
             containers = []
-            colorCycle = itertools.cycle( range(2,5) + range(6,10) )
+            colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
             for yukawaDerivedTheoryFile in yukawaDerivedTheoryFiles:
                 color = next(colorCycle)
 
                 container = TheoryCommands.ReadDerivedTheoryFile(
                     yukawaDerivedTheoryFile,
                     returnContainer = True,
+                    verbose = True
                     )
 
                 container.name = 'kappab_{0}_kappac_{1}'.format(
@@ -90,14 +96,14 @@ def main( args ):
                     0.5*(container.binBoundaries[i] + container.binBoundaries[i+1]) for i in xrange(nBins)
                     ]
 
-                container.Tg = TheoryCommands.GetTheoryTGraph(
-                    container.name,
-                    container.binBoundaries,
-                    container.ratios,
-                    muBoundLeft   = None,
-                    muBoundRight  = None,
-                    boundaries    = True,
-                    )
+                # container.Tg = TheoryCommands.GetTheoryTGraph(
+                #     container.name,
+                #     container.binBoundaries,
+                #     container.ratios,
+                #     muBoundLeft   = None,
+                #     muBoundRight  = None,
+                #     boundaries    = True,
+                #     )
 
                 yParametrization_expBinning, yParametrization = TheoryCommands.TestParametrizationsInWorkspace(
                     wsToCheck,
@@ -120,9 +126,12 @@ def main( args ):
                     muBoundRight  = None,
                     boundaries    = True,
                     )
+                container.Tg_theory.SetLineWidth(2)
                 container.Tg_theory.SetLineColor(color)
                 container.Tg_theory.SetMarkerColor(color)
                 container.Tg_theory.SetLineStyle(2)
+                container.Tg_theory.SetMarkerStyle(8)
+                container.Tg_theory.SetMarkerSize(0.8)
 
                 container.Tg_parametrization = TheoryCommands.GetTheoryTGraph(
                     container.name,
@@ -139,10 +148,56 @@ def main( args ):
                 containers.append( container )
 
 
-                
+            # ======================================
+            # Make plot
 
+            c.cd()
+            c.Clear()
+            SetCMargins( RightMargin=0.3 )
 
+            xMinAbs = min([ container.Tg_theory.xMin for container in containers ])
+            xMaxAbs = max([ container.Tg_theory.xMax for container in containers ])
+            yMinAbs = min([ container.Tg_theory.yMin for container in containers ])
+            yMaxAbs = max([ container.Tg_theory.yMax for container in containers ])
 
+            xMin = xMinAbs - 0.1*( xMaxAbs - xMinAbs )
+            xMax = xMaxAbs + 0.1*( xMaxAbs - xMinAbs )
+            yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
+            yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
+
+            base = GetPlotBase(
+                xMin = xMin,
+                xMax = xMax,
+                yMin = yMin,
+                yMax = yMax,
+                xTitle = 'p_{T} [GeV]', yTitle = '#mu'
+                )
+            base.Draw('P')
+
+            leg = ROOT.TLegend(
+                # 1 - c.GetRightMargin() - 0.3,
+                # 1 - c.GetTopMargin() - 0.3,
+                # 1 - c.GetRightMargin() ,
+                # 1 - c.GetTopMargin() 
+                1 - 0.3,
+                c.GetBottomMargin(),
+                1 - 0.02 ,
+                1 - c.GetTopMargin() 
+
+                )
+            leg.SetBorderSize(0)
+            leg.SetFillStyle(0)
+
+            for container in containers:
+                container.Tg_theory.Draw('XP')
+                container.Tg_parametrization.Draw('XL')
+
+                leg.AddEntry( container.Tg_theory.GetName(), container.name, 'p' )
+
+            leg.Draw()
+
+            outname = '{0}_parametrizationCheck'.format( basename(wsToCheck) )
+            SaveC( outname )
 
 
 

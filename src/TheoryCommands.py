@@ -416,6 +416,7 @@ def CreateDerivedTheoryFiles(
 def ReadDerivedTheoryFile(
     derivedTheoryFile,
     returnContainer = False,
+    verbose = False,
     ):
 
     with open( derivedTheoryFile, 'r' ) as theoryFp:
@@ -424,6 +425,11 @@ def ReadDerivedTheoryFile(
 
     if returnContainer:
         container = Container()
+
+        container.file = derivedTheoryFile
+
+        if verbose:
+            print '\nCreating container for \'{0}\''.format( derivedTheoryFile )
 
         for line in lines:
             key, value = line.split('=',1)
@@ -438,7 +444,12 @@ def ReadDerivedTheoryFile(
                 except ValueError:
                     pass
 
+            if verbose:
+                print 'Attribute \'{0}\' is set to:'.format( key )
+                print value
+
             setattr( container, key, value )
+
 
         return container
 
@@ -687,8 +698,8 @@ def GetTheoryTGraph(
             array( 'd', [ 0 for i in xrange(nBins) ] ),
             array( 'd', [ 0 for i in xrange(nBins) ] ),
             )
-        muBoundLeft  = [ 0 for i in xrange(nBins) ]
-        muBoundRight = [ 0 for i in xrange(nBins) ]
+        # muBoundLeft  = [ 0 for i in xrange(nBins) ]
+        # muBoundRight = [ 0 for i in xrange(nBins) ]
 
     else:
         Tg = ROOT.TGraphAsymmErrors(
@@ -719,13 +730,19 @@ def GetTheoryTGraph(
 
     Tg.xMin = min( binBoundaries )
     Tg.xMax = max( binBoundaries )
-    Tg.yMin = min( muBoundLeft )
-    Tg.yMax = max( muBoundRight )
-
     Tg.fourth_xMin = sorted( binBoundaries )[4]
     Tg.fourth_xMax = sorted( binBoundaries, reverse=True )[4]
-    Tg.fourth_yMin = sorted( muBoundLeft )[4]
-    Tg.fourth_yMax = sorted( muBoundRight, reverse=True )[4]
+
+    if muBoundRight == None or muBoundLeft == None:
+        Tg.yMin = min( muPoints )
+        Tg.yMax = max( muPoints )
+        Tg.fourth_yMin = sorted( muPoints )[4]
+        Tg.fourth_yMax = sorted( muPoints, reverse=True )[4]
+    else:
+        Tg.yMin = min( muBoundLeft )
+        Tg.yMax = max( muBoundRight )
+        Tg.fourth_yMin = sorted( muBoundLeft )[4]
+        Tg.fourth_yMax = sorted( muBoundRight, reverse=True )[4]
 
     # Try to set a coupling
     for coupling in [ 'ct', 'cb', 'cg' ]:

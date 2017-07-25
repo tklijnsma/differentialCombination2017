@@ -246,8 +246,8 @@ class CouplingModel( PhysicsModel ):
                 '{coupling}[{default},{down},{up}]'.format(
                     coupling = coupling,
                     default  = self.SMDict['couplings'][coupling],
-                    down     = self.SMDict['couplings'][coupling] - 10.0,
-                    up       = self.SMDict['couplings'][coupling] + 10.0,
+                    down     = self.SMDict['couplings'][coupling] - 20.0,
+                    up       = self.SMDict['couplings'][coupling] + 20.0,
                     )
                 )
 
@@ -481,12 +481,14 @@ class CouplingModel( PhysicsModel ):
 
                 couplingTuple = couplingCombinations[iWeightedParameter]
 
-                if len(couplingTuple) == 2:
+                nCouplingsForThisParameter = len(couplingTuple)
+                if nCouplingsForThisParameter == 2:
                     coupling1, coupling2 = couplingTuple
                     componentName = coupling1 + coupling2
-                elif len(couplingTuple) == 1:
+                elif nCouplingsForThisParameter == 1:
+                    coupling1 = couplingTuple[0]
                     componentName = couplingTuple[0]
-                elif len(couplingTuple) == 0:
+                elif nCouplingsForThisParameter == 0:
                     componentName = 'CONSTANT'
 
 
@@ -507,18 +509,42 @@ class CouplingModel( PhysicsModel ):
                     signal     = expBinStr,
                     componentName = componentName,
                     )
-                productExpression = (
-                    'expr::{productName}('
-                    '"(@0*@1*@2)", '
-                    '{weight},{coupling1},{coupling2} )'
-                    ).format(
-                        productName = productName,
-                        weight      = weightedParameterName,
-                        coupling1   = coupling1,
-                        coupling2   = coupling2,
+
+                if nCouplingsForThisParameter == 2:
+                    productExpression = (
+                        'expr::{productName}('
+                        '"(@0*@1*@2)", '
+                        '{weight},{coupling1},{coupling2} )'
+                        ).format(
+                            productName = productName,
+                            weight      = weightedParameterName,
+                            coupling1   = coupling1,
+                            coupling2   = coupling2,
+                            )
+                    if self.verbose: print productExpression
+                    self.modelBuilder.factory_( productExpression )
+
+                elif nCouplingsForThisParameter == 1:
+                    productExpression = (
+                        'expr::{productName}('
+                        '"(@0*@1)", '
+                        '{weight},{coupling1} )'
+                        ).format(
+                            productName = productName,
+                            weight      = weightedParameterName,
+                            coupling1   = coupling1
+                            )
+                    if self.verbose: print productExpression
+                    self.modelBuilder.factory_( productExpression )
+
+                elif nCouplingsForThisParameter == 0:
+                    self.modelBuilder.doVar(
+                        '{productName}[{weight}]'.format(
+                            productName = productName,
+                            weight      = weightedParameterName,
+                            )
                         )
-                if self.verbose: print productExpression
-                self.modelBuilder.factory_( productExpression )
+
                 productNames.append( productName )
 
 
