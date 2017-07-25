@@ -53,6 +53,7 @@ def main():
 
     args = parser.parse_args()
 
+    print args
 
 
 
@@ -60,7 +61,6 @@ def main():
         Commands.TestMode()
 
 
-    print args
 
     ########################################
     # Stuff dealing with combine (datacard merging/combining, t2ws, bestfits, scans, etc.)
