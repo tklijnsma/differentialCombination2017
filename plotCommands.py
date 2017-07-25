@@ -68,10 +68,11 @@ def main( args ):
 
         if args.latest:
 
-            wsToCheck = 'workspaces_Jul25/combinedCard_Jul21_CouplingModel.root'
+            wsToCheck = 'workspaces_Jul25/combinedCard_Jul25_CouplingModel.root'
+
+            yukawaDerivedTheoryFiles = glob( 'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_*.txt' )
 
 
-            yukawaDerivedTheoryFiles = glob( 'derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_*.txt' )
             # yukawaDerivedTheoryFiles = yukawaDerivedTheoryFiles[:10]
 
             nBins = len( TheoryCommands.ReadDerivedTheoryFile( yukawaDerivedTheoryFiles[0], returnContainer=True ).binBoundaries ) - 1

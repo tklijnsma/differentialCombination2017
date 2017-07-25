@@ -54,6 +54,7 @@ def main():
     args = parser.parse_args()
 
     print args
+    print ''
 
 
 
@@ -190,7 +191,13 @@ def main():
         TheoryCommands.CreateDerivedTheoryFiles( pattern=r'ct_[mp\d]+_cg_[mp\d]+' )
 
     if args.createDerivedTheoryFiles_Yukawa:
-        TheoryCommands.CreateDerivedTheoryFiles_Yukawa()
+        TheoryCommands.CreateDerivedTheoryFiles_Yukawa(
+            theoryDir = 'suppliedInput/fromPier/histograms_ggH_May17/',
+            verbose = True,
+            mainCrossSection = 'matched',
+            )
+
+
 
 
 

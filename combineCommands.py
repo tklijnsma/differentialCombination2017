@@ -53,6 +53,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingBestfit',                 action=CustomAction )
     parser.add_argument( '--couplingImportanceHistogram',     action=CustomAction )
     parser.add_argument( '--doFastscan',                      action=CustomAction )
+    parser.add_argument( '--OutsideAcceptancetosignal',       action=CustomAction )
 
     # group = parser.add_mutually_exclusive_group(required=False)
     # group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -66,6 +67,11 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
+    #____________________________________________________________________
+    if args.OutsideAcceptancetosignal:
+        OneOfCommands.ChangeOutsideAcceptanceToSignalProcess(
+            'suppliedInput/fromDavid/PTH_May15/hzz4l_comb_13TeV_xs.txt',
+            )
 
     #____________________________________________________________________
     if args.renamehgg:
@@ -118,22 +124,11 @@ def main( args ):
             Commands.BasicCombineCards(
                 'suppliedInput/combinedCard_{0}.txt'.format(datestr),
                 'suppliedInput/fromVittorio/pT_unsplit_Mar21/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamedProcesses_Jul21.txt',
-                'suppliedInput/PTH/hzz4l_comb_13TeV_xs_processesShifted.txt'
+                'suppliedInput/fromDavid/PTH_May15/hzz4l_comb_13TeV_xs_processesShifted.txt'
                 )
 
         else:
-
-            Commands.BasicCombineCards(
-                'suppliedInput/combinedCard_{0}.txt'.format(datestr),
-                'suppliedInput/pT_v5_renamed/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.txt',
-                'suppliedInput/PTH/hzz4l_comb_13TeV_xs.txt'
-                )
-
-            Commands.BasicCombineCards(
-                'suppliedInput/combinedCard_{0}.txt'.format(datestr),
-                'suppliedInput/pT_v5_renamed/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.txt',
-                'suppliedInput/PTH/hzz4l_comb_13TeV_xs_processesShifted.txt'
-                )
+            print 'Nothing for args.combineCards'
 
 
     #____________________________________________________________________
@@ -400,47 +395,50 @@ def main( args ):
 
         if args.latest:
 
+            fullpath = lambda path: abspath('derivedTheoryFiles_Jul25/{0}'.format( path ) )
+
             Commands.BasicT2WSwithModel(
                 # 'suppliedInput/combinedCard_May15.txt',
-                'suppliedInput/combinedCard_Jul21.txt',
+                # 'suppliedInput/combinedCard_Jul21.txt',
+                'suppliedInput/combinedCard_Jul25.txt',
                 'CouplingModel.py',
                 extraOptions = [
-                    '--PO verbose=1',
+                    '--PO verbose=2',
                     '--PO \'higgsMassRange=123,127\'',
                     '--PO linearTerms=True',
                     # SM
-                    '--PO SM=[kappab=1,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_1_kappac_1.txt') ),
+                    '--PO SM=[kappab=1,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_1.txt') ),
                     # For parametrization
-                    '--PO theory=[kappab=-2,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m2_kappac_5.txt') ),
-                    '--PO theory=[kappab=1,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_1_kappac_0.txt') ),
-                    '--PO theory=[kappab=2,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_2_kappac_m10.txt') ),
-                    '--PO theory=[kappab=-1,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m1_kappac_m5.txt') ),
-                    '--PO theory=[kappab=2,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_2_kappac_10.txt') ),
+                    '--PO theory=[kappab=-2,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_5.txt') ),
+                    '--PO theory=[kappab=1,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_0.txt') ),
+                    '--PO theory=[kappab=2,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_m10.txt') ),
+                    '--PO theory=[kappab=-1,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_m5.txt') ),
+                    '--PO theory=[kappab=2,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_10.txt') ),
                     # Rest
-                    '--PO theory=[kappab=0,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_0_kappac_0.txt') ),
-                    '--PO theory=[kappab=0,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_0_kappac_1.txt') ),
-                    '--PO theory=[kappab=0,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_0_kappac_10.txt') ),
-                    '--PO theory=[kappab=0,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_0_kappac_5.txt') ),
-                    '--PO theory=[kappab=0,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_0_kappac_m10.txt') ),
-                    '--PO theory=[kappab=0,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_0_kappac_m5.txt') ),
-                    '--PO theory=[kappab=1,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_1_kappac_10.txt') ),
-                    '--PO theory=[kappab=1,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_1_kappac_5.txt') ),
-                    '--PO theory=[kappab=1,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_1_kappac_m10.txt') ),
-                    '--PO theory=[kappab=1,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_1_kappac_m5.txt') ),
-                    '--PO theory=[kappab=2,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_2_kappac_0.txt') ),
-                    '--PO theory=[kappab=2,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_2_kappac_1.txt') ),
-                    '--PO theory=[kappab=2,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_2_kappac_5.txt') ),
-                    '--PO theory=[kappab=2,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_2_kappac_m5.txt') ),
-                    '--PO theory=[kappab=-1,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m1_kappac_0.txt') ),
-                    '--PO theory=[kappab=-1,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m1_kappac_1.txt') ),
-                    '--PO theory=[kappab=-1,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m1_kappac_10.txt') ),
-                    '--PO theory=[kappab=-1,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m1_kappac_5.txt') ),
-                    '--PO theory=[kappab=-1,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m1_kappac_m10.txt') ),
-                    '--PO theory=[kappab=-2,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m2_kappac_0.txt') ),
-                    '--PO theory=[kappab=-2,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m2_kappac_1.txt') ),
-                    '--PO theory=[kappab=-2,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m2_kappac_10.txt') ),
-                    '--PO theory=[kappab=-2,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m2_kappac_m10.txt') ),
-                    '--PO theory=[kappab=-2,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul24/muR_1_muF_1_Q_1_kappab_m2_kappac_m5.txt') ),
+                    '--PO theory=[kappab=0,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_0.txt') ),
+                    '--PO theory=[kappab=0,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_1.txt') ),
+                    '--PO theory=[kappab=0,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_10.txt') ),
+                    '--PO theory=[kappab=0,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_5.txt') ),
+                    '--PO theory=[kappab=0,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_m10.txt') ),
+                    '--PO theory=[kappab=0,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_m5.txt') ),
+                    '--PO theory=[kappab=1,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_10.txt') ),
+                    '--PO theory=[kappab=1,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_5.txt') ),
+                    '--PO theory=[kappab=1,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_m10.txt') ),
+                    '--PO theory=[kappab=1,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_m5.txt') ),
+                    '--PO theory=[kappab=2,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_0.txt') ),
+                    '--PO theory=[kappab=2,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_1.txt') ),
+                    '--PO theory=[kappab=2,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_5.txt') ),
+                    '--PO theory=[kappab=2,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_m5.txt') ),
+                    '--PO theory=[kappab=-1,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_0.txt') ),
+                    '--PO theory=[kappab=-1,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_1.txt') ),
+                    '--PO theory=[kappab=-1,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_10.txt') ),
+                    '--PO theory=[kappab=-1,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_5.txt') ),
+                    '--PO theory=[kappab=-1,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_m10.txt') ),
+                    '--PO theory=[kappab=-2,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_0.txt') ),
+                    '--PO theory=[kappab=-2,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_1.txt') ),
+                    '--PO theory=[kappab=-2,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_10.txt') ),
+                    '--PO theory=[kappab=-2,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_m10.txt') ),
+                    '--PO theory=[kappab=-2,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_m5.txt') ),
 
                     # ======================================
                     # These do not contain the ratios
@@ -542,7 +540,8 @@ def main( args ):
 
         # datacard = 'workspaces_May30/combinedCard_May15.root'
         # datacard = 'workspaces_Jun22/combinedCard_May15_theoryUncertainties.root'
-        datacard = 'workspaces_Jul24/combinedCard_Jul21.root'
+        # datacard = 'workspaces_Jul24/combinedCard_Jul21.root'
+        datacard = 'workspaces_Jul25/combinedCard_Jul25_CouplingModel.root'
 
         if TESTFIT:
             Commands.BasicBestfit(

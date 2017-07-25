@@ -180,13 +180,15 @@ def ReadLinesOfYukawaTheoryFile( theoryFile, verbose=False ):
 
 
 def CreateDerivedTheoryFiles_Yukawa(
+        theoryDir = 'suppliedInput/fromPier/histograms_ggH_May17/',
+        mainCrossSection = 'resummed',
         verbose = True,
         ):
 
     outdir = 'derivedTheoryFiles_{0}'.format( datestr )
     if not isdir( outdir ): os.makedirs( outdir )
 
-    theoryDir = abspath( 'suppliedInput/theory_Yukawa' )
+    theoryDir = abspath( theoryDir )
     theoryFiles = glob.glob( join( theoryDir, '*.res' ) )
 
 
@@ -297,14 +299,21 @@ def CreateDerivedTheoryFiles_Yukawa(
             w( 'kappac={0}'.format( kappac ) )
 
             w( 'binBoundaries={0}'.format(         ','.join( map(str, binBoundaries ) ) ) )
-            w( 'crosssection={0}'.format(          ','.join( map(str, resummed_xss ) ) ) )
+            
+            if mainCrossSection == 'resummed':
+                w( 'crosssection={0}'.format(          ','.join( map(str, resummed_xss ) ) ) )
+            elif mainCrossSection == 'matched':
+                w( 'crosssection={0}'.format(          ','.join( map(str, matched_xss ) ) ) )
 
             w( 'resummed_crosssection={0}'.format( ','.join( map(str, resummed_xss ) ) ) )
             w( 'matched_crosssection={0}'.format(  ','.join( map(str, matched_xss ) ) ) )
 
             if smFound:
-                # print '[FIXME] Also add ratio to derived theory file'
-                ratios = [ xs / SMxs for xs, SMxs in zip( resummed_xss, SM.resummed_xss ) ]
+                if mainCrossSection == 'resummed':
+                    ratios = [ xs / SMxs for xs, SMxs in zip( resummed_xss, SM.resummed_xss ) ]
+                elif mainCrossSection == 'matched':
+                    ratios = [ xs / SMxs for xs, SMxs in zip( matched_xss, SM.matched_xss ) ]
+                
                 w( 'ratios={0}'.format( ','.join( map(str, ratios ) ) ) )
 
 

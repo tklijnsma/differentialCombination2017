@@ -217,24 +217,24 @@ class CouplingModel( PhysicsModel ):
 
 
         # Number of theories necessary to perform a parametrization
-        nParameters = sum(range(nCouplings+1))
+        nComponents = sum(range(nCouplings+1))
         if self.includeLinearTerms:
-            nParameters += len(couplings) + 1
+            nComponents += len(couplings) + 1
 
-        if not len(couplingCombinations) == nParameters:
+        if not len(couplingCombinations) == nComponents:
             print 'ERROR: amount of coupling combinations should be equal to number of expected parameters'
             sys.exit()
 
-        if len(self.theories) > nParameters:
-            print '[FIXME!] Need to choose {0} theories with DIFFERENT COUPLINGS, otherwise matrix is singular!'.format( nParameters )
+        if len(self.theories) > nComponents:
+            print '[FIXME!] Need to choose {0} theories with DIFFERENT COUPLINGS, otherwise matrix is singular!'.format( nComponents )
             print '\n{0} theories supplied but only {1} needed for parametrization; taking only the first {1} theories:'.format(
-                len(self.theories), nParameters )
-            self.theories = self.theories[:nParameters]
+                len(self.theories), nComponents )
+            self.theories = self.theories[:nComponents]
             for theory in self.theories:
                 print '    ' + ', '.join([ '{0:10} = {1:10}'.format( cName, cValue ) for cName, cValue in theory['couplings'].iteritems() ])
-        elif len(self.theories) < nParameters:
+        elif len(self.theories) < nComponents:
             print 'ERROR: cannot parametrize because number of supplied theories is too small (need {0} theories, found {1})'.format(
-                nParameters, len(self.theories) )
+                nComponents, len(self.theories) )
             sys.exit()
 
 
@@ -282,16 +282,16 @@ class CouplingModel( PhysicsModel ):
         parametrizations = []
 
         # Underflow (left extrapolation)
-        parametrizations.append( [ 0. for i in xrange(nParameters) ] )
+        parametrizations.append( [ 0. for i in xrange(nComponents) ] )
 
         # Add parametrization for each bin
         for iTheoryBin in xrange(nTheoryBins):
-            crosssections = numpy.array([ [theory['ratios'][iTheoryBin]] for theory in self.theories ])
-            parametrization = list(itertools.chain.from_iterable( couplingMatInv.dot( crosssections ) ))
+            ratios = numpy.array([ [theory['ratios'][iTheoryBin]] for theory in self.theories ])
+            parametrization = list(itertools.chain.from_iterable( couplingMatInv.dot( ratios ) ))
             parametrizations.append( parametrization )
 
         # Overflow (right extrapolation)
-        # parametrizations.append( [ 0. for i in xrange(nParameters) ] )
+        # parametrizations.append( [ 0. for i in xrange(nComponents) ] )
         parametrizations.append( parametrizations[-1][:] )
 
         if self.verbose:
@@ -300,14 +300,8 @@ class CouplingModel( PhysicsModel ):
                 print '{0:4}: {1}'.format( i, parametrization )
             print
 
-
-        # Assign coupling index for RooFormulas
-        iCoupling = 0
-        argCoupling = {}
-        for coupling in couplings:
-            argCoupling[coupling] = '@{0}'.format(iCoupling)
-            iCoupling += 1
-        # argString = ','.join([ argCoupling[coupling] for coupling in couplings ])
+        # Create a "@number" string per coupling
+        argCoupling = { coupling : '@{0}'.format(iCoupling) for iCoupling, coupling in enumerate(couplings) }
 
         parametrizationNames = []
         for iParametrization, parametrization in enumerate( parametrizations ):
@@ -340,7 +334,7 @@ class CouplingModel( PhysicsModel ):
                 ).format(
                     name      = parametrizationName,
                     string    = parametrizationString,
-                    arguments = ','.join([ coupling for coupling in couplings ]),
+                    arguments = ','.join(couplings),
                     )
 
             if self.verbose > 1:
@@ -417,45 +411,7 @@ class CouplingModel( PhysicsModel ):
                 print '  ', parametrizationIndices
 
 
-            # Build the analytic function that described the XS in the experimental bin
-            #   as a function of the supplied couplings
-
-            # sumweights = sum(theoryBinWidthsInsideExperimentalBin)
-            # weights = [ w/sumweights for w in theoryBinWidthsInsideExperimentalBin ]
-            weights = theoryBinWidthsInsideExperimentalBin[:]
-            # sumweights = sum(weights)
-            # weights = [ w / sumweights for w in weights ]
-
-            if self.verbose:
-                print '   Which will carry the following weights:'
-                print '   [ ' + ', '.join([ '{0:.4f}'.format(w) for w in weights ]) + ']'
-
-            if len(weights) == 0:
-                print '  Did not find any theoretical bin boundaries inside this experimental bin'
-                print '   (i.e. can not do a parametrization here)'
-                print '   Yield parameter will be 1.0'
-                self.modelBuilder.doVar( 'r_{0}[1.0]'.format( expBinStr ))
-                continue
-
-            weightedParameters = []
-            for iParameter in xrange(nParameters):
-                weightedParameter = 0.
-                for iParametrization, weight in zip( parametrizationIndices, weights ):
-                    weightedParameter += weight * parametrizations[iParametrization][iParameter] * self.SMXS[iParametrization]
-
-                    if self.verbose > 1:
-                        print '\n    Adding contribution from parametrization {0} to component {1}'.format( iParametrization, iParameter )
-                        print '      weight                                         = ', weight
-                        print '      parametrizations[iParametrization][iParameter] = ', parametrizations[iParametrization][iParameter]
-                        print '      self.SMXS[iParametrization]                    = ', self.SMXS[iParametrization]
-                        print '      contribution                                   = ', weight * parametrizations[iParametrization][iParameter] * self.SMXS[iParametrization]
-
-                weightedParameters.append( weightedParameter )
-
-            # Divide by SM cross section so we get a ratio back
-            # SMXSInsideExperimentalBin = sum([
-            #     self.SMXS[iParametrization] for iParametrization in parametrizationIndices
-            #     ])
+            # Calculate total cross section (*not* /GeV) in experimental bin
             SMXSInsideExperimentalBin = 0.
             for iParametrization, binWidth in zip( parametrizationIndices, theoryBinWidthsInsideExperimentalBin ):
                 SMXSInsideExperimentalBin += self.SMXS[iParametrization] * binWidth
@@ -466,97 +422,186 @@ class CouplingModel( PhysicsModel ):
                     print '      binWidth                    = ', binWidth
                     print '      contribution                = ', self.SMXS[iParametrization] * binWidth
 
+            if self.verbose:
+                print '\nTotal cross section in {0} is {1}'.format( SMXSInsideExperimentalBin, expBinStr )
 
-            weightedParameters = [ p / SMXSInsideExperimentalBin for p in weightedParameters ]
+
+            # if self.verbose:
+            #     print '   Which will carry the following weights:'
+            #     print '   [ ' + ', '.join([ '{0:.4f}'.format(w) for w in theoryBinWidthsInsideExperimentalBin ]) + ']'
+
+            if len(theoryBinWidthsInsideExperimentalBin) == 0:
+                print '  Did not find any theoretical bin boundaries inside this experimental bin'
+                print '   (i.e. can not do a parametrization here)'
+                print '   Yield parameter will be 1.0'
+                self.modelBuilder.doVar( 'r_{0}[1.0]'.format( expBinStr ))
+                continue
+
+
+            componentWeights = []
+            for iComponent in xrange(nComponents):
+                parametrizationWeights = []
+                for iParametrization, binWidth in zip( parametrizationIndices, theoryBinWidthsInsideExperimentalBin ):
+                    weight = (
+                        ( binWidth * self.SMXS[iParametrization] )
+                        /
+                        SMXSInsideExperimentalBin
+                        )
+                    parametrizationWeights.append(weight)
+
+                    if self.verbose > 1:
+                        print '\n  Weight for component {0}, parametrization {1}'.format( iComponent, iParametrization )
+                        print '    binWidth (theoryBin)    = ', binWidth
+                        print '    SMXS/GeV (theoryBin)    = ', self.SMXS[iParametrization]
+                        print '    SMXS (expBin, not /GeV) = ', SMXSInsideExperimentalBin
+                        print '    ( binWidth * SMXS/GeV ) / SMXS_expBin = ', weight
+
+                componentWeights.append( parametrizationWeights )
+
+
+            # ======================================
+            # Calculate the weighted average of components
 
             if self.verbose:
-                print '   Weighted parameters:'
-                print '  ', weightedParameters
+                print '\nCalculating weighted average components'
+
+            averageComponents = []
+            for iComponent in xrange(nComponents):
+
+                if self.verbose > 1:
+                    print '\n  Component {0}:'.format(iComponent)
+
+                averageComponent = 0.
+                parametrizationWeights = componentWeights[iComponent]
+                for iParametrization, weight in zip( parametrizationIndices, parametrizationWeights ):
+                    averageComponent += weight * parametrizations[iParametrization][iComponent]
+
+                    if self.verbose > 1:
+                        print '    Parametrization {0}'.format(iParametrization)
+                        print '      weight          = ', weight
+                        print '      parameter value = ', parametrizations[iParametrization][iComponent]
+                        print '      product         = ', weight * parametrizations[iParametrization][iComponent]
+
+                if self.verbose > 1:
+                    print '  average Compontent {0} = {1}'.format( iComponent, averageComponent )
+
+                averageComponents.append( averageComponent )
 
 
+            # ======================================
             # Importing into WS is somewhat delicate
-            weightedParameterNames = []
+
+            argumentIndices = { coupling : '@{0}'.format(iCoupling) for iCoupling, coupling in enumerate(couplings) }
+
+            averageComponentNames = []
             productNames = []
-            for iWeightedParameter, weightedParameter in enumerate(weightedParameters):
+            yieldParameterFormula = []
+            for iAverageComponent, averageComponent in enumerate(averageComponents):
 
-                couplingTuple = couplingCombinations[iWeightedParameter]
+                couplingList = couplingCombinations[iAverageComponent]
+                nCouplingsForThisParameter = len(couplingList)
 
-                nCouplingsForThisParameter = len(couplingTuple)
-                if nCouplingsForThisParameter == 2:
-                    coupling1, coupling2 = couplingTuple
-                    componentName = coupling1 + coupling2
-                elif nCouplingsForThisParameter == 1:
-                    coupling1 = couplingTuple[0]
-                    componentName = couplingTuple[0]
-                elif nCouplingsForThisParameter == 0:
-                    componentName = 'CONSTANT'
-
-
-                weightedParameterName = 'weight_{signal}_component_{componentName}'.format(
+                averageComponentName = 'averageComponent_{signal}_{whichCouplings}'.format(
                     signal = expBinStr,
-                    componentName = componentName,
+                    whichCouplings = ''.join(couplingList) if nCouplingsForThisParameter > 0 else 'CONSTANT',
                     )
 
                 self.modelBuilder.doVar(
                     '{0}[{1}]'.format(
-                        weightedParameterName,
-                        weightedParameter,
+                        averageComponentName,
+                        averageComponent,
                         )
                     )
-                weightedParameterNames.append( weightedParameterName )
+                averageComponentNames.append( averageComponentName )
 
-                productName = 'r_{signal}_component_{componentName}'.format(
-                    signal     = expBinStr,
-                    componentName = componentName,
-                    )
 
-                if nCouplingsForThisParameter == 2:
-                    productExpression = (
-                        'expr::{productName}('
-                        '"(@0*@1*@2)", '
-                        '{weight},{coupling1},{coupling2} )'
-                        ).format(
-                            productName = productName,
-                            weight      = weightedParameterName,
-                            coupling1   = coupling1,
-                            coupling2   = coupling2,
-                            )
-                    if self.verbose: print productExpression
-                    self.modelBuilder.factory_( productExpression )
+                # First add a "@number" entry in the argumentIndices dict, then use that in the formula
+                argumentIndices[averageComponentName] = '@{0}'.format( len(argumentIndices) )
 
-                elif nCouplingsForThisParameter == 1:
-                    productExpression = (
-                        'expr::{productName}('
-                        '"(@0*@1)", '
-                        '{weight},{coupling1} )'
-                        ).format(
-                            productName = productName,
-                            weight      = weightedParameterName,
-                            coupling1   = coupling1
-                            )
-                    if self.verbose: print productExpression
-                    self.modelBuilder.factory_( productExpression )
-
-                elif nCouplingsForThisParameter == 0:
-                    self.modelBuilder.doVar(
-                        '{productName}[{weight}]'.format(
-                            productName = productName,
-                            weight      = weightedParameterName,
-                            )
-                        )
-
-                productNames.append( productName )
+                yieldParameterFormulaComponent = argumentIndices[averageComponentName]
+                for coupling in couplingList:
+                    yieldParameterFormulaComponent += '*{0}'.format( argumentIndices[coupling] )
+                yieldParameterFormula.append( yieldParameterFormulaComponent )
 
 
             # Compile expression string for final yieldParameter
             yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
                 signal                   = expBinStr,
-                formulaString            = '+'.join([ '@' + str(iComponent) for iComponent in xrange(nParameters) ]),
-                commaSeparatedParameters = ','.join( productNames )
+                formulaString            = '+'.join(yieldParameterFormula),
+                commaSeparatedParameters = ','.join( couplings + averageComponentNames )
                 )
-            if self.verbose: print yieldParameterExpression
+            if self.verbose:
+                print 'Final yield parameter expression: {0}'.format(yieldParameterExpression)
+                print '  Overview:'
+                for key, value in argumentIndices.iteritems():
+                    print '    {0:4} = {1}'.format( value, key )
             self.modelBuilder.factory_( yieldParameterExpression )
 
+
+
+
+            #     productName = 'r_{signal}_component_{componentName}'.format(
+            #         signal     = expBinStr,
+            #         componentName = componentName,
+            #         )
+
+            #     if nCouplingsForThisParameter == 2:
+            #         productExpression = (
+            #             'expr::{productName}('
+            #             '"(@0*@1*@2)", '
+            #             '{weight},{coupling1},{coupling2} )'
+            #             ).format(
+            #                 productName = productName,
+            #                 weight      = averageComponentName,
+            #                 coupling1   = coupling1,
+            #                 coupling2   = coupling2,
+            #                 )
+            #         if self.verbose:
+            #             print 'Expression for component {0}: {1}'.format( iAverageComponent, productExpression )
+            #         self.modelBuilder.factory_( productExpression )
+
+            #     elif nCouplingsForThisParameter == 1:
+            #         productExpression = (
+            #             'expr::{productName}('
+            #             '"(@0*@1)", '
+            #             '{weight},{coupling1} )'
+            #             ).format(
+            #                 productName = productName,
+            #                 weight      = averageComponentName,
+            #                 coupling1   = coupling1
+            #                 )
+            #         if self.verbose:
+            #             print 'Expression for component {0}: {1}'.format( iAverageComponent, productExpression )
+            #         self.modelBuilder.factory_( productExpression )
+
+            #     elif nCouplingsForThisParameter == 0:
+            #         self.modelBuilder.doVar(
+            #             '{productName}[{weight}]'.format(
+            #                 productName = productName,
+            #                 weight      = averageComponentName,
+            #                 )
+            #             )
+
+            #     productNames.append( productName )
+
+
+            # # Compile expression string for final yieldParameter
+            # yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+            #     signal                   = expBinStr,
+            #     formulaString            = '+'.join([ '@' + str(iComponent) for iComponent in xrange(nComponents) ]),
+            #     commaSeparatedParameters = ','.join( productNames )
+            #     )
+            # if self.verbose:
+            #     print 'Final yield parameter expression: {0}'.format(yieldParameterExpression)
+            # self.modelBuilder.factory_( yieldParameterExpression )
+
+
+            if self.verbose:
+                print '\nTest evaluation of yieldParameter:'
+                for coupling in couplings:
+                    self.modelBuilder.out.var(coupling).Print()
+                self.modelBuilder.out.function( 'r_{0}'.format(expBinStr) ).Print()
+                print ''
 
 
             # ======================================
@@ -565,8 +610,8 @@ class CouplingModel( PhysicsModel ):
             # # Build yieldParameter expression
             # yieldParameterComponents = ROOT.RooArgList()
             # iComponent = 0
-            # for weightedParameter, couplingCombination in zip( weightedParameters, couplingCombinations ):
-            #     w =  ROOT.RooFit.RooConst( weightedParameter )
+            # for averageComponent, couplingCombination in zip( averageComponents, couplingCombinations ):
+            #     w =  ROOT.RooFit.RooConst( averageComponent )
             #     ROOT.SetOwnership( w, False )
             #     c1 = self.modelBuilder.out.var( couplingCombination[0] )
             #     c2 = self.modelBuilder.out.var( couplingCombination[1] )
