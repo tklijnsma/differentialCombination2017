@@ -120,6 +120,9 @@ def main():
 
 
 
+def mean( l ):
+    return sum(l) / len(l)
+
 def GetCorrelationMatrix(
         variations,
         makeScatterPlots = False,
@@ -127,7 +130,17 @@ def GetCorrelationMatrix(
         outname = 'corrMat',
         verbose = False,
         halfNumberOfPlots = False,
+        withRespectToCentralScale = False,
         ):
+
+    if isinstance( variations[0], TheoryCommands.Container ):
+        # Probably a returned object by TheoryCommands.ReadDerivedTheoryFile;
+        # make sure all the proper attributes are filled
+        for variation in variations:
+            variation.binValues  = variation.crosssection
+            variation.binCenters = [
+                0.5*(variation.binBoundaries[i]+variation.binBoundaries[i+1]) for i in xrange(len(variation.binValues))
+                ]
 
     if not makeScatterPlots:
         halfNumberOfPlots = True
@@ -141,12 +154,23 @@ def GetCorrelationMatrix(
         base = GetPlotBase()
 
     corrMatrix = [ [ 999 for jPoint in xrange(nPoints) ] for iPoint in xrange(nPoints) ]
+    errors     = []
 
     jStartPoint = 0
     for iPoint in xrange(nPoints):
         if verbose: print 'Processing point {0}/{1}'.format( iPoint, nPoints-1 )
         iBinValues = [ variation.binValues[iPoint] for variation in variations ]
         iPt = variations[0].binCenters[iPoint]
+
+        maxVarUp   = max( iBinValues )
+        maxVarDown = min( iBinValues )
+        if withRespectToCentralScale:
+            print 'Not yet implemented'
+        else:
+            errors.append((
+                abs( maxVarUp - mean(iBinValues) ),
+                abs( maxVarDown - mean(iBinValues) ),
+                ))
 
         # Essentially doing this loop from 0 to nPoints is double work, but for the plots
         # it's nicer to do it anyway
@@ -231,12 +255,20 @@ def GetCorrelationMatrix(
 
 
     if not isdir(CPlotDir): os.makedirs( CPlotDir )
+
     with open( join( CPlotDir, '{0}.txt'.format(outname) ), 'w' ) as corrMatFp:
         for iPoint in xrange(nPoints):
             corrMatFp.write(
-                ' '.join([ '{0:+.2f}'.format(corrMatrix[iPoint][jPoint]) for jPoint in xrange(nPoints) ])
+                ' '.join([ '{0:+.4f}'.format(corrMatrix[iPoint][jPoint]) for jPoint in xrange(nPoints) ])
                 + '\n'
                 )
+
+    with open( join( CPlotDir, 'errors_for_{0}.txt'.format(outname) ), 'w' ) as errorsFp:
+        for up, down in errors:
+            errorsFp.write(
+                '{0:+.8f} {1:+.8f}\n'.format( up, down )
+                )
+
 
     if makeCorrelationMatrixPlot:
 

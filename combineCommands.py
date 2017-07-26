@@ -406,6 +406,9 @@ def main( args ):
                     '--PO verbose=2',
                     '--PO \'higgsMassRange=123,127\'',
                     '--PO linearTerms=True',
+                    # Theory uncertainties
+                    '--PO correlationMatrix=plots_CorrelationMatrices_Jul25/corrMat_exp.txt',
+                    '--PO theoryUncertainties=plots_CorrelationMatrices_Jul25/errors_for_corrMat_exp.txt'
                     # SM
                     '--PO SM=[kappab=1,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_1.txt') ),
                     # For parametrization

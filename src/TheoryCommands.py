@@ -149,6 +149,31 @@ physicsFileDict = {
     }
 
 
+def RebinDerivedTheoryContainer( container, newBinBoundaries ):
+
+    newNBins = len(newBinBoundaries) - 1
+
+    newCrosssection = MapFineToCoarse(
+        theoryBinBoundaries = container.binBoundaries,
+        theoryBinValues     = container.crosssection,
+        expBinBoundaries    = newBinBoundaries,
+        lastBinIsOverflow   = True,
+        )
+
+    newRatios = MapFineToCoarse(
+        theoryBinBoundaries = container.binBoundaries,
+        theoryBinValues     = container.ratios,
+        expBinBoundaries    = newBinBoundaries,
+        lastBinIsOverflow   = True,
+        )
+
+    # newBinCenters = [ 0.5*(newBinBoundaries[i]+newBinBoundaries[i+1]) for i in xrange(newNBins) ]
+
+    container.binBoundaries = newBinBoundaries
+    container.crosssection  = newCrosssection
+    container.ratios        = newRatios
+
+
 
 def ReadLinesOfYukawaTheoryFile( theoryFile, verbose=False ):
     # Read lines
@@ -319,8 +344,6 @@ def CreateDerivedTheoryFiles_Yukawa(
 
                 print ratios
                 print
-
-
 
 
 

@@ -3,6 +3,8 @@ from HiggsAnalysis.CombinedLimit.PhysicsModel import *
 
 import os, sys, numpy, itertools, re
 import ROOT
+from math import sqrt
+
 
 class CouplingModel( PhysicsModel ):
     ''' Model used to unfold differential distributions '''
@@ -20,6 +22,11 @@ class CouplingModel( PhysicsModel ):
         self.SMXS = []
 
         self.includeLinearTerms = False
+
+        self.theoryUncertaintiesPassed = False
+        self.correlationMatrixPassed   = False
+        self.covarianceMatrixPassed    = False
+
 
 
     def chapter( self, text, indent=0 ):
@@ -60,6 +67,87 @@ class CouplingModel( PhysicsModel ):
 
         return binBoundaries, ratios, crosssection
 
+
+    def readCorrelationMatrixFile( self, correlationMatrixFile ):
+        with open( correlationMatrixFile, 'r' ) as correlationMatrixFp:
+            lines = [ l.strip() for l in correlationMatrixFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
+
+        corrMat = [ line.split() for line in lines ]
+
+        # Check if it is square
+        if not all([ len(row) == len(corrMat) for row in corrMat ]):
+            print '[ERROR] inputted matrix is not square - Found:'
+            print corrMat
+
+        return corrMat
+
+
+    def readErrorFile( self, errorFile ):
+        with open( errorFile, 'r' ) as errorFp:
+            lines = [ l.strip() for l in errorFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
+
+        symmErrors = []
+        for line in lines:
+            line = line.split()
+
+            if len(line) == 1:
+                symmErrors.append( abs(line[0]) )
+            elif len(line) == 2:
+                symmErrors.append( 0.5*( abs(line[0]) + abs(line[1]) ) )
+            else:
+                print '[ERROR] Found {0} elements on line in \'{1}\''.format( len(line), errorFile )
+                return
+            
+        return symmErrors
+
+    # Literal example from Pasquale:
+
+    # def Decorrelate( correlationMatrix, errors ):
+
+    #     ndim = 2
+    #     covariance = ROOT.TMatrixDSym(ndim)
+    #     errors = [ 0.7, 1 ]
+    #     correlations = [ [1, 0.5], [0.5, 1] ]
+    #     transform = [ [1, 0], [0, 1] ]
+
+    #     for ix in xrange(ndim):
+    #         for iy in xrange(ndim):
+    #             covariance[ix][iy] = correlations[ix][iy]*errors[ix]*errors[iy]
+    #     covariance.Print()
+
+    #     eigen = ROOT.TMatrixDSymEigen(covariance)
+    #     vectors = eigen.GetEigenVectors()
+    #     values  = eigen.GetEigenValues()
+
+    #     vectors.Print()
+    #     values.Print()
+
+
+    #     for ix in xrange(ndim):
+    #         for iy in xrange(ndim):
+    #             transform[ix][iy] = vectors(ix,iy) * sqrt(values(iy))
+
+    #     print transform
+
+    def Decorrelate( self, covarianceMatrix ):
+
+        N = len(covarianceMatrix)
+
+        covarianceTMatrix = ROOT.TMatrixDSym(N)
+        for i in xrange(n):
+            for j in xrange(n):
+                covarianceTMatrix[i][j] = covarianceMatrix[i][j]
+
+        eigenObject  = ROOT.TMatrixDSymEigen(covarianceTMatrix)
+        eigenVectors = eigenObject.GetEigenVectors()
+        eigenValues  = eigenObject.GetEigenValues()
+
+        decorrelatedMatrix = []
+        for i in xrange(n):
+            for j in xrange(n):
+                decorrelatedMatrix[i][j] = eigenVectors(i,j) * sqrt( eigenValues(j) )
+
+        return decorrelatedMatrix
 
 
     def setPhysicsOptions( self, physOptions ):
@@ -127,6 +215,22 @@ class CouplingModel( PhysicsModel ):
             elif optionName == 'linearTerms':
                 self.includeLinearTerms = True
 
+
+            # ======================================
+            # Options to pass the theory uncertainties
+
+            elif optionName == 'theoryUncertainties':
+                self.theoryUncertainties = self.readErrorFile( optionValue )
+                self.theoryUncertaintiesPassed = True
+
+            elif optionName == 'correlationMatrix':
+                self.correlationMatrix = self.readCorrelationMatrixFile( optionValue )
+                self.correlationMatrixPassed = True
+
+            elif optionName == 'covarianceMatrix':
+                self.covarianceMatrix = self.readCorrelationMatrixFile( optionValue )
+                self.covarianceMatrixPassed = True
+
             else:
                 print 'Unknown option \'{0}\'; skipping'.format(optionName)
                 continue
@@ -138,7 +242,7 @@ class CouplingModel( PhysicsModel ):
 
         bins    = self.DC.bins
         signals = self.DC.signals
-        signals = [ s for s in signals if not s == 'OutsideAcceptance' ]
+        signals = [ s for s in signals if not 'OutsideAcceptance' in s ]
         signals.sort( key = lambda n: float(
             n.split('_')[2].replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','') ) )
 
@@ -182,25 +286,16 @@ class CouplingModel( PhysicsModel ):
         print '   ' + '\n   '.join( signals )
 
 
-        # ======================================
+        ########################################
         # Handling theory
-
-        # Sort according to ct value
-        try:
-            self.theories.sort( key=lambda t: t['ct'] )
-        except:
-            pass
+        ########################################
 
         # Make sure list lengths do not differ between theories
         #   (Could also check whether binBoundaries matches exactly)
-        def checkListLengths( key ):
-            elements = list(set([ len(theory[key]) for theory in self.theories ]))
-            if len(elements) > 1:
-                print 'WARNING: Found different list lengths for key \'{0}\''.format(key)
-        checkListLengths( 'couplings' )
-        checkListLengths( 'binBoundaries' )
-        checkListLengths( 'crosssection' )
-
+        for key in [ 'couplings', 'binBoundaries', 'crosssection' ]:
+            lengthsOfLists = list(set([ len(theory[key]) for theory in self.theories ]))
+            if len(lengthsOfLists) > 1:
+                print 'WARNING: Found different list lengths for theory attribute \'{0}\': {1}'.format( key, lengthsOfLists )
 
         nCouplings                = len(self.theories[0]['couplings'])
         couplings                 = self.theories[0]['couplings'].keys()
@@ -212,6 +307,7 @@ class CouplingModel( PhysicsModel ):
         couplingCombinations.extend( [ [ coupling, coupling ] for coupling in couplings ] )
         couplingCombinations.extend( [ list(couplingTuple) for couplingTuple in itertools.combinations( couplings, 2 ) ] )
         if self.includeLinearTerms:
+            # Include also singular coupling terms and a constant
             couplingCombinations.extend( [ [coupling] for coupling in couplings ] )
             couplingCombinations.append( [] )
 
@@ -239,8 +335,79 @@ class CouplingModel( PhysicsModel ):
 
 
         # ======================================
-        # Set variables for all couplings
+        # Handle theory uncertainties
 
+        # First check if given input makes sense
+
+        self.theoryUncertaintiesPassed = False
+        self.correlationMatrixPassed   = False
+        self.covarianceMatrixPassed    = False
+
+
+        doDecorrelation = False
+        if (
+            not self.theoryUncertaintiesPassed
+            and not self.correlationMatrixPassed
+            and not self.covarianceMatrixPassed
+            ):
+            print 'No theory uncertainties are specified; Running without theory uncertainties'
+            pass
+
+        elif (
+            self.theoryUncertaintiesPassed
+            and self.correlationMatrixPassed
+            and not self.covarianceMatrixPassed
+            ):
+            if not len(self.theoryUncertainties) == len(self.correlationMatrix):
+                print '[ERROR] Cannot build a covariance matrix out of given input'
+                print '        len(self.theoryUncertainties) = {0}'.format( len(self.theoryUncertainties) )
+                print '        len(self.correlationMatrix)   = {0}'.format( len(self.correlationMatrix) )
+                return
+
+            self.covarianceMatrix = []
+            self.nTheoryUncertainties = len(self.theoryUncertainties)
+            for i in xrange(self.nTheoryUncertainties):
+                self.covarianceMatrix.append(
+                    [ self.theoryUncertainties[i] * self.correlationMatrix[i][j] for j in xrange(self.nTheoryUncertainties) ]
+                    )
+            doDecorrelation = True
+
+        elif (
+            not self.theoryUncertaintiesPassed
+            and not self.correlationMatrixPassed
+            and self.covarianceMatrixPassed
+            ):
+            # self.covarianceMatrix should be filled already
+            doDecorrelation = True
+
+        else:
+            print '[ERROR] Given input makes no sense:'
+            print '        self.theoryUncertaintiesPassed = ', self.theoryUncertaintiesPassed
+            print '        self.correlationMatrixPassed   = ', self.correlationMatrixPassed
+            print '        self.covarianceMatrixPassed    = ', self.covarianceMatrixPassed
+            return
+
+
+        if doDecorrelation:
+            decorrelatedMatrix = self.Decorrelate( self.covarianceMatrix )
+
+            print decorrelatedMatrix
+
+
+
+
+
+
+
+
+        print 'Test exit'
+        sys.exit()
+
+
+        # ======================================
+        # Find the parametrizations for all nTheorybins, plus 1 underflow and 1 overflow parametrization
+
+        # First make sure there are RooRealVars for all the couplings in the workspace
         for coupling in couplings:
             self.modelBuilder.doVar(
                 '{coupling}[{default},{down},{up}]'.format(
@@ -250,10 +417,6 @@ class CouplingModel( PhysicsModel ):
                     up       = self.SMDict['couplings'][coupling] + 20.0,
                     )
                 )
-
-
-        # ======================================
-        # Find the parametrizations for all nTheorybins, plus 1 underflow and 1 overflow parametrization
 
         # Calculate the coupling matrix
         couplingMat = []
@@ -279,6 +442,8 @@ class CouplingModel( PhysicsModel ):
             print couplingMat
         couplingMatInv = numpy.linalg.inv( couplingMat )
 
+
+        # Create the actual parametrization for each theory bin
         parametrizations = []
 
         # Underflow (left extrapolation)
@@ -530,71 +695,14 @@ class CouplingModel( PhysicsModel ):
                 formulaString            = '+'.join(yieldParameterFormula),
                 commaSeparatedParameters = ','.join( couplings + averageComponentNames )
                 )
+
             if self.verbose:
                 print 'Final yield parameter expression: {0}'.format(yieldParameterExpression)
                 print '  Overview:'
                 for key, value in argumentIndices.iteritems():
                     print '    {0:4} = {1}'.format( value, key )
+
             self.modelBuilder.factory_( yieldParameterExpression )
-
-
-
-
-            #     productName = 'r_{signal}_component_{componentName}'.format(
-            #         signal     = expBinStr,
-            #         componentName = componentName,
-            #         )
-
-            #     if nCouplingsForThisParameter == 2:
-            #         productExpression = (
-            #             'expr::{productName}('
-            #             '"(@0*@1*@2)", '
-            #             '{weight},{coupling1},{coupling2} )'
-            #             ).format(
-            #                 productName = productName,
-            #                 weight      = averageComponentName,
-            #                 coupling1   = coupling1,
-            #                 coupling2   = coupling2,
-            #                 )
-            #         if self.verbose:
-            #             print 'Expression for component {0}: {1}'.format( iAverageComponent, productExpression )
-            #         self.modelBuilder.factory_( productExpression )
-
-            #     elif nCouplingsForThisParameter == 1:
-            #         productExpression = (
-            #             'expr::{productName}('
-            #             '"(@0*@1)", '
-            #             '{weight},{coupling1} )'
-            #             ).format(
-            #                 productName = productName,
-            #                 weight      = averageComponentName,
-            #                 coupling1   = coupling1
-            #                 )
-            #         if self.verbose:
-            #             print 'Expression for component {0}: {1}'.format( iAverageComponent, productExpression )
-            #         self.modelBuilder.factory_( productExpression )
-
-            #     elif nCouplingsForThisParameter == 0:
-            #         self.modelBuilder.doVar(
-            #             '{productName}[{weight}]'.format(
-            #                 productName = productName,
-            #                 weight      = averageComponentName,
-            #                 )
-            #             )
-
-            #     productNames.append( productName )
-
-
-            # # Compile expression string for final yieldParameter
-            # yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-            #     signal                   = expBinStr,
-            #     formulaString            = '+'.join([ '@' + str(iComponent) for iComponent in xrange(nComponents) ]),
-            #     commaSeparatedParameters = ','.join( productNames )
-            #     )
-            # if self.verbose:
-            #     print 'Final yield parameter expression: {0}'.format(yieldParameterExpression)
-            # self.modelBuilder.factory_( yieldParameterExpression )
-
 
             if self.verbose:
                 print '\nTest evaluation of yieldParameter:'
@@ -603,46 +711,6 @@ class CouplingModel( PhysicsModel ):
                 self.modelBuilder.out.function( 'r_{0}'.format(expBinStr) ).Print()
                 print ''
 
-
-            # ======================================
-            # Much neater, but can't figure out the import without making the WS disfunctional
-
-            # # Build yieldParameter expression
-            # yieldParameterComponents = ROOT.RooArgList()
-            # iComponent = 0
-            # for averageComponent, couplingCombination in zip( averageComponents, couplingCombinations ):
-            #     w =  ROOT.RooFit.RooConst( averageComponent )
-            #     ROOT.SetOwnership( w, False )
-            #     c1 = self.modelBuilder.out.var( couplingCombination[0] )
-            #     c2 = self.modelBuilder.out.var( couplingCombination[1] )
-            #     product = ROOT.RooProduct(
-            #             'mu_expbin{0}_component{1}'.format( iExpBin, iComponent ),
-            #             'mu_expbin{0}_component{1}'.format( iExpBin, iComponent ),
-            #             ROOT.RooArgList( w, c1, c2 )
-            #             )
-            #     ROOT.SetOwnership( product, False )
-            #     yieldParameterComponents.add( product )
-            #     iComponent += 1
-
-            #     if self.verbose:
-            #         print 'Created component {0}; doing product.Print():'.format( iComponent )
-            #         product.Print()
-
-
-            # yieldParameter = ROOT.RooAddition(
-            #     'r_' + expBinStr,
-            #     'r_' + expBinStr,
-            #     yieldParameterComponents,
-            #     )
-            # ROOT.SetOwnership( yieldParameter, False )
-
-            # if self.verbose:
-            #     print 'Created yieldParameter; doing yieldParameter.Print():'
-            #     yieldParameter.Print()
-
-            # Only import todo - Neither work
-            # getattr( self.modelBuilder.out, 'import' )( yieldParameter )
-            # self.modelBuilder.doVar( yieldParameter.GetName() )
 
 
         self.modelBuilder.out.defineSet( 'POI', ','.join(couplings) )

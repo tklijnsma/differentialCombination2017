@@ -43,6 +43,7 @@ def main():
     parser.add_argument( '--createDerivedTheoryFiles',        action='store_true' )
     parser.add_argument( '--createDerivedTheoryFiles_Yukawa', action='store_true' )
     parser.add_argument( '--CorrelationMatrices',             action='store_true' )
+    parser.add_argument( '--CorrelationMatrices_Agnieszka',   action='store_true' )
 
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
@@ -85,8 +86,42 @@ def main():
     # Stuff dealing with theory spectra (creation of derivedTheoryFiles, rebinning, correlation matrices, etc.)
     ########################################
 
-
     if args.CorrelationMatrices:
+
+        variationFiles = glob( 'derivedTheoryFiles_Jul25/*kappab_1_kappac_1.txt' )
+
+        variations = [
+            TheoryCommands.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+                for variationFile in variationFiles ]
+
+        CorrelationMatrices.GetCorrelationMatrix(
+            variations,
+            makeScatterPlots          = False,
+            makeCorrelationMatrixPlot = True,
+            outname                   = 'corrMat_theory',
+            verbose                   = True,
+            )
+
+
+        print '[fixme] Exp bin boundaries hardcoded'
+        expBinBoundaries    = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
+
+        variations_expbinning = deepcopy(variations)
+        for variation in variations_expbinning:
+            TheoryCommands.RebinDerivedTheoryContainer( variation, expBinBoundaries )
+
+        CorrelationMatrices.GetCorrelationMatrix(
+            variations_expbinning,
+            makeScatterPlots          = True,
+            makeCorrelationMatrixPlot = True,
+            outname                   = 'corrMat_exp',
+            verbose                   = True,
+            )
+
+
+
+
+    if args.CorrelationMatrices_Agnieszka:
 
         variationFiles = glob( 'suppliedInput/fromAgnieszka/ScaleVarNNLO_Jul17/*.top' )
 
