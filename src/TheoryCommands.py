@@ -109,58 +109,21 @@ def GetPlotBase(
 
 
 ########################################
-# Dealing with theory spectra from Agnieszka
+# Dealing with derived theory files
 ########################################
-
-def TheoryPath( filename ):
-    return join( 'suppliedInput/theory', filename )
-
-physicsFileDict = {
-    'ct_1p1'                   : TheoryPath( 'ratio_ctup_new' ),
-    'ct_0p9'                   : TheoryPath( 'ratio_ctdown_new' ),
-    'cg_0p008'                 : TheoryPath( 'ratio_cgup_new' ),
-    'cg_m0p008'                : TheoryPath( 'ratio_cgdown_new' ),
-    'cb_4p0'                   : TheoryPath( 'ratio_cbup_new' ),
-    'cb_m2p0'                  : TheoryPath( 'ratio_cbdown_new' ),
-    'ct_1p2_cb_m2p98_cg_m0p03' : TheoryPath( 'ratio_cg003ct12_new' ),
-    'ct_1p3_cb_m0p85_cg_m0p03' : TheoryPath( 'ratio_cg003ct13sw_new' ),
-    'ct_1p4_cb_3p31_cg_m0p03'  : TheoryPath( 'ratio_cg003ct14sw_new' ),
-    'ct_1p2_cb_m4p89_cg_m0p04' : TheoryPath( 'ratio_cg004ct12sw_new' ),
-    'ct_1p3_cb_m3p34_cg_m0p04' : TheoryPath( 'ratio_cg004ct13sw_new' ),
-    'ct_1p5_cb_1p88_cg_m0p04'  : TheoryPath( 'ratio_cg004ct15sw_new' ),
-    'ct_1p4_cb_m3p67_cg_m0p05' : TheoryPath( 'ratio_cg005ct14sw_new' ),
-    'ct_1p5_cb_m1p79_cg_m0p05' : TheoryPath( 'ratio_cg005ct15sw_new' ),
-    'ct_0p5_cb_m7p46'          : TheoryPath( 'ratio_ctcb05_new' ),
-    'ct_0p8_cb_m3p67'          : TheoryPath( 'ratio_ctcb08_new' ),
-    'ct_0p9_cb_m1p79'          : TheoryPath( 'ratio_ctcb09_new' ),
-    'ct_1p1_cb_3p79'           : TheoryPath( 'ratio_ctcb11_new' ),
-    'ct_1p2_cb_4p67'           : TheoryPath( 'ratio_ctcb12_new' ),
-    'ct_0p1_cg_0p075'          : TheoryPath( 'ratio_ctcg01_new' ),
-    'ct_0p5_cg_0p042'          : TheoryPath( 'ratio_ctcg05_new' ),
-    'ct_1p5_cg_m0p042'         : TheoryPath( 'ratio_ctcg15_new' ),
-    'ct_2p0_cg_m0p083'         : TheoryPath( 'ratio_ctcg2_new' ),
-
-    'SM_NLO'                   : TheoryPath( 'SM_NLO' ),
-    'SM_NLO_downRatio'         : TheoryPath( 'SMmin_NLO' ),
-    'SM_NLO_upRatio'           : TheoryPath( 'SMmax_NLO' ),
-    'SM_NNLO'                  : TheoryPath( 'SM_NNLO' ),
-    'SM_NNLO_downRatio'        : TheoryPath( 'SMmin_NNLO' ),
-    'SM_NNLO_upRatio'          : TheoryPath( 'SMmax_NNLO' ),
-    }
-
 
 def RebinDerivedTheoryContainer( container, newBinBoundaries ):
 
     newNBins = len(newBinBoundaries) - 1
 
-    newCrosssection = MapFineToCoarse(
+    newCrosssection = Rebin(
         theoryBinBoundaries = container.binBoundaries,
         theoryBinValues     = container.crosssection,
         expBinBoundaries    = newBinBoundaries,
         lastBinIsOverflow   = True,
         )
 
-    newRatios = MapFineToCoarse(
+    newRatios = Rebin(
         theoryBinBoundaries = container.binBoundaries,
         theoryBinValues     = container.ratios,
         expBinBoundaries    = newBinBoundaries,
@@ -174,280 +137,9 @@ def RebinDerivedTheoryContainer( container, newBinBoundaries ):
     container.ratios        = newRatios
 
 
-
-def ReadLinesOfYukawaTheoryFile( theoryFile, verbose=False ):
-    # Read lines
-    with open( theoryFile, 'r' ) as theoryFp:
-        lines = [ line.strip() for line in theoryFp.readlines() ]
-    commentlines = [ line.strip() for line in lines if line.startswith('#') ]
-    lines        = [ line for line in lines if not line.startswith('#') and len(line) > 0 ]
-
-    pts          = []
-    matched_xss  = []
-    resummed_xss = []
-
-    for line in lines:
-        components = line.split()
-        pt          = float(components[0])
-        matched_xs  = float(components[1])
-        resummed_xs = float(components[2])
-
-        if verbose:
-            print '    pt = {0:<8.3f} |  matched_xs = {1:<10.6f} |  resummed_xs = {2:<10.6f}'.format(
-                pt, matched_xs, resummed_xs
-                )
-
-        pts.append( pt )
-        matched_xss.append( matched_xs )
-        resummed_xss.append( resummed_xs )
-
-    return pts, matched_xss, resummed_xss
-
-
-def CreateDerivedTheoryFiles_Yukawa(
-        theoryDir = 'suppliedInput/fromPier/histograms_ggH_May17/',
-        mainCrossSection = 'resummed',
-        verbose = True,
-        ):
-
-    outdir = 'derivedTheoryFiles_{0}'.format( datestr )
-    if not isdir( outdir ): os.makedirs( outdir )
-
-    theoryDir = abspath( theoryDir )
-    theoryFiles = glob.glob( join( theoryDir, '*.res' ) )
-
-
-    # ======================================
-    # Try to find a 'SM' file first so it's possible to calculate ratios
-
-    for theoryFile in theoryFiles:
-        theoryFilename = basename( theoryFile )
-
-        pat = r'H125-LHC13-R04-MSbar-xmur(?P<muR>\d+)-xmuf(?P<muF>\d+)_(?P<kappab>[\-\d]+)_(?P<kappac>[\-\d]+)-xQ(?P<Q>\d+)'
-        match = re.search( pat, theoryFilename )
-
-        if not match: continue
-
-        muR    = float(match.group('muR')) / 50.
-        muF    = float(match.group('muF')) / 50.
-        Q      = float(match.group('Q')) / 50.
-        kappab = float(match.group('kappab'))
-        kappac = float(match.group('kappac'))
-
-        if (
-                muR == 1.0 and
-                muF == 1.0 and
-                Q == 1.0 and
-                kappac == 1.0 and
-                kappab == 1.0
-                ):
-
-            smFound = True
-            pts, matched_xss, resummed_xss = ReadLinesOfYukawaTheoryFile( theoryFile, verbose )
-            newBinCenters, binBoundaries, binWidths = BinningHeuristic( pts, manualSwitchAt50=False )
-
-            SM = Container()
-            SM.pts           = deepcopy(pts)
-            SM.matched_xss   = deepcopy(matched_xss)
-            SM.resummed_xss  = deepcopy(resummed_xss)
-            SM.newBinCenters = deepcopy(newBinCenters)
-            SM.binBoundaries = deepcopy(binBoundaries)
-            SM.binWidths     = deepcopy(binWidths)
-            del pts
-            del matched_xss
-            del resummed_xss
-            del newBinCenters
-            del binBoundaries
-            del binWidths
-
-            break
-    else:
-        print '[info] Did not find a SM file; ratios will be unavailable in the derivedTheoryFile'
-        smFound = False
-
-
-    # ======================================
-    # Process all other files
-    
-    for theoryFile in theoryFiles:
-        theoryFilename = basename( theoryFile )
-
-        if verbose:
-            print 'Processing theory file \'{0}\''.format( theoryFile )
-
-        # H125-LHC13-R04-MSbar-xmur025-xmuf050_-2_-5-xQ050-NNLO+NNLLmult.-2_-5.res
-
-        pat = r'H125-LHC13-R04-MSbar-xmur(?P<muR>\d+)-xmuf(?P<muF>\d+)_(?P<kappab>[\-\d]+)_(?P<kappac>[\-\d]+)-xQ(?P<Q>\d+)'
-
-        match = re.search( pat, theoryFilename )
-
-        if not match:
-            print '    No match found for theory file \'{0}\''.format( theoryFilename )
-            print '    The pattern was:'
-            print '    ' + pat
-            continue
-
-        muR    = float(match.group('muR')) / 50.
-        muF    = float(match.group('muF')) / 50.
-        Q      = float(match.group('Q')) / 50.
-        kappab = float(match.group('kappab'))
-        kappac = float(match.group('kappac'))
-
-        if verbose:
-            print '    muR = {0:<6.1f}, muF = {1:<6.1f}, Q = {2:<6.1f}, kappab = {3:<6.1f}, kappac = {4:<6.1f}'.format(
-                muR, muF, Q, kappab, kappac
-                )
-
-        pts, matched_xss, resummed_xss = ReadLinesOfYukawaTheoryFile( theoryFile, verbose )
-        newBinCenters, binBoundaries, binWidths = BinningHeuristic( pts, manualSwitchAt50=False )
-
-
-        def numberStr(number):
-            if number.is_integer():
-                return ('{0:d}'.format(int(number))).replace('.','p').replace('-','m')
-            else:
-                return ('{0:.2f}'.format(number)).replace('.','p').replace('-','m')
-        outname = join( outdir, 'muR_{0}_muF_{1}_Q_{2}_kappab_{3}_kappac_{4}.txt'.format(
-            numberStr(muR),
-            numberStr(muF),
-            numberStr(Q),
-            numberStr(kappab),
-            numberStr(kappac),
-            ))
-        with open( outname, 'w' ) as outFp:
-            w = lambda text: outFp.write( text + '\n' )
-
-            w( 'muR={0}'.format(    muR ) )
-            w( 'muF={0}'.format(    muF ) )
-            w( 'Q={0}'.format(      Q ) )
-            w( 'kappab={0}'.format( kappab ) )
-            w( 'kappac={0}'.format( kappac ) )
-
-            w( 'binBoundaries={0}'.format(         ','.join( map(str, binBoundaries ) ) ) )
-            
-            if mainCrossSection == 'resummed':
-                w( 'crosssection={0}'.format(          ','.join( map(str, resummed_xss ) ) ) )
-            elif mainCrossSection == 'matched':
-                w( 'crosssection={0}'.format(          ','.join( map(str, matched_xss ) ) ) )
-
-            w( 'resummed_crosssection={0}'.format( ','.join( map(str, resummed_xss ) ) ) )
-            w( 'matched_crosssection={0}'.format(  ','.join( map(str, matched_xss ) ) ) )
-
-            if smFound:
-                if mainCrossSection == 'resummed':
-                    ratios = [ xs / SMxs for xs, SMxs in zip( resummed_xss, SM.resummed_xss ) ]
-                elif mainCrossSection == 'matched':
-                    ratios = [ xs / SMxs for xs, SMxs in zip( matched_xss, SM.matched_xss ) ]
-                
-                w( 'ratios={0}'.format( ','.join( map(str, ratios ) ) ) )
-
-
-                print ratios
-                print
-
-
-
-def CreateDerivedTheoryFiles(
-    pattern = None
-    ):
-
-    outdir = 'derivedTheoryFiles_{0}'.format( datestr )
-    if not isdir( outdir ): os.makedirs( outdir )
-
-
-    # ======================================
-    # Determine for which files to create the derived files
-
-    theories = []
-    for ratio in physicsFileDict.keys():
-        # print 'Trying pattern \'{0}\' on \'{1}\''.format( pattern, ratio )
-        if re.search( pattern, ratio ):
-            theories.append( ratio  )
-            # print re.search( pattern, ratio ).group(1)
-        # else:
-        #     print '    No match'
-
-    if len(theories) == 0:
-        Commands.ThrowError( 'Pattern \'{0}\' does not match any know keys'.format(pattern) )
-        return
-
-
-    # ======================================
-    # First get the SM predictions; need to read at least one theory file to know the binning
-
-    dummymu, binBoundaries, binWidths, binCenters = ReadTheoryFile( physicsFileDict[theories[0]], applyHeuristic=True )
-
-    SM_NNLO = ReadTheoryFile( physicsFileDict['SM_NNLO'], applyHeuristic=True )[0]
-    print '[info] Multiplying list by 1/2.27 (1/(HggBR*1000, from Agnieszka\'s plotting script)'
-    SM_NNLO = [ 1/2.27 * i for i in SM_NNLO ]
-    print '[fixme] Cutting point >400GeV away for now'
-    SM_NNLO = SM_NNLO[:len(binCenters)+1]  # Results go up to 800
-
-    SM_NNLO_upRatio   = ReadTheoryFile( physicsFileDict['SM_NNLO_upRatio'], applyHeuristic=True )[0]
-    SM_NNLO_upRatio   = SM_NNLO_upRatio[:len(binCenters)+1]  # Results go up to 800
-    SM_NNLO_downRatio = ReadTheoryFile( physicsFileDict['SM_NNLO_downRatio'], applyHeuristic=True )[0]
-    SM_NNLO_downRatio = SM_NNLO_downRatio[:len(binCenters)+1]  # Results go up to 800
-
-    SM_NNLO_up   = [ i*j for i,j in zip( SM_NNLO_upRatio, SM_NNLO ) ]
-    SM_NNLO_down = [ i*j for i,j in zip( SM_NNLO_downRatio, SM_NNLO ) ]
-
-    # SM_NNLO has the same bins as coupling variation files
-    # No rebinning necessary now, but the code below does the trick
-
-    # # Read standard model values in original binning
-    # SM_NNLO_originalValues, SM_NNLO_originalBinBoundaries = ReadTheoryFile(
-    #     physicsFileDict['SM_NNLO'], applyHeuristic=True )[0:2]
-    
-    # # Get the rebinned SM values w.r.t. the binning that was used for the scaling of couplings
-    # SM_NNLO = Rebin(
-    #     SM_NNLO_originalBinBoundaries, SM_NNLO_originalValues,
-    #     binBoundaries,
-    #     verbose=True
-    #     )
-
-    outname = join( outdir, 'SM_NNLO.txt' )
-    with open( outname, 'w' ) as outFp:
-        w = lambda text: outFp.write( text + '\n' )
-        w( 'binBoundaries={0}'.format( ','.join( map(str, binBoundaries ) ) ) )
-        w( 'crosssection={0}'.format( ','.join( map(str, SM_NNLO ) ) ) )
-        w( 'crosssection_up={0}'.format( ','.join( map(str, SM_NNLO_up ) ) ) )
-        w( 'crosssection_down={0}'.format( ','.join( map(str, SM_NNLO_down ) ) ) )
-
-
-    # ======================================
-    # Read files and determine binning
-
-    knownCouplings = [ 'ct', 'cb', 'cg' ]
-
-    for theory in theories:
-        mus = ReadTheoryFile( physicsFileDict[theory], applyHeuristic=True )[0]
-        crosssection = [ mu * SMXS for mu, SMXS in zip( mus, SM_NNLO ) ]
-
-        couplings = {}
-        for coupling in knownCouplings:
-            match = re.search( r'{0}_([mp\d]+)'.format(coupling), theory )
-            if match:
-                couplings[coupling] = float(match.group(1).replace('p','.').replace('m','-'))
-
-
-        outname = join( outdir, theory + '.txt' )
-        with open( outname, 'w' ) as outFp:
-            w = lambda text: outFp.write( text + '\n' )
-
-            for coupling in knownCouplings:
-                match = re.search( r'{0}_([mp\d]+)'.format(coupling), theory )
-                if match:
-                    couplingValue = float(match.group(1).replace('p','.').replace('m','-'))
-                    w( '{0}={1}'.format( coupling, couplingValue ) )
-
-            w( 'binBoundaries={0}'.format( ','.join( map(str, binBoundaries ) ) ) )
-            w( 'crosssection={0}'.format( ','.join( map(str, crosssection ) ) ) )
-            w( 'ratios={0}'.format( ','.join( map(str, mus ) ) ) )
-
-
 def ReadDerivedTheoryFile(
     derivedTheoryFile,
-    returnContainer = False,
+    returnContainer = True,
     verbose = False,
     ):
 
@@ -511,129 +203,11 @@ def ReadDerivedTheoryFile(
 
 
 
-
-
-def LoadTheoryCurves( pattern=None ):
-
-    # theoryPath = lambda filename: join( 'suppliedInput/numbersFromAgnieszka', filename )
-
-    divlist  = lambda l1, l2: map( operator.truediv, l1, l2 )
-    prodlist = lambda l1, l2: map( operator.mul, l1, l2 )
-
-    pt_SM_NNLO, SM_NNLO, ratio_SM_NNLO_down, ratio_SM_NNLO_up = LoadStandardModelCurves(
-        ptAxis=ReadTheoryFile( TheoryPath('ratio_ctup_new') )[0] )
-
-
-    if not pattern:
-        doRatios = [
-            # 'ct_1p2_cb_m2p98_cg_m0p03',
-            # 'ct_1p3_cb_m0p85_cg_m0p03',
-            # 'ct_1p4_cb_3p31_cg_m0p03',
-            # 'ct_1p2_cb_m4p89_cg_m0p04',
-            # 'ct_1p3_cb_m3p34_cg_m0p04',
-            # 'ct_1p5_cb_1p88_cg_m0p04',
-            # 'ct_1p4_cb_m3p67_cg_m0p05',
-            # 'ct_1p5_cb_m1p79_cg_m0p05',
-            'ct_0p1_cg_0p075',
-            'ct_0p5_cg_0p042',
-            'ct_1p5_cg_m0p042',
-            'ct_2p0_cg_m0p083',
-            ]
-    
-    elif pattern == 'SM':
-        return pt_SM_NNLO, SM_NNLO, ratio_SM_NNLO_down, ratio_SM_NNLO_up
-
-    else:
-        doRatios = []
-        for ratio in physicsFileDict.keys():
-            # print 'Trying pattern \'{0}\' on \'{1}\''.format( pattern, ratio )
-            if re.search( pattern, ratio ):
-                doRatios.append( ratio )
-                # print re.search( pattern, ratio ).group(1)
-            # else:
-            #     print '    No match'
-
-        if len(doRatios) == 0:
-            Commands.ThrowError( 'Pattern \'{0}\' does not match any know keys'.format(pattern) )
-            return
-
-
-    Tgs = []
-    for ratioKey in doRatios:
-
-        pt_variation, ratio = ReadTheoryFile( physicsFileDict[ratioKey] )
-
-        Tg = GetTheoryTGraph(
-            ratioKey,
-            pt_variation, ratio,
-            prodlist( ratio_SM_NNLO_down, ratio ),
-            prodlist( ratio_SM_NNLO_up, ratio )
-            )
-
-        Tg.SM            = SM_NNLO
-        Tg.SM_up_ratio   = ratio_SM_NNLO_up
-        Tg.SM_down_ratio = ratio_SM_NNLO_down
-
-        Tgs.append( Tg )
-
-
-    BasicTheoryPlot(Tgs)
-    return Tgs
-
-
-
-def LoadStandardModelCurves(
-    ptAxis = None
-    ):
-
-    # if not ptAxis:
-    #     # Read 1 file to get the pt axis of the variation
-    #     ptAxis, ratio_ct_1p1    = ReadTheoryFile( TheoryPath('ratio_ctup_new') )
-
-    # Read the values of the SM cross sections
-    pt_SM_NLO,  SM_NLO             = ReadTheoryFile( TheoryPath('SM_NLO') )
-    pt_SM_NLO,  ratio_SM_NLO_down  = ReadTheoryFile( TheoryPath('SMmin_NLO') )
-    pt_SM_NLO,  ratio_SM_NLO_up    = ReadTheoryFile( TheoryPath('SMmax_NLO') )
-    pt_SM_NNLO, SM_NNLO            = ReadTheoryFile( TheoryPath('SM_NNLO') )
-    pt_SM_NNLO, ratio_SM_NNLO_down = ReadTheoryFile( TheoryPath('SMmin_NNLO') )
-    pt_SM_NNLO, ratio_SM_NNLO_up   = ReadTheoryFile( TheoryPath('SMmax_NNLO') )
-
-    if not ptAxis == None:
-        SM_NNLO            = MapFineToCoarse( pt_SM_NNLO, SM_NNLO, ptAxis )
-        ratio_SM_NNLO_down = MapFineToCoarse( pt_SM_NNLO, ratio_SM_NNLO_down, ptAxis )
-        ratio_SM_NNLO_up   = MapFineToCoarse( pt_SM_NNLO, ratio_SM_NNLO_up, ptAxis )
-        pt_SM_NNLO         = ptAxis
-
-    return pt_SM_NNLO, SM_NNLO, ratio_SM_NNLO_down, ratio_SM_NNLO_up
-
-
-
-def ReadTheoryFile(
-    theoryFile,
-    applyHeuristic=False,
-    ):
-
-    with open( theoryFile, 'r' ) as theoryFp:
-        lines = [ l.strip() for l in theoryFp.readlines() if not len(l.strip())==0 and not l.strip().startswith('#') ]
-
-    binCenters = []
-    mu = []
-    for line in lines:
-        components = line.split()
-        binCenters.append( float(components[0]) )
-        mu.append( float(components[1]) )
-
-    if applyHeuristic:
-        binCenters, binBoundaries, binWidths = BinningHeuristic( binCenters )
-        return mu, binBoundaries, binWidths, binCenters
-    else:
-        return binCenters, mu
-
-
 # Theory files contain a somewhat non-consistent binning, turn it into a well-defined binning
 def BinningHeuristic(
     binCenters,
     manualSwitchAt50 = True,
+    manualSwitchAt5  = False,
     ):
 
     nBins = len(binCenters)
@@ -644,9 +218,15 @@ def BinningHeuristic(
 
     # Bin boundaries are defined by being the middle of bin centers
     for iBin in xrange(0,nBins-1):
+
         # Manually overwrite for the cross-over at pt = 50 (which is irregular)
         if manualSwitchAt50 and binCenters[iBin] == 48.5:
             binBoundaries.append( 51 )
+
+        # For the quark induced histograms there is an irregularity at pt = 5.0
+        elif manualSwitchAt5 and ( binCenters[iBin] == 3.0 or binCenters[iBin] == 2.75 ):
+            binBoundaries.append( 5.0 )
+
         else:
             binBoundaries.append(
             binCenters[iBin] + 0.5*(binCenters[iBin+1]-binCenters[iBin])
@@ -790,287 +370,6 @@ def GetTheoryTGraph(
     return Tg
 
 
-def BasicTheoryPlot( Tgs, drawErrors=True ):
-
-    c.Clear()
-
-    xMin = min( [ Tg.xMin for Tg in Tgs ] )
-    xMax = max( [ Tg.xMax for Tg in Tgs ] )
-
-    # Actually take 1.1 * 4th maximum to kill some spikes
-    # yMin = min( [ Tg.yMin for Tg in Tgs ] )
-    # yMax = max( [ Tg.yMax for Tg in Tgs ] )
-    yMin = min( [ Tg.fourth_yMin for Tg in Tgs ] )
-    yMax = max( [ Tg.fourth_yMax for Tg in Tgs ] )
-
-
-    base = GetPlotBase(
-        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
-        xTitle = 'PTH', yTitle = '#sigma'
-        )
-    base.Draw('P')
-
-    leg = ROOT.TLegend( 1-RightMargin-0.3, 1-TopMargin-0.3, 1-RightMargin, 1-TopMargin )
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
-
-    colorCycle = itertools.cycle( range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 ) )
-    for Tg in Tgs:
-        color = next(colorCycle)
-
-        if drawErrors:
-            Tg.Draw('L')
-        else:
-            Tg.Draw('L X')
-        
-        Tg.SetLineColor(color)
-        leg.AddEntry( Tg.GetName(), Tg.name, 'l' )
-
-    leg.Draw()
-
-    SaveC( 'theory_{0}'.format( GetShortTheoryName([ Tg.name for Tg in Tgs ]) ) )
-
-
-
-def GetShortTheoryName( names ):
-    keyStrings = [ 'ct', 'cb', 'cg' ]
-
-    uniqueCombinations = set()
-    for name in names:
-        presentKeyStrings = ''
-        for keyString in keyStrings:
-            if keyString in name: presentKeyStrings += keyString
-        uniqueCombinations.add( presentKeyStrings )
-    return '_'.join( list(uniqueCombinations) )
-
-
-# def MapFineToCoarse(
-#     xsFine, ysFine, xsCoarse, ysCoarse=None,
-#     ):
-
-#     nFine = len(xsFine)
-#     nCoarse = len(xsCoarse)
-
-#     xFineMin = min(xsFine)
-#     xFineMax = max(xsFine)
-#     yInterpolatedFine = []
-
-#     for iCoarse in xrange(nCoarse):
-#         xCoarse = xsCoarse[iCoarse]
-
-#         if xCoarse in xsFine:
-#             # Simple case, just copy value
-#             yInterpolatedFine.append( ysFine[ xsFine.index(xCoarse) ] )
-
-#         elif xCoarse < xFineMin and xCoarse > xFineMax:
-#             print 'Interpolation error'
-
-#         else:
-
-#             # Loop over fine bins, get 2 enclosing boundaries
-#             for iFine in xrange(nFine):
-
-#                 # break condition:
-#                 if xCoarse < xsFine[iFine]:
-#                     leftx  = xsFine[iFine-1]
-#                     rightx = xsFine[iFine]
-#                     lefty  = ysFine[iFine-1]
-#                     righty = ysFine[iFine]
-
-#                     print 'Interpolating for x = {0} between x = {1} and x = {2}'.format( xCoarse, leftx, rightx )
-
-#                     yInterpolatedFine.append(
-#                         lefty + 
-#                             (xCoarse-leftx) / (rightx-leftx)
-#                             *
-#                             (righty-lefty)
-#                         )
-
-#                     print '    Found y_interpolated = {0} (between y = {1} and y = {2})'.format( yInterpolatedFine[-1], lefty, righty )
-
-#                     break
-
-#     return yInterpolatedFine
-
-def MapFineToCoarse(
-        theoryBinBoundaries,
-        theoryBinValues,
-        expBinBoundaries,
-        lastBinIsOverflow = False,
-        ):
-    theoryIntegralFunction = GetIntegral( theoryBinBoundaries, theoryBinValues )
-    expBinValues = []
-    for iBinExp in xrange(len(expBinBoundaries)-1):
-        expBinValues.append(
-            theoryIntegralFunction( expBinBoundaries[iBinExp], expBinBoundaries[iBinExp+1] ) / ( expBinBoundaries[iBinExp+1] - expBinBoundaries[iBinExp] )
-            )
-
-    if lastBinIsOverflow:
-        expBinValues[-1] = theoryIntegralFunction( expBinBoundaries[-2], theoryBinBoundaries[-1] ) / ( theoryBinBoundaries[-1] - expBinBoundaries[-2] )
-
-    return expBinValues
-
-
-
-def GetParametrization(
-    points,
-    # = [
-    #    ( 0.1**2 , 0.1*0.075 , 0.075 ),
-    #    ( 0.5**2 , 0.5*0.042 , 0.042 ),
-    #    ( 1.5**2 , 1.5*-0.042 , -0.042 ),
-    #    ( 2.0**2 , 2.0*-0.083 , -0.083 ),
-    #    ],
-    yValues,
-    testMode = False,
-    ):
-
-    # function = 'y = A*x1 + B*x2 + C*x3'
-
-    nPoints = len(points)
-    nPars = len(points[0])
-
-    if nPoints > nPars:
-        print 'More points than parameters given, system is overconstrained; Taking only the first {0} points'.format( nPars )
-        nPoints = nPars
-        points = points[:nPars]
-        yValues = yValues[:nPars]
-    elif nPars < nPoints:
-        print 'Less points than parameters given, system is underconstrained'
-        return
-
-
-    if testMode:
-        print 'Used points:'
-        for point in points:
-            print 'y = fn( {0} )'.format( ', '.join([ str(p) for p in point]) )
-
-
-    xMatrix = numpy.array(points)
-    xInv = numpy.linalg.inv(xMatrix)
-
-
-    pointFunctions = []
-    parameterValuesPerPoint = []
-    for i in xrange(len(yValues[0])):
-
-        yValsPerPoint = numpy.array( [ [ys[i]] for ys in yValues ])
-        parameterValues = list(itertools.chain.from_iterable( xInv.dot( yValsPerPoint ) ))
-        parameterValuesPerPoint.append( parameterValues )
-
-        # NOTE THE i=i! otherwise i always points to the last element of the loop
-        pointFunction = lambda point, i=i: sum([ parValue * arg for parValue, arg in zip( point, parameterValuesPerPoint[i] ) ])
-        pointFunctions.append( pointFunction )
-
-
-        if testMode:
-
-            print '\n' + '-'*70 + '\nPoint {0}'.format(i)
-            print '\nxInv:'
-            print xInv
-            print '\nyValsPerPoint:'
-            print yValsPerPoint
-            print '\nparameterValues:'
-            print parameterValues
-
-            print '\nPoint function tests:'
-            print 'Real value = {1},  pointFunction = {0}'.format( pointFunction( points[0] ), yValsPerPoint[0] )
-            copy = list(points[0][:])
-
-            copy[0] = 1.1*points[0][0]
-            print 'small up variation of pointFunction   = {0}'.format( pointFunction( copy ) )
-            copy[0] = 0.9*points[0][0]
-            print 'small down variation of pointFunction = {0}'.format( pointFunction( copy ) )
-
-
-    functionForList = lambda *args: [ function(args) for function in pointFunctions ]
-    return functionForList
-
-
-
-
-
-
-def Rebin(
-    ptFine, sigmasFine,
-    ptCoarse,
-    verbose=False,
-    ):
-
-    integralfunction = GetIntegral( ptFine, sigmasFine )
-    
-    sigmasCoarse = []
-    for iBinCoarse in xrange( len(ptCoarse)-1 ):
-        integral       = integralfunction( ptCoarse[iBinCoarse], ptCoarse[iBinCoarse+1], verbose=verbose )
-        integralPerGeV = integral / ( ptCoarse[iBinCoarse+1] - ptCoarse[iBinCoarse] )
-        if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( ptCoarse[iBinCoarse], ptCoarse[iBinCoarse+1], integralPerGeV )
-        sigmasCoarse.append( integralPerGeV )
-
-    return sigmasCoarse
-
-
-
-def MapPredictionToExperimental(
-    ptTheory, sigmaTheory,
-    binning,
-    verbose = False,
-    makeTGraph = None,
-    ):
-
-    sigmas        = sigmaTheory
-    binBoundaries = ptTheory
-    nBins         = len(binBoundaries)-1
-    binCenters    = [ 0.5*( binBoundaries[i] + binBoundaries[i+1] ) for i in xrange(nBins) ]
-    binWidths     = [ ( binBoundaries[i+1] - binBoundaries[i] ) for i in xrange(nBins) ]
-    halfBinWidths = [ 0.5*( binBoundaries[i+1] - binBoundaries[i] ) for i in xrange(nBins) ]
-
-    nBinsExp      = len(binning)-1
-    binCentersExp    = [ 0.5*( binning[i] + binning[i+1] ) for i in xrange(nBinsExp) ]
-    binWidthsExp     = [ ( binning[i+1] - binning[i] ) for i in xrange(nBinsExp) ]
-    halfBinWidthsExp = [ 0.5*( binning[i+1] - binning[i] ) for i in xrange(nBinsExp) ]
-
-
-    if verbose:
-        print 'Theory curve:'
-        print '{0:9}  |  {1:9}  |  {2:9}  |  {3:9}'.format( 'pt left', 'pt right', 'pt center', 'sigma' )
-        for iBin in xrange(nBins):
-            print '{0:+9.2f}  |  {1:+9.2f}  |  {2:+9.2f}  |  {3:+9.5f}'.format(
-                binBoundaries[iBin], binBoundaries[iBin+1], binCenters[iBin], sigmas[iBin]
-                )
-
-    if verbose: print '\nInterpolating and rebinning'
-    # integralfunction = GetIntegral( binCenters, sigmas )
-    integralfunction = GetIntegral( binBoundaries, sigmas )
-
-    sigmaExpBinning = []
-    for iBinExp in xrange(nBinsExp):
-        leftBound      = binning[iBinExp]
-        rightBound     = binning[iBinExp+1]
-        integral       = integralfunction( leftBound, rightBound, verbose=verbose )
-        integralPerGeV = integral / ( rightBound - leftBound )
-        if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( leftBound, rightBound, integralPerGeV )
-        sigmaExpBinning.append( integralPerGeV )
-
-
-    if not makeTGraph == None:
-
-        Tg = ROOT.TGraphAsymmErrors(
-            nBinsExp,
-            array( 'd', binCentersExp ),
-            array( 'd', sigmaExpBinning, ),
-            array( 'd', halfBinWidthsExp ),
-            array( 'd', halfBinWidthsExp ),
-            array( 'd', [ 0 for i in xrange(nBinsExp) ] ),
-            array( 'd', [ 0 for i in xrange(nBinsExp) ] ),
-            )
-        ROOT.SetOwnership( Tg, False )
-        Tg.SetName( makeTGraph )
-        Tg.name = makeTGraph
-        return Tg
-
-    else:
-        return sigmaExpBinning
-
-
 
 
 def GetIntegral( binBoundaries, binValues ):
@@ -1158,16 +457,271 @@ def GetIntegral( binBoundaries, binValues ):
 
         return integral
 
-
     return integralfunction
+
+
+def Rebin(
+        theoryBinBoundaries,
+        theoryBinValues,
+        expBinBoundaries,
+        lastBinIsOverflow = False,
+        verbose = False,
+        ):
+    theoryIntegralFunction = GetIntegral( theoryBinBoundaries, theoryBinValues )
+    expBinValues = []
+    for iBinExp in xrange(len(expBinBoundaries)-1):
+        expBinValues.append(
+            theoryIntegralFunction( expBinBoundaries[iBinExp], expBinBoundaries[iBinExp+1] ) / ( expBinBoundaries[iBinExp+1] - expBinBoundaries[iBinExp] )
+            )
+        if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( expBinValues[iBinExp], expBinValues[iBinExp+1], expBinValues[iBinExp] )
+
+    if lastBinIsOverflow:
+        expBinValues[-1] = theoryIntegralFunction( expBinBoundaries[-2], theoryBinBoundaries[-1] ) / ( theoryBinBoundaries[-1] - expBinBoundaries[-2] )
+
+    return expBinValues
+
+
+def MapFineToCoarse(
+        theoryBinBoundaries,
+        theoryBinValues,
+        expBinBoundaries,
+        lastBinIsOverflow = False,
+        verbose = False,
+        ):
+
+    print '[warning] \'MapFineToCoarse\' is now just an alias of \'Rebin\', and should no longer be used' 
+    
+    Rebin(
+        theoryBinBoundaries,
+        theoryBinValues,
+        expBinBoundaries,
+        lastBinIsOverflow = False,
+        verbose = False,
+        )
+
+# def Rebin(
+#     ptFine, sigmasFine,
+#     ptCoarse,
+#     verbose=False,
+#     ):
+
+#     integralfunction = GetIntegral( ptFine, sigmasFine )
+    
+#     sigmasCoarse = []
+#     for iBinCoarse in xrange( len(ptCoarse)-1 ):
+#         integral       = integralfunction( ptCoarse[iBinCoarse], ptCoarse[iBinCoarse+1], verbose=verbose )
+#         integralPerGeV = integral / ( ptCoarse[iBinCoarse+1] - ptCoarse[iBinCoarse] )
+#         if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( ptCoarse[iBinCoarse], ptCoarse[iBinCoarse+1], integralPerGeV )
+#         sigmasCoarse.append( integralPerGeV )
+
+#     return sigmasCoarse
+
+
+
+
+def BasicTheoryPlot( Tgs, drawErrors=True ):
+
+    c.Clear()
+
+    xMin = min( [ Tg.xMin for Tg in Tgs ] )
+    xMax = max( [ Tg.xMax for Tg in Tgs ] )
+
+    # Actually take 1.1 * 4th maximum to kill some spikes
+    # yMin = min( [ Tg.yMin for Tg in Tgs ] )
+    # yMax = max( [ Tg.yMax for Tg in Tgs ] )
+    yMin = min( [ Tg.fourth_yMin for Tg in Tgs ] )
+    yMax = max( [ Tg.fourth_yMax for Tg in Tgs ] )
+
+
+    base = GetPlotBase(
+        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
+        xTitle = 'PTH', yTitle = '#sigma'
+        )
+    base.Draw('P')
+
+    leg = ROOT.TLegend( 1-RightMargin-0.3, 1-TopMargin-0.3, 1-RightMargin, 1-TopMargin )
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+
+    colorCycle = itertools.cycle( range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 ) )
+    for Tg in Tgs:
+        color = next(colorCycle)
+
+        if drawErrors:
+            Tg.Draw('L')
+        else:
+            Tg.Draw('L X')
+        
+        Tg.SetLineColor(color)
+        leg.AddEntry( Tg.GetName(), Tg.name, 'l' )
+
+    leg.Draw()
+
+    SaveC( 'theory_{0}'.format( GetShortTheoryName([ Tg.name for Tg in Tgs ]) ) )
+
+
+
+def GetShortTheoryName( names ):
+    keyStrings = [ 'ct', 'cb', 'cg' ]
+
+    uniqueCombinations = set()
+    for name in names:
+        presentKeyStrings = ''
+        for keyString in keyStrings:
+            if keyString in name: presentKeyStrings += keyString
+        uniqueCombinations.add( presentKeyStrings )
+    return '_'.join( list(uniqueCombinations) )
+
+
+
+
+
+def GetParametrization(
+    points,
+    # = [
+    #    ( 0.1**2 , 0.1*0.075 , 0.075 ),
+    #    ( 0.5**2 , 0.5*0.042 , 0.042 ),
+    #    ( 1.5**2 , 1.5*-0.042 , -0.042 ),
+    #    ( 2.0**2 , 2.0*-0.083 , -0.083 ),
+    #    ],
+    yValues,
+    testMode = False,
+    ):
+
+    # function = 'y = A*x1 + B*x2 + C*x3'
+
+    nPoints = len(points)
+    nPars = len(points[0])
+
+    if nPoints > nPars:
+        print 'More points than parameters given, system is overconstrained; Taking only the first {0} points'.format( nPars )
+        nPoints = nPars
+        points = points[:nPars]
+        yValues = yValues[:nPars]
+    elif nPars < nPoints:
+        print 'Less points than parameters given, system is underconstrained'
+        return
+
+
+    if testMode:
+        print 'Used points:'
+        for point in points:
+            print 'y = fn( {0} )'.format( ', '.join([ str(p) for p in point]) )
+
+
+    xMatrix = numpy.array(points)
+    xInv = numpy.linalg.inv(xMatrix)
+
+
+    pointFunctions = []
+    parameterValuesPerPoint = []
+    for i in xrange(len(yValues[0])):
+
+        yValsPerPoint = numpy.array( [ [ys[i]] for ys in yValues ])
+        parameterValues = list(itertools.chain.from_iterable( xInv.dot( yValsPerPoint ) ))
+        parameterValuesPerPoint.append( parameterValues )
+
+        # NOTE THE i=i! otherwise i always points to the last element of the loop
+        pointFunction = lambda point, i=i: sum([ parValue * arg for parValue, arg in zip( point, parameterValuesPerPoint[i] ) ])
+        pointFunctions.append( pointFunction )
+
+
+        if testMode:
+
+            print '\n' + '-'*70 + '\nPoint {0}'.format(i)
+            print '\nxInv:'
+            print xInv
+            print '\nyValsPerPoint:'
+            print yValsPerPoint
+            print '\nparameterValues:'
+            print parameterValues
+
+            print '\nPoint function tests:'
+            print 'Real value = {1},  pointFunction = {0}'.format( pointFunction( points[0] ), yValsPerPoint[0] )
+            copy = list(points[0][:])
+
+            copy[0] = 1.1*points[0][0]
+            print 'small up variation of pointFunction   = {0}'.format( pointFunction( copy ) )
+            copy[0] = 0.9*points[0][0]
+            print 'small down variation of pointFunction = {0}'.format( pointFunction( copy ) )
+
+
+    functionForList = lambda *args: [ function(args) for function in pointFunctions ]
+    return functionForList
+
+
+
+
+def MapPredictionToExperimental(
+    ptTheory, sigmaTheory,
+    binning,
+    verbose = False,
+    makeTGraph = None,
+    ):
+
+    Commands.ThrowError( '\'MapPredictionToExperimental\' should really not be used anymore; use \'Rebin\' instead' )
+    sys.exit()
+
+
+    sigmas        = sigmaTheory
+    binBoundaries = ptTheory
+    nBins         = len(binBoundaries)-1
+    binCenters    = [ 0.5*( binBoundaries[i] + binBoundaries[i+1] ) for i in xrange(nBins) ]
+    binWidths     = [ ( binBoundaries[i+1] - binBoundaries[i] ) for i in xrange(nBins) ]
+    halfBinWidths = [ 0.5*( binBoundaries[i+1] - binBoundaries[i] ) for i in xrange(nBins) ]
+
+    nBinsExp      = len(binning)-1
+    binCentersExp    = [ 0.5*( binning[i] + binning[i+1] ) for i in xrange(nBinsExp) ]
+    binWidthsExp     = [ ( binning[i+1] - binning[i] ) for i in xrange(nBinsExp) ]
+    halfBinWidthsExp = [ 0.5*( binning[i+1] - binning[i] ) for i in xrange(nBinsExp) ]
+
+
+    if verbose:
+        print 'Theory curve:'
+        print '{0:9}  |  {1:9}  |  {2:9}  |  {3:9}'.format( 'pt left', 'pt right', 'pt center', 'sigma' )
+        for iBin in xrange(nBins):
+            print '{0:+9.2f}  |  {1:+9.2f}  |  {2:+9.2f}  |  {3:+9.5f}'.format(
+                binBoundaries[iBin], binBoundaries[iBin+1], binCenters[iBin], sigmas[iBin]
+                )
+
+    if verbose: print '\nInterpolating and rebinning'
+    # integralfunction = GetIntegral( binCenters, sigmas )
+    integralfunction = GetIntegral( binBoundaries, sigmas )
+
+    sigmaExpBinning = []
+    for iBinExp in xrange(nBinsExp):
+        leftBound      = binning[iBinExp]
+        rightBound     = binning[iBinExp+1]
+        integral       = integralfunction( leftBound, rightBound, verbose=verbose )
+        integralPerGeV = integral / ( rightBound - leftBound )
+        if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( leftBound, rightBound, integralPerGeV )
+        sigmaExpBinning.append( integralPerGeV )
+
+
+    if not makeTGraph == None:
+
+        Tg = ROOT.TGraphAsymmErrors(
+            nBinsExp,
+            array( 'd', binCentersExp ),
+            array( 'd', sigmaExpBinning, ),
+            array( 'd', halfBinWidthsExp ),
+            array( 'd', halfBinWidthsExp ),
+            array( 'd', [ 0 for i in xrange(nBinsExp) ] ),
+            array( 'd', [ 0 for i in xrange(nBinsExp) ] ),
+            )
+        ROOT.SetOwnership( Tg, False )
+        Tg.SetName( makeTGraph )
+        Tg.name = makeTGraph
+        return Tg
+
+    else:
+        return sigmaExpBinning
 
 
 
 ########################################
 # Making plots with output workspaces
 ########################################
-
-
 
 def WriteTH2DToFile(
         rootfiles,
@@ -1257,15 +811,15 @@ def PlotCouplingScan2D(
     scan = Commands.ConvertTChainToArray(
         rootfiles
         )
-    nPoints = len(scan['ct'])
+    nPoints = len(scan[xCoupling])
 
 
-    keys = [ 'cg', 'ct', 'deltaNLL' ]
-    ret = []
+    keys = [ yCoupling, xCoupling, 'deltaNLL' ]
+    ret = Container( scanPoints=[] )
     for iPoint in xrange(nPoints):
-        ret.append( [ scan[key][iPoint] for key in keys ] )
+        ret.scanPoints.append( [ scan[key][iPoint] for key in keys ] )
     if verbose:
-        pprint.pprint( [ keys ] + ret )
+        pprint.pprint( [ keys ] + ret.scanPoints )
 
 
     def inferBinBoundaries( binCenters ):
@@ -1338,8 +892,17 @@ def PlotCouplingScan2D(
         if scan[xCoupling][iPoint] == xBestfit and scan[yCoupling][iPoint] == yBestfit:
             continue
 
-        iBinX = xBinCenters.index( scan[xCoupling][iPoint] )
-        iBinY = yBinCenters.index( scan[yCoupling][iPoint] )
+        try:
+            iBinX = xBinCenters.index( scan[xCoupling][iPoint] )
+        except ValueError:
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[xCoupling][iPoint] )
+            continue
+
+        try:
+            iBinY = yBinCenters.index( scan[yCoupling][iPoint] )
+        except ValueError:
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[yCoupling][iPoint] )
+            continue
 
         H2.SetBinContent( iBinX+1, iBinY+1, scan['deltaNLL'][iPoint] )
 
@@ -1355,7 +918,7 @@ def PlotCouplingScan2D(
 
     # H2.GetZaxis().SetLimits( 0., 50. )
     # H2.GetZaxis().SetRange( 0, 10 )
-    H2.SetMaximum( 50. )
+    H2.SetMaximum( 7. )
     c.Update()
 
 
@@ -1364,7 +927,7 @@ def PlotCouplingScan2D(
     Tpoint.SetMarkerStyle(34)
     Tpoint.Draw('P')
 
-    Tpoint_SM = ROOT.TGraph( 1, array( 'd', [1.] ), array( 'd', [0.] ) )
+    Tpoint_SM = ROOT.TGraph( 1, array( 'd', [1.] ), array( 'd', [1.] ) )
     Tpoint_SM.SetMarkerSize(2)
     Tpoint_SM.SetMarkerStyle(21)
     Tpoint_SM.Draw('P')
@@ -1372,6 +935,12 @@ def PlotCouplingScan2D(
 
     SaveC( 'couplingscan2D', asROOT=True )
     SetCMargins()
+
+
+    ret.xCoupling = xCoupling
+    ret.yCoupling = yCoupling
+    ret.xBestfit  = xBestfit
+    ret.yBestfit  = yBestfit
 
     return ret
     
@@ -1407,6 +976,9 @@ def TestParametrizationsInWorkspace(
     yieldParameters.sort( key = lambda i: Commands.InterpretPOI( i.GetName() )[2][0] )
 
 
+    expBinBoundaries = [ Commands.InterpretPOI( yp.GetName() )[2][0] for yp in yieldParameters ]
+    expBinBoundaries = [ float(b) for b in expBinBoundaries if isinstance(b, float) ]
+    expBinBoundaries.append( 999. )
 
     print '\nSM Couplings:'
     for coupling in couplings:
@@ -1418,7 +990,8 @@ def TestParametrizationsInWorkspace(
 
 
 
-    yPerCoupling = []
+    containers = []
+    # yPerCoupling = []
     for newcouplings in testcouplings:
 
         # print '\nSetting ct = {0}, cg = {1}'.format( newcouplings['ct'], newcouplings['cg'] )
@@ -1444,9 +1017,18 @@ def TestParametrizationsInWorkspace(
             print '    {0:20}: {1}'.format( parametrization.GetName(), parametrization.getVal() )
             yParametrization.append( parametrization.getVal() )
 
-        yPerCoupling.append( ( y, yParametrization ) )
+        # yPerCoupling.append( ( y, yParametrization ) )
 
-    return yPerCoupling
+        container = Container()
+        container.mus_expBinning       = y
+        container.mus_expBinBoundaries = expBinBoundaries
+        container.mus_theoryBinning    = yParametrization
+
+        containers.append( container )
+
+
+    # return yPerCoupling
+    return containers
 
 
 

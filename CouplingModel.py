@@ -4,6 +4,7 @@ from HiggsAnalysis.CombinedLimit.PhysicsModel import *
 import os, sys, numpy, itertools, re
 import ROOT
 from math import sqrt
+from copy import deepcopy
 
 
 class CouplingModel( PhysicsModel ):
@@ -72,7 +73,7 @@ class CouplingModel( PhysicsModel ):
         with open( correlationMatrixFile, 'r' ) as correlationMatrixFp:
             lines = [ l.strip() for l in correlationMatrixFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
 
-        corrMat = [ line.split() for line in lines ]
+        corrMat = [ [ float(number) for number in line.split() ] for line in lines ]
 
         # Check if it is square
         if not all([ len(row) == len(corrMat) for row in corrMat ]):
@@ -91,9 +92,9 @@ class CouplingModel( PhysicsModel ):
             line = line.split()
 
             if len(line) == 1:
-                symmErrors.append( abs(line[0]) )
+                symmErrors.append( abs(float(line[0])) )
             elif len(line) == 2:
-                symmErrors.append( 0.5*( abs(line[0]) + abs(line[1]) ) )
+                symmErrors.append( 0.5*( abs(float(line[0])) + abs(float(line[1])) ) )
             else:
                 print '[ERROR] Found {0} elements on line in \'{1}\''.format( len(line), errorFile )
                 return
@@ -134,17 +135,18 @@ class CouplingModel( PhysicsModel ):
         N = len(covarianceMatrix)
 
         covarianceTMatrix = ROOT.TMatrixDSym(N)
-        for i in xrange(n):
-            for j in xrange(n):
-                covarianceTMatrix[i][j] = covarianceMatrix[i][j]
+        for i in xrange(N):
+            for j in xrange(N):
+                # covarianceTMatrix[i][j] = covarianceMatrix[i][j]
+                covarianceTMatrix[i,j] = covarianceMatrix[i][j]
 
         eigenObject  = ROOT.TMatrixDSymEigen(covarianceTMatrix)
         eigenVectors = eigenObject.GetEigenVectors()
         eigenValues  = eigenObject.GetEigenValues()
 
-        decorrelatedMatrix = []
-        for i in xrange(n):
-            for j in xrange(n):
+        decorrelatedMatrix = [ [ 999 for j in xrange(N) ] for i in xrange(N) ]
+        for i in xrange(N):
+            for j in xrange(N):
                 decorrelatedMatrix[i][j] = eigenVectors(i,j) * sqrt( eigenValues(j) )
 
         return decorrelatedMatrix
@@ -271,7 +273,7 @@ class CouplingModel( PhysicsModel ):
 
         expBinBoundaries = []
         for signal in signals:
-            if signal == 'OutsideAcceptance': continue
+            if 'OutsideAcceptance' in signal: continue
             bounds = signal.split('_')[2:]
             for bound in bounds:
                 bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
@@ -335,76 +337,6 @@ class CouplingModel( PhysicsModel ):
 
 
         # ======================================
-        # Handle theory uncertainties
-
-        # First check if given input makes sense
-
-        self.theoryUncertaintiesPassed = False
-        self.correlationMatrixPassed   = False
-        self.covarianceMatrixPassed    = False
-
-
-        doDecorrelation = False
-        if (
-            not self.theoryUncertaintiesPassed
-            and not self.correlationMatrixPassed
-            and not self.covarianceMatrixPassed
-            ):
-            print 'No theory uncertainties are specified; Running without theory uncertainties'
-            pass
-
-        elif (
-            self.theoryUncertaintiesPassed
-            and self.correlationMatrixPassed
-            and not self.covarianceMatrixPassed
-            ):
-            if not len(self.theoryUncertainties) == len(self.correlationMatrix):
-                print '[ERROR] Cannot build a covariance matrix out of given input'
-                print '        len(self.theoryUncertainties) = {0}'.format( len(self.theoryUncertainties) )
-                print '        len(self.correlationMatrix)   = {0}'.format( len(self.correlationMatrix) )
-                return
-
-            self.covarianceMatrix = []
-            self.nTheoryUncertainties = len(self.theoryUncertainties)
-            for i in xrange(self.nTheoryUncertainties):
-                self.covarianceMatrix.append(
-                    [ self.theoryUncertainties[i] * self.correlationMatrix[i][j] for j in xrange(self.nTheoryUncertainties) ]
-                    )
-            doDecorrelation = True
-
-        elif (
-            not self.theoryUncertaintiesPassed
-            and not self.correlationMatrixPassed
-            and self.covarianceMatrixPassed
-            ):
-            # self.covarianceMatrix should be filled already
-            doDecorrelation = True
-
-        else:
-            print '[ERROR] Given input makes no sense:'
-            print '        self.theoryUncertaintiesPassed = ', self.theoryUncertaintiesPassed
-            print '        self.correlationMatrixPassed   = ', self.correlationMatrixPassed
-            print '        self.covarianceMatrixPassed    = ', self.covarianceMatrixPassed
-            return
-
-
-        if doDecorrelation:
-            decorrelatedMatrix = self.Decorrelate( self.covarianceMatrix )
-
-            print decorrelatedMatrix
-
-
-
-
-
-
-
-
-        print 'Test exit'
-        sys.exit()
-
-
-        # ======================================
         # Find the parametrizations for all nTheorybins, plus 1 underflow and 1 overflow parametrization
 
         # First make sure there are RooRealVars for all the couplings in the workspace
@@ -413,8 +345,8 @@ class CouplingModel( PhysicsModel ):
                 '{coupling}[{default},{down},{up}]'.format(
                     coupling = coupling,
                     default  = self.SMDict['couplings'][coupling],
-                    down     = self.SMDict['couplings'][coupling] - 20.0,
-                    up       = self.SMDict['couplings'][coupling] + 20.0,
+                    down     = self.SMDict['couplings'][coupling] - 1000.0,
+                    up       = self.SMDict['couplings'][coupling] + 1000.0,
                     )
                 )
 
@@ -515,6 +447,7 @@ class CouplingModel( PhysicsModel ):
         # ======================================
         # Find the theory bin widths and parametrization indices inside the experimental bins
 
+        SMXSInsideExperimentalBins = []
         for iExpBin in xrange(nExpBins):
 
             expBoundLeft  = expBinBoundaries[iExpBin]
@@ -589,7 +522,7 @@ class CouplingModel( PhysicsModel ):
 
             if self.verbose:
                 print '\nTotal cross section in {0} is {1}'.format( SMXSInsideExperimentalBin, expBinStr )
-
+            SMXSInsideExperimentalBins.append( SMXSInsideExperimentalBin )
 
             # if self.verbose:
             #     print '   Which will carry the following weights:'
@@ -712,12 +645,126 @@ class CouplingModel( PhysicsModel ):
                 print ''
 
 
-
         self.modelBuilder.out.defineSet( 'POI', ','.join(couplings) )
 
         # Define 2 extra sets for plotting convenience
         self.modelBuilder.out.defineSet( 'couplings', ','.join(couplings) )
         self.modelBuilder.out.defineSet( 'yieldParameters', ','.join([ 'r_' + s for s in signals ]) )
+
+
+        ########################################
+        # Handle theory uncertainties
+        ########################################
+
+        def printMatrix( matrix, indent = '    ', scientific=True ):
+            for row in matrix:
+                print indent + ' '.join([ '{0:<+10.2{1}}'.format( number, 'E' if scientific else 'f' ) for number in row ])
+
+        # First check if given input makes sense
+        doDecorrelation = False
+        if (
+            not self.theoryUncertaintiesPassed
+            and not self.correlationMatrixPassed
+            and not self.covarianceMatrixPassed
+            ):
+            print 'No theory uncertainties are specified; Running without theory uncertainties'
+            pass
+
+        elif (
+            self.theoryUncertaintiesPassed
+            and self.correlationMatrixPassed
+            and not self.covarianceMatrixPassed
+            ):
+            if not len(self.theoryUncertainties) == len(self.correlationMatrix):
+                print '[ERROR] Cannot build a covariance matrix out of given input'
+                print '        len(self.theoryUncertainties) = {0}'.format( len(self.theoryUncertainties) )
+                print '        len(self.correlationMatrix)   = {0}'.format( len(self.correlationMatrix) )
+                return
+
+            self.covarianceMatrix = []
+            self.nTheoryUncertainties = len(self.theoryUncertainties)
+            for i in xrange(self.nTheoryUncertainties):
+                self.covarianceMatrix.append(
+                    [ self.theoryUncertainties[i] * self.theoryUncertainties[j] * self.correlationMatrix[i][j] for j in xrange(self.nTheoryUncertainties) ]
+                    )
+            doDecorrelation = True
+            print '\nApplying theory uncertainties using the passed correlationMatrix and theoryUncertainties'
+
+            print '  Using the following theory uncertainties:'
+            for unc in self.theoryUncertainties:
+                print '    {0:<+20.8f}'.format( unc )
+
+            print '  Using the following correlation matrix:'
+            printMatrix( self.correlationMatrix, scientific=False )
+
+
+        elif (
+            not self.theoryUncertaintiesPassed
+            and not self.correlationMatrixPassed
+            and self.covarianceMatrixPassed
+            ):
+            # self.covarianceMatrix should be filled already
+            doDecorrelation = True
+            self.nTheoryUncertainties = len(self.covarianceMatrix)
+            print '\nApplying theory uncertainties using the passed covarianceMatrix'
+
+        else:
+            print '[ERROR] Given input makes no sense:'
+            print '        self.theoryUncertaintiesPassed = ', self.theoryUncertaintiesPassed
+            print '        self.correlationMatrixPassed   = ', self.correlationMatrixPassed
+            print '        self.covarianceMatrixPassed    = ', self.covarianceMatrixPassed
+            return
+
+
+        if doDecorrelation:
+
+            print '  Using the following covariance matrix:'
+            printMatrix( self.covarianceMatrix )
+
+            decorrelatedMatrix = self.Decorrelate( self.covarianceMatrix )
+
+            print '  Found the following decorrelatedMatrix:'
+            printMatrix( decorrelatedMatrix )
+
+            print '  Divided by SM cross section:'
+            decorrelatedMatrixNormalized = deepcopy( decorrelatedMatrix )
+            for i in xrange(self.nTheoryUncertainties):
+                for j in xrange(self.nTheoryUncertainties):
+                    decorrelatedMatrixNormalized[i][j] = 1 + decorrelatedMatrix[i][j] / SMXSInsideExperimentalBins[i]
+                    # # Skip some uncertainties if the effect is too small
+                    # if abs(decorrelatedMatrixNormalized[i][j] - 1) < 0.0005:
+                    #     decorrelatedMatrixNormalized[i][j] = 0.
+            printMatrix( decorrelatedMatrixNormalized )
+
+            # for nuis in self.DC.systs:
+            #     print nuis[0], nuis[1], nuis[2], nuis[3]
+
+            for iTheoryUncertainty in xrange(self.nTheoryUncertainties):
+
+                errDict = {}
+                for binName in self.DC.bins:
+                    errDict[binName] = {}
+                    for processName in self.DC.processes:
+
+                        errDict[binName][processName] = 0.
+
+                        if processName in signals:
+                            iProcess = signals.index(processName)
+                            if iProcess < self.nTheoryUncertainties:
+                                errDict[binName][processName] = decorrelatedMatrixNormalized[iTheoryUncertainty][iProcess]
+                        
+                systematicName = 'theoryUncertainty_{0}'.format( signals[iTheoryUncertainty] )
+
+                self.DC.systs.append(
+                    ( systematicName, False, 'lnN', [], errDict )
+                    )
+
+                if self.verbose:
+                    print 'Added nuisance \'{0}\''.format( systematicName )
+                        
+
+        # print 'Test exit'
+        # sys.exit()
 
         self.chapter( 'Starting model.getYieldScale()' )
 

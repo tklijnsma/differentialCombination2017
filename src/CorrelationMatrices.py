@@ -149,6 +149,7 @@ def GetCorrelationMatrix(
     # Try to get correlations
 
     nPoints = len( variations[0].binValues )
+    binBoundaries = variations[0].binBoundaries
 
     if makeScatterPlots:
         base = GetPlotBase()
@@ -162,14 +163,15 @@ def GetCorrelationMatrix(
         iBinValues = [ variation.binValues[iPoint] for variation in variations ]
         iPt = variations[0].binCenters[iPoint]
 
+        binWidth   = binBoundaries[iPoint+1] - binBoundaries[iPoint]
         maxVarUp   = max( iBinValues )
         maxVarDown = min( iBinValues )
         if withRespectToCentralScale:
             print 'Not yet implemented'
         else:
             errors.append((
-                abs( maxVarUp - mean(iBinValues) ),
-                abs( maxVarDown - mean(iBinValues) ),
+                binWidth * abs( maxVarUp - mean(iBinValues) ),
+                binWidth * abs( maxVarDown - mean(iBinValues) ),
                 ))
 
         # Essentially doing this loop from 0 to nPoints is double work, but for the plots
@@ -762,7 +764,12 @@ def MergeLowHighPtFilesFromHqT(
 
 
 
-def ConvertTGraphToLinesAndBoxes( Tg, drawImmediately=False, legendObject=None, verbose=False ):
+def ConvertTGraphToLinesAndBoxes(
+        Tg,
+        drawImmediately=False,
+        legendObject=None,
+        verbose=False,
+        noBoxes=False ):
 
     yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
     xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
@@ -816,7 +823,7 @@ def ConvertTGraphToLinesAndBoxes( Tg, drawImmediately=False, legendObject=None, 
         boxes.append(box)
 
         if drawImmediately:
-            box.Draw()
+            if not noBoxes: box.Draw()
             line.Draw()
 
 
@@ -836,7 +843,91 @@ def ConvertTGraphToLinesAndBoxes( Tg, drawImmediately=False, legendObject=None, 
         legendDummy.Draw('PSAME')
 
         if legendObject:
-            legendObject.AddEntry( legendDummy.GetName(), Tg.GetName(), 'lf' )
+            legendObject.AddEntry(
+                legendDummy.GetName(), Tg.GetName(),
+                'lf' if not noBoxes else 'l'
+                )
+
+
+
+def ConvertTGraphToHistogram(
+        Tg,
+        drawImmediately=False,
+        legendObject=None,
+        verbose=False,
+        ):
+
+    yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
+    xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
+
+    if not xBand or not yBand:
+        Commands.ThrowError( 'Make sure all errors are filled' )
+
+    nPoints = Tg.GetN()
+
+    if verbose: print '[debug] Converting \'{0}\' to lines and boxes ({1} points)'.format( Tg.GetName(), nPoints )
+
+    lineStyle = Tg.GetLineStyle()
+    lineWidth = Tg.GetLineWidth()
+    lineColor = Tg.GetLineColor()
+
+    fillStyle = Tg.GetFillStyle()
+    fillColor = Tg.GetFillColor()
+
+    binBoundaries = []
+    yValues       = []
+
+    x_Double = ROOT.Double(0)
+    y_Double = ROOT.Double(0)
+    for iPoint in xrange( nPoints ):
+        Tg.GetPoint( iPoint, x_Double, y_Double )
+        x = float(x_Double)
+        y = float(y_Double)
+
+        xMin = abs(Tg.GetErrorXlow(iPoint))
+        xMax = abs(Tg.GetErrorXhigh(iPoint))
+        yMin = abs(Tg.GetErrorYlow(iPoint))
+        yMax = abs(Tg.GetErrorYhigh(iPoint))
+
+        if verbose:
+            print '[debug] Point {0:<3}:'.format( iPoint )
+            print '        x = {0:+8.3f}, xMin = {1:+8.3f}, xMax = {2:+8.3f}'.format( x, xMin, xMax )
+            print '        y = {0:+8.3f}, yMin = {1:+8.3f}, yMax = {2:+8.3f}'.format( y, yMin, yMax )
+
+        binBoundaries.append( x - xMin )
+        rightBound = x + xMax
+
+        yValues.append( y )
+
+
+    binBoundaries.append( rightBound )
+
+
+    Hname = TheoryCommands.GetUniqueRootName()
+    H = ROOT.TH1F(
+        Hname, Hname,
+        nPoints,
+        array( 'f', binBoundaries )
+        )
+    ROOT.SetOwnership( H, False )
+
+    H.SetLineStyle( lineStyle )
+    H.SetLineWidth( lineWidth )
+    H.SetLineColor( lineColor )
+
+    print '[debug] Filling the histogram'
+    for iBin in xrange(nPoints):
+        H.SetBinContent( iBin+1, yValues[iBin] )
+
+    # H.Scale( 1./H.Integral() )
+
+    if drawImmediately:
+        H.Draw('SAME')
+
+        if legendObject:
+            legendObject.AddEntry( H.GetName(), Tg.GetName(), 'l' )
+
+
 
 
 

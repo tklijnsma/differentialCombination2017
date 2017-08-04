@@ -22,6 +22,8 @@ import PhysicsCommands
 import OneOfCommands
 import TheoryCommands
 import CorrelationMatrices
+import MergeHGGWDatacards
+import TheoryFileInterface
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -42,6 +44,9 @@ def main():
     parser.add_argument( '--makeStewartTackmannDatacard',     action='store_true' )
     parser.add_argument( '--createDerivedTheoryFiles',        action='store_true' )
     parser.add_argument( '--createDerivedTheoryFiles_Yukawa', action='store_true' )
+    parser.add_argument( '--createDerivedTheoryFiles_YukawaQuarkInduced', action='store_true' )
+    parser.add_argument( '--mergeGluonInducedWithQuarkInduced', action='store_true' )
+
     parser.add_argument( '--CorrelationMatrices',             action='store_true' )
     parser.add_argument( '--CorrelationMatrices_Agnieszka',   action='store_true' )
 
@@ -223,17 +228,22 @@ def main():
 
 
     if args.createDerivedTheoryFiles:
-        TheoryCommands.CreateDerivedTheoryFiles( pattern=r'ct_[mp\d]+_cg_[mp\d]+' )
+        TheoryFileInterface.CreateDerivedTheoryFiles( pattern=r'ct_[mp\d]+_cg_[mp\d]+' )
 
     if args.createDerivedTheoryFiles_Yukawa:
-        TheoryCommands.CreateDerivedTheoryFiles_Yukawa(
+        TheoryFileInterface.CreateDerivedTheoryFiles_Yukawa(
             theoryDir = 'suppliedInput/fromPier/histograms_ggH_May17/',
             verbose = True,
             mainCrossSection = 'matched',
             )
 
+    if args.createDerivedTheoryFiles_YukawaQuarkInduced:
+        TheoryFileInterface.CreateDerivedTheoryFiles_YukawaQuarkInduced(
+            verbose = True,
+            )
 
-
+    if args.mergeGluonInducedWithQuarkInduced:
+        TheoryFileInterface.MergeGluonAndQuarkInduced()
 
 
 

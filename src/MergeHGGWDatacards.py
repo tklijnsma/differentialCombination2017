@@ -49,6 +49,136 @@ def main():
 
 
 
+def RenameProductionModeHgg( process, wsFile ):
+
+    outRootFile = wsFile.replace( '.root', '_FullyRenamed_{0}.root'.format(datestr) )
+    fout = ROOT.TFile( outRootFile, 'recreate' )
+
+    # ======================================
+    # Get input ws
+
+    wsFp   = ROOT.TFile.Open( wsFile )
+    w      = ROOT.gDirectory.Get('wsig_13TeV')
+
+    componentArgset   = w.components()
+    nComponents       = componentArgset.getSize()
+
+    componentIterator = w.componentIterator()
+
+    for i in xrange(nComponents):
+        element = componentIterator.Next()
+        name = element.GetName()
+
+        if 'InsideAcceptance' in name or 'OutsideAcceptance' in name:
+            newname = name.replace( 'InsideAcceptance', '{0}_InsideAcceptance'.format(process) ).replace( 'OutsideAcceptance', '{0}_OutsideAcceptance'.format(process) )
+            print 'Replacing \'{0}\' with \'{1}\''.format( name, newname )
+            element.SetName( newname )
+        else:
+            print 'Not renaming \'{0}\''.format(name)
+
+        # newname = process + '_' + name
+        # print 'Replacing \'{0}\' with \'{1}\''.format( name, newname )
+        # element.SetName( newname )
+
+
+
+    # ======================================
+    # Write to file
+
+    fout.WriteTObject(w)
+    fout.Close()
+
+    wsFp.Close()
+
+
+
+
+
+def RenameProductionModeHgg_PerMethod( process, wsFile ):
+
+    # ======================================
+    # Arrange IO for output
+
+    if Commands.IsTestMode():
+        makeTempDir( 'RenamedTests_{0}'.format(datestr) )
+        outRootFile = join( TEMPCARDDIR, basename(wsFile.replace('.root','_feaRenamed.root')) )
+    else:
+        outRootFile = wsFile.replace('.root','_FullyRenamed.root')
+
+    fout = ROOT.TFile( outRootFile, 'recreate' )
+
+
+    # ======================================
+    # Get input ws
+
+    wsFp   = ROOT.TFile.Open( wsFile )
+    w      = ROOT.gDirectory.Get('wsig_13TeV')
+
+
+
+    allMethods = [
+        'allVars',
+        'allCats',
+        'allFunctions',
+        'allCatFunctions',
+        'allPdfs',
+        'allResolutionModels',
+        'allData',
+        'allEmbeddedData',
+        'allGenericObjects',
+        ]
+
+    for method in allMethods:
+
+        argset   = getattr( w, method )()
+
+        elements = []
+        try:
+            iterator = argset.createIterator()
+            for i in xrange(argset.getSize()):
+                element = iterator.Next()
+                elements.append(element)
+        except AttributeError:
+            element = argset.begin()
+            for i in xrange(len(argset)):
+                elements.append(element)
+                try:
+                    next(element)
+                except StopIteration:
+                    break
+
+
+        for element in elements:
+
+            name = element.GetName()
+
+            if 'const' in name: print 'Next replaced process should be \'{0}\' to \'{1}\''.format(
+                name,
+                name.replace( 'InsideAcceptance', '{0}_InsideAcceptance'.format(process) ),
+                )
+
+            if 'InsideAcceptance' in name:
+                newname = name.replace( 'InsideAcceptance', '{0}_InsideAcceptance'.format(process) )
+                print 'Replacing \'{0}\' with \'{1}\''.format( name, newname )
+                element.SetName( newname )
+
+            if 'OutsideAcceptance' in name:
+                newname = name.replace( 'OutsideAcceptance', '{0}_OutsideAcceptance'.format(process) )
+                print 'Replacing \'{0}\' with \'{1}\''.format( name, newname )
+                element.SetName( newname )
+
+
+    # ======================================
+    # Write to file
+
+    fout.WriteTObject(w)
+    fout.Close()
+
+    wsFp.Close()
+
+
+
+
 
 def Rename_fea( process, wsFile ):
 
@@ -91,6 +221,7 @@ def Rename_fea( process, wsFile ):
     fout.Close()
 
     wsFp.Close()
+
 
 
 
@@ -266,6 +397,14 @@ def ExtendPathOfRootFiles( card, basepath ):
 def GetDatacardContainer(
         datacardTxt
         ):
+
+    
+    if isfile( datacardTxt ):
+        print 'Given argument \'{0}\' was found to be a valid path; Trying to read datacard from it'.format(datacardTxt)
+        datacardFile = datacardTxt
+        with open( datacardFile, 'r' ) as datacardFp:
+            datacardTxt = datacardFp.read()
+
 
     ret = Container()
     ret.shapesLines = []

@@ -30,6 +30,32 @@ def IsTestMode():
 
 
 TEMPJOBDIR = abspath( 'tmp' )
+def SetTempJobDir( newdirname='tmp' ):
+    global TEMPJOBDIR
+    TEMPJOBDIR = newdirname
+
+
+def AppendNumberToDirNameUntilItDoesNotExistAnymore(
+        dirName,
+        nAttempts = 100,
+        ):
+
+    dirName = abspath(dirName)
+
+    if not isdir(dirName):
+        return dirName
+
+    dirName += '_{0}'
+    for iAttempt in xrange(nAttempts):
+        if not isdir( dirName.format(iAttempt) ):
+            dirName = dirName.format(iAttempt)
+            break
+    else:
+        ThrowError( 'Could not create a unique directory for {0}'.format(dirName.format('X')) )
+        sys.exit()
+
+    print '[info] New directory: {0}'.format( dirName )
+    return dirName
 
 
 def BasicCombineCards(
@@ -51,11 +77,15 @@ def BasicT2WS(
     datacard,
     extraOptions=None,
     manualMaps=None,
+    outputWS=None,
     ):
 
     outputDir = abspath( 'workspaces_{0}'.format(datestr) )
     if not isdir( outputDir ): os.makedirs( outputDir )
-    outputWS = join( outputDir, basename(datacard).replace( '.txt', '.root' ) )
+    
+    if not outputWS:
+        outputWS = basename(datacard).replace( '.txt', '.root' )
+    outputWS = join( outputDir, outputWS )
 
     signalprocesses, processes, bins = ListProcesses( datacard )
 
@@ -145,6 +175,8 @@ def BasicBestfit(
         datacard,
         setPOIs = True,
         onBatch = False,
+        batchJobSubDir = None,
+        sendEmail = True,
         extraOptions = None,
         ):
     
@@ -154,6 +186,7 @@ def BasicBestfit(
         'combine',
         datacard,
         '-M MultiDimFit',
+        '--saveNLL',
         # '--saveWorkspace',
         # '--minimizerStrategy 2',
         # '-v 2',
@@ -189,25 +222,34 @@ def BasicBestfit(
 
         if not TESTMODE:
 
-            if not isdir(TEMPJOBDIR): os.makedirs(TEMPJOBDIR)
+            tempdir = abspath(TEMPJOBDIR)
+            if not batchJobSubDir == None:
+                tempdir = abspath( join( TEMPJOBDIR, batchJobSubDir ) )
+            tempdir = AppendNumberToDirNameUntilItDoesNotExistAnymore( tempdir )
+
+            if not isdir(tempdir): os.makedirs(tempdir)
+
             osHandle, shFile =  tempfile.mkstemp(
                 prefix = 'basicbestfitjob_',
                 suffix = '.sh',
-                dir = TEMPJOBDIR
+                dir = tempdir
                 )
             shFile = abspath( shFile )
 
             cmsswPath = join( os.environ['CMSSW_BASE'], 'src' )
 
             with open( shFile, 'w' ) as shFp:
-                shFp.write( '#$ -o {0} \n'.format( TEMPJOBDIR ) )
-                shFp.write( '#$ -e {0} \n'.format( TEMPJOBDIR ) )
+                if sendEmail:
+                    shFp.write( '#$ -M tklijnsm@gmail.com \n' )
+                    shFp.write( '#$ -m eas \n' )
+                shFp.write( '#$ -o {0} \n'.format( tempdir ) )
+                shFp.write( '#$ -e {0} \n'.format( tempdir ) )
                 shFp.write( 'export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch/ \n' )
                 shFp.write( 'source /cvmfs/cms.cern.ch/cmsset_default.sh \n' )
                 shFp.write( 'source /swshare/psit3/etc/profile.d/cms_ui_env.sh \n' )
                 shFp.write( 'cd {0} \n'.format( cmsswPath ) )
                 shFp.write( 'eval `scramv1 runtime -sh` \n')
-                shFp.write( 'cd {0} \n'.format( TEMPJOBDIR ) )
+                shFp.write( 'cd {0} \n'.format( tempdir ) )
                 shFp.write( ' '.join(cmd) )
 
             qsubCmd = 'qsub -q short.q {0}'.format( shFile )
@@ -384,6 +426,8 @@ def MultiDimCombineTool(
         queue         = '1nh',
         notOnBatch    = False,
         jobDirectory  = None,
+        fastscan      = False,
+        asimov        = False,
         extraOptions  = [],
     ):
 
@@ -423,6 +467,10 @@ def MultiDimCombineTool(
         # '--minimizerStrategy 2',
         ]
 
+    if fastscan:
+        cmd.append( '--fastScan' )
+    if asimov:
+        cmd.append( '-t -1' )
 
     if not extraOptions:
         pass
