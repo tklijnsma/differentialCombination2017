@@ -5,6 +5,7 @@ import os, sys, numpy, itertools, re
 import ROOT
 from math import sqrt
 from copy import deepcopy
+from array import array
 
 
 class CouplingModel( PhysicsModel ):
@@ -28,6 +29,7 @@ class CouplingModel( PhysicsModel ):
         self.correlationMatrixPassed   = False
         self.covarianceMatrixPassed    = False
 
+        self.skipBins = []
 
 
     def chapter( self, text, indent=0 ):
@@ -164,6 +166,9 @@ class CouplingModel( PhysicsModel ):
             elif optionName == 'verbose':
                 self.verbose = int(optionValue)
 
+            elif optionName == 'skipBins':
+                self.skipBins = optionValue.split(',')
+
             elif optionName == 'theory':
                 # Syntax: --PO theory=[ct=1,cg=1,file=some/path/.../] , brackets optional
 
@@ -215,7 +220,7 @@ class CouplingModel( PhysicsModel ):
 
 
             elif optionName == 'linearTerms':
-                self.includeLinearTerms = True
+                self.includeLinearTerms = eval(optionValue)
 
 
             # ======================================
@@ -386,6 +391,10 @@ class CouplingModel( PhysicsModel ):
             ratios = numpy.array([ [theory['ratios'][iTheoryBin]] for theory in self.theories ])
             parametrization = list(itertools.chain.from_iterable( couplingMatInv.dot( ratios ) ))
             parametrizations.append( parametrization )
+
+        # Use the SAME parametrization for the underflow bin as the first actually defined bin
+        # Otherwise the zero contribution pulls down the integral
+        parametrizations[0] = deepcopy( parametrizations[1] )
 
         # Overflow (right extrapolation)
         # parametrizations.append( [ 0. for i in xrange(nComponents) ] )
@@ -763,8 +772,24 @@ class CouplingModel( PhysicsModel ):
                     print 'Added nuisance \'{0}\''.format( systematicName )
                         
 
-        # print 'Test exit'
-        # sys.exit()
+
+        # Import also the theory and exp binBoundaries into workspace
+        # theoryBinBoundariesTVectorD = ROOT.TVectorD( len(theoryBinBoundaries) )
+        # for i, theoryBinBoundary in enumerate(theoryBinBoundaries):
+        #     theoryBinBoundariesTVectorD[i] = theoryBinBoundary
+
+
+        theoryBinBoundarySet = []
+        for i, theoryBinBoundary in enumerate(theoryBinBoundaries):
+            self.modelBuilder.doVar( 'theoryBinBound{0}[{1}]'.format( i, theoryBinBoundary ) )
+            theoryBinBoundarySet.append( 'theoryBinBound{0}'.format(i) )
+        self.modelBuilder.out.defineSet( 'theoryBinBoundaries', ','.join(theoryBinBoundarySet) )
+
+        expBinBoundarySet = []
+        for i, expBinBoundary in enumerate(expBinBoundaries):
+            self.modelBuilder.doVar( 'expBinBound{0}[{1}]'.format( i, expBinBoundary ) )
+            expBinBoundarySet.append( 'expBinBound{0}'.format(i) )
+        self.modelBuilder.out.defineSet( 'expBinBoundaries', ','.join(expBinBoundarySet) )
 
         self.chapter( 'Starting model.getYieldScale()' )
 
@@ -786,6 +811,11 @@ class CouplingModel( PhysicsModel ):
                 return 1
             else:
                 yieldParameter = 'r_' + process
+
+                for skipBin in self.skipBins:
+                    if skipBin in process:
+                        yieldParameter = 1
+
                 p( yieldParameter )
                 return yieldParameter
 

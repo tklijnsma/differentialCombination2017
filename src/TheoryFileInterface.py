@@ -18,137 +18,282 @@ from glob import glob
 from time import strftime
 datestr = strftime( '%b%d' )
 
+from Container import Container
+from OutputInterface import OutputContainer
 import Commands
 import TheoryCommands
+from Parametrization import Parametrization
 
+
+########################################
+# General functions
+########################################
+
+#____________________________________________________________________
+def Div( l1, l2 ):
+    ret = [ i / j if j!=0. else 0. for i, j in zip( l1, l2 ) ]
+    return ret
+
+
+#____________________________________________________________________
+FILEFINDERDIR = '.'
+def SetFileFinderDir( directory ):
+    global FILEFINDERDIR
+    FILEFINDERDIR = abspath( directory )
+
+
+#____________________________________________________________________
+def FileFinder( **kwargs ):
+
+    # ======================================
+    # Some options
+    
+    if 'verbose' in kwargs:
+        verbose = kwargs['verbose']
+        del kwargs['verbose']
+    else:
+        verbose = False
+
+    if 'directory' in kwargs:
+        allFilesDir = kwargs['directory']
+        del kwargs['directory']
+    else:
+        allFilesDir = FILEFINDERDIR
+
+    if 'expectOneFile' in kwargs:
+        expectOne = kwargs['expectOneFile']
+        del kwargs['expectOneFile']
+    else:
+        expectOne = False
+
+    if 'filter' in kwargs:
+        if isinstance( kwargs['filter'], basestring ):
+            filefilters = [ kwargs['filter'] ]
+        else:
+            filefilters = kwargs['filter']
+        del kwargs['filter']
+    else:
+        filefilters = []
+
+
+    # ======================================
+    # Find files
+
+    allFiles = [ f for f in glob( join( allFilesDir, '*' ) ) if isfile(f) ]
+
+    acceptedFiles = []
+    for theoryFile in allFiles:
+
+        passedFilter = True
+        for filefilter in filefilters:
+            if filefilter in theoryFile: passedFilter = False
+        if not passedFilter: continue
+
+        acceptancePerKey = []
+        for key, value in kwargs.iteritems():
+            if value == '*':
+                if key in theoryFile:
+                    acceptedByThisKey = True
+                else:
+                    acceptedByThisKey = False
+            elif not(
+                    re.search( r'{0}_{1}\D'.format( key, value ), theoryFile )
+                    or re.search( r'{0}_{1}\D'.format( key, Commands.ConvertFloatToStr(value) ), theoryFile )
+                    ):
+                acceptedByThisKey = False
+            else:
+                acceptedByThisKey = True
+            acceptancePerKey.append(acceptedByThisKey)
+
+        if all(acceptancePerKey):
+            acceptedFiles.append( theoryFile )
+
+
+    if len(acceptedFiles) == 0:
+        Commands.ThrowError(
+            'The following call to FileFinder failed to retrieve any files:\n      '
+            + '\n      '.join( [ '{0} = {1}'.format(key,value) for key, value in kwargs.iteritems() ] )
+            )
+        sys.exit()
+
+    if expectOne and len(acceptedFiles) > 1:
+        Commands.ThrowError(
+            'Found more than 1 file for the following keys:'
+            + '\n    ' + '\n    '.join( [ '{0} = {1}'.format(key,value) for key, value in kwargs.iteritems() ] )
+            + '\n  File list:'
+            + '\n    ' + '\n    '.join([ relpath( f, '.' ) for f in acceptedFiles ])
+            )
+        sys.exit()
+
+    if verbose:
+        print '[info] FileFinder: Using the following keys:'
+        print '    ' + '\n    '.join( [ '{0} = {1}'.format(key,value) for key, value in kwargs.iteritems() ] )
+        print '  Found the following file(s):'
+        print '    ' + '\n    '.join([ relpath( f, '.' ) for f in acceptedFiles ])
+
+    if expectOne:
+        return acceptedFiles[0]
+    else:
+        return acceptedFiles
+
+
+#____________________________________________________________________
+def ReadDerivedTheoryFile(
+    derivedTheoryFile,
+    returnContainer = True,
+    verbose = False,
+    ):
+
+    with open( derivedTheoryFile, 'r' ) as theoryFp:
+        lines = [ l.strip() for l in theoryFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
+
+
+    if returnContainer:
+        container = Container()
+
+        container.file = derivedTheoryFile
+
+        if verbose:
+            print '\nCreating container for \'{0}\''.format( derivedTheoryFile )
+
+        for line in lines:
+            key, value = line.split('=',1)
+
+            try:
+                value = [ float(v) for v in value.split(',') ]
+                if len(value) == 1:
+                    value = value[0]
+            except ValueError:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+
+            if verbose:
+                print 'Attribute \'{0}\' is set to:'.format( key )
+                print value
+
+            setattr( container, key, value )
+
+        # Assume central scales if not specified
+        if not hasattr( container, 'muR' ):
+            container.muR = 1.0
+        if not hasattr( container, 'muF' ):
+            container.muF = 1.0
+        if not hasattr( container, 'Q' ):
+            container.Q = 1.0
+
+        return container
+
+
+    else:
+
+        ret  = {}
+        couplings = {}
+        for line in lines:
+            key, value = line.split('=',1)
+            if key == 'binBoundaries':
+                binBoundaries = [ float(v) for v in value.split(',') ]
+                ret['binBoundaries'] = binBoundaries
+            elif key == 'crosssection':
+                crosssection = [ float(v) for v in value.split(',') ]
+                ret['crosssection'] = crosssection
+            elif key == 'ratios':
+                ratios = [ float(v) for v in value.split(',') ]
+                ret['ratios'] = ratios
+            else:
+                couplings[key] = float(value)
+
+        ret['couplings'] = couplings
+
+        # return binBoundaries, crosssection
+        return ret
+
+
+def ReadDerivedTheoryFileToTGraph(
+        derivedTheoryFile,
+        name=None,
+        yAttr=None,
+        ):
+
+    container = ReadDerivedTheoryFile( derivedTheoryFile )
+    outputcontainer = OutputContainer( container )
+    outputcontainer.GetTGraph( name=name, yAttr=yAttr )
+    return outputcontainer.Tg
 
 
 ########################################
 # Interface fromPier
 ########################################
 
+#____________________________________________________________________
+def DumpContainerToFile( container, prefix, outdir ):
 
-class Parametrization():
-    def __init__(self):
-        self.verbose = True
+    outname = '{0}_kappab_{1}_kappac_{2}'.format(
+        prefix,
+        Commands.ConvertFloatToStr( container.kappab ),
+        Commands.ConvertFloatToStr( container.kappac )
+        )
+    
+    if hasattr( container, 'muR' ) and hasattr( container, 'muF' ):
+        outname += '_muR_{0}_muF_{1}'.format(
+            Commands.ConvertFloatToStr( container.muR ),
+            Commands.ConvertFloatToStr( container.muF )
+            )
 
+    if hasattr( container, 'Q' ):
+        outname += '_Q_{0}'.format( Commands.ConvertFloatToStr(container.Q) )
 
-    def Parametrize(
-            self,
-            containers,
-            couplingsToParametrize = [ 'kappab', 'kappac' ],
-            includeLinearTerms = True,
-            ):
+    outname += '.txt'
 
-        self.couplings = couplingsToParametrize
+    container.derivedTheoryFilePath = abspath( join( outdir, outname ) )
 
-        couplingCombinations = []
-        couplingCombinations += [ list(couplingTuple) for couplingTuple in itertools.combinations( self.couplings, 2 ) ]
-        couplingCombinations += [ [ coupling, coupling ] for coupling in self.couplings ]
-        if includeLinearTerms:
-            couplingCombinations += [ [coupling] for coupling in self.couplings ] + [[]]
-        self.couplingCombinations = couplingCombinations
+    with open( container.derivedTheoryFilePath, 'w' ) as outFp:
+        w = lambda text: outFp.write( text + ' \n' )
 
-        nComponents = len(couplingCombinations)
-        self.nComponents = nComponents
+        w( 'file={0}'.format(container.file) )
+        w( 'kappab={0}'.format(container.kappab) )
+        w( 'kappac={0}'.format(container.kappac) )
 
-        if len(containers) < nComponents:
-            Commands.ThrowError( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
-            sys.exit()
-        elif len(containers) > nComponents:
-            print '[info] Need only {0} containers; limiting number of containers'.format( nComponents )
-            print '[fixme] Now taking the first {0} (may lead to degenerate matrix...)'.format( nComponents )
-            # containers = containers[:nComponents]
-            random.seed(1001)
-            containers = random.sample( containers, nComponents )
+        if hasattr( container, 'muR' ) and hasattr( container, 'muF' ):
+            w( 'muR={0}'.format(container.muR) )
+            w( 'muF={0}'.format(container.muF) )
 
+        if hasattr( container, 'Q' ):
+            w( 'Q={0}'.format(container.Q) )
 
-        couplingMatrix = []
-        for container in containers:
-            row = []
-            for couplingCombination in couplingCombinations:
-                product = 1.0
-                for coupling in couplingCombination:
-                    product *= getattr( container, coupling )
-                row.append( product )
-            couplingMatrix.append( row )
-
-        couplingMatrix = numpy.array( couplingMatrix )
-        if self.verbose:
-            print '\nSquared coupling terms:'
-            print '  ', couplingCombinations
-            print 'Found the following coupling matrix:'
-            print couplingMatrix
-        couplingMatrixInv = numpy.linalg.inv( couplingMatrix )
-
-        nBins = len(containers[0].binBoundaries) - 1
-        self.nBins = nBins
-
-        # ======================================
-        # Create parametrization per bin
-
-        # def make_evaluateParametrization( components ):
-        #     if not len(self.couplingCombinations) == len(components):
-        #         Commands.ThrowError('Number of coupling combinations ({0}) does not agree with number of components ({1})'.format( len(couplingCombinations), len(components) ) )
-        #         sys.exit()
-
-        #     def evaluateParametrization():
-        #         res = 0.
-        #         for couplingCombination, component in zip( self.couplingCombinations, components ):
-        #             product = 1.0
-        #             for couping in couplingCombination:
-        #                 product *= getattr( self, coupling )
-        #             res += product * component
-        #         return res
-
-        #     return 
-
-        componentsPerBin = []
-        for iBin in xrange(nBins):
-            yValues = numpy.array([ [container.crosssection[iBin]] for container in containers ])
-            components = list(itertools.chain.from_iterable( couplingMatrixInv.dot( yValues ) ))
-            componentsPerBin.append( components )
-
-        self.componentsPerBin = componentsPerBin
+        w( 'binBoundaries={0}'.format( ','.join(map( str, container.binBoundaries )) ) )
+        w( 'crosssection={0}'.format( ','.join(map( str, container.crosssection )) ) )
+        if hasattr( container, 'binCenters' ): w( 'binCenters={0}'.format( ','.join(map( str, container.binCenters )) ) )
+        w( 'ratios={0}'.format( ','.join(map( str, container.ratios )) ) )
 
 
-    def Evaluate( self, **kwargs ):
-        for key, value in kwargs.iteritems():
-            setattr( self, key, value )
-
-        xsFromParametrization = []
-        for iBin in xrange(self.nBins):
-            components = self.componentsPerBin[iBin]
-
-            res = 0.
-            for couplingCombination, component in zip( self.couplingCombinations, components ):
-                product = 1.0
-                for coupling in couplingCombination:
-                    product *= getattr( self, coupling )
-                res += product * component
-
-            xsFromParametrization.append( res )
-
-        return xsFromParametrization
+#____________________________________________________________________
+def addContainer( self, c2 ):
+    nBinsC2 = len(c2.binBoundaries)-1
+    for iBin in xrange(nBinsC2):
+        self.crosssection[iBin] += c2.crosssection[iBin]
+Container.addContainer = addContainer
 
 
-
-
+#____________________________________________________________________
 def MergeGluonAndQuarkInduced(
+        gI_theoryFileDir,
+        qI_theoryFileDir,
         verbose = True,
         ):
 
     # ======================================
     # IO
 
-    gI_theoryFileDir = 'derivedTheoryFiles_gluonInduced_Aug04'
-    qI_theoryFileDir = 'derivedTheoryFiles_YukawaQuarkInduced_Aug04'
+    outdir = 'derivedTheoryFiles_{0}_YukawaSummed'.format( datestr )
+    if not isdir( outdir ): os.makedirs( outdir )
 
-    qI_theoryFiles = [ theoryFile for theoryFile in glob( join( qI_theoryFileDir, '*.txt' ) ) if not 'muR' in theoryFile ]
-    gI_theoryFiles = [ theoryFile for theoryFile in glob( join( gI_theoryFileDir, 'muR_1_muF_1_Q_1_*.txt' ) ) ]
-
-    qI_containers = [ TheoryCommands.ReadDerivedTheoryFile(tF) for tF in qI_theoryFiles ]
-    gI_containers = [ TheoryCommands.ReadDerivedTheoryFile(tF) for tF in gI_theoryFiles ]
+    qI_theoryFiles = FileFinder( directory=qI_theoryFileDir, filter='muR' )
+    gI_theoryFiles = FileFinder( directory=gI_theoryFileDir, muR=1.0, muF=1.0, Q=1.0 )
+    
+    qI_containers = [ ReadDerivedTheoryFile(tF) for tF in qI_theoryFiles ]
+    gI_containers = [ ReadDerivedTheoryFile(tF) for tF in gI_theoryFiles ]
 
     # Pointers to SM containers
     qI_SM = [ c for c in qI_containers if c.kappab == 1.0 and c.kappac == 1.0 ][0]
@@ -175,7 +320,9 @@ def MergeGluonAndQuarkInduced(
     # (needed because mass effects need to be scaled)
 
     parametrization = Parametrization()
-    parametrization.Parametrize( qI_containers )
+
+    # parametrization.Parametrize( qI_containers )
+    parametrization.ParametrizeByFitting( qI_containers )
 
     mb_old = 4.65
     mb_new = 2.963
@@ -197,15 +344,32 @@ def MergeGluonAndQuarkInduced(
         container.ratios = [ xs / smxs if not smxs == 0. else 0. for xs, smxs in zip( container.crosssection, qI_SM.crosssection ) ]
 
 
-    # HIER VERDER
+    # Sum up; start with gluon induced
+    summed_containers = deepcopy( gI_containers )
+    summed_SM = deepcopy( gI_SM )
+    DumpContainerToFile( summed_SM, prefix='YukawaSummed', outdir=outdir )
 
-    # qI moet opgeteld worden bij gI, en dan naar een derivedTheoryFile opslaan
-    # Nog niet zeker wat te doen met de range, qI gaat maar tot 120 GeV
-    # Kan gewoon de laatste waarde kopieren (gluon induced is niet flat > 120 GeV, alleen de ratio is flat)
+    for container in summed_containers:
+
+        # Find the matching qI container
+        for qI in qI_containers:
+
+            if (
+                    container.kappab == qI.kappab
+                    and container.kappac == qI.kappac
+                    ):
+
+                container.addContainer( qI )
+                container.ratios = [ xs / smxs for xs, smxs in zip( container.crosssection, summed_SM.crosssection ) ]
+                DumpContainerToFile( container, prefix='YukawaSummed', outdir=outdir )
+                break
+
+        else:
+            print '[warning] Could not find a matching container for kappab = {0}, kappac = {1}'.format( container.kappab, container.kappac )
 
 
-
-def ReadLinesOfYukawaTheoryFile_quarkInduced( theoryFile, verbose=False ):
+#____________________________________________________________________
+def ReadLinesOfTheoryFile_YukawaQuarkInduced( theoryFile, verbose=False, SM=None ):
 
     # Read lines
     with open( theoryFile, 'r' ) as theoryFp:
@@ -224,9 +388,16 @@ def ReadLinesOfYukawaTheoryFile_quarkInduced( theoryFile, verbose=False ):
         xs         = 1000. * float(components[1])
 
         if verbose:
-            print '    pt = {0:<8.3f} |  xs = {1:<10.6f}'.format(
-                pt, xs
-                )
+            if SM is None:
+                print '    pt = {0:<8.3f} |  xs = {1:<10.6f}'.format(
+                    pt, xs
+                    )
+            else:
+                i = SM.pt.index(pt)
+                print '    pt = {0:<8.3f} | xs = {1:<10.6f} | SM xs = {2:<10.6f} | ratio = {3:<10.6f}'.format(
+                    pt, xs, SM.xs[i], xs / SM.xs[i] if SM.xs[i] != 0. else 0.
+                    )
+
 
         pts.append( pt )
         xss.append( xs )
@@ -234,12 +405,13 @@ def ReadLinesOfYukawaTheoryFile_quarkInduced( theoryFile, verbose=False ):
     return pts, xss
 
 
+#____________________________________________________________________
 def CreateDerivedTheoryFiles_YukawaQuarkInduced(
         theoryDir = 'suppliedInput/fromPier/13tev-pth_quarkInduced_Aug04/',
         verbose = True,
         ):
 
-    outdir = 'derivedTheoryFiles_YukawaQuarkInduced_{0}'.format( datestr )
+    outdir = 'derivedTheoryFiles_{0}_YukawaQuarkInduced'.format( datestr )
     if not isdir( outdir ): os.makedirs( outdir )
 
     theoryDir = abspath( theoryDir )
@@ -248,20 +420,41 @@ def CreateDerivedTheoryFiles_YukawaQuarkInduced(
     # ======================================
     # Try to find a 'SM' file first so it's possible to calculate ratios
 
-    SM = TheoryCommands.Container()
+    SM = Container()
     SM.file = join( theoryDir, 'higgs_plus_jet_13tev_1_1_mur050_muf050.pth' )
-    SM.pt, SM.xs = ReadLinesOfYukawaTheoryFile_quarkInduced( SM.file )
+
+    if verbose:
+        print '\n\n' + '='*80
+        print '='*80
+        print 'Processing SM \'{0}\'\n'.format( SM.file )
+
+    SM.pt, SM.xs = ReadLinesOfTheoryFile_YukawaQuarkInduced( SM.file, verbose )
     SM.kappab = 1
     SM.kappac = 1
 
+    if verbose:
+        print '\n\nFound SM.xs:'
+        print SM.xs
 
+        print '\n\nContents of \'{0}\''.format( SM.file )
+        with open( SM.file) as fp:
+            print fp.read()
+
+
+    # ======================================
+    # Rest of theory files
 
     pat = r'higgs_plus_jet_13tev_([0-9mp]+)_([0-9mp]+)'
     scaleVarPat = r'mur([0-9]+)_muf([0-9]+)'
 
     for theoryFile in theoryFiles:
-        container = TheoryCommands.Container()
+        container = Container()
         container.file = theoryFile
+
+        if verbose:
+            print '\n\n' + '='*80
+            print '='*80
+            print 'Processing \'{0}\'\n'.format( container.file )
 
         match = re.search( pat, container.file )
         if not match:
@@ -274,11 +467,12 @@ def CreateDerivedTheoryFiles_YukawaQuarkInduced(
         match = re.search( scaleVarPat, container.file )
         if match:
             isScaleVariation = True
-            container.muR = float( match.group(1) ) / 100
-            container.muF = float( match.group(2) ) / 100
+            container.muR = float( match.group(1) ) / 50
+            container.muF = float( match.group(2) ) / 50
 
-        container.pt, container.xs = ReadLinesOfYukawaTheoryFile_quarkInduced( container.file )
+        container.pt, container.xs = ReadLinesOfTheoryFile_YukawaQuarkInduced( container.file, verbose, SM=SM )
         container.ratios = [ xs / smxs if not smxs == 0. else 0. for xs, smxs in zip( container.xs, SM.xs ) ]
+        container.crosssection = container.xs
 
         container.binCenters, container.binBoundaries, container.binWidths = TheoryCommands.BinningHeuristic(
             container.pt, manualSwitchAt50 = False, manualSwitchAt5 = True )
@@ -287,36 +481,20 @@ def CreateDerivedTheoryFiles_YukawaQuarkInduced(
         # ======================================
         # Dump container to file
 
-        outname = 'YukawaQuarkInduced_kappab_{0}_kappac_{1}'.format(
-            Commands.ConvertFloatToStr( container.kappab ),
-            Commands.ConvertFloatToStr( container.kappac )
-            )
-        if isScaleVariation:
-            outname += '_muR_{0}_muF_{1}'.format(
-                Commands.ConvertFloatToStr( container.muR ),
-                Commands.ConvertFloatToStr( container.muF )
-                )
-        outname += '.txt'
+        DumpContainerToFile( container, prefix='YukawaQuarkInduced', outdir=outdir )
 
-        with open( join( outdir, outname ), 'w' ) as outFp:
-            w = lambda text: outFp.write( text + ' \n' )
+        if verbose:
+            print '\n\nContents of \'{0}\':\n'.format( relpath( container.file, '.' ) )
+            with open( container.file) as fp:
+                print fp.read()
 
-            w( 'file={0}'.format(container.file) )
-            w( 'kappab={0}'.format(container.kappab) )
-            w( 'kappac={0}'.format(container.kappac) )
-
-            if isScaleVariation:
-                w( 'muR={0}'.format(container.muR) )
-                w( 'muF={0}'.format(container.muF) )
-
-            w( 'binBoundaries={0}'.format( ','.join(map( str, container.binBoundaries )) ) )
-            w( 'crosssection={0}'.format( ','.join(map( str, container.xs )) ) )
-            w( 'binCenters={0}'.format( ','.join(map( str, container.binCenters )) ) )
-            w( 'ratios={0}'.format( ','.join(map( str, container.ratios )) ) )
+            print '\n\nContents of \'{0}\':\n'.format( relpath( container.derivedTheoryFilePath, '.' ) )
+            with open(container.derivedTheoryFilePath) as fp:
+                print fp.read()
 
 
-
-def ReadLinesOfYukawaTheoryFile( theoryFile, verbose=False ):
+#____________________________________________________________________
+def ReadLinesOfTheoryFile_YukawaGluonInduced( theoryFile, verbose=False ):
     # Read lines
     with open( theoryFile, 'r' ) as theoryFp:
         lines = [ line.strip() for line in theoryFp.readlines() ]
@@ -330,8 +508,8 @@ def ReadLinesOfYukawaTheoryFile( theoryFile, verbose=False ):
     for line in lines:
         components = line.split()
         pt          = float(components[0])
-        matched_xs  = float(components[1])
-        resummed_xs = float(components[2])
+        matched_xs  = float(components[1]) * 1000.
+        resummed_xs = float(components[2]) * 1000.
 
         if verbose:
             print '    pt = {0:<8.3f} |  matched_xs = {1:<10.6f} |  resummed_xs = {2:<10.6f}'.format(
@@ -345,13 +523,14 @@ def ReadLinesOfYukawaTheoryFile( theoryFile, verbose=False ):
     return pts, matched_xss, resummed_xss
 
 
-def CreateDerivedTheoryFiles_Yukawa(
+#____________________________________________________________________
+def CreateDerivedTheoryFiles_YukawaGluonInduced(
         theoryDir = 'suppliedInput/fromPier/histograms_ggH_May17/',
-        mainCrossSection = 'resummed',
+        mainCrossSection = 'matched',
         verbose = True,
         ):
 
-    outdir = 'derivedTheoryFiles_gluonInduced_{0}'.format( datestr )
+    outdir = 'derivedTheoryFiles_{0}_YukawaGluonInduced'.format( datestr )
     if not isdir( outdir ): os.makedirs( outdir )
 
     theoryDir = abspath( theoryDir )
@@ -384,10 +563,10 @@ def CreateDerivedTheoryFiles_Yukawa(
                 ):
 
             smFound = True
-            pts, matched_xss, resummed_xss = ReadLinesOfYukawaTheoryFile( theoryFile, verbose )
+            pts, matched_xss, resummed_xss = ReadLinesOfTheoryFile_YukawaGluonInduced( theoryFile, verbose )
             newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic( pts, manualSwitchAt50=False, manualSwitchAt5=True )
 
-            SM = TheoryCommands.Container()
+            SM = Container()
             SM.pts           = deepcopy(pts)
             SM.matched_xss   = deepcopy(matched_xss)
             SM.resummed_xss  = deepcopy(resummed_xss)
@@ -439,59 +618,280 @@ def CreateDerivedTheoryFiles_Yukawa(
                 muR, muF, Q, kappab, kappac
                 )
 
-        pts, matched_xss, resummed_xss = ReadLinesOfYukawaTheoryFile( theoryFile, verbose )
+        pts, matched_xss, resummed_xss = ReadLinesOfTheoryFile_YukawaGluonInduced( theoryFile, verbose )
         newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic( pts, manualSwitchAt50=False, manualSwitchAt5=True )
 
 
-        def numberStr(number):
-            if number.is_integer():
-                return ('{0:d}'.format(int(number))).replace('.','p').replace('-','m')
-            else:
-                return ('{0:.2f}'.format(number)).replace('.','p').replace('-','m')
-        outname = join( outdir, 'muR_{0}_muF_{1}_Q_{2}_kappab_{3}_kappac_{4}.txt'.format(
-            numberStr(muR),
-            numberStr(muF),
-            numberStr(Q),
-            numberStr(kappab),
-            numberStr(kappac),
-            ))
-        with open( outname, 'w' ) as outFp:
-            w = lambda text: outFp.write( text + '\n' )
+        container = Container()
 
-            w( 'muR={0}'.format(    muR ) )
-            w( 'muF={0}'.format(    muF ) )
-            w( 'Q={0}'.format(      Q ) )
-            w( 'kappab={0}'.format( kappab ) )
-            w( 'kappac={0}'.format( kappac ) )
+        container.file = theoryFile
 
-            w( 'binBoundaries={0}'.format(         ','.join( map(str, binBoundaries ) ) ) )
-            
-            if mainCrossSection == 'resummed':
-                w( 'crosssection={0}'.format(          ','.join( map(str, resummed_xss ) ) ) )
-            elif mainCrossSection == 'matched':
-                w( 'crosssection={0}'.format(          ','.join( map(str, matched_xss ) ) ) )
+        if mainCrossSection == 'matched':
+            container.crosssection = matched_xss
+            container.ratios = Div( container.crosssection, SM.matched_xss )
+        elif mainCrossSection == 'resummed':
+            container.crosssection = resummed_xss
+            container.ratios = Div( container.crosssection, SM.resummed_xss )
 
-            w( 'resummed_crosssection={0}'.format( ','.join( map(str, resummed_xss ) ) ) )
-            w( 'matched_crosssection={0}'.format(  ','.join( map(str, matched_xss ) ) ) )
+        container.binBoundaries = binBoundaries
 
-            if smFound:
-                if mainCrossSection == 'resummed':
-                    ratios = [ xs / SMxs for xs, SMxs in zip( resummed_xss, SM.resummed_xss ) ]
-                elif mainCrossSection == 'matched':
-                    ratios = [ xs / SMxs for xs, SMxs in zip( matched_xss, SM.matched_xss ) ]
-                
-                w( 'ratios={0}'.format( ','.join( map(str, ratios ) ) ) )
+        container.muR    = muR
+        container.muF    = muF
+        container.Q      = Q
+        container.kappab = kappab
+        container.kappac = kappac
 
+        DumpContainerToFile( container, prefix='YukawaGluonInduced', outdir=outdir )
 
-                print ratios
-                print
 
 
 ########################################
 # Interface fromAgnieszka
 ########################################
 
-def CreateDerivedTheoryFiles_Agnieszka(
+AgnieszkasFilenameDecoder = {
+    'ratio_ctup_new'          : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1 },
+    'ratio_ctdown_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9 },
+    'ratio_cgup_new'          : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.008 },
+    'ratio_cgdown_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : -0.008 },
+    'ratio_cbup_new'          : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 4.0 },
+    'ratio_cbdown_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : -2.0 },
+    'ratio_cg003ct12_new'     : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -2.98 ,  'cg' : -0.03 },
+    'ratio_cg003ct13sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -0.85 ,  'cg' : -0.03 },
+    'ratio_cg003ct14sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : 3.31 ,   'cg' : -0.03 },
+    'ratio_cg004ct12sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -4.89 ,  'cg' : -0.04 },
+    'ratio_cg004ct13sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -3.34 ,  'cg' : -0.04 },
+    'ratio_cg004ct15sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : 1.88 ,   'cg' : -0.04 },
+    'ratio_cg005ct14sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : -3.67 ,  'cg' : -0.05 },
+    'ratio_cg005ct15sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : -1.79 ,  'cg' : -0.05 },
+    'ratio_ctcb05_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cb' : -7.46 },
+    'ratio_ctcb08_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.8, 'cb' : -3.67 },
+    'ratio_ctcb09_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9, 'cb' : -1.79 },
+    'ratio_ctcb11_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1, 'cb' : 3.79 },
+    'ratio_ctcb12_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : 4.67 },
+    'ratio_ctcg01_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.1, 'cg' : 0.075 },
+    'ratio_ctcg05_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cg' : 0.042 },
+    'ratio_ctcg15_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cg' : -0.042 },
+    'ratio_ctcg2_new'         : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 2.0, 'cg' : -0.083 },
+    # 'SM_NLO'                  : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    # 'SMmin_NLO'               : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    # 'SMmax_NLO'               : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'SM_NNLO'                 : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    # 'SMmin_NNLO'              : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    # 'SMmax_NNLO'              : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mR1mF1.top'         : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mR1mF1Q2.top'       : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 2.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mR1mF1Qh.top'       : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 0.5, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mR1mF2.top'         : { 'muR' : 1.0, 'muF' : 2.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mR1mFh.top'         : { 'muR' : 1.0, 'muF' : 0.5, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mR2mF1.top'         : { 'muR' : 2.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mR2mF2.top'         : { 'muR' : 2.0, 'muF' : 2.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mRhmF1.top'         : { 'muR' : 0.5, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'HRes_mRhmFh.top'         : { 'muR' : 0.5, 'muF' : 0.5, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    }
+
+
+#____________________________________________________________________
+def DumpContainerToFile_Top( container, prefix, outdir ):
+
+    outname = prefix
+    for coupling in [ 'ct', 'cg', 'cb' ]:
+        if hasattr( container, coupling ):
+            outname += '_{0}_{1}'.format(
+                coupling, Commands.ConvertFloatToStr( getattr(container, coupling) )
+                )
+    
+    if hasattr( container, 'muR' ) and hasattr( container, 'muF' ):
+        outname += '_muR_{0}_muF_{1}'.format(
+            Commands.ConvertFloatToStr( container.muR ),
+            Commands.ConvertFloatToStr( container.muF )
+            )
+
+    if hasattr( container, 'Q' ):
+        outname += '_Q_{0}'.format( Commands.ConvertFloatToStr(container.Q) )
+
+    outname += '.txt'
+
+    container.derivedTheoryFilePath = abspath( join( outdir, outname ) )
+
+    with open( container.derivedTheoryFilePath, 'w' ) as outFp:
+        w = lambda text: outFp.write( text + ' \n' )
+
+        w( 'file={0}'.format(container.file) )
+
+        if hasattr( container, 'ct' ): w( 'ct={0}'.format(container.ct) )
+        if hasattr( container, 'cg' ): w( 'cg={0}'.format(container.cg) )
+        if hasattr( container, 'cb' ): w( 'cb={0}'.format(container.cb) )
+
+        if hasattr( container, 'muR' ) and hasattr( container, 'muF' ):
+            w( 'muR={0}'.format(container.muR) )
+            w( 'muF={0}'.format(container.muF) )
+
+        if hasattr( container, 'Q' ):  w( 'Q={0}'.format(container.Q) )
+
+        w( 'binBoundaries={0}'.format( ','.join(map( str, container.binBoundaries )) ) )
+        w( 'crosssection={0}'.format( ','.join(map( str, container.crosssection )) ) )
+        if hasattr( container, 'binCenters' ): w( 'binCenters={0}'.format( ','.join(map( str, container.binCenters )) ) )
+        w( 'ratios={0}'.format( ','.join(map( str, container.ratios )) ) )
+
+
+#____________________________________________________________________
+def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=False ):
+    # Read lines
+    with open( theoryFile, 'r' ) as theoryFp:
+        lines = [ line.strip() for line in theoryFp.readlines() ]
+    commentlines = [ line.strip() for line in lines if line.startswith('#') ]
+    lines        = [ line for line in lines if not line.startswith('#') and len(line) > 0 ]
+
+    if isSMFile:
+
+        pts  = []
+        xss  = []
+
+        for line in lines:
+            components = line.split()
+            pt         = float(components[0])
+            xs         = float(components[1]) / 2.27 # 1 over Hgg BR (peculiarity from Agnieszka)
+
+            if verbose:
+                if SM is None:
+                    print '    pt = {0:<8.3f} |  xs = {1:<10.6f}'.format( pt, xs )
+                else:
+                    SMxs = SM.crosssection[ SM.pts.index(pt) ]
+                    print '    pt = {0:<8.3f} |  xs = {1:<10.6f} |  SMxs = {2:<10.6f} |  ratio = {3:<10.6f}'.format(
+                        pt, xs, SMxs, xs/SMxs if not SMxs == 0. else 0. )
+
+            pts.append( pt )
+            xss.append( xs )
+
+        return pts, xss
+
+    else:
+
+        if SM is None:
+            Commands.ThrowError( 'SM should be specified when reading a non-SM file' )
+            sys.exit()
+
+        pts    = []
+        ratios = []
+        xss    = []
+
+        for line in lines:
+
+            components = line.split()
+            pt         = float(components[0])
+            ratio      = float(components[1])
+
+            SMxs = SM.crosssection[ SM.pts.index(pt) ]
+            xs   = SMxs * ratio
+
+            if verbose:
+                print '    pt = {0:<8.3f} |  xs = {1:<10.6f} |  SMxs = {2:<10.6f} |  ratio = {3:<10.6f}'.format(
+                    pt, xs, SMxs, ratio )
+
+            pts.append( pt )
+            ratios.append( ratio )
+            xss.append( xs )
+
+        return pts, xss, ratios
+
+    
+
+
+#____________________________________________________________________
+def CreateDerivedTheoryFiles_Top(
+        theoryDirs = [
+            'suppliedInput/fromAgnieszka/HRes_SMEFT_May16',
+            'suppliedInput/fromAgnieszka/SMEFTscaling_May16',
+            'suppliedInput/fromAgnieszka/ScaleVarNNLO_Jul17',
+            ],
+        verbose = False,
+        ):
+
+    outdir = 'derivedTheoryFiles_{0}_Top'.format( datestr )
+    if not isdir( outdir ): os.makedirs( outdir )
+
+    theoryDirs = [ abspath( theoryDir ) for theoryDir in theoryDirs ]
+    theoryFiles = []
+    for theoryDir in theoryDirs:
+        theoryFiles.extend( glob( join( theoryDir, '*' ) ) )
+
+
+    # ======================================
+    # First look for SM file
+
+    for theoryFile in theoryFiles:
+        if basename(theoryFile).replace('/','') == 'SM_NNLO':
+            smFile = theoryFile
+            break
+    else:
+        Commands.ThrowError( 'Could not find a SM file' )
+        sys.exit()
+
+    SM = Container()
+    SM.file = smFile
+
+    binCenters, crosssection = ReadLinesOfTheoryFile_Top( SM.file, isSMFile=True, verbose=verbose )
+    newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+        binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
+
+    SM.pts           = binCenters
+    SM.binCenters    = deepcopy( newBinCenters )
+    SM.binBoundaries = deepcopy( binBoundaries )
+    SM.crosssection  = deepcopy( crosssection )
+    SM.ratios = [ 1.0 for xs in SM.crosssection ]
+
+    for key, value in AgnieszkasFilenameDecoder[basename(SM.file).replace('/','')].iteritems():
+        setattr( SM, key, value )
+
+
+    # ======================================
+    # Process the other theory files
+
+    for theoryFile in theoryFiles:
+
+        if verbose:
+            print '\n\n' + '-'*80
+            print 'Processing {0}'.format( theoryFile )
+            print '\n'
+
+        container = Container()
+        container.file = theoryFile
+
+        shortFileName = basename(container.file).replace('/','')
+        if not shortFileName in AgnieszkasFilenameDecoder:
+            print 'Skipping \'{0}\''.format(shortFileName)
+            continue
+
+        binCenters, crosssection, ratios = ReadLinesOfTheoryFile_Top( container.file, verbose, SM=SM )
+        newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+            binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
+
+        container.binCenters    = newBinCenters
+        container.binBoundaries = binBoundaries
+        container.crosssection  = crosssection
+        container.ratios        = ratios
+
+        if verbose:
+            print '\nWriting the following to a file:'
+            for i in xrange(len(container.crosssection)):
+                print '    {0:6.1f} - {1:6.1f}  |  xs = {2:10.6f}  |  ratio = {3:10.6f}'.format(
+                    container.binBoundaries[i], container.binBoundaries[i+1],
+                    container.crosssection[i], container.ratios[i]
+                    )
+
+        for key, value in AgnieszkasFilenameDecoder[shortFileName].iteritems():
+            setattr( container, key, value )
+
+        DumpContainerToFile_Top( container, prefix='Top', outdir=outdir )
+
+
+########################################
+# Older
+########################################
+
+#____________________________________________________________________
+def CreateDerivedTheoryFiles_Agnieszka_OLD(
     pattern = None
     ):
 
@@ -587,7 +987,6 @@ def CreateDerivedTheoryFiles_Agnieszka(
             w( 'binBoundaries={0}'.format( ','.join( map(str, binBoundaries ) ) ) )
             w( 'crosssection={0}'.format( ','.join( map(str, crosssection ) ) ) )
             w( 'ratios={0}'.format( ','.join( map(str, mus ) ) ) )
-
 
 
 

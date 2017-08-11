@@ -15,6 +15,8 @@ from copy import deepcopy
 
 import combineCommands
 import plotCommands
+import yukawaCommands
+import topCommands
 
 sys.path.append('src')
 import Commands
@@ -41,17 +43,12 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument( '--test',                            action='store_true' )
-    parser.add_argument( '--makeStewartTackmannDatacard',     action='store_true' )
-    parser.add_argument( '--createDerivedTheoryFiles',        action='store_true' )
-    parser.add_argument( '--createDerivedTheoryFiles_Yukawa', action='store_true' )
-    parser.add_argument( '--createDerivedTheoryFiles_YukawaQuarkInduced', action='store_true' )
-    parser.add_argument( '--mergeGluonInducedWithQuarkInduced', action='store_true' )
-
-    parser.add_argument( '--CorrelationMatrices',             action='store_true' )
-    parser.add_argument( '--CorrelationMatrices_Agnieszka',   action='store_true' )
+    parser.add_argument( '--notFastscan',                     action='store_true' )
 
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
+    yukawaCommands.AppendParserOptions(parser)
+    topCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -67,6 +64,21 @@ def main():
     if args.test:
         Commands.TestMode()
 
+
+    ########################################
+    # Encompassing module for stuff related to the kappac kappab fits
+    ########################################
+
+    if args.yukawaCommands:
+        yukawaCommands.main(args)
+
+
+    ########################################
+    # Encompassing module for stuff related to the ct, cg, cb fits
+    ########################################
+
+    if args.topCommands:
+        topCommands.main(args)
 
 
     ########################################
@@ -90,40 +102,6 @@ def main():
     ########################################
     # Stuff dealing with theory spectra (creation of derivedTheoryFiles, rebinning, correlation matrices, etc.)
     ########################################
-
-    if args.CorrelationMatrices:
-
-        variationFiles = glob( 'derivedTheoryFiles_Jul25/*kappab_1_kappac_1.txt' )
-
-        variations = [
-            TheoryCommands.ReadDerivedTheoryFile( variationFile, returnContainer=True )
-                for variationFile in variationFiles ]
-
-        CorrelationMatrices.GetCorrelationMatrix(
-            variations,
-            makeScatterPlots          = False,
-            makeCorrelationMatrixPlot = True,
-            outname                   = 'corrMat_theory',
-            verbose                   = True,
-            )
-
-
-        print '[fixme] Exp bin boundaries hardcoded'
-        expBinBoundaries    = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
-
-        variations_expbinning = deepcopy(variations)
-        for variation in variations_expbinning:
-            TheoryCommands.RebinDerivedTheoryContainer( variation, expBinBoundaries )
-
-        CorrelationMatrices.GetCorrelationMatrix(
-            variations_expbinning,
-            makeScatterPlots          = True,
-            makeCorrelationMatrixPlot = True,
-            outname                   = 'corrMat_exp',
-            verbose                   = True,
-            )
-
-
 
 
     if args.CorrelationMatrices_Agnieszka:
@@ -214,36 +192,21 @@ def main():
             )
 
 
-    if args.makeStewartTackmannDatacard:
+    # Maybe this becomes useful for nJets workspaces at some point...
+    # if args.makeStewartTackmannDatacard:
 
-        container = TheoryCommands.ReadDerivedTheoryFile( 'derivedTheoryFiles_Jun22/SM_NNLO.txt', returnContainer=True )
+    #     container = TheoryCommands.ReadDerivedTheoryFile( 'derivedTheoryFiles_Jun22/SM_NNLO.txt', returnContainer=True )
         
-        covMat = TheoryCommands.GetStewartTackmannCovarianceMatrix( container )
+    #     covMat = TheoryCommands.GetStewartTackmannCovarianceMatrix( container )
 
-        # No longer works! Was anyway incorrectly implemented
-        # TheoryCommands.AddCovarianceMatrixAsNuisanceParameters(
-        #     'suppliedInput/combinedCard_May15.txt',
-        #     covMat
-        #     )
+    #     # No longer works! Was anyway incorrectly implemented
+    #     # TheoryCommands.AddCovarianceMatrixAsNuisanceParameters(
+    #     #     'suppliedInput/combinedCard_May15.txt',
+    #     #     covMat
+    #     #     )
 
 
-    if args.createDerivedTheoryFiles:
-        TheoryFileInterface.CreateDerivedTheoryFiles( pattern=r'ct_[mp\d]+_cg_[mp\d]+' )
 
-    if args.createDerivedTheoryFiles_Yukawa:
-        TheoryFileInterface.CreateDerivedTheoryFiles_Yukawa(
-            theoryDir = 'suppliedInput/fromPier/histograms_ggH_May17/',
-            verbose = True,
-            mainCrossSection = 'matched',
-            )
-
-    if args.createDerivedTheoryFiles_YukawaQuarkInduced:
-        TheoryFileInterface.CreateDerivedTheoryFiles_YukawaQuarkInduced(
-            verbose = True,
-            )
-
-    if args.mergeGluonInducedWithQuarkInduced:
-        TheoryFileInterface.MergeGluonAndQuarkInduced()
 
 
 

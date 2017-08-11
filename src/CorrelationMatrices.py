@@ -20,7 +20,7 @@ datestr = strftime( '%b%d' )
 
 import Commands
 import TheoryCommands
-
+from Container import Container
 
 import ROOT
 from array import array
@@ -69,6 +69,9 @@ def GetPlotBase(
     return base
 
 CPlotDir = 'plots_CorrelationMatrices_{0}'.format(datestr)
+def SetPlotDir( newdir ):
+    global CPlotDir
+    CPlotDir = newdir
 def SaveC( outname, subdir=None, asPDF=True, asPNG=False, asROOT=False ):
 
     if subdir == None:
@@ -82,10 +85,6 @@ def SaveC( outname, subdir=None, asPDF=True, asPNG=False, asROOT=False ):
     if asPDF: c.SaveAs( outname + '.pdf' )
     if asPNG: c.SaveAs( outname + '.png' )
     if asROOT: c.SaveAs( outname + '.proot' )
-
-class Container:
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
 
 
 ########################################
@@ -133,7 +132,7 @@ def GetCorrelationMatrix(
         withRespectToCentralScale = False,
         ):
 
-    if isinstance( variations[0], TheoryCommands.Container ):
+    if isinstance( variations[0], Container ):
         # Probably a returned object by TheoryCommands.ReadDerivedTheoryFile;
         # make sure all the proper attributes are filled
         for variation in variations:
@@ -769,7 +768,9 @@ def ConvertTGraphToLinesAndBoxes(
         drawImmediately=False,
         legendObject=None,
         verbose=False,
-        noBoxes=False ):
+        noBoxes=False,
+        xMaxExternal=None,
+        ):
 
     yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
     xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
@@ -807,6 +808,16 @@ def ConvertTGraphToLinesAndBoxes(
             print '[debug] Point {0:<3}:'.format( iPoint )
             print '        x = {0:+8.3f}, xMin = {1:+8.3f}, xMax = {2:+8.3f}'.format( x, xMin, xMax )
             print '        y = {0:+8.3f}, yMin = {1:+8.3f}, yMax = {2:+8.3f}'.format( y, yMin, yMax )
+
+        if xMaxExternal != None:
+            if x-xMin > xMaxExternal:
+                if verbose:
+                    print 'x-xMin {0} > xMaxExternal {1}; Continuing'.format( x-xMin, xMaxExternal )
+                continue
+            elif x+xMax > xMaxExternal:
+                if verbose:
+                    print 'x+xMax {0} > xMaxExternal {1}; Limiting xMax'.format( x+xMax, xMaxExternal )
+                xMax = xMaxExternal-x
 
         line = ROOT.TLine( x-xMin, y, x+xMax, y )
         ROOT.SetOwnership( line, False )

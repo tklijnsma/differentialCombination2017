@@ -7,7 +7,7 @@ Thomas Klijnsma
 # Imports
 ########################################
 
-import os, itertools, operator, re, argparse, sys
+import os, itertools, operator, re, argparse, sys, random
 from math import isnan, isinf
 from os.path import *
 from glob import glob
@@ -538,7 +538,43 @@ def main( args ):
 
         if args.latest:
 
-            fullpath = lambda path: abspath('derivedTheoryFiles_Jul25/{0}'.format( path ) )
+            theoryDir = 'derivedTheoryFiles_YukawaSummed_Aug08/'
+
+            extraOptions = [
+                '--PO verbose=2',
+                '--PO \'higgsMassRange=123,127\'',
+                '--PO linearTerms=True',
+                ]
+
+            Commands.SetFileFinderDir( theoryDir )
+            extraOptions.append(
+                '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
+                    Commands.FileFinder( kappab=1, kappac=1, expectOneFile=True )
+                    )
+                )
+
+            possibleTheories = []
+            for kappab in [ -2, -1, 0, 1, 2 ]:
+                for kappac in [ -10, -5, 0, 1, 5, 10 ]:
+                    if kappab == 1 and kappac == 1: continue
+                    else:
+                        possibleTheories.append(
+                            '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
+                                kappab, kappac,
+                                Commands.FileFinder( kappab=kappab, kappac=kappac, expectOneFile=True )
+                                )
+                            )
+
+            random.seed(1002)
+            extraOptions.extend( random.sample( possibleTheories, 6 ) )
+
+            Commands.BasicT2WSwithModel(
+                'suppliedInput/combinedCard_Jul26.txt',
+                'CouplingModel.py',
+                extraOptions = extraOptions,
+                )
+
+        else:
 
             Commands.BasicT2WSwithModel(
                 # 'suppliedInput/combinedCard_May15.txt',
@@ -625,9 +661,7 @@ def main( args ):
                     ]
                 )
 
-
-
-        else:
+            sys.exit()
 
             Commands.BasicT2WSwithModel(
                 # 'suppliedInput/combinedCard_May15.txt',
@@ -692,15 +726,19 @@ def main( args ):
         # datacard = 'workspaces_Jul25/combinedCard_Jul25_CouplingModel.root'
         
         # datacard = 'workspaces_Jul27/combinedCard_Jul26_CouplingModel.root'
-        datacard = 'workspaces_Jul28/combinedCard_Jul26_CouplingModel_noTheoryUncertainties.root'
+        # datacard = 'workspaces_Jul28/combinedCard_Jul26_CouplingModel_noTheoryUncertainties.root'
+
+        datacard = 'workspaces_Aug08/combinedCard_Jul26_CouplingModel.root' # No theory uncertainties
 
         if TESTFIT:
             Commands.BasicBestfit(
                 datacard,
                 setPOIs = False,
                 extraOptions = [
-                    # '--setPhysicsModelParameters ct=1.0,cg=0.0'
-                    '--setPhysicsModelParameters kappab=1.0,kappac=1.0'
+                    # '--setPhysicsModelParameters ct=1.0,cg=0.0',
+                    '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
+                    '-m 125',
+                    # '--floatOtherPOIs=1',
                     ]
                 )
 
@@ -711,8 +749,8 @@ def main( args ):
                 # ASIMOV = False
                 ASIMOV = True
 
-                kappab_ranges = [ -140., 60. ]
-                kappac_ranges = [ -600., 1000. ]
+                kappab_ranges = [ -20., 20. ]
+                kappac_ranges = [ -50., 100. ]
 
                 jobDirectory = 'Scan_couplings_{0}'.format( datestr )
                 if ASIMOV: jobDirectory += '_asimov'

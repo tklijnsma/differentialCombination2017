@@ -52,6 +52,9 @@ class Container:
 
 
 PLOTDIR = 'plots_{0}'.format(datestr)
+def SetPlotDir( newdir ):
+    global PLOTDIR
+    PLOTDIR = newdir
 def SaveC( outname, PNG=False, asROOT=False ):
     global PLOTDIR
     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
@@ -107,11 +110,7 @@ def GetPlotBase(
     return base
 
 
-
-########################################
-# Dealing with derived theory files
-########################################
-
+#____________________________________________________________________
 def RebinDerivedTheoryContainer( container, newBinBoundaries ):
 
     newNBins = len(newBinBoundaries) - 1
@@ -135,71 +134,6 @@ def RebinDerivedTheoryContainer( container, newBinBoundaries ):
     container.binBoundaries = newBinBoundaries
     container.crosssection  = newCrosssection
     container.ratios        = newRatios
-
-
-def ReadDerivedTheoryFile(
-    derivedTheoryFile,
-    returnContainer = True,
-    verbose = False,
-    ):
-
-    with open( derivedTheoryFile, 'r' ) as theoryFp:
-        lines = [ l.strip() for l in theoryFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
-
-
-    if returnContainer:
-        container = Container()
-
-        container.file = derivedTheoryFile
-
-        if verbose:
-            print '\nCreating container for \'{0}\''.format( derivedTheoryFile )
-
-        for line in lines:
-            key, value = line.split('=',1)
-
-            try:
-                value = [ float(v) for v in value.split(',') ]
-                if len(value) == 1:
-                    value = value[0]
-            except ValueError:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-
-            if verbose:
-                print 'Attribute \'{0}\' is set to:'.format( key )
-                print value
-
-            setattr( container, key, value )
-
-
-        return container
-
-
-    else:
-
-        ret  = {}
-        couplings = {}
-        for line in lines:
-            key, value = line.split('=',1)
-            if key == 'binBoundaries':
-                binBoundaries = [ float(v) for v in value.split(',') ]
-                ret['binBoundaries'] = binBoundaries
-            elif key == 'crosssection':
-                crosssection = [ float(v) for v in value.split(',') ]
-                ret['crosssection'] = crosssection
-            elif key == 'ratios':
-                ratios = [ float(v) for v in value.split(',') ]
-                ret['ratios'] = ratios
-            else:
-                couplings[key] = float(value)
-
-        ret['couplings'] = couplings
-
-        # return binBoundaries, crosssection
-        return ret
 
 
 
@@ -718,7 +652,6 @@ def MapPredictionToExperimental(
         return sigmaExpBinning
 
 
-
 ########################################
 # Making plots with output workspaces
 ########################################
@@ -933,7 +866,9 @@ def PlotCouplingScan2D(
     Tpoint_SM.Draw('P')
 
 
-    SaveC( 'couplingscan2D', asROOT=True )
+    outname = 'couplingscan2D_{0}'.format( basename(dirname(rootfiles[0])).replace('/','') )
+
+    SaveC( outname, asROOT=True )
     SetCMargins()
 
 
@@ -1029,9 +964,6 @@ def TestParametrizationsInWorkspace(
 
     # return yPerCoupling
     return containers
-
-
-
 
 
 ########################################

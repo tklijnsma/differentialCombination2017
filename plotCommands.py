@@ -20,6 +20,8 @@ import OneOfCommands
 import TheoryCommands
 import CorrelationMatrices
 import MergeHGGWDatacards
+import TheoryFileInterface
+from Parametrization import Parametrization, WSParametrization
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -57,6 +59,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--plotParametrizationsOnCombination', action=CustomAction )
     parser.add_argument( '--coupling2Dplot',                    action=CustomAction )
     parser.add_argument( '--ReproducePaperPlot',                action=CustomAction )
+    parser.add_argument( '--TestParametrizationClassOnDerivedTheoryFiles', action=CustomAction )
 
 
 ########################################
@@ -67,8 +70,11 @@ def main( args ):
 
     if args.ReproducePaperPlot:
 
+        theoryDir = 'derivedTheoryFiles_YukawaSummed_Aug08/'
+        Commands.SetFileFinderDir( theoryDir )
+
         SMcontainer = TheoryCommands.ReadDerivedTheoryFile(
-            'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_kappab_1_kappac_1.txt',
+            Commands.FileFinder( muF=1, muR=1, kappab=1, kappac=1, expectOneFile=True ),
             returnContainer = True,
             verbose = False,
             )
@@ -86,17 +92,7 @@ def main( args ):
         SMcontainer.integral = SMcontainer.integralFn( 0., SMcontainer.binBoundaries[-1] )
 
 
-
-        yukawaDerivedTheoryFiles = [
-            'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_kappab_1_kappac_0.txt',
-            'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_kappab_1_kappac_1.txt',
-            'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_kappab_1_kappac_10.txt',
-            'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_kappab_1_kappac_5.txt',
-            'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_kappab_1_kappac_m10.txt',
-            'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_kappab_1_kappac_m5.txt',
-            ]
-
-
+        yukawaDerivedTheoryFiles = Commands.FileFinder( muF = 1, muR = 1, kappab=1 )
         containers = []
         colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
         for yukawaDerivedTheoryFile in yukawaDerivedTheoryFiles:
@@ -206,23 +202,29 @@ def main( args ):
 
         if args.latest:
 
-            # wsToCheck = 'workspaces_Jul27/combinedCard_Jul26_CouplingModel.root'
-            wsToCheck = 'workspaces_Jul28/combinedCard_Jul26_CouplingModel_noTheoryUncertainties.root'
+            # DrawExperimentalBinLines = False
+            DrawExperimentalBinLines = True
 
-            yukawaDerivedTheoryFiles = glob( 'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_*.txt' )
+            wsToCheck = 'workspaces_Aug10/combinedCard_Jul26_CouplingModel_Yukawa_withTheoryUncertainties.root'
+            wsParametrization = WSParametrization( wsToCheck )
+
+            theoryDir = 'derivedTheoryFiles_Aug09_YukawaSummed/'
+            TheoryFileInterface.SetFileFinderDir( theoryDir )
+            yukawaDerivedTheoryFiles = TheoryFileInterface.FileFinder( muF=1, muR=1 )
+            # yukawaDerivedTheoryFiles = glob( 'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_*.txt' )
 
             import random
             random.seed(1000)
             yukawaDerivedTheoryFiles = random.sample( yukawaDerivedTheoryFiles, 8 )
 
-            nBins = len( TheoryCommands.ReadDerivedTheoryFile( yukawaDerivedTheoryFiles[0], returnContainer=True ).binBoundaries ) - 1
+            nBins = len( TheoryFileInterface.ReadDerivedTheoryFile( yukawaDerivedTheoryFiles[0] ).binBoundaries ) - 1
 
             containers = []
             colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
             for yukawaDerivedTheoryFile in yukawaDerivedTheoryFiles:
                 color = next(colorCycle)
 
-                container = TheoryCommands.ReadDerivedTheoryFile(
+                container = TheoryFileInterface.ReadDerivedTheoryFile(
                     yukawaDerivedTheoryFile,
                     returnContainer = True,
                     verbose = True
@@ -246,17 +248,17 @@ def main( args ):
                 #     boundaries    = True,
                 #     )
 
-                parametrizationContainer = TheoryCommands.TestParametrizationsInWorkspace(
-                    wsToCheck,
-                    testcouplings = [
-                        { 'kappab' : container.kappab, 'kappac' : container.kappac }
-                        ]
-                    )[0]
+                # parametrizationContainer = TheoryCommands.TestParametrizationsInWorkspace(
+                #     wsToCheck,
+                #     testcouplings = [
+                #         { 'kappab' : container.kappab, 'kappac' : container.kappac }
+                #         ]
+                #     )[0]
 
 
                 for iBin in xrange(nBins):
                     print 'Bin {0:3} | Value in file = {1:+9.5f},  parametrization = {2:+9.5f}'.format(
-                        iBin, container.ratios[iBin], parametrizationContainer.mus_theoryBinning[iBin+1]
+                        iBin, container.ratios[iBin], theoryParametrization[iBin]
                         )
 
                 container.Tg_theory = TheoryCommands.GetTheoryTGraph(
@@ -274,30 +276,36 @@ def main( args ):
                 container.Tg_theory.SetMarkerStyle(8)
                 container.Tg_theory.SetMarkerSize(0.8)
 
-                container.Tg_parametrization = TheoryCommands.GetTheoryTGraph(
-                    container.name,
-                    container.binBoundaries,
-                    parametrizationContainer.mus_theoryBinning[1:-1],
-                    muBoundLeft   = None,
-                    muBoundRight  = None,
-                    boundaries    = True,
-                    )
+
+                # theoryParametrization = wsParametrization.Evaluate(
+                #     kappab = container.kappab , kappac = container.kappac, returnWhat='theory'
+                #     )[1:-1]
+
+                # container.Tg_parametrization = TheoryCommands.GetTheoryTGraph(
+                #     container.name,
+                #     container.binBoundaries,
+                #     theoryParametrization,
+                #     muBoundLeft   = None,
+                #     muBoundRight  = None,
+                #     boundaries    = True,
+                #     )
+
+
+                container.Tg_parametrization = wsParametrization.GetOutputContainer( kappab = container.kappab , kappac = container.kappac, returnWhat='theory' ).Tg
                 container.Tg_parametrization.SetLineColor(color)
                 container.Tg_parametrization.SetMarkerColor(color)
                 container.Tg_parametrization.SetLineStyle(1)
 
 
-                # Remove overflow because kappab/kappac don't go very far
-                parametrizationContainer.mus_expBinBoundaries = parametrizationContainer.mus_expBinBoundaries[:-1]
-                parametrizationContainer.mus_expBinning = parametrizationContainer.mus_expBinning[:-1]
 
-                # Set end of spectrum to whatever was the end for kappab/kappac
-                parametrizationContainer.mus_expBinBoundaries[-1] = container.binBoundaries[-1]
+                expParametrization = wsParametrization.Evaluate(
+                    kappab = container.kappab , kappac = container.kappac, returnWhat='exp'
+                    )
 
                 container.Tg_parametrization_expBinning = TheoryCommands.GetTheoryTGraph(
                     container.name,
-                    parametrizationContainer.mus_expBinBoundaries,
-                    parametrizationContainer.mus_expBinning,
+                    expBinBoundaries,
+                    expParametrization,
                     muBoundLeft   = None,
                     muBoundRight  = None,
                     boundaries    = True,
@@ -313,8 +321,8 @@ def main( args ):
             # Additional lines to check
 
             extraTestCouplings = [
-                { 'kappab' : -6.843, 'kappac' : 21.0 },
-                { 'kappab' : -27.544008255, 'kappac' : 227.531097412 },
+                # { 'kappab' : -6.843, 'kappac' : 21.0 },
+                # { 'kappab' : -27.544008255, 'kappac' : 227.531097412 },
                 ]
 
             extraTestContainers = []
@@ -383,7 +391,7 @@ def main( args ):
             xMin = xMinAbs - 0.1*( xMaxAbs - xMinAbs )
             xMax = xMaxAbs + 0.1*( xMaxAbs - xMinAbs )
             yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
-            yMax = yMaxAbs + 2.1*( yMaxAbs - yMinAbs )
+            yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
 
             base = GetPlotBase(
                 xMin = xMin,
@@ -412,18 +420,20 @@ def main( args ):
                 container.Tg_theory.Draw('XP')
                 container.Tg_parametrization.Draw('XL')
 
-                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
-                    container.Tg_parametrization_expBinning,
-                    drawImmediately=True, legendObject=leg, noBoxes=True )
+                if DrawExperimentalBinLines:
+                    CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                        container.Tg_parametrization_expBinning,
+                        drawImmediately=True, legendObject=leg, noBoxes=True, xMaxExternal=xMax )
 
                 leg.AddEntry( container.Tg_theory.GetName(), container.name, 'p' )
 
 
             for container in extraTestContainers:
                 container.Tg_parametrization.Draw('XL')
-                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
-                    container.Tg_parametrization_expBinning,
-                    drawImmediately=True, legendObject=leg, noBoxes=True )
+                if DrawExperimentalBinLines:
+                    CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                        container.Tg_parametrization_expBinning,
+                        drawImmediately=True, legendObject=leg, noBoxes=True, xMaxExternal=xMax )
 
 
 
@@ -450,48 +460,86 @@ def main( args ):
             )
 
         # Need theory binBoundaries; awkwardly read this from a derivedTheoryFile
-        binBoundaries = TheoryCommands.ReadDerivedTheoryFile(
-            glob( 'derivedTheoryFiles_Jul25/muR_1_muF_1_Q_1_*.txt' )[0],
-            returnContainer=True
+        binBoundaries = TheoryFileInterface.ReadDerivedTheoryFile(
+            'derivedTheoryFiles_Aug09_YukawaSummed/YukawaSummed_kappab_1_kappac_1_muR_1_muF_1_Q_1.txt'
             ).binBoundaries
-
 
         # Get parametrizations to plot
         couplingsToPlot = [
-            { 'kappab' : -6.843, 'kappac' : 21.0 },
-            { 'kappab' : -27.544008255, 'kappac' : 227.531097412 },
-            { 'kappab' : -12., 'kappac' : 100. },
-            { 'kappab' : 0., 'kappac' : 100. },
-            { 'kappab' : 9., 'kappac' : 100. },
+            { 'kappab' : -0.565910458565, 'kappac' : 9.62666416168 },
             ]
 
-        # wsToCheck = 'workspaces_Jul27/combinedCard_Jul26_CouplingModel.root'
-        wsToCheck = 'workspaces_Jul28/combinedCard_Jul26_CouplingModel_noTheoryUncertainties.root'
 
+        wsToCheck = 'workspaces_Aug10/combinedCard_Jul26_CouplingModel_Yukawa_withTheoryUncertainties.root'
+        wsParametrization = WSParametrization( wsToCheck )
+        theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS(wsToCheck)
+        expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS(wsToCheck)
 
         Tgs = []
+        colorCycle = itertools.cycle( range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 ) )
         for couplingDict in couplingsToPlot:            
+            color = next(colorCycle)
 
-            parametrizationContainer = TheoryCommands.TestParametrizationsInWorkspace(
-                wsToCheck,
-                testcouplings = [ couplingDict ]
-                )[0]
+            parametrizationName = '_'.join([ '{0}_{1:.2f}'.format(key, float(value)) for key, value in sorted(couplingDict.iteritems()) ])
 
-            parametrizationName = '_'.join([ '{0}_{1}'.format(key, value) for key, value in sorted(couplingDict.iteritems()) ])
+            musTheory = wsParametrization.Evaluate(
+                kappab=couplingDict['kappab'], kappac=couplingDict['kappac']
+                )[1:-1]
 
-            Tg_parametrization = TheoryCommands.GetTheoryTGraph(
+            Tg_theory = TheoryCommands.GetTheoryTGraph(
                 parametrizationName,
-                binBoundaries,
-                parametrizationContainer.mus_theoryBinning[1:-1],
+                theoryBinBoundaries,
+                musTheory,
                 muBoundLeft   = None,
                 muBoundRight  = None,
                 boundaries    = True,
                 )
-            # Tg_parametrization.SetLineColor(color)
-            # Tg_parametrization.SetMarkerColor(color)
-            Tg_parametrization.SetLineStyle(1)
+            Tg_theory.SetLineStyle(1)
+            Tg_theory.SetLineColor(color)
 
-            Tgs.append( Tg_parametrization )
+            musExp = wsParametrization.Evaluate(
+                returnWhat='exp',
+                kappab=couplingDict['kappab'], kappac=couplingDict['kappac']
+                )
+
+            Tg_exp = TheoryCommands.GetTheoryTGraph(
+                parametrizationName + '_exp',
+                expBinBoundaries,
+                musExp,
+                muBoundLeft   = None,
+                muBoundRight  = None,
+                boundaries    = True,
+                )
+            Tg_exp.SetLineStyle(1)
+            Tg_exp.SetLineColor(color)
+
+            Tgs.append( Tg_theory )
+            Tgs.append( Tg_exp )
+
+
+        # Tgs = []
+        # for couplingDict in couplingsToPlot:            
+
+        #     parametrizationContainer = TheoryCommands.TestParametrizationsInWorkspace(
+        #         wsToCheck,
+        #         testcouplings = [ couplingDict ]
+        #         )[0]
+
+        #     parametrizationName = '_'.join([ '{0}_{1}'.format(key, value) for key, value in sorted(couplingDict.iteritems()) ])
+
+        #     Tg_parametrization = TheoryCommands.GetTheoryTGraph(
+        #         parametrizationName,
+        #         binBoundaries,
+        #         parametrizationContainer.mus_theoryBinning[1:-1],
+        #         muBoundLeft   = None,
+        #         muBoundRight  = None,
+        #         boundaries    = True,
+        #         )
+        #     # Tg_parametrization.SetLineColor(color)
+        #     # Tg_parametrization.SetMarkerColor(color)
+        #     Tg_parametrization.SetLineStyle(1)
+
+        #     Tgs.append( Tg_parametrization )
 
 
         # Draw both
@@ -506,7 +554,7 @@ def main( args ):
                 ),
             theoryCurves=Tgs,
             drawTheoryCurvesAsLines=True,
-            # autocolor=False,
+            autocolor=False,
             filenameSuffix='_withParametrizationsFromWS'
             )
 
@@ -729,16 +777,33 @@ def main( args ):
 
     if args.coupling2Dplot:
 
-        res = TheoryCommands.PlotCouplingScan2D(
-            'workspaces_Jul27/combinedCard_Jul26_CouplingModel.root',
-            glob( 'Scan_couplings_Jul28_1/*.root' ),
-            xCoupling = 'kappab',
-            yCoupling = 'kappac',
-            )
 
-        print '\nBest fit:'
-        print res.xCoupling, '=', res.xBestfit
-        print res.yCoupling, '=', res.yBestfit
+        if args.latest:
+
+            res = TheoryCommands.PlotCouplingScan2D(
+                'workspaces_Aug08/combinedCard_Jul26_CouplingModel.root',
+                glob( 'Scan_couplings_Aug09/*.root' ),
+                xCoupling = 'kappab',
+                yCoupling = 'kappac',
+                )
+
+            print '\nBest fit:'
+            print res.xCoupling, '=', res.xBestfit
+            print res.yCoupling, '=', res.yBestfit
+
+
+        else:
+
+            res = TheoryCommands.PlotCouplingScan2D(
+                'workspaces_Jul27/combinedCard_Jul26_CouplingModel.root',
+                glob( 'Scan_couplings_Jul28_1/*.root' ),
+                xCoupling = 'kappab',
+                yCoupling = 'kappac',
+                )
+
+            print '\nBest fit:'
+            print res.xCoupling, '=', res.xBestfit
+            print res.yCoupling, '=', res.yBestfit
 
                 
 
@@ -891,6 +956,144 @@ def main( args ):
 
         container = TheoryCommands.ReadDerivedTheoryFile( 'derivedTheoryFiles_Jun22/SM_NNLO.txt', returnContainer=True )
         TheoryCommands.MakeRebinnedTheoryPlot( container )
+
+
+
+    if args.TestParametrizationClassOnDerivedTheoryFiles:
+
+        theoryFileDir = 'derivedTheoryFiles_YukawaQuarkInduced_Aug08'
+        # theoryFileDir = 'derivedTheoryFiles_gluonInduced_Aug07/'
+
+        Commands.SetFileFinderDir( theoryFileDir )
+
+        if 'gluonInduced' in theoryFileDir:
+            SMfile      = Commands.FileFinder( muF=1, muR=1, kappab=1, kappac=1, expectOneFile=True, Q=1 )
+            theoryFiles = [ f for f in Commands.FileFinder( muF=1, muR=1, Q=1 ) ]
+        else:
+            SMfile      = Commands.FileFinder( muF=1, muR=1, kappab=1, kappac=1, expectOneFile=True )
+            theoryFiles = [ f for f in Commands.FileFinder() if not 'mu' in f ]
+
+
+        SM = TheoryCommands.ReadDerivedTheoryFile(
+            SMfile,
+            returnContainer = True,
+            verbose = False,
+            )
+
+        containers = []
+        for theoryFile in theoryFiles:
+            containers.append(
+                TheoryCommands.ReadDerivedTheoryFile(
+                    theoryFile,
+                    returnContainer = True,
+                    verbose = False,
+                    )
+                )
+
+        colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
+        parametrization = Parametrization()
+
+        # parametrization.Parametrize( containers )
+        parametrization.ParametrizeByFitting( containers )
+
+
+        for container in containers:
+            color = next(colorCycle)
+
+            container.name = 'kappab_{0}_kappac_{1}'.format(
+                Commands.ConvertFloatToStr( container.kappab ),
+                Commands.ConvertFloatToStr( container.kappac )
+                )
+
+            container.crosssection_fromParametrization = parametrization.Evaluate(
+                kappab = container.kappab, kappac = container.kappac
+                )
+
+            container.ratios_fromParametrization = \
+                [ i/j if j!=0. else 0. for i, j in zip( container.crosssection_fromParametrization, SM.crosssection ) ]
+
+            container.Tg = TheoryCommands.GetTheoryTGraph(
+                container.name,
+                container.binBoundaries,
+                container.ratios,
+                boundaries = True
+                )
+            container.Tg.SetMarkerStyle(8)
+            container.Tg.SetMarkerColor(color)
+            container.Tg.SetMarkerSize(0.75)
+
+            container.Tg_fromParametrization = TheoryCommands.GetTheoryTGraph(
+                container.name,
+                container.binBoundaries,
+                container.ratios_fromParametrization,
+                boundaries = True
+                )
+            container.Tg_fromParametrization.SetLineColor(color)
+            container.Tg_fromParametrization.SetLineWidth(2)
+
+
+        # ======================================
+        # Make a plot of it
+
+        c.cd()
+        c.Clear()
+        SetCMargins( RightMargin=0.3 )
+
+        xMinAbs = min([ container.Tg.xMin for container in containers ])
+        xMaxAbs = max([ container.Tg.xMax for container in containers ])
+        yMinAbs = min([ container.Tg.yMin for container in containers ])
+        yMaxAbs = max([ container.Tg.yMax for container in containers ])
+
+        xMin = xMinAbs - 0.1*( xMaxAbs - xMinAbs )
+        xMax = xMaxAbs + 0.1*( xMaxAbs - xMinAbs )
+        yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
+        yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
+
+        base = GetPlotBase(
+            xMin = xMin,
+            xMax = xMax,
+            yMin = yMin,
+            yMax = yMax,
+            xTitle = 'p_{T} [GeV]', yTitle = '#mu'
+            )
+        base.Draw('P')
+
+        leg = ROOT.TLegend(
+            # 1 - c.GetRightMargin() - 0.3,
+            # 1 - c.GetTopMargin() - 0.3,
+            # 1 - c.GetRightMargin() ,
+            # 1 - c.GetTopMargin() 
+            1 - 0.3,
+            c.GetBottomMargin(),
+            1 - 0.02 ,
+            1 - c.GetTopMargin() 
+
+            )
+        leg.SetBorderSize(0)
+        leg.SetFillStyle(0)
+
+        for container in containers:
+            container.Tg.Draw('XP')
+            container.Tg_fromParametrization.Draw('XL')
+
+            # if DrawExperimentalBinLines:
+            #     CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+            #         container.Tg_parametrization_expBinning,
+            #         drawImmediately=True, legendObject=leg, noBoxes=True )
+
+            leg.AddEntry( container.Tg.GetName(), container.name, 'p' )
+
+        leg.Draw()
+
+        outname = 'ParametrizationClassCheck_{0}'.format( basename(abspath(theoryFileDir)).replace('/','') )
+        SaveC( outname )
+
+
+
+
+
+    
+
 
 
 

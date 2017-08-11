@@ -9,6 +9,7 @@ Thomas Klijnsma
 
 import os, tempfile, shutil, re, subprocess, sys, traceback
 from os.path import *
+from glob import glob
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -127,6 +128,7 @@ def BasicT2WSwithModel(
     datacard,
     pathToModel,
     modelName=None,
+    suffix=None,
     extraOptions=None,
     ):
 
@@ -146,6 +148,9 @@ def BasicT2WSwithModel(
     outputDir = abspath( 'workspaces_{0}'.format(datestr) )
     if not isdir( outputDir ): os.makedirs( outputDir )
     outputWS = join( outputDir, basename(datacard).replace( '.txt', '_{0}.root'.format( basename(pathToModel).replace('.py','') ) ) )
+    
+    if suffix != None:
+        outputWS = outputWS.replace( '.root', '_{0}.root'.format(suffix) )
 
     signalprocesses, processes, bins = ListProcesses( datacard )
 
@@ -188,8 +193,8 @@ def BasicBestfit(
         '-M MultiDimFit',
         '--saveNLL',
         # '--saveWorkspace',
-        # '--minimizerStrategy 2',
-        # '-v 2',
+        '--minimizerStrategy 2',
+        '-v 2',
         # '-m 125',
         # '--floatOtherPOIs=1',
         ]
@@ -323,7 +328,38 @@ def ListSet(
     return varNames
 
 
+def ReadBinBoundariesFromWS( datacardRootFile, theory = True ):
 
+    if theory == True:
+        setName = 'theoryBinBoundaries'
+    else:
+        setName = 'expBinBoundaries'
+
+    datacardFp = ROOT.TFile.Open( datacardRootFile )
+    w = datacardFp.Get('w')
+    argSet = w.set(setName)
+    if not argSet:
+        ThrowError( 'No set \'{0}\' in {1}'.format( setName, datacardRootFile ) )
+        datacardFp.Close()
+        sys.exit()
+    binBoundaryList = ROOT.RooArgList(argSet)
+
+    parValues = []
+    for i in xrange( binBoundaryList.getSize() ):
+        parValue = binBoundaryList[i].getVal()
+        parValues.append( parValue )
+
+    parValues = list(set(parValues))
+    parValues.sort()
+
+    datacardFp.Close()
+    return parValues
+
+
+def ReadTheoryBinBoundariesFromWS( datacardRootFile ):
+    return ReadBinBoundariesFromWS( datacardRootFile, theory = True )    
+def ReadExpBinBoundariesFromWS( datacardRootFile ):
+    return ReadBinBoundariesFromWS( datacardRootFile, theory = False )
 
 
 def ListProcesses( datacardFile ):
