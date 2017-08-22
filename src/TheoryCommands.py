@@ -738,59 +738,46 @@ def PlotCouplingScan2D(
         rootfiles,
         xCoupling = 'ct',
         yCoupling = 'cg',
+        SM = None,
         verbose = True,
+        drawContours = True,
+        xMin = None, xMax = None, yMin = None, yMax = None,
+        multiplyBinContents = None,
         ):
 
-    scan = Commands.ConvertTChainToArray(
-        rootfiles
+    res = GetTH2FromListOfRootFiles(
+        rootfiles,
+        xCoupling,
+        yCoupling,
+        verbose,
+        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax
         )
-    nPoints = len(scan[xCoupling])
+    H2 = res.H2
 
 
-    keys = [ yCoupling, xCoupling, 'deltaNLL' ]
-    ret = Container( scanPoints=[] )
-    for iPoint in xrange(nPoints):
-        ret.scanPoints.append( [ scan[key][iPoint] for key in keys ] )
-    if verbose:
-        pprint.pprint( [ keys ] + ret.scanPoints )
+    if verbose or multiplyBinContents:
+        for iX in xrange( H2.GetNbinsX() ):
+            for iY in xrange( H2.GetNbinsY() ):
 
-
-    def inferBinBoundaries( binCenters ):
-        binBoundaries = []
-        for iBin in xrange(len(binCenters)-1):
-            binBoundaries.append( 0.5*(binCenters[iBin]+binCenters[iBin]) )
-        binBoundaries = (
-            [ binCenters[0] - (binBoundaries[0]-binCenters[0]) ] +
-            binBoundaries +
-            [ binCenters[-1] + (binCenters[-1]-binBoundaries[-1]) ]
-            )
-        return binBoundaries
-
-
-    iBestfit = scan['deltaNLL'].index( 0.0 )
-    xBestfit = scan[xCoupling][iBestfit]
-    yBestfit = scan[yCoupling][iBestfit]
-
-    xBinCenters = list(set(scan[xCoupling]))
-    xBinCenters.pop( xBinCenters.index(xBestfit) )
-    xBinCenters.sort()
-    xNBins = len(xBinCenters)
-    xBinBoundaries = inferBinBoundaries( xBinCenters )
-
-    yBinCenters = list(set(scan[yCoupling]))
-    yBinCenters.pop( yBinCenters.index(yBestfit) )
-    yBinCenters.sort()
-    yNBins = len(yBinCenters)
-    yBinBoundaries = inferBinBoundaries( yBinCenters )
-
-
+                if verbose:
+                    if abs(iX-(H2.GetNbinsX()/2)) < 5 and abs(iY-(H2.GetNbinsY()/2)) < 5:
+                        print 'iX = {0:2d}, iY = {1:2d}, X = {2:+5.2f}, Y = {3:+5.2f}, deltaNLL = {4}'.format(
+                            iX, iY,
+                            H2.GetXaxis().GetBinCenter(iX+1), H2.GetYaxis().GetBinCenter(iY+1),
+                            H2.GetBinContent( iX+1, iY+1 )
+                            )
+                if multiplyBinContents:
+                    H2.SetBinContent(
+                        iX+1, iY+1,
+                        H2.GetBinContent( iX+1, iY+1 ) * multiplyBinContents
+                        )
 
     c.Clear()
     SetCMargins(
-        LeftMargin   = 0.10,
+        LeftMargin   = 0.12,
         RightMargin  = 0.10,
-        BottomMargin = 0.10,
-        TopMargin    = 0.10,
+        BottomMargin = 0.12,
+        TopMargin    = 0.09,
         )
 
     # n_stops = 3
@@ -814,40 +801,49 @@ def PlotCouplingScan2D(
     #     array('d', blues ),
     #     255 )
 
-    H2 = ROOT.TH2D(
-        'couplingScan', '',
-        xNBins, array( 'd', xBinBoundaries ),
-        yNBins, array( 'd', yBinBoundaries ),
-        )
 
-    for iPoint in xrange(nPoints):
-
-        if scan[xCoupling][iPoint] == xBestfit and scan[yCoupling][iPoint] == yBestfit:
-            continue
-
-        try:
-            iBinX = xBinCenters.index( scan[xCoupling][iPoint] )
-        except ValueError:
-            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[xCoupling][iPoint] )
-            continue
-
-        try:
-            iBinY = yBinCenters.index( scan[yCoupling][iPoint] )
-        except ValueError:
-            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[yCoupling][iPoint] )
-            continue
-
-        H2.SetBinContent( iBinX+1, iBinY+1, scan['deltaNLL'][iPoint] )
-
+    # GetContoursFromTH2( H2, 2.99, minPoints = 20 )
+    # sys.exit()
 
     H2.Draw('COLZ')
 
-    H2.GetXaxis().SetTitle(xCoupling)
-    H2.GetYaxis().SetTitle(yCoupling)
-    H2.GetXaxis().SetTitleSize(0.05)
-    H2.GetYaxis().SetTitleSize(0.05)
+
+    if drawContours:
+
+        contourTgs_1sigma = GetContoursFromTH2( H2, 2.30 )
+        for Tg_1sigma in contourTgs_1sigma:
+            Tg_1sigma.SetLineColor(1)
+            Tg_1sigma.SetLineWidth(3)
+            Tg_1sigma.Draw('LSAME')
+            Tg_1sigma.SetName('contour1sigma')
+
+        contourTgs_2sigma = GetContoursFromTH2( H2, 6.18 )
+        for Tg_2sigma in contourTgs_2sigma:
+            Tg_2sigma.SetLineColor(1)
+            Tg_2sigma.SetLineWidth(3)
+            Tg_2sigma.SetLineStyle(2)
+            Tg_2sigma.Draw('LSAME')
+            Tg_2sigma.SetName('contour2sigma')
+
+
+    axisTitleDict = {
+        'kappab' : '#kappa_{b}',
+        'kappac' : '#kappa_{c}',
+        'ct'     : '#kappa_{t}',
+        'cg'     : '#kappa_{g}',
+        }
+
+    H2.GetXaxis().SetTitle( axisTitleDict.get( xCoupling, xCoupling ) )
+    H2.GetYaxis().SetTitle( axisTitleDict.get( yCoupling, yCoupling ) )
+    H2.GetXaxis().SetTitleSize(0.06)
+    H2.GetYaxis().SetTitleSize(0.06)
     H2.GetXaxis().SetTitleOffset(0.9)
     H2.GetYaxis().SetTitleOffset(0.9)
+
+    H2.GetXaxis().SetLabelSize(0.045)
+    H2.GetYaxis().SetLabelSize(0.045)
+    H2.GetZaxis().SetLabelSize(0.045)
+
 
     # H2.GetZaxis().SetLimits( 0., 50. )
     # H2.GetZaxis().SetRange( 0, 10 )
@@ -855,31 +851,231 @@ def PlotCouplingScan2D(
     c.Update()
 
 
-    Tpoint = ROOT.TGraph( 1, array( 'd', [xBestfit] ), array( 'd', [yBestfit] ) )
+    Tpoint = ROOT.TGraph( 1, array( 'd', [res.xBestfit] ), array( 'd', [res.yBestfit] ) )
     Tpoint.SetMarkerSize(2)
     Tpoint.SetMarkerStyle(34)
     Tpoint.Draw('P')
+    Tpoint.SetName('BestfitPoint')
 
-    Tpoint_SM = ROOT.TGraph( 1, array( 'd', [1.] ), array( 'd', [1.] ) )
+    if SM is None:
+        xSM = 1.0
+        ySM = 1.0
+    else:
+        xSM, ySM = SM
+
+    Tpoint_SM = ROOT.TGraph( 1, array( 'd', [xSM] ), array( 'd', [ySM] ) )
     Tpoint_SM.SetMarkerSize(2)
     Tpoint_SM.SetMarkerStyle(21)
     Tpoint_SM.Draw('P')
+    Tpoint_SM.SetName('SMPoint')
 
+    if drawContours:
+        leg = ROOT.TLegend(
+            c.GetRightMargin() + 0.08,
+            0.99,
+            c.GetRightMargin() + 0.08 + 0.7,
+            0.99 - c.GetTopMargin() + 0.02
+            )
+        leg.SetBorderSize(0)
+        leg.SetFillStyle(0)
+        leg.SetNColumns(4)
+        leg.AddEntry( Tg_1sigma.GetName(), '1 #sigma', 'l' )
+        leg.AddEntry( Tg_2sigma.GetName(), '2 #sigma', 'l' )
+        leg.AddEntry( Tpoint.GetName(),    'Best fit', 'p' )
+        leg.AddEntry( Tpoint_SM.GetName(), 'SM',       'p' )
+        leg.Draw()
 
     outname = 'couplingscan2D_{0}'.format( basename(dirname(rootfiles[0])).replace('/','') )
-
     SaveC( outname, asROOT=True )
     SetCMargins()
 
+    return res
+    
 
-    ret.xCoupling = xCoupling
-    ret.yCoupling = yCoupling
-    ret.xBestfit  = xBestfit
-    ret.yBestfit  = yBestfit
+
+def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
+
+    # Open a temporary canvas so the contour business does not screw up other plots
+    ctemp = ROOT.TCanvas( 'ctemp', 'ctemp', 1000, 800 )
+    ctemp.cd()
+
+    TH2 = TH2_original.Clone()
+    TH2.SetName( GetUniqueRootName() )
+    TH2.SetContour( 1, array( 'd', [threshold] ) )
+
+    if verbose:
+        print 'Trying to get contours from \'{0}\''.format( TH2.GetName() )
+
+    TH2.Draw( 'CONT Z LIST' )
+    ROOT.gPad.Update()
+
+    if verbose:
+        print '    Contours found'
+
+    contours_genObj = ROOT.gROOT.GetListOfSpecials().FindObject('contours')
+
+    Tgs = []
+    for iContour in xrange( contours_genObj.GetSize() ):
+        contour_TList = contours_genObj.At(iContour)
+        for iVal in xrange( contour_TList.GetSize() ):
+            Tg = contour_TList.At(iVal)
+
+            TgClone = Tg.Clone()
+            ROOT.SetOwnership( TgClone, False )
+            Tgs.append( TgClone )
+
+
+    del TH2
+    del contours_genObj
+
+    ctemp.Close()
+    del ctemp
+    c.cd()
+    ROOT.gPad.Update()
+
+    return Tgs
+
+
+def SetExtremaOfContour( Tg ):
+
+    xBuffer = Tg.GetX()
+    xs = [ xBuffer[i] for i in xrange( Tg.GetN() ) ]
+
+    yBuffer = Tg.GetY()
+    ys = [ yBuffer[i] for i in xrange( Tg.GetN() ) ]
+
+    Tg.xMin = min(xs)
+    Tg.xMax = max(xs)
+    Tg.yMin = min(ys)
+    Tg.yMax = max(ys)
+
+
+
+def GetTH2FromListOfRootFiles(
+        rootfiles,
+        xCoupling = 'ct',
+        yCoupling = 'cg',
+        verbose   = False,
+        xMin = None, xMax = None, yMin = None, yMax = None,
+        ):
+
+    # Read values from specified rootfiles
+    scan = Commands.ConvertTChainToArray(
+        rootfiles,
+        returnPerVariable = False
+        )
+    if xMin: scan = [ s for s in scan if s[xCoupling] >= xMin ]
+    if xMax: scan = [ s for s in scan if s[xCoupling] <= xMax ]
+    if yMin: scan = [ s for s in scan if s[yCoupling] >= yMin ]
+    if yMax: scan = [ s for s in scan if s[yCoupling] <= yMax ]
+    nPoints = len(scan)
+
+    GetListFromScan = lambda key: [ s[key] for s in scan ]
+
+    # keys = [ yCoupling, xCoupling, 'deltaNLL' ]
+    # ret = Container( scanPoints=[] )
+    # for iPoint in xrange(nPoints):
+    #     ret.scanPoints.append( [ scan[key][iPoint] for key in keys ] )
+    # if verbose:
+    #     pprint.pprint( [ keys ] + ret.scanPoints )
+
+
+    def inferBinBoundaries( binCenters ):
+        binBoundaries = []
+        for iBin in xrange(len(binCenters)-1):
+            binBoundaries.append( 0.5*(binCenters[iBin]+binCenters[iBin]) )
+        binBoundaries = (
+            [ binCenters[0] - (binBoundaries[0]-binCenters[0]) ] +
+            binBoundaries +
+            [ binCenters[-1] + (binCenters[-1]-binBoundaries[-1]) ]
+            )
+        return binBoundaries
+
+
+    iBestfit = GetListFromScan('deltaNLL').index( 0.0 )
+    xBestfit = GetListFromScan(xCoupling)[iBestfit]
+    yBestfit = GetListFromScan(yCoupling)[iBestfit]
+
+    xBinCenters = list(set( GetListFromScan(xCoupling) ))
+    xBinCenters.pop( xBinCenters.index(xBestfit) )
+    xBinCenters.sort()
+    xNBins = len(xBinCenters)
+    xBinBoundaries = inferBinBoundaries( xBinCenters )
+
+    yBinCenters = list(set( GetListFromScan(yCoupling) ))
+    yBinCenters.pop( yBinCenters.index(yBestfit) )
+    yBinCenters.sort()
+    yNBins = len(yBinCenters)
+    yBinBoundaries = inferBinBoundaries( yBinCenters )
+
+
+    H2name = GetUniqueRootName()
+    H2 = ROOT.TH2D(
+        H2name, '',
+        xNBins, array( 'd', xBinBoundaries ),
+        yNBins, array( 'd', yBinBoundaries ),
+        )
+    ROOT.SetOwnership( H2, False )
+
+
+    for iPoint in xrange(nPoints):
+
+        if scan[iPoint][xCoupling] == xBestfit and scan[iPoint][yCoupling] == yBestfit:
+            continue
+
+        try:
+            iBinX = xBinCenters.index( scan[iPoint][xCoupling] )
+        except ValueError:
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][xCoupling] )
+            continue
+
+        try:
+            iBinY = yBinCenters.index( scan[iPoint][yCoupling] )
+        except ValueError:
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][yCoupling] )
+            continue
+
+        H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint]['deltaNLL'] )
+
+
+    # for iPoint in xrange(nPoints):
+
+    #     if scan[xCoupling][iPoint] == xBestfit and scan[yCoupling][iPoint] == yBestfit:
+    #         continue
+
+    #     try:
+    #         iBinX = xBinCenters.index( scan[xCoupling][iPoint] )
+    #     except ValueError:
+    #         print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[xCoupling][iPoint] )
+    #         continue
+
+    #     try:
+    #         iBinY = yBinCenters.index( scan[yCoupling][iPoint] )
+    #     except ValueError:
+    #         print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[yCoupling][iPoint] )
+    #         continue
+
+    #     H2.SetBinContent( iBinX+1, iBinY+1, scan['deltaNLL'][iPoint] )
+
+    # Open return object
+    ret = Container()
+
+    ret.H2             = H2
+    ret.xCoupling      = xCoupling
+    ret.yCoupling      = yCoupling
+    ret.iBestfit       = iBestfit
+    ret.xBestfit       = xBestfit
+    ret.yBestfit       = yBestfit
+    ret.xBinCenters    = xBinCenters
+    ret.xNBins         = xNBins
+    ret.xBinBoundaries = xBinBoundaries
+    ret.yBinCenters    = yBinCenters
+    ret.yNBins         = yNBins
+    ret.yBinBoundaries = yBinBoundaries
 
     return ret
     
-
+    
 
 def TestParametrizationsInWorkspace(
     datacard,

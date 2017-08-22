@@ -535,23 +535,6 @@ def FullyProcess_ggH():
             ]
         )
 
-    # ggH_DCrenamed = MergeHGGWDatacards.RenameProcesses(
-    #     'ggH',
-    #     ggHCard,
-    #     renameOutsideAcceptance=True,
-    #     globalReplace = [
-    #         (
-    #             'CMS-HGG_sigfit_differential_pT_moriond17_ggHonly_v2.root',
-    #             'CMS-HGG_sigfit_differential_pT_moriond17_ggHonly_v2_FullyRenamed_Aug03.root'
-    #             ),
-    #         (
-    #             'hggpdfsmrel',
-    #             'ggH_hggpdfsmrel'
-    #             ),
-    #         ]
-    #     )
-
-
     ggh = MergeHGGWDatacards.GetDatacardContainer( ggH_DCrenamed )
     ggh.process = 'ggH'
 
@@ -591,22 +574,6 @@ def FullyProcess_xH():
                 ),
             ]
         )
-
-    # xH_DCrenamed = MergeHGGWDatacards.RenameProcesses(
-    #     'xH',
-    #     xHCard,
-    #     renameOutsideAcceptance=True,
-    #     globalReplace = [
-    #         (
-    #             'CMS-HGG_sigfit_differential_pT_moriond17_HxOnly.root',
-    #             'CMS-HGG_sigfit_differential_pT_moriond17_HxOnly_FullyRenamed_Aug03.root'
-    #             ),
-    #         (
-    #             'hggpdfsmrel',
-    #             'xH_hggpdfsmrel'
-    #             ),
-    #         ]
-    #     )
 
 
     xh = MergeHGGWDatacards.GetDatacardContainer( xH_DCrenamed )

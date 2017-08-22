@@ -7,28 +7,30 @@ Thomas Klijnsma
 # Imports
 ########################################
 
-import os, itertools, operator, re, argparse, sys
-from math import isnan, isinf
-from os.path import *
-from glob import glob
-from copy import deepcopy
+# import os, itertools, operator, re, argparse, sys
+# from math import isnan, isinf
+# from os.path import *
+# from glob import glob
+# from copy import deepcopy
 
 import combineCommands
 import plotCommands
 import yukawaCommands
 import topCommands
+import highLumiStudyCommands
 
+import sys
 sys.path.append('src')
 import Commands
-import PhysicsCommands
-import OneOfCommands
-import TheoryCommands
-import CorrelationMatrices
-import MergeHGGWDatacards
-import TheoryFileInterface
+# import PhysicsCommands
+# import OneOfCommands
+# import TheoryCommands
+# import CorrelationMatrices
+# import MergeHGGWDatacards
+# import TheoryFileInterface
 
-from time import strftime
-datestr = strftime( '%b%d' )
+# from time import strftime
+# datestr = strftime( '%b%d' )
 
 
 ########################################
@@ -49,20 +51,21 @@ def main():
     plotCommands.AppendParserOptions(parser)
     yukawaCommands.AppendParserOptions(parser)
     topCommands.AppendParserOptions(parser)
+    highLumiStudyCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
     group.add_argument( '--older',  dest='latest', action='store_false' )
+
+    parser.add_argument( '--hzz',   action='store_true' )
+    parser.add_argument( '--hgg',   action='store_true' )
 
     args = parser.parse_args()
 
     print args
     print ''
 
-
-
-    if args.test:
-        Commands.TestMode()
+    if args.test: Commands.TestMode()
 
 
     ########################################
@@ -85,7 +88,6 @@ def main():
     # Stuff dealing with combine (datacard merging/combining, t2ws, bestfits, scans, etc.)
     ########################################
 
-    # Moved to separate file
     if args.combineCommands:
         combineCommands.main(args)
 
@@ -94,120 +96,16 @@ def main():
     # Result and Test Plotting
     ########################################
 
-    # Moved to separate file
     if args.plotCommands:
         plotCommands.main(args)
 
 
     ########################################
-    # Stuff dealing with theory spectra (creation of derivedTheoryFiles, rebinning, correlation matrices, etc.)
+    # High lumi study
     ########################################
 
-
-    if args.CorrelationMatrices_Agnieszka:
-
-        variationFiles = glob( 'suppliedInput/fromAgnieszka/ScaleVarNNLO_Jul17/*.top' )
-
-        # ======================================
-        # Correlation matrix in theory binning
-
-        variations = [ CorrelationMatrices.ReadVariationFile( variationFile, fromAgnieszka=True ) for variationFile in variationFiles ]
-        CorrelationMatrices.GetCorrelationMatrix(
-            variations,
-            makeScatterPlots          = False,
-            makeCorrelationMatrixPlot = True,
-            outname                   = 'corrMat_theory',
-            verbose                   = True,
-            )
-
-        # ======================================
-        # Correlation matrix in exp binning
-        
-        print '[fixme] Exp bin boundaries hardcoded'
-        expBinBoundaries    = [ 0., 15., 30., 45., 85., 125., 200., 350., 800. ]
-        expBinCenters       = [ 0.5*(expBinBoundaries[iBin]+expBinBoundaries[iBin+1]) for iBin in xrange(len(expBinBoundaries)-1) ]
-
-        variations_expbinning = []
-        for variation in variations:
-            theoryBinCenters, theoryBinBoundaries, theoryBinWidths = TheoryCommands.BinningHeuristic( variation.binCenters, manualSwitchAt50=True )
-            expBinValues = TheoryCommands.MapFineToCoarse(
-                theoryBinBoundaries = theoryBinBoundaries,
-                theoryBinValues     = variation.binValues,
-                expBinBoundaries    = expBinBoundaries,
-                lastBinIsOverflow   = True,
-                )
-
-            variation_exp = deepcopy( variation )
-            variation_exp.binCenters = expBinCenters
-            variation_exp.binValues  = expBinValues
-            variation_exp.binBoundaries = expBinBoundaries
-
-            variations_expbinning.append( variation_exp )
-
-
-        CorrelationMatrices.GetCorrelationMatrix(
-            variations_expbinning,
-            # makeScatterPlots          = False,
-            makeScatterPlots          = True,
-            makeCorrelationMatrixPlot = True,
-            outname                   = 'corrMat_exp',
-            verbose                   = True,
-            )
-
-        CorrelationMatrices.PlotVariationSpectra( variations_expbinning, 'exp' )
-        CorrelationMatrices.PlotVariationSpectra( variations, 'theory' )
-
-        CorrelationMatrices.PlotRelativeUncertainty( variations_expbinning, 'exp' )
-        CorrelationMatrices.PlotRelativeUncertainty( variations, 'theory' )
-
-
-        # ======================================
-        # Read HqT variations; These are split up over 2 files and need to be merged
-
-        LOHqTvariationFiles_lowPt = glob( 'HqT/infiles_Jul19/LO*minPt_1_*.out' )
-        LOHqTvariations_lowPt = [ CorrelationMatrices.ReadVariationFile( variationFile, fromHqT=True ) for variationFile in LOHqTvariationFiles_lowPt ]
-        LOHqTvariationFiles_highPt = glob( 'HqT/infiles_Jul19/LO*minPt_50_*.out' )
-        LOHqTvariations_highPt = [ CorrelationMatrices.ReadVariationFile( variationFile, fromHqT=True ) for variationFile in LOHqTvariationFiles_highPt ]
-        LOHqTvariations = CorrelationMatrices.MergeLowHighPtFilesFromHqT( LOHqTvariations_lowPt, LOHqTvariations_highPt )
-
-        CorrelationMatrices.PlotVariationSpectra( LOHqTvariations, 'hqtLO' )
-        CorrelationMatrices.PlotRelativeUncertainty( LOHqTvariations, 'hqtLO' )
-
-        # [July 19 14:40] No working NLO files yet
-        NLOHqTvariationFiles_lowPt = glob( 'HqT/infiles_Jul19/NLO*minPt_1_*.out' )
-        NLOHqTvariations_lowPt = [ CorrelationMatrices.ReadVariationFile( variationFile, fromHqT=True ) for variationFile in NLOHqTvariationFiles_lowPt ]
-        NLOHqTvariationFiles_highPt = glob( 'HqT/infiles_Jul19/NLO*minPt_50_*.out' )
-        NLOHqTvariations_highPt = [ CorrelationMatrices.ReadVariationFile( variationFile, fromHqT=True ) for variationFile in NLOHqTvariationFiles_highPt ]
-        NLOHqTvariations = CorrelationMatrices.MergeLowHighPtFilesFromHqT( NLOHqTvariations_lowPt, NLOHqTvariations_highPt )
-
-        CorrelationMatrices.PlotVariationSpectra( NLOHqTvariations, 'hqtNLO' )
-        CorrelationMatrices.PlotRelativeUncertainty( NLOHqTvariations, 'hqtNLO' )
-
-        CorrelationMatrices.PlotWithEnvelop(
-            ( 'hqtLO', LOHqTvariations ),
-            ( 'hqtNLO', NLOHqTvariations ),
-            ( 'exp', variations_expbinning ),
-            ( 'hresNNLO', variations ),
-            ptMax = 150.
-            )
-
-
-    # Maybe this becomes useful for nJets workspaces at some point...
-    # if args.makeStewartTackmannDatacard:
-
-    #     container = TheoryCommands.ReadDerivedTheoryFile( 'derivedTheoryFiles_Jun22/SM_NNLO.txt', returnContainer=True )
-        
-    #     covMat = TheoryCommands.GetStewartTackmannCovarianceMatrix( container )
-
-    #     # No longer works! Was anyway incorrectly implemented
-    #     # TheoryCommands.AddCovarianceMatrixAsNuisanceParameters(
-    #     #     'suppliedInput/combinedCard_May15.txt',
-    #     #     covMat
-    #     #     )
-
-
-
-
+    if args.highLumiStudyCommands:
+        highLumiStudyCommands.main(args)
 
 
 ########################################

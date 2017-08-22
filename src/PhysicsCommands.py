@@ -330,7 +330,8 @@ def FigureOutBinning( POIs ):
 def GetTGraphForSpectrum(
     POIs,
     scans,
-    name = 'unnamed'
+    name = 'unnamed',
+    scalePOIs = None,
     ):
 
     # Sort by first number of observable range
@@ -341,6 +342,10 @@ def GetTGraphForSpectrum(
     binWidths     = [ right-left for left, right in zip( binBoundaries[:-1], binBoundaries[1:] ) ]
     halfBinWidths = [ 0.5*(right-left) for left, right in zip( binBoundaries[:-1], binBoundaries[1:] ) ]
 
+    if scalePOIs and len(scalePOIs) != len(binCenters):
+        Commands.ThrowError( 'Length of scalePOIs {0} is not equal to length of binCenters {1}'.format( scalePOIs, binCenters ) )
+        sys.exit()        
+
     POICenters  = []
     POIErrsLeft  = []
     POIErrsRight = []
@@ -350,9 +355,18 @@ def GetTGraphForSpectrum(
         nPoints = len(POIvals)
         minimaAndUncertainties = FindMinimaAndErrors( POIvals, deltaNLLs )
 
-        POICenters.append( minimaAndUncertainties['min'] )
-        POIErrsLeft.append( minimaAndUncertainties['leftError'] )
-        POIErrsRight.append( minimaAndUncertainties['rightError'] )
+        POICenter   = minimaAndUncertainties['min']
+        POIErrLeft  = minimaAndUncertainties['leftError']
+        POIErrRight = minimaAndUncertainties['rightError']
+
+        if scalePOIs:
+            POICenter   *= scalePOIs[ POIs.index(POI) ]
+            POIErrLeft  *= scalePOIs[ POIs.index(POI) ]
+            POIErrRight *= scalePOIs[ POIs.index(POI) ]
+
+        POICenters.append(   POICenter )
+        POIErrsLeft.append(  POIErrLeft )
+        POIErrsRight.append( POIErrRight )
 
 
     Tg = ROOT.TGraphAsymmErrors(
@@ -450,12 +464,23 @@ def BasicCombineSpectra(
         else:
             drawoptions.append( [] )
 
+    isRatioPlot = True
+    for kwarg in kwargs:
+        if '_SMXS' in kwarg:
+            isRatioPlot = False
+
+    IsBottomRatioPlot = kwargs.get( 'bottomRatioPlot', False )
 
     Tgs = []
     for name, POIList, scanList, drawoptionList in zip( names, POIs, scans, drawoptions ):
-        Tg = GetTGraphForSpectrum( POIList, scanList, name=name )
+        Tg = GetTGraphForSpectrum( POIList, scanList, name=name, scalePOIs=kwargs.get( '{0}_SMXS'.format(name), None ) )
 
+        Tg.DrawAsBlocks = True
         for drawoption in drawoptionList:
+            if drawoption[0] == 'AsBlocks':
+                Tg.DrawAsBlocks = drawoption[1]
+                continue
+
             try:
                 getattr( Tg, drawoption[0] )( *drawoption[1:] )
                 # print 'Successfully called \'Tg.{0}({1})\''.format( drawoption[0], drawoption[1:] )
@@ -498,33 +523,70 @@ def BasicCombineSpectra(
     yMax = max([ Tg.yMax for Tg in Tgs ])
     dy = yMax-yMin
     
+    yMin -= 0.05*dy
+    yMax += 0.05*dy
+
+    titledict = {
+        'combination' : 'Combination',
+        'hgg'         : 'H #rightarrow #gamma#gamma',
+        'hzz'         : 'H #rightarrow ZZ',
+        'PTH'         : 'p_{T}^{H} [GeV]',
+        }
+
     c.Clear()
+    c.SetLeftMargin( 0.18 )
+    if not isRatioPlot:
+        c.SetLogy()
+        yMax = yMax * 2.
+        yMin = max( yMin, 0.0001 )
+        xMax = 600.
+
+    if IsBottomRatioPlot:
+        c.SetTopMargin( 0.65 )
+        c.SetBottomMargin( 0.01 )
+
     base = ROOT.TH1F()
     base.Draw('P')
     base.GetXaxis().SetLimits( xMin, xMax )
-    base.SetMinimum( yMin - 0.05*dy )
-    base.SetMaximum( yMax + 0.05*dy )
+    base.SetMinimum( yMin )
+    base.SetMaximum( yMax )
     base.SetMarkerColor(0)
-    base.GetXaxis().SetTitle( observableName )
-    base.GetYaxis().SetTitle( '#mu' )
+    base.GetXaxis().SetTitle( titledict.get( observableName, observableName ) )
+    
+    if isRatioPlot:
+        base.GetYaxis().SetTitle( '#mu' )
+        base.GetYaxis().SetTitleSize( 0.06 )
+    else:
+        # 'd#sigma/dp_{T} [pb/GeV]'
+        base.GetYaxis().SetTitle( '#frac{#Delta#sigma(p_{T}^{H})}{#Delta p_{T}^{H}} [pb/GeV]' )
+        base.GetYaxis().SetTitleSize( 0.05 )
+
+    if IsBottomRatioPlot:
+        base.GetXaxis().SetTitle('')
+        base.GetXaxis().SetLabelOffset(999.)
+        base.GetYaxis().SetNdivisions(505)
 
     base.GetXaxis().SetTitleSize( 0.06 )
-    base.GetYaxis().SetTitleSize( 0.06 )
+    base.GetXaxis().SetLabelSize( 0.05 )
+    base.GetYaxis().SetLabelSize( 0.05 )
+    base.GetYaxis().SetTitleOffset( 1.5 )
 
-    lineAtOne = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
-    lineAtOne.SetLineWidth(3)
-    lineAtOne.SetLineColor(17)
-    # lineAtOne.SetLineStyle(2)
-    lineAtOne.Draw()
+    if isRatioPlot:
+        lineAtOne = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
+        lineAtOne.SetLineWidth(3)
+        lineAtOne.SetLineColor(17)
+        # lineAtOne.SetLineStyle(2)
+        lineAtOne.Draw()
 
-    leg = ROOT.TLegend( 1-RightMargin-0.25, 1-TopMargin-0.3, 1-RightMargin, 1-TopMargin )
+    leg = ROOT.TLegend( 1-RightMargin-0.23, 1-TopMargin-0.3, 1-RightMargin, 1-TopMargin )
     leg.SetFillStyle(0)
     leg.SetBorderSize(0)
 
-    optionTLines = True
-    TgDrawStr = 'SAME E2 P'
+    TgDrawStr = 'SAME P'
 
     for Tg in Tgs:
+
+        Tg.title = titledict.get( Tg.name, Tg.name )
 
         # Make overflow bin extend until max of spectrum
         if Tg.binBoundaries[-1] < xMax:
@@ -537,7 +599,7 @@ def BasicCombineSpectra(
             Tg.SetPointEXhigh( lastPoint, newHalfBinWidth )
 
 
-        if optionTLines:
+        if Tg.DrawAsBlocks:
 
             # This is already transparent!
             # Regular color 4 becomes something like 972 when transparent
@@ -547,9 +609,21 @@ def BasicCombineSpectra(
 
             for iBin in xrange(len(Tg.binBoundaries)-1):
 
+                if Tg.binBoundaries[iBin] > xMax:
+                    continue
+
+                revertChange = False
+                if Tg.binBoundaries[iBin+1] > xMax:
+                    # Change this back at end of loop
+                    actualBound = Tg.binBoundaries[iBin+1]
+                    Tg.binBoundaries[iBin+1] = xMax
+                    revertChange = True
+
                 box = ROOT.TBox(
-                    Tg.binBoundaries[iBin], Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin],
-                    Tg.binBoundaries[iBin+1], Tg.POICenters[iBin]+Tg.POIErrsRight[iBin]
+                    Tg.binBoundaries[iBin],
+                    Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin] if Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin] > yMin else yMin,
+                    Tg.binBoundaries[iBin+1]                 if Tg.binBoundaries[iBin+1] < xMax else xMax,
+                    Tg.POICenters[iBin]+Tg.POIErrsRight[iBin]
                     )
                 ROOT.SetOwnership( box, False )
 
@@ -568,6 +642,11 @@ def BasicCombineSpectra(
                 line.SetLineWidth( Tg.GetLineWidth() )
                 line.Draw()
 
+                if revertChange:
+                    Tg.binBoundaries[iBin+1] = actualBound
+                    revertChange = False
+
+
             # Dummy for the legend
             TgDummy = ROOT.TGraph( 1, array( 'd', [-999.]), array( 'd', [-999.]) )
             ROOT.SetOwnership( TgDummy, False )
@@ -581,11 +660,12 @@ def BasicCombineSpectra(
             TgDummy.SetName( Tg.name + '_dummy' )
             TgDummy.Draw('SAME')
 
-            leg.AddEntry( TgDummy.GetName(), Tg.name, 'lf' )
+            leg.AddEntry( TgDummy.GetName(), Tg.title, 'lf' )
 
 
         else:
             Tg.Draw( TgDrawStr )
+            leg.AddEntry( Tg.GetName(), Tg.title, 'lp' )
 
 
 
@@ -609,16 +689,17 @@ def BasicCombineSpectra(
                 Tg.Draw('L X')
                 leg.AddEntry( Tg.GetName(), Tg.name, 'l' )
 
-
-    leg.Draw()
+    if not IsBottomRatioPlot:
+        leg.Draw()
 
 
     outname = 'mspectrum_{0}_{1}_{2}'.format( productionMode, observableName, '_'.join(names) )
     if 'theoryCurves' in kwargs: outname += '_withTheoryCurves_{0}'.format( TheoryCommands.GetShortTheoryName([Tg.name for Tg in theoryTgs]) )
     outname += kwargs.get( 'filenameSuffix', '' )
+    if IsBottomRatioPlot: outname += 'bottomRatioPlot'
     SaveC( outname, asROOT=True )
 
-
+    if not isRatioPlot: c.SetLogy(False)
 
 
 def ConvertToLinesAndBoxes(

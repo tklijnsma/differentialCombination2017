@@ -580,6 +580,79 @@ def main( args ):
         # print len(res['r_smH_PTH_30_45'])
 
 
+        # ======================================
+        # Specify SMXS
+
+        binBoundaries_hgg = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
+        binBoundaries_hzz = [ 0., 15., 30., 85., 200., 1000. ]
+
+        binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
+        binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
+
+        # hgg_acceptances = [ 0.208025,0.234770,0.165146,0.218345,0.087552,0.059154,0.022612,0.004398 ]
+        # totalXS         = 50.98
+        # hgg_crosssections = [ acc * totalXS / binWidth for acc, binWidth in zip( hgg_acceptances, binWidths ) ]
+
+
+        # # hzz_integrated_crosssections = [ 11.217853725, 12.3184990883, 8.36791008711, 9.94637668133, 3.4264960885, 2.22439072095, 0.85868393071, 0.159789925965 ]
+
+        # # POWHEG
+        # # 0.0   - 15.0   : 11.9831773639
+        # # 15.0  - 30.0   : 13.4092882276
+        # # 30.0  - 45.0   : 8.32376986742
+        # # 45.0  - 85.0   : 9.38364923
+        # # 85.0  - 125.0  : 2.96226680279
+        # # 125.0 - 200.0  : 1.70364780352
+        # # 200.0 - 350.0  : 0.648814626038
+        # # 350.0 - 1000.0 : 0.105386280484
+        # hzz_integrated_crosssections = [
+        #     11.9831773639,
+        #     13.4092882276,
+        #     8.32376986742 + 9.38364923,
+        #     2.96226680279 + 1.70364780352,
+        #     0.648814626038 + 0.105386280484,
+        #     ]
+
+        # # MC@NLO
+        # # 0.0   15.0   11.217853725
+        # # 15.0  30.0   12.3184990883
+        # # 30.0  45.0   8.36791008711
+        # # 45.0  85.0   9.94637668133
+        # # 85.0  125.0  3.4264960885
+        # # 125.0 200.0  2.22439072095
+        # # 200.0 350.0  0.85868393071
+        # # 350.0 1000.0 0.159789925965
+        # hzz_integrated_crosssections = [
+        #     11.217853725,
+        #     12.3184990883,
+        #     8.36791008711 + 9.94637668133,
+        #     3.4264960885 + 2.22439072095,
+        #     0.85868393071 + 0.159789925965,
+        #     ]
+
+        # hzz_binBoundaries = [ 0., 15., 30., 85., 200., 1000. ]
+
+        # hzz_crosssections = []
+        # for i in xrange(len(hzz_integrated_crosssections)):
+        #     binWidth = hzz_binBoundaries[i+1] - hzz_binBoundaries[i]
+        #     hzz_crosssections.append( hzz_integrated_crosssections[i] / binWidth )
+
+        YR4_totalXS = 55.70628722 # pb
+
+        shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
+        shape_hzz = [
+            0.208025,
+            0.234770,
+            0.165146 + 0.218345,
+            0.087552 + 0.059154,
+            0.022612 + 0.004398,
+            ]
+        hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
+        hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
+
+
+        # ======================================
+        # Start drawing
 
         hggPOIs = Commands.ListPOIs( 'workspaces_May15/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root' )
         hggscans = PhysicsCommands.GetScanResults(
@@ -631,6 +704,9 @@ def main( args ):
                 ( 'SetFillColorAlpha', 4, 0.2 ),
                 ),
             printTable=True,
+            hzz_SMXS         = hzz_crosssections,
+            hgg_SMXS         = hgg_crosssections,
+            combination_SMXS = hgg_crosssections,
             )
 
 
@@ -656,39 +732,39 @@ def main( args ):
             )
 
 
-        # Combination only with theory curves
-        for pattern in [
-            r'^cg_[mp\d]+$',
-            r'^ct_[mp\d]+$',
-            r'^cb_[mp\d]+$',
-            r'ct_[mp\d]+_cb_[mp\d]+_cg_[mp\d]+',
-            r'ct_[mp\d]+_cb_([mp\d]+)$', # ct_XX_cb_XX , but not ct_XX_cb_XX_cg_XX
-            r'ct_[mp\d]+_cg_[mp\d]+',
-            ]:
+        # # Combination only with theory curves
+        # for pattern in [
+        #     r'^cg_[mp\d]+$',
+        #     r'^ct_[mp\d]+$',
+        #     r'^cb_[mp\d]+$',
+        #     r'ct_[mp\d]+_cb_[mp\d]+_cg_[mp\d]+',
+        #     r'ct_[mp\d]+_cb_([mp\d]+)$', # ct_XX_cb_XX , but not ct_XX_cb_XX_cg_XX
+        #     r'ct_[mp\d]+_cg_[mp\d]+',
+        #     ]:
 
-            theoryTgs = TheoryCommands.LoadTheoryCurves( pattern )
+        #     theoryTgs = TheoryCommands.LoadTheoryCurves( pattern )
 
-            PhysicsCommands.BasicCombineSpectra(
-                ( 'combination', combinationPOIs, combinationscans,
-                    ( 'SetLineColor', 1 ),
-                    ( 'SetMarkerStyle', 2 ),
-                    ( 'SetFillColorAlpha', 1, 0.2 ),
-                    # ( 'SetFillColor', 13 ),
-                    # ( 'SetFillStyle', 3544 ),
-                    # ( 'SetFillStyle', 3345 ),
-                    ),
-                # ( 'hgg', hggPOIs, hggscans,
-                #     ( 'SetLineColor', 2 ),
-                #     ( 'SetMarkerStyle', 5 ),
-                #     ( 'SetFillColorAlpha', 2, 0.2 ),
-                #     ),
-                # ( 'hzz', hzzPOIs, hzzscans,
-                #     ( 'SetLineColor', 4 ),
-                #     ( 'SetMarkerStyle', 8 ),
-                #     ( 'SetFillColorAlpha', 4, 0.2 ),
-                #     ),
-                theoryCurves=theoryTgs
-                )
+        #     PhysicsCommands.BasicCombineSpectra(
+        #         ( 'combination', combinationPOIs, combinationscans,
+        #             ( 'SetLineColor', 1 ),
+        #             ( 'SetMarkerStyle', 2 ),
+        #             ( 'SetFillColorAlpha', 1, 0.2 ),
+        #             # ( 'SetFillColor', 13 ),
+        #             # ( 'SetFillStyle', 3544 ),
+        #             # ( 'SetFillStyle', 3345 ),
+        #             ),
+        #         # ( 'hgg', hggPOIs, hggscans,
+        #         #     ( 'SetLineColor', 2 ),
+        #         #     ( 'SetMarkerStyle', 5 ),
+        #         #     ( 'SetFillColorAlpha', 2, 0.2 ),
+        #         #     ),
+        #         # ( 'hzz', hzzPOIs, hzzscans,
+        #         #     ( 'SetLineColor', 4 ),
+        #         #     ( 'SetMarkerStyle', 8 ),
+        #         #     ( 'SetFillColorAlpha', 4, 0.2 ),
+        #         #     ),
+        #         theoryCurves=theoryTgs
+        #         )
 
 
     # ======================================

@@ -13,6 +13,8 @@ from os.path import *
 from glob import glob
 from copy import deepcopy
 
+from LatestPaths import *
+
 sys.path.append('src')
 import Commands
 import PhysicsCommands
@@ -20,7 +22,6 @@ import OneOfCommands
 import TheoryCommands
 import CorrelationMatrices
 import MergeHGGWDatacards
-
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -47,16 +48,40 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--renamehgg',                       action=CustomAction )
     parser.add_argument( '--mergehgg',                        action=CustomAction )
     parser.add_argument( '--t2ws',                            action=CustomAction )
+    parser.add_argument( '--t2ws_OLD',                        action=CustomAction )
     parser.add_argument( '--bestfit',                         action=CustomAction )
-    parser.add_argument( '--couplingT2WS',                    action=CustomAction )
     parser.add_argument( '--combineCards',                    action=CustomAction )
-    parser.add_argument( '--couplingBestfit',                 action=CustomAction )
     parser.add_argument( '--couplingImportanceHistogram',     action=CustomAction )
     parser.add_argument( '--doFastscan',                      action=CustomAction )
-    parser.add_argument( '--OutsideAcceptancetosignal',       action=CustomAction )
+    parser.add_argument( '--OutsideAcceptancetoSignal',       action=CustomAction )
     parser.add_argument( '--reparseT2WS',                     action=CustomAction )
     parser.add_argument( '--reparseBestfit',                  action=CustomAction )
+    parser.add_argument( '--smartMapTest',                    action=CustomAction )
 
+
+    parser.add_argument( '--t2ws_combined_unsplit',           action=CustomAction )
+    parser.add_argument( '--t2ws_hgg_unsplit',                action=CustomAction )
+    parser.add_argument( '--t2ws_hzz_unsplit',                action=CustomAction )
+    parser.add_argument( '--bestfit_combined_unsplit',        action=CustomAction )
+    parser.add_argument( '--bestfit_hgg_unsplit',             action=CustomAction )
+    parser.add_argument( '--bestfit_hzz_unsplit',             action=CustomAction )
+
+    parser.add_argument( '--t2ws_combined_split',           action=CustomAction )
+    parser.add_argument( '--t2ws_hgg_split',                action=CustomAction )
+    parser.add_argument( '--t2ws_hzz_split',                action=CustomAction )
+    parser.add_argument( '--bestfit_combined_split',        action=CustomAction )
+    parser.add_argument( '--bestfit_hgg_split',             action=CustomAction )
+    parser.add_argument( '--bestfit_hzz_split',             action=CustomAction )
+
+    parser.add_argument( '--scan_combined_unsplit',         action=CustomAction )
+    parser.add_argument( '--scan_hgg_unsplit',              action=CustomAction )
+    parser.add_argument( '--scan_hzz_unsplit',              action=CustomAction )
+
+    parser.add_argument( '--RenameHggProcesses_Aug21',      action=CustomAction )
+    parser.add_argument( '--RenumberHzzProcesses_Aug21',    action=CustomAction )
+    parser.add_argument( '--CombineCards_Aug21',            action=CustomAction )
+
+    parser.add_argument( '--plot_ptSpectra',                action=CustomAction )
 
     # group = parser.add_mutually_exclusive_group(required=False)
     # group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -70,8 +95,321 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
+
     #____________________________________________________________________
-    if args.OutsideAcceptancetosignal:
+    if args.RenameHggProcesses_Aug21:
+        MergeHGGWDatacards.RenameProcesses_Aug21(
+            card_onlyhgg_split_both_unrenamed,
+            )
+
+
+    if args.RenumberHzzProcesses_Aug21:
+        MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+            card_onlyhzz_split_unrenamed,
+            )
+
+
+    if args.CombineCards_Aug21:
+        Commands.BasicCombineCards(
+            'suppliedInput/combinedCard_{0}.txt'.format(datestr),
+            card_onlyhgg_split_both_renamed,
+            card_onlyhzz_split_renamed
+            )
+
+
+    #____________________________________________________________________
+    if args.t2ws_combined_unsplit:
+        Commands.BasicT2WS(
+            card_combined_unsplit,
+            smartMaps = [
+                ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+                ],
+            )
+
+    if args.t2ws_hgg_unsplit:
+        Commands.BasicT2WS(
+            card_onlyhgg_unsplit_renamed,
+            smartMaps = [
+                ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+                ],
+            )
+
+    if args.t2ws_hzz_unsplit:
+        Commands.BasicT2WS(
+            card_onlyhzz_unsplit_OAsignal,
+            # smartMaps = [
+            #     ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+            #     ],
+            manualMaps = [
+                '--PO \'map=.*/smH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/smH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/smH_PTH_30_45:r_smH_PTH_30_85[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_45_85:r_smH_PTH_30_85[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_85_125:r_smH_PTH_85_200[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_125_200:r_smH_PTH_85_200[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_200_350:r_smH_PTH_GT200[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_GT350:r_smH_PTH_GT200[1.0,-1.0,4.0]\'',
+                ],
+            )
+
+    #____________________________________________________________________
+
+    if args.t2ws_combined_split:
+
+        # Specific for HZZ
+        Commands.BasicT2WS(
+            card_combined_split,
+            smartMaps = [
+                ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+                ],
+            )
+
+
+    if args.t2ws_hgg_split:
+
+        # Specific for HZZ
+        Commands.BasicT2WS(
+            card_onlyhgg_split_both_renamed,
+            smartMaps = [
+                ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+                ],
+            )
+
+
+    if args.t2ws_hzz_split:
+
+        # Specific for HZZ
+        Commands.BasicT2WS(
+            'suppliedInput/hzz_ggH_xH_split_Jun26/hzz4l_all_13TeV_xs.txt',
+            manualMaps=[
+                '--PO \'map=.*/ggH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/xH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+                ],
+            )
+
+
+    #____________________________________________________________________
+    def bestfit( ws ):
+        Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
+        Commands.BasicBestfit(
+            ws,
+            onBatch=True,
+            batchJobSubDir = 'job_{0}'.format( basename(ws).replace('/','').replace('.root','') ),
+            extraOptions = [
+                '-m 125',
+                '--floatOtherPOIs=1',
+                ]
+            )
+
+    if args.bestfit_combined_unsplit:
+        bestfit( ws_combined_unsplit )
+
+    if args.bestfit_hgg_unsplit:
+        bestfit( ws_onlyhgg_unsplit )
+        
+    if args.bestfit_hzz_unsplit:
+        bestfit( ws_onlyhzz_unsplit )
+
+    if args.bestfit_combined_split:
+        bestfit( ws_combined_split )
+
+    if args.bestfit_hgg_split:
+        bestfit( ws_onlyhgg_split )
+        
+    if args.bestfit_hzz_split:
+        bestfit( ws_onlyhzz_split )
+
+
+
+    # Commands.BasicCombineTool(
+    #     'workspaces_May15/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root',
+    #     POIpattern    = '*',
+    #     nPoints       = 40,
+    #     nPointsPerJob = 4,
+    #     # notOnBatch    = True,
+    #     jobDirectory  = 'Scan_{0}'.format(datestr),
+    #     queue         = 'short.q',
+    #     )
+
+
+
+    #____________________________________________________________________
+
+    ASIMOV = True
+
+    if args.scan_combined_unsplit:
+        Commands.BasicCombineTool(
+            ws_combined_unsplit,
+            POIpattern    = '*',
+            nPoints       = 39,
+            nPointsPerJob = 3,
+            jobDirectory  = 'Scan_{0}'.format(datestr),
+            queue         = 'short.q',
+            asimov        = ASIMOV,
+            )
+
+    if args.scan_hgg_unsplit:
+        Commands.BasicCombineTool(
+            ws_onlyhgg_unsplit,
+            POIpattern    = '*',
+            nPoints       = 39,
+            nPointsPerJob = 3,
+            jobDirectory  = 'Scan_{0}'.format(datestr),
+            queue         = 'short.q',
+            asimov        = ASIMOV,
+            )
+        
+    if args.scan_hzz_unsplit:
+        Commands.BasicCombineTool(
+            ws_onlyhzz_unsplit,
+            POIpattern    = '*',
+            nPoints       = 39,
+            nPointsPerJob = 13,
+            jobDirectory  = 'Scan_{0}'.format(datestr),
+            queue         = 'short.q',
+            asimov        = ASIMOV,
+            POIRange      = [ 0.0, 3.0 ]
+            )
+
+
+
+    if args.plot_ptSpectra:
+
+        # ======================================
+        # Specify SMXS
+
+        binBoundaries_hgg = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
+        binBoundaries_hzz = [ 0., 15., 30., 85., 200., 1000. ]
+
+        binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
+        binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
+
+        YR4_totalXS = 55.70628722 # pb
+
+        shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
+        shape_hzz = [
+            0.208025,
+            0.234770,
+            0.165146 + 0.218345,
+            0.087552 + 0.059154,
+            0.022612 + 0.004398,
+            ]
+        hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
+        hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
+
+
+        # ======================================
+        # Start drawing
+
+        hggPOIs = Commands.ListPOIs( ws_onlyhgg_unsplit )
+        hggscans = PhysicsCommands.GetScanResults(
+            hggPOIs,
+            scan_ptcombination_hgg_profiled_asimov,
+            # pattern = 'Datacard_13TeV_differential_pT'
+            )
+        PhysicsCommands.BasicDrawScanResults( hggPOIs, hggscans, name='hgg' )
+        PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
+
+
+        hzzPOIs = Commands.ListPOIs( ws_onlyhzz_unsplit )
+        hzzscans = PhysicsCommands.GetScanResults(
+            hzzPOIs,
+            scan_ptcombination_hzz_profiled_asimov,
+            # pattern = 'usingDavidsCommand_OAshifted'
+            )
+        PhysicsCommands.BasicDrawScanResults( hzzPOIs, hzzscans, name='hzz' )
+        PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
+
+
+        combinationPOIs = Commands.ListPOIs( ws_combined_unsplit )
+        combinationscans = PhysicsCommands.GetScanResults(
+            combinationPOIs,
+            scan_ptcombination_combined_profiled_asimov,
+            # pattern = 'combinedCard'
+            )
+        PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
+        PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
+
+
+        PhysicsCommands.BasicCombineSpectra(
+            ( 'combination', combinationPOIs, combinationscans,
+                ( 'AsBlocks', False ),
+                ( 'SetLineColor', 1 ),
+                ( 'SetMarkerStyle', 8 ),
+                # # Block settings
+                # ( 'SetLineColor', 1 ),
+                # ( 'SetMarkerStyle', 2 ),
+                # # ( 'SetFillColorAlpha', 1, 0.2 ),
+                # ( 'SetFillColor', 13 ),
+                # # ( 'SetFillStyle', 3544 ),
+                # ( 'SetFillStyle', 3345 ),
+                ),
+            ( 'hgg', hggPOIs, hggscans,
+                ( 'SetLineColor', 2 ),
+                ( 'SetMarkerStyle', 5 ),
+                ( 'SetFillColorAlpha', 2, 0.2 ),
+                ),
+            ( 'hzz', hzzPOIs, hzzscans,
+                ( 'SetLineColor', 4 ),
+                ( 'SetMarkerStyle', 8 ),
+                ( 'SetFillColorAlpha', 4, 0.2 ),
+                ),
+            hzz_SMXS         = hzz_crosssections,
+            hgg_SMXS         = hgg_crosssections,
+            combination_SMXS = hgg_crosssections,
+            )
+
+
+        PhysicsCommands.BasicCombineSpectra(
+            ( 'combination', combinationPOIs, combinationscans,
+                ( 'AsBlocks', False ),
+                ( 'SetLineColor', 1 ),
+                ( 'SetMarkerStyle', 8 ),
+                # # Block settings
+                # ( 'SetLineColor', 1 ),
+                # ( 'SetMarkerStyle', 2 ),
+                # # ( 'SetFillColorAlpha', 1, 0.2 ),
+                # ( 'SetFillColor', 13 ),
+                # # ( 'SetFillStyle', 3544 ),
+                # ( 'SetFillStyle', 3345 ),
+                ),
+            ( 'hgg', hggPOIs, hggscans,
+                ( 'SetLineColor', 2 ),
+                ( 'SetMarkerStyle', 5 ),
+                ( 'SetFillColorAlpha', 2, 0.2 ),
+                ),
+            ( 'hzz', hzzPOIs, hzzscans,
+                ( 'SetLineColor', 4 ),
+                ( 'SetMarkerStyle', 8 ),
+                ( 'SetFillColorAlpha', 4, 0.2 ),
+                ),
+            printTable=True,
+            bottomRatioPlot = True,
+            )
+
+
+
+
+    ########################################
+    # Older
+    ########################################
+
+    #____________________________________________________________________
+    if args.OutsideAcceptancetoSignal:
         OneOfCommands.ChangeOutsideAcceptanceToSignalProcess(
             'suppliedInput/fromDavid/PTH_May15/hzz4l_comb_13TeV_xs.txt',
             )
@@ -193,8 +531,6 @@ def main( args ):
                 'suppliedInput/fromVittorio/pT_unsplit_Mar21/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5.txt',
                 outdatacard='auto' )
 
-
-
     #____________________________________________________________________
     if args.combineCards:
 
@@ -210,7 +546,35 @@ def main( args ):
             print 'Nothing for args.combineCards'
 
 
+    #____________________________________________________________________
+    if args.smartMapTest:
 
+        Commands.TestMode()
+
+        card = 'suppliedInput/combinedCard_Jul26.txt'
+
+        Commands.BasicT2WS(
+            card,
+            manualMaps=[
+                '--PO \'map=.*/smH_PTH_0_15:r_smH_PTH_0_15[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_15_30:r_smH_PTH_15_30[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_30_45:r_smH_PTH_30_45[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_45_85:r_smH_PTH_45_85[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_85_125:r_smH_PTH_85_125[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_125_200:r_smH_PTH_125_200[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_200_350:r_smH_PTH_200_350[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_GT350:r_smH_PTH_GT350[1.0,-1.0,4.0]\'',
+                ],
+            )
+
+        Commands.BasicT2WS(
+            card,
+            smartMaps = [
+                ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+                ],
+            )
+
+    #____________________________________________________________________
     if args.reparseT2WS:
 
         GGH = False
@@ -296,7 +660,7 @@ def main( args ):
 
 
     #____________________________________________________________________
-    if args.t2ws:
+    if args.t2ws_OLD:
 
         # ======================================
         # July 24
@@ -532,155 +896,6 @@ def main( args ):
 
 
     #____________________________________________________________________
-    if args.couplingT2WS:
-
-        # Commands.TestMode()
-
-        if args.latest:
-
-            theoryDir = 'derivedTheoryFiles_YukawaSummed_Aug08/'
-
-            extraOptions = [
-                '--PO verbose=2',
-                '--PO \'higgsMassRange=123,127\'',
-                '--PO linearTerms=True',
-                ]
-
-            Commands.SetFileFinderDir( theoryDir )
-            extraOptions.append(
-                '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
-                    Commands.FileFinder( kappab=1, kappac=1, expectOneFile=True )
-                    )
-                )
-
-            possibleTheories = []
-            for kappab in [ -2, -1, 0, 1, 2 ]:
-                for kappac in [ -10, -5, 0, 1, 5, 10 ]:
-                    if kappab == 1 and kappac == 1: continue
-                    else:
-                        possibleTheories.append(
-                            '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
-                                kappab, kappac,
-                                Commands.FileFinder( kappab=kappab, kappac=kappac, expectOneFile=True )
-                                )
-                            )
-
-            random.seed(1002)
-            extraOptions.extend( random.sample( possibleTheories, 6 ) )
-
-            Commands.BasicT2WSwithModel(
-                'suppliedInput/combinedCard_Jul26.txt',
-                'CouplingModel.py',
-                extraOptions = extraOptions,
-                )
-
-        else:
-
-            Commands.BasicT2WSwithModel(
-                # 'suppliedInput/combinedCard_May15.txt',
-                # 'suppliedInput/combinedCard_Jul21.txt',
-                # 'suppliedInput/combinedCard_Jul25.txt',
-                'suppliedInput/combinedCard_Jul26.txt',
-                'CouplingModel.py',
-                extraOptions = [
-                    '--PO verbose=2',
-                    '--PO \'higgsMassRange=123,127\'',
-                    '--PO linearTerms=True',
-                    # # Theory uncertainties
-                    # '--PO correlationMatrix=plots_CorrelationMatrices_Jul26/corrMat_exp.txt',
-                    # '--PO theoryUncertainties=plots_CorrelationMatrices_Jul26/errors_for_corrMat_exp.txt',
-                    # SM
-                    '--PO SM=[kappab=1,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_1.txt') ),
-                    # For parametrization
-                    '--PO theory=[kappab=-2,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_5.txt') ),
-                    '--PO theory=[kappab=1,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_0.txt') ),
-                    '--PO theory=[kappab=2,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_m10.txt') ),
-                    '--PO theory=[kappab=-1,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_m5.txt') ),
-                    '--PO theory=[kappab=2,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_10.txt') ),
-                    # Rest
-                    '--PO theory=[kappab=0,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_0.txt') ),
-                    '--PO theory=[kappab=0,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_1.txt') ),
-                    '--PO theory=[kappab=0,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_10.txt') ),
-                    '--PO theory=[kappab=0,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_5.txt') ),
-                    '--PO theory=[kappab=0,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_m10.txt') ),
-                    '--PO theory=[kappab=0,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_0_kappac_m5.txt') ),
-                    '--PO theory=[kappab=1,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_10.txt') ),
-                    '--PO theory=[kappab=1,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_5.txt') ),
-                    '--PO theory=[kappab=1,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_m10.txt') ),
-                    '--PO theory=[kappab=1,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_1_kappac_m5.txt') ),
-                    '--PO theory=[kappab=2,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_0.txt') ),
-                    '--PO theory=[kappab=2,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_1.txt') ),
-                    '--PO theory=[kappab=2,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_5.txt') ),
-                    '--PO theory=[kappab=2,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_2_kappac_m5.txt') ),
-                    '--PO theory=[kappab=-1,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_0.txt') ),
-                    '--PO theory=[kappab=-1,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_1.txt') ),
-                    '--PO theory=[kappab=-1,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_10.txt') ),
-                    '--PO theory=[kappab=-1,kappac=5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_5.txt') ),
-                    '--PO theory=[kappab=-1,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m1_kappac_m10.txt') ),
-                    '--PO theory=[kappab=-2,kappac=0,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_0.txt') ),
-                    '--PO theory=[kappab=-2,kappac=1,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_1.txt') ),
-                    '--PO theory=[kappab=-2,kappac=10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_10.txt') ),
-                    '--PO theory=[kappab=-2,kappac=-10,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_m10.txt') ),
-                    '--PO theory=[kappab=-2,kappac=-5,file={0}]'.format( fullpath('muR_1_muF_1_Q_1_kappab_m2_kappac_m5.txt') ),
-
-                    # ======================================
-                    # These do not contain the ratios
-
-                    # '--PO SM=[kappab=+1,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_1_kappac_1.txt')),
-                    # # Used for the parametrization
-                    # '--PO theory=[kappab=-2,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m2_kappac_5.txt')),
-                    # '--PO theory=[kappab=+1,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_1_kappac_0.txt')),
-                    # '--PO theory=[kappab=+2,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_2_kappac_m10.txt')),
-                    # # The rest
-                    # '--PO theory=[kappab=+2,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_2_kappac_m5.txt')),
-                    # '--PO theory=[kappab=+0,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_0_kappac_0.txt')),
-                    # '--PO theory=[kappab=+0,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_0_kappac_1.txt')),
-                    # '--PO theory=[kappab=+0,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_0_kappac_10.txt')),
-                    # '--PO theory=[kappab=+0,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_0_kappac_5.txt')),
-                    # '--PO theory=[kappab=+0,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_0_kappac_m10.txt')),
-                    # '--PO theory=[kappab=+0,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_0_kappac_m5.txt')),
-                    # '--PO theory=[kappab=+1,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_1_kappac_10.txt')),
-                    # '--PO theory=[kappab=+1,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_1_kappac_5.txt')),
-                    # '--PO theory=[kappab=+1,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_1_kappac_m10.txt')),
-                    # '--PO theory=[kappab=+1,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_1_kappac_m5.txt')),
-                    # '--PO theory=[kappab=+2,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_2_kappac_0.txt')),
-                    # '--PO theory=[kappab=+2,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_2_kappac_1.txt')),
-                    # '--PO theory=[kappab=+2,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_2_kappac_10.txt')),
-                    # '--PO theory=[kappab=+2,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_2_kappac_5.txt')),
-                    # '--PO theory=[kappab=-1,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m1_kappac_0.txt')),
-                    # '--PO theory=[kappab=-1,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m1_kappac_1.txt')),
-                    # '--PO theory=[kappab=-1,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m1_kappac_10.txt')),
-                    # '--PO theory=[kappab=-1,kappac=5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m1_kappac_5.txt')),
-                    # '--PO theory=[kappab=-1,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m1_kappac_m10.txt')),
-                    # '--PO theory=[kappab=-1,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m1_kappac_m5.txt')),
-                    # '--PO theory=[kappab=-2,kappac=0,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m2_kappac_0.txt')),
-                    # '--PO theory=[kappab=-2,kappac=1,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m2_kappac_1.txt')),
-                    # '--PO theory=[kappab=-2,kappac=10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m2_kappac_10.txt')),
-                    # '--PO theory=[kappab=-2,kappac=-10,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m2_kappac_m10.txt')),
-                    # '--PO theory=[kappab=-2,kappac=-5,file={0}]'.format( abspath('derivedTheoryFiles_Jul07/muR_100_muF_100_Q_50_kappab_m2_kappac_m5.txt')),
-                    ]
-                )
-
-            sys.exit()
-
-            Commands.BasicT2WSwithModel(
-                # 'suppliedInput/combinedCard_May15.txt',
-                'suppliedInput/combinedCard_May15_theoryUncertainties.txt',
-                'CouplingModel.py',
-                extraOptions = [
-                    '--PO verbose=1',
-                    '--PO \'higgsMassRange=123,127\'',
-                    '--PO SM=[ct=1.0,cg=0.0,file={0}]'.format( abspath('derivedTheoryFiles_May23/SM_NNLO.txt') ),
-                    '--PO theory=[ct=0.1,cg=0.075,file={0}]'.format( abspath('derivedTheoryFiles_May23/ct_0p1_cg_0p075.txt') ),
-                    '--PO theory=[ct=0.5,cg=0.042,file={0}]'.format( abspath('derivedTheoryFiles_May23/ct_0p5_cg_0p042.txt') ),
-                    '--PO theory=[ct=1.5,cg=-0.042,file={0}]'.format( abspath('derivedTheoryFiles_May23/ct_1p5_cg_m0p042.txt') ),
-                    '--PO theory=[ct=2.0,cg=-0.083,file={0}]'.format( abspath('derivedTheoryFiles_May23/ct_2p0_cg_m0p083.txt') ),
-                    ]
-                )
-
-
-
-    #____________________________________________________________________
     if args.couplingImportanceHistogram:
 
         if args.doFastscan:
@@ -712,149 +927,6 @@ def main( args ):
                 # glob( 'Scan_couplings_May31_3/*.root' )
                 glob( 'Fastscan_couplings_{0}/*.root'.format( datestr ) )
                 )
-
-
-    #____________________________________________________________________
-    if args.couplingBestfit:
-
-        # TESTFIT = True
-        TESTFIT = False
-
-        # datacard = 'workspaces_May30/combinedCard_May15.root'
-        # datacard = 'workspaces_Jun22/combinedCard_May15_theoryUncertainties.root'
-        # datacard = 'workspaces_Jul24/combinedCard_Jul21.root'
-        # datacard = 'workspaces_Jul25/combinedCard_Jul25_CouplingModel.root'
-        
-        # datacard = 'workspaces_Jul27/combinedCard_Jul26_CouplingModel.root'
-        # datacard = 'workspaces_Jul28/combinedCard_Jul26_CouplingModel_noTheoryUncertainties.root'
-
-        datacard = 'workspaces_Aug08/combinedCard_Jul26_CouplingModel.root' # No theory uncertainties
-
-        if TESTFIT:
-            Commands.BasicBestfit(
-                datacard,
-                setPOIs = False,
-                extraOptions = [
-                    # '--setPhysicsModelParameters ct=1.0,cg=0.0',
-                    '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
-                    '-m 125',
-                    # '--floatOtherPOIs=1',
-                    ]
-                )
-
-        else:
-            
-            if args.latest:
-
-                # ASIMOV = False
-                ASIMOV = True
-
-                kappab_ranges = [ -20., 20. ]
-                kappac_ranges = [ -50., 100. ]
-
-                jobDirectory = 'Scan_couplings_{0}'.format( datestr )
-                if ASIMOV: jobDirectory += '_asimov'
-                jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
-
-                Commands.MultiDimCombineTool(
-                    datacard,
-                    nPoints       = 6400,
-                    # nPoints       = 100,
-                    nPointsPerJob = 100,
-                    queue         = 'all.q',
-                    notOnBatch    = False,
-                    # notOnBatch    = True,
-                    jobDirectory  = jobDirectory,
-                    fastscan      = args.doFastscan,
-                    asimov        = ASIMOV,
-                    extraOptions  = [
-                        # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
-                        '-P kappab -P kappac',
-                        '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
-                        '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
-                            kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
-                        '--saveSpecifiedFunc {0}'.format(','.join(
-                            Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
-                        '--squareDistPoiStep',
-                        ]
-                    )
-
-
-
-
-            else:
-
-                Commands.MultiDimCombineTool(
-                    datacard,
-                    nPoints       = 1600,
-                    # nPoints       = 100,
-                    nPointsPerJob = 10,
-                    queue         = 'all.q',
-                    notOnBatch    = False,
-                    # notOnBatch    = True,
-                    jobDirectory  = 'Scan_couplings_{0}'.format( datestr ),
-                    extraOptions  = [
-                        '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
-                        '-P ct -P cg',
-                        '--setPhysicsModelParameters ct=1.0,cg=0.0',
-                        '--setPhysicsModelParameterRanges ct=-0.5,4.2:cg=-0.32,0.1',
-                        # '--fastScan', # TURN THIS OFF FOR REAL RUN!!!!
-                        '--saveSpecifiedFunc {0}'.format(','.join(
-                            Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
-                        '--squareDistPoiStep',
-                        ]
-                    )
-
-
-
-    # ======================================
-    # combineTool.py
-
-    # Commands.BasicCombineTool(
-    #     'workspaces_Apr27/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root',
-    #     POIpattern    = '30_45',
-    #     nPoints       = 10,
-    #     nPointsPerJob = 2,
-    #     )
-
-
-
-    # # Ran on 15 May
-
-    # Commands.BasicCombineTool(
-    #     'workspaces_May15/usingDavidsCommand_OAshifted.root',
-    #     POIpattern    = '*',
-    #     nPoints       = 40,
-    #     nPointsPerJob = 8,
-    #     # notOnBatch    = True,
-    #     jobDirectory  = 'Scan_{0}'.format(datestr),
-    #     queue         = 'short.q',
-    #     )
-
-    # Commands.BasicCombineTool(
-    #     'workspaces_May15/Datacard_13TeV_differential_pT_moriond17_reminiaod_extrabin_corrections_newsysts_v5_renamed.root',
-    #     POIpattern    = '*',
-    #     nPoints       = 40,
-    #     nPointsPerJob = 4,
-    #     # notOnBatch    = True,
-    #     jobDirectory  = 'Scan_{0}'.format(datestr),
-    #     queue         = 'short.q',
-    #     )
-
-    # Commands.BasicCombineTool(
-    #     'workspaces_May15/combinedCard_May15.root',
-    #     POIpattern    = '*',
-    #     nPoints       = 40,
-    #     nPointsPerJob = 4,
-    #     # notOnBatch    = True,
-    #     jobDirectory  = 'Scan_{0}'.format(datestr),
-    #     queue         = 'short.q',
-    #     )
-
-
-
-
-
 
 
 

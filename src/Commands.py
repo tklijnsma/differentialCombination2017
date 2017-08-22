@@ -77,11 +77,16 @@ def BasicCombineCards(
 def BasicT2WS(
     datacard,
     extraOptions=None,
-    manualMaps=None,
     outputWS=None,
+    outputDir=None,
+    autoMaps=False,
+    manualMaps=None,
+    smartMaps=None,
+    verbose=False,
     ):
 
-    outputDir = abspath( 'workspaces_{0}'.format(datestr) )
+    if outputDir is None:
+        outputDir = abspath( 'workspaces_{0}'.format(datestr) )
     if not isdir( outputDir ): os.makedirs( outputDir )
     
     if not outputWS:
@@ -98,12 +103,62 @@ def BasicT2WS(
     cmd.append( '--PO verbose' )
     cmd.append( '--PO \'higgsMassRange=123,127\'' )
 
-    if manualMaps:
 
+    if not manualMaps and not smartMaps: autoMaps = True
+
+    if smartMaps:
+
+        # Example procPat:
+        # '--PO \'map=.*/InsideAcceptance_genPt_200p0_350p0:r_xH_PTH_200_350[1.0,-1.0,4.0]\'',
+        # Want to replace this by:
+        # '--PO \'map=.*/InsideAcceptance_genPt_([\dpm]+)p0_([\dpm]+)p0:r_xH_PTH_\1_\2[1.0,-1.0,4.0]\'',
+
+        # in smartMap form: ( r'.*/InsideAcceptance_genPt_([\dm]+)p0_([\dm]+)p0', r'r_xH_PTH_\1_\2[1.0,-1.0,4.0]' )
+
+        # Manual maps should override smart maps; gather all the patters that are already in a manualMap
+        if manualMaps:
+            manualMapPats = []
+            for manualMap in manualMaps:
+                match = re.search( r'map=(.*):', manualMap )
+                if not match: continue
+                manualMapPats.append( match.group(1) )
+
+        newMaps = []
+        for binprocPat, yieldParPat in smartMaps:
+
+            for proc in signalprocesses:
+                for bin in bins:
+
+                    binprocStr = '{0}/{1}'.format( bin, proc )
+
+                    manualMapAvailable = False
+                    if manualMaps:
+                        for manualMapPat in manualMapPats:
+                            if re.match( manualMapPat, binprocStr ):
+                                manualMapAvailable = True
+
+                    if manualMapAvailable:
+                        continue
+                    elif not re.match( binprocPat, binprocStr ):
+                        continue
+
+                    if verbose: print 'Pattern \"{0}\" matches with \"{1}\"'.format( binprocPat, binprocStr )
+
+                    yieldPar = re.sub( binprocPat, yieldParPat, binprocStr )
+                    newMap = '--PO \'map={0}:{1}\''.format( binprocStr, yieldPar )
+
+                    newMaps.append( newMap )
+
+
+        for newMap in newMaps:
+            cmd.append(newMap)
+
+    if manualMaps:
         for manualMap in manualMaps:
             cmd.append( manualMap )
 
-    else:
+    # Default option
+    if autoMaps:
         parRange = [ -1.0, 3.0 ]
         parName = lambda process: 'r_' + process
 
@@ -113,6 +168,7 @@ def BasicT2WS(
                 parName( process ),
                 parRange[0], parRange[1],
                 ))
+
 
     if not extraOptions:
         pass
@@ -435,12 +491,11 @@ def executeCommand( cmd, captureOutput=False ):
             print '\nEXECUTING: ' + cmdStr + '\n'
             os.system( cmdExec )
         else:
-            print 'THIS IS UNTESTED'
             output = subprocess.check_output(
                 cmd,
                 shell=True,
                 )
-            print output
+            return output
 
 
 
@@ -464,6 +519,7 @@ def MultiDimCombineTool(
         jobDirectory  = None,
         fastscan      = False,
         asimov        = False,
+        jobPriority   = 0,
         extraOptions  = [],
     ):
 
@@ -527,9 +583,14 @@ def MultiDimCombineTool(
                 print 'Queue \'{0}\' is not available on PSI'.format(queue)
                 return
 
-            cmd.append(
-                '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
-                )
+            if jobPriority != 0:
+                cmd.append(
+                    '--job-mode psi --task-name {0} --sub-opts=\'-q {1} -p {2}\' '.format( scanName, queue, jobPriority ),
+                    )
+            else:
+                cmd.append(
+                    '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
+                    )
 
         else:
 
@@ -552,12 +613,14 @@ def MultiDimCombineTool(
 def BasicCombineTool(
         datacard,
         POIpattern    = '*',
-        POIRange      = [ -1.0, 3.0 ],
+        POIRange      = [ -1.0, 4.0 ],
         nPoints       = 100,
         nPointsPerJob = 3,
         queue         = '1nh',
         notOnBatch    = False,
         jobDirectory  = None,
+        asimov        = False,
+        fastscan      = False,
         ):
 
     datacard = abspath( datacard )
@@ -580,9 +643,11 @@ def BasicCombineTool(
         doPOIs = allPOIs[:]
 
     currentdir = os.getcwd()
+    if not jobDirectory:
+        jobDirectory = TEMPJOBDIR
+    jobDirectory = AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+
     if not TESTMODE:
-        if not jobDirectory:
-            jobDirectory = TEMPJOBDIR
         if not isdir( jobDirectory ):
             print 'Creating directory {0}'.format( jobDirectory )
             os.makedirs( jobDirectory )
@@ -610,6 +675,11 @@ def BasicCombineTool(
             '--saveInactivePOI 1',
             '--points={0} '.format(nPoints),
             ]
+
+        if asimov:
+            cmd.append( '-t -1' )
+        if fastscan:
+            cmd.append( '--fastScan' )
 
         if not notOnBatch:
             cmd.append(
@@ -645,6 +715,7 @@ def ConvertTChainToArray(
     rootFileList,
     treeName = 'limit',
     variablePattern = '*',
+    returnPerVariable = True,
     ):
 
     if len(rootFileList) == 0:
@@ -716,14 +787,24 @@ def ConvertTChainToArray(
     for rootFile in rootFileList:
         chain.Add( rootFile )
 
-
-    res = {}
-    for varName in useVars:
-        res[varName] = []
-
-    for event in chain:
+    if returnPerVariable:
+        res = {}
         for varName in useVars:
-            res[varName].append( getattr( event, varName ) )
+            res[varName] = []
+
+        for event in chain:
+            for varName in useVars:
+                res[varName].append( getattr( event, varName ) )
+
+    else:
+
+        res = []
+        for event in chain:
+            entry = {}
+            for varName in useVars:
+                entry[varName] = getattr( event, varName )
+            res.append( entry )
+
 
     return res
 

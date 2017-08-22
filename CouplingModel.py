@@ -24,12 +24,16 @@ class CouplingModel( PhysicsModel ):
         self.SMXS = []
 
         self.includeLinearTerms = False
+        self.splitggH           = False
+        self.MakeLumiScalable   = False
 
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
         self.covarianceMatrixPassed    = False
 
+        self.manualExpBinBoundaries = []
         self.skipBins = []
+        
 
 
     def chapter( self, text, indent=0 ):
@@ -163,6 +167,15 @@ class CouplingModel( PhysicsModel ):
             if False:
                 pass
 
+            elif optionName == 'lumiScale':
+                self.MakeLumiScalable = eval(optionValue)
+
+            elif optionName == 'splitggH':
+                self.splitggH = eval(optionValue)
+
+            elif optionName == 'binBoundaries':
+                self.manualExpBinBoundaries = [ float(i) for i in optionValue.split(',') ]
+
             elif optionName == 'verbose':
                 self.verbose = int(optionValue)
 
@@ -250,6 +263,10 @@ class CouplingModel( PhysicsModel ):
         bins    = self.DC.bins
         signals = self.DC.signals
         signals = [ s for s in signals if not 'OutsideAcceptance' in s ]
+        
+        if self.splitggH:
+            signals = [ s for s in signals if 'ggH' in s ]
+
         signals.sort( key = lambda n: float(
             n.split('_')[2].replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','') ) )
 
@@ -276,21 +293,32 @@ class CouplingModel( PhysicsModel ):
 
         productionMode, observableName = signals[0].split('_')[:2]
 
-        expBinBoundaries = []
-        for signal in signals:
-            if 'OutsideAcceptance' in signal: continue
-            bounds = signal.split('_')[2:]
-            for bound in bounds:
-                bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
-                expBinBoundaries.append( float(bound) )
-        expBinBoundaries = list(set(expBinBoundaries))
-        expBinBoundaries.sort()
-        expBinBoundaries.append( 500. )  # Overflow bin
-        nExpBins = len(expBinBoundaries) - 1
+        if len(self.manualExpBinBoundaries) > 0:
+            expBinBoundaries = self.manualExpBinBoundaries
+            expBinBoundaries.append( 500. )
+            nExpBins = len(expBinBoundaries) - 1
+            print 'Taking manually specified bin boundaries:', expBinBoundaries
 
-        print 'Determined the following experimental bin boundaries:', expBinBoundaries
-        print '   from the following signals:'
-        print '   ' + '\n   '.join( signals )
+        else:
+            expBinBoundaries = []
+            for signal in signals:
+                if 'OutsideAcceptance' in signal: continue
+                bounds = signal.split('_')[2:]
+                for bound in bounds:
+                    bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
+                    expBinBoundaries.append( float(bound) )
+            expBinBoundaries = list(set(expBinBoundaries))
+            expBinBoundaries.sort()
+            expBinBoundaries.append( 500. )  # Overflow bin
+            nExpBins = len(expBinBoundaries) - 1
+
+            print 'Determined the following experimental bin boundaries:', expBinBoundaries
+            print '   from the following signals:'
+            print '   ' + '\n   '.join( signals )
+
+        # Also attach to class so they are accesible in other methods
+        self.expBinBoundaries = expBinBoundaries
+        self.nExpBins         = nExpBins
 
 
         ########################################
@@ -452,16 +480,34 @@ class CouplingModel( PhysicsModel ):
         self.modelBuilder.out.defineSet( 'parametrizations', ','.join(parametrizationNames) )
 
 
-
-        # ======================================
+        ########################################
         # Find the theory bin widths and parametrization indices inside the experimental bins
+        ########################################
+
+        if self.MakeLumiScalable:
+            self.modelBuilder.doVar( 'lumiScale[1.0]' )
+            self.modelBuilder.out.var('lumiScale').setConstant()
+
 
         SMXSInsideExperimentalBins = []
+        self.yieldParameterNames = []
         for iExpBin in xrange(nExpBins):
 
             expBoundLeft  = expBinBoundaries[iExpBin]
             expBoundRight = expBinBoundaries[iExpBin+1]
-            expBinStr     = signals[iExpBin]
+            # expBinStr     = signals[iExpBin]
+
+            if iExpBin == nExpBins-1:
+                expBinStr     =  '{0}_{1}_GT{2}'.format(
+                    productionMode, observableName,
+                    expBoundLeft if not expBoundLeft.is_integer() else int(expBoundLeft)
+                    )
+            else:
+                expBinStr     =  '{0}_{1}_{2}_{3}'.format(
+                    productionMode, observableName,
+                    expBoundLeft  if not expBoundLeft.is_integer() else int(expBoundLeft),
+                    expBoundRight if not expBoundRight.is_integer() else int(expBoundRight)
+                    )
 
             theoryBinBoundariesInsideExperimentalBin = []
             parametrizationIndices                   = []
@@ -630,13 +676,20 @@ class CouplingModel( PhysicsModel ):
                     yieldParameterFormulaComponent += '*{0}'.format( argumentIndices[coupling] )
                 yieldParameterFormula.append( yieldParameterFormulaComponent )
 
-
             # Compile expression string for final yieldParameter
-            yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                signal                   = expBinStr,
-                formulaString            = '+'.join(yieldParameterFormula),
-                commaSeparatedParameters = ','.join( couplings + averageComponentNames )
-                )
+            if not self.MakeLumiScalable:
+                yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                    signal                   = expBinStr,
+                    formulaString            = '+'.join(yieldParameterFormula),
+                    commaSeparatedParameters = ','.join( couplings + averageComponentNames )
+                    )
+            else:
+                argumentIndices['lumiScale'] = '@{0}'.format( len(argumentIndices) )
+                yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                    signal                   = expBinStr,
+                    formulaString            =  '{0}*({1})'.format( argumentIndices['lumiScale'], '+'.join(yieldParameterFormula) ),
+                    commaSeparatedParameters = ','.join( couplings + averageComponentNames + ['lumiScale'] )
+                    )
 
             if self.verbose:
                 print 'Final yield parameter expression: {0}'.format(yieldParameterExpression)
@@ -653,12 +706,15 @@ class CouplingModel( PhysicsModel ):
                 self.modelBuilder.out.function( 'r_{0}'.format(expBinStr) ).Print()
                 print ''
 
+            self.yieldParameterNames.append( 'r_{0}'.format(expBinStr) )
+
 
         self.modelBuilder.out.defineSet( 'POI', ','.join(couplings) )
 
         # Define 2 extra sets for plotting convenience
         self.modelBuilder.out.defineSet( 'couplings', ','.join(couplings) )
-        self.modelBuilder.out.defineSet( 'yieldParameters', ','.join([ 'r_' + s for s in signals ]) )
+        # self.modelBuilder.out.defineSet( 'yieldParameters', ','.join([ 'r_' + s for s in signals ]) )
+        self.modelBuilder.out.defineSet( 'yieldParameters', ','.join(self.yieldParameterNames) )
 
 
         ########################################
@@ -737,8 +793,8 @@ class CouplingModel( PhysicsModel ):
 
             print '  Divided by SM cross section:'
             decorrelatedMatrixNormalized = deepcopy( decorrelatedMatrix )
-            for i in xrange(self.nTheoryUncertainties):
-                for j in xrange(self.nTheoryUncertainties):
+            for i in xrange( min( self.nTheoryUncertainties, len(SMXSInsideExperimentalBins) ) ):
+                for j in xrange( min( self.nTheoryUncertainties, len(SMXSInsideExperimentalBins) ) ):
                     decorrelatedMatrixNormalized[i][j] = 1 + decorrelatedMatrix[i][j] / SMXSInsideExperimentalBins[i]
                     # # Skip some uncertainties if the effect is too small
                     # if abs(decorrelatedMatrixNormalized[i][j] - 1) < 0.0005:
@@ -794,9 +850,69 @@ class CouplingModel( PhysicsModel ):
         self.chapter( 'Starting model.getYieldScale()' )
 
 
-
-
     def getYieldScale( self, bin, process ):
+
+        def p( yieldScale ):
+            if self.verbose > 0:
+                print 'Getting yield scale: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldScale )
+
+        one = 1 if not self.MakeLumiScalable else 'lumiScale'
+
+        if not self.DC.isSignal[process]:
+            p( one )
+            return one
+        else:
+            if process == 'OutsideAcceptance':
+                p( one )
+                return one
+            elif self.splitggH and not 'ggH' in process:
+                p( one )
+                return one
+            else:
+
+                if not( self.manualExpBinBoundaries is None ):
+
+                    # Try to determine bin boundaries from process name
+                    match = re.search( r'([\dmp]+)_([\dmp]+)', process )
+
+                    if not match:
+                        p( one )
+                        return one
+                    else:
+                        leftBound  = float(match.group(1))
+                        rightBound = float(match.group(2))
+
+                        for iBin in xrange(self.nExpBins):
+                            if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
+                                yieldParameter = self.yieldParameterNames[iBin]
+
+                                # Still check if the bin is supposed to be skipped
+                                for skipBin in self.skipBins:
+                                    if skipBin in process:
+                                        yieldParameter = one
+
+                                p(yieldParameter)
+                                return yieldParameter
+
+                        else:
+                            print 'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
+                            sys.exit()
+
+                else:
+                    # Case for when no manual bin boundaries were specified
+
+                    yieldParameter = 'r_' + process
+
+                    for skipBin in self.skipBins:
+                        if skipBin in process:
+                            yieldParameter = one
+
+                    p( yieldParameter )
+                    return yieldParameter
+
+
+
+    def getYieldScaleOLD( self, bin, process ):
 
         def p( yieldScale ):
             if self.verbose > 0:
@@ -810,14 +926,46 @@ class CouplingModel( PhysicsModel ):
                 p( 1 )
                 return 1
             else:
-                yieldParameter = 'r_' + process
 
-                for skipBin in self.skipBins:
-                    if skipBin in process:
-                        yieldParameter = 1
+                if not( self.manualExpBinBoundaries is None ):
 
-                p( yieldParameter )
-                return yieldParameter
+                    # Try to determine bin boundaries from process name
+                    match = re.search( r'([\dmp]+)_([\dmp]+)', process )
+
+                    if not match:
+                        p( 1 )
+                        return 1
+                    else:
+                        leftBound  = float(match.group(1))
+                        rightBound = float(match.group(2))
+
+                        for iBin in xrange(self.nExpBins):
+                            if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
+                                yieldParameter = self.yieldParameterNames[iBin]
+
+                                # Still check if the bin is supposed to be skipped
+                                for skipBin in self.skipBins:
+                                    if skipBin in process:
+                                        yieldParameter = 1
+
+                                p(yieldParameter)
+                                return yieldParameter
+
+                        else:
+                            print 'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
+                            sys.exit()
+
+                else:
+                    # Case for when no manual bin boundaries were specified
+
+                    yieldParameter = 'r_' + process
+
+                    for skipBin in self.skipBins:
+                        if skipBin in process:
+                            yieldParameter = 1
+
+                    p( yieldParameter )
+                    return yieldParameter
 
 
 

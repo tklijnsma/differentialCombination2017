@@ -47,6 +47,233 @@ def main():
 
 
 
+def RenameProcesses_Aug21(
+    indatacard,
+    renameOutsideAcceptance = True,
+    globalReplace = None,
+    writeToFile = True
+    ):
+
+    with open( indatacard, 'r' ) as indatacardFp:
+        indatacardTxt = indatacardFp.read()
+
+
+    # ======================================
+    # Renaming
+
+    outdatacardTxt = indatacardTxt
+
+    # Replace multiple times to cover neighboring matches
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)gghInsideAcceptance_genPt_350p0_10000p0(\W)',
+            r'\1ggH_PTH_GT350\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)gghInsideAcceptance_genPt_(\d+)p0_(\d+)p0(\W)',
+            r'\1ggH_PTH_\2_\3\4',
+            outdatacardTxt
+            )
+
+    if renameOutsideAcceptance:
+        outdatacardTxt = re.sub(
+            r'(\W)gghOutsideAcceptance(\W)',
+            r'\1ggH_OutsideAcceptance\2',
+            outdatacardTxt
+            )
+
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)hxInsideAcceptance_genPt_350p0_10000p0(\W)',
+            r'\1xH_PTH_GT350\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)hxInsideAcceptance_genPt_(\d+)p0_(\d+)p0(\W)',
+            r'\1xH_PTH_\2_\3\4',
+            outdatacardTxt
+            )
+
+    if renameOutsideAcceptance:
+        outdatacardTxt = re.sub(
+            r'(\W)hxOutsideAcceptance(\W)',
+            r'\1xH_OutsideAcceptance\2',
+            outdatacardTxt
+            )
+
+
+    # ======================================
+    # Process simple global replacements
+
+    if not globalReplace == None:
+        for string, replacement in globalReplace:
+            outdatacardTxt = outdatacardTxt.replace( string, replacement )
+
+
+    # ======================================
+    # Write to file / return
+
+    if writeToFile:
+        outdatacard = indatacard.replace( '.txt', '_renamedProcesses.txt'.format(datestr) )
+        with open( outdatacard, 'w' ) as outdatacardFp:
+            outdatacardFp.write( outdatacardTxt )
+        print '[info] Wrote output to ' + outdatacard
+
+    return outdatacardTxt
+
+
+
+#____________________________________________________________________
+def sorter( process ):
+
+    if not isinstance( process, basestring ):
+        process = process[0]
+
+    ret = 100000
+
+    if process.startswith( 'ggH' ):
+        ret -= 10000
+    elif process.startswith( 'xH' ):
+        ret -= 20000
+
+    if process.startswith( 'ggH' ) or process.startswith( 'xH' ):
+        components = process.split('_')
+        if len(components) >= 3:
+            leftBound = int( components[2].replace('GT','') )
+            ret += leftBound
+
+    else:
+        ret += 1000
+
+    return ret
+
+
+def RenumberProcessesHZZ_Aug21(
+        datacardFile,
+        ):
+
+    with open( datacardFile, 'r' ) as datacardFp:
+        lines = datacardFp.readlines()
+
+    firstMatch = True
+    for iLine, line in enumerate(lines):
+
+        if line.startswith( 'process ' ):
+            if firstMatch:
+                names = line.split()[1:]
+                firstMatch = False
+                iNameLine = iLine
+            else:
+                numbers = line.split()[1:]
+                iNumberLine = iLine
+                break
+
+    else:
+        print 'Reached end of for-loop; Something is wrong'
+
+    signals = []
+    bkgs    = []
+    for process in list(set(names)):
+        if process.startswith('ggH') or process.startswith('xH'):
+            signals.append(process)
+        else:
+            bkgs.append(process)
+
+    signals.sort( key=sorter )
+    bkgs.sort( key=sorter )
+
+    numberDict = {}
+    for iSignal, signal in enumerate( signals ):
+        numberDict[signal] = -iSignal
+    for iBkg, bkg in enumerate( bkgs ):
+        numberDict[bkg] = iBkg + 1
+
+
+    newNumberLine = '{0:39}'.format('process')
+    for name in names:
+        newNumberLine += '{0:<17}'.format( numberDict[name] )
+    lines[iNumberLine] = newNumberLine + '\n'
+
+
+    out = datacardFile.replace( '.txt', '_processesShifted.txt' )
+    with open( out, 'w' ) as outFp:
+        outFp.write( ''.join(lines) )
+    print '[info] Wrote output to \'{0}\''.format( out )
+
+
+#____________________________________________________________________
+# There is no need for this function, channel renaming is only for convenience
+def RenameProcessesHZZchannels(
+    process,
+    indatacard,
+    outdatacard=None,
+    globalReplace=None,
+    ):
+
+    with open( indatacard, 'r' ) as indatacardFp:
+        indatacardTxt = indatacardFp.read()
+
+
+    # ======================================
+    # Renaming
+
+    outdatacardTxt = indatacardTxt
+
+    # Replace multiple times to cover neighboring matches
+
+    # HIER VERDER
+
+    # ch1 --> smH_... enzo doen
+
+
+
+
+    # for i in xrange(3):
+    #     outdatacardTxt = re.sub(
+    #         r'(\W)InsideAcceptance_genPt_350p0_10000p0(\W)',
+    #         r'\1{0}_PTH_GT350\2'.format(process),
+    #         outdatacardTxt
+    #         )
+
+    # for i in xrange(3):
+    #     outdatacardTxt = re.sub(
+    #         r'(\W)InsideAcceptance_genPt_(\d+)p0_(\d+)p0(\W)',
+    #         r'\1{0}_PTH_\2_\3\4'.format(process),
+    #         outdatacardTxt
+    #         )
+
+
+    # ======================================
+    # Process simple global replacements
+
+    if not globalReplace == None:
+        for string, replacement in globalReplace:
+            outdatacardTxt = outdatacardTxt.replace( string, replacement )
+
+
+    # ======================================
+    # Write to file / return
+
+    if outdatacard == 'auto':
+        outdatacard = indatacard.replace( '.txt', '_renamedProcesses_{0}.txt'.format(datestr) )
+        with open( outdatacard, 'w' ) as outdatacardFp:
+            outdatacardFp.write( outdatacardTxt )
+        print '[info] Wrote output to ' + outdatacard
+    elif not outdatacard == None:
+        outdatacard = join( TEMPCARDDIR, basename(indatacard).replace( '.txt', '_renamedProcesses.txt' ) )
+        with open( outdatacard, 'w' ) as outdatacardFp:
+            outdatacardFp.write( outdatacardTxt )
+        print '[info] Wrote output to ' + outdatacard
+
+    return outdatacardTxt
+
 
 
 def RenameProductionModeHgg( process, wsFile ):

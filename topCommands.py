@@ -12,6 +12,9 @@ from math import isnan, isinf
 from os.path import *
 from glob import glob
 from copy import deepcopy
+from array import array
+
+import LatestPaths
 
 sys.path.append('src')
 import Commands
@@ -57,7 +60,9 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingT2WS_Top',                              action=CustomAction )
     parser.add_argument( '--couplingBestfit_Top',                           action=CustomAction )
     parser.add_argument( '--coupling2Dplot_Top',                            action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Top',                       action=CustomAction )
     parser.add_argument( '--checkWSParametrization_Top',                    action=CustomAction )
+
 
 
 ########################################
@@ -129,8 +134,11 @@ def main( args ):
         INCLUDE_THEORY_UNCERTAINTIES = True
         # INCLUDE_THEORY_UNCERTAINTIES = False
 
-        # datacard = 'suppliedInput/combinedCard_Jul26.txt'
-        datacard = LATESTDATACARD_Top
+        datacard = LatestPaths.card_combined_split
+        if args.hgg:
+            datacard = LatestPaths.card_onlyhgg_split_both_renamed
+        if args.hzz:
+            datacard = LatestPaths.card_onlyhzz_split_renamed
 
         TheoryFileInterface.SetFileFinderDir( LATESTTHEORYDIR_Top )
 
@@ -138,6 +146,7 @@ def main( args ):
             '--PO verbose=2',
             '--PO \'higgsMassRange=123,127\'',
             '--PO linearTerms=False',
+            '--PO splitggH=True',
             ]
 
         extraOptions.append(
@@ -193,24 +202,34 @@ def main( args ):
         ASIMOV = False
         # ASIMOV = True
 
-        datacard = LATESTWORKSPACE_Top
+        datacard = LatestPaths.ws_combined_split_top
+        if args.hgg:
+            datacard = LatestPaths.ws_onlyhgg_split_top
+        if args.hzz:
+            datacard = LatestPaths.ws_onlyhzz_split_top
 
-        ct_ranges = [ -5., 10. ]
-        cg_ranges = [ -1., 1. ]
 
-        jobDirectory = 'Scan_couplings_{0}'.format( datestr )
+        ct_ranges = [ -1., 2. ]
+        cg_ranges = [ -0.1, 0.2 ]
+
+
+        jobDirectory = 'Scan_Top_{0}'.format( datestr )
         if ASIMOV: jobDirectory += '_asimov'
         jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
 
 
         if doFastscan:
-            nPoints = 6400
-            nPointsPerJob = 100
+            nPoints = 12800
+            nPointsPerJob = 800
             queue = 'short.q'
         else:
             nPoints = 6400
-            nPointsPerJob = 50
-            queue = 'long.q'
+            nPointsPerJob = 8
+            queue = 'all.q'
+            if args.hzz:
+                nPointsPerJob = 80
+                queue = 'short.q'
+
 
         Commands.MultiDimCombineTool(
             datacard,
@@ -221,10 +240,11 @@ def main( args ):
             jobDirectory  = jobDirectory,
             fastscan      = doFastscan,
             asimov        = ASIMOV,
+            jobPriority   = -2,
             extraOptions  = [
                 # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
                 '-P ct -P cg',
-                '--setPhysicsModelParameters ct=1.0,cg=1.0',
+                '--setPhysicsModelParameters ct=1.0,cg=0.0',
                 '--setPhysicsModelParameterRanges ct={0},{1}:cg={2},{3}'.format(
                     ct_ranges[0], ct_ranges[1], cg_ranges[0], cg_ranges[1] ),
                 '--saveSpecifiedFunc {0}'.format(','.join(
@@ -237,20 +257,153 @@ def main( args ):
     #____________________________________________________________________
     if args.coupling2Dplot_Top:
 
-        datacard = LATESTWORKSPACE_Top
+        datacard = LatestPaths.ws_combined_split_top
         
-        scandir  = 'Scan_couplings_Aug11'
+        # scandir  = 'Scan_couplings_Aug11'
+        # scandir  = 'Scan_couplings_Aug11_0'
+        # scandir  = 'Scan_couplings_Aug11_1'
+        # scandir  = 'Scan_Top_Aug21'
+        scandir    = LatestPaths.scan_top_combined_profiled
 
         res = TheoryCommands.PlotCouplingScan2D(
             datacard,
             glob( '{0}/*.root'.format(scandir) ),
             xCoupling = 'ct',
             yCoupling = 'cg',
+            SM = ( 1.0, 0.0 ),
             )
 
         print '\nBest fit:'
         print res.xCoupling, '=', res.xBestfit
         print res.yCoupling, '=', res.yBestfit
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top:
+
+        xCoupling = 'ct'
+        yCoupling = 'cg'
+        titles = {
+            'ct': '#kappa_{t}', 'cg' : '#kappa_{g}',
+            'hgg' : 'H #rightarrow #gamma#gamma',
+            'hzz' : 'H #rightarrow 4l',
+            'combined' : 'Combination',
+            }
+
+        # hgg = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     glob( '{0}/*.root'.format(LatestPaths.scan_hgg_profiled) ),
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # hgg.color = 2
+        # hgg.name = 'hgg'
+
+        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
+            glob( '{0}/*.root'.format(LatestPaths.scan_top_hzz_profiled) ),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        hzz.color = 4
+        hzz.name = 'hzz'
+
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled ) ),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'combined'
+
+        containers = [
+            hzz,
+            combined
+            ]
+
+
+        for container in containers:
+            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
+            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
+
+        c.cd()
+        c.Clear()
+        SetCMargins()
+
+        xMin = -0.2
+        xMax = 1.35
+        yMin = -0.03
+        yMax = 0.135
+
+        base = GetPlotBase(
+            xMin = xMin,
+            xMax = xMax,
+            yMin = yMin,
+            yMax = yMax,
+            xTitle = titles.get( xCoupling, xCoupling ),
+            yTitle = titles.get( yCoupling, yCoupling ),
+            )
+        base.Draw('P')
+
+        base.GetXaxis().SetTitleSize(0.06)
+        base.GetXaxis().SetLabelSize(0.05)
+        base.GetYaxis().SetTitleSize(0.06)
+        base.GetYaxis().SetLabelSize(0.05)
+
+
+        # leg = ROOT.TLegend(
+        #     1 - c.GetRightMargin() - 0.22,
+        #     c.GetBottomMargin() + 0.02,
+        #     1 - c.GetRightMargin(),
+        #     c.GetBottomMargin() + 0.21
+        #     )
+
+        leg = ROOT.TLegend(
+            c.GetLeftMargin() + 0.01,
+            c.GetBottomMargin() + 0.02,
+            1 - c.GetRightMargin() - 0.01,
+            c.GetBottomMargin() + 0.09
+            )
+        leg.SetNColumns(3)
+        leg.SetBorderSize(0)
+        leg.SetFillStyle(0)
+
+        for container in containers:
+
+            for Tg in container.contours_1sigma:
+                Tg.SetLineWidth(2)
+                Tg.SetLineColor( container.color )
+                Tg.SetLineStyle(1)
+                Tg.Draw('CSAME')
+                if Tg == container.contours_1sigma[0]:
+                    Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
+                    leg.AddEntry( Tg.GetName(), titles.get( container.name, container.name ), 'l' )
+
+            for Tg in container.contours_2sigma:
+                Tg.SetLineWidth(2)
+                Tg.SetLineColor( container.color )
+                Tg.SetLineStyle(2)
+                Tg.Draw('CSAME')
+
+            Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
+            ROOT.SetOwnership( Tpoint, False )
+            Tpoint.SetMarkerSize(2)
+            Tpoint.SetMarkerStyle(34)
+            Tpoint.SetMarkerColor( container.color )
+            Tpoint.Draw('PSAME')
+            Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
+
+        TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [0.0] ) )
+        ROOT.SetOwnership( TpointSM, False )
+        TpointSM.SetMarkerSize(2)
+        TpointSM.SetMarkerStyle(21)
+        TpointSM.SetMarkerColor( 12 )
+        TpointSM.Draw('PSAME')
+
+        leg.Draw()
+
+        SaveC( 'contours' )
 
 
     #____________________________________________________________________

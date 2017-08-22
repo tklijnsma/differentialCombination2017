@@ -770,6 +770,7 @@ def ConvertTGraphToLinesAndBoxes(
         verbose=False,
         noBoxes=False,
         xMaxExternal=None,
+        # yMinExternal=None,
         ):
 
     yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
@@ -818,6 +819,16 @@ def ConvertTGraphToLinesAndBoxes(
                 if verbose:
                     print 'x+xMax {0} > xMaxExternal {1}; Limiting xMax'.format( x+xMax, xMaxExternal )
                 xMax = xMaxExternal-x
+
+        # if yMinExternal != None:
+        #     if x-xMin > yMinExternal:
+        #         if verbose:
+        #             print 'x-xMin {0} > yMinExternal {1}; Continuing'.format( x-xMin, yMinExternal )
+        #         continue
+        #     elif x+yMin > yMinExternal:
+        #         if verbose:
+        #             print 'x+yMin {0} > yMinExternal {1}; Limiting yMin'.format( x+yMin, yMinExternal )
+        #         yMin = yMinExternal-x
 
         line = ROOT.TLine( x-xMin, y, x+xMax, y )
         ROOT.SetOwnership( line, False )
