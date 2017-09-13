@@ -56,6 +56,16 @@ ws_onlyhzz_split_top       = 'workspaces_Aug22/hzz4l_all_13TeV_xs_processesShift
 
 
 # ======================================
+# Derived theory files
+
+derivedTheoryFilesDirectory_Top = 'derivedTheoryFiles_Aug11_Top'
+
+derivedTheoryFilesDirectory_YukawaGluonInduced = 'derivedTheoryFiles_Aug09_YukawaGluonInduced'
+derivedTheoryFilesDirectory_YukawaQuarkInduced = 'derivedTheoryFiles_Aug09_YukawaQuarkInduced'
+derivedTheoryFilesDirectory_YukawaSummed       = 'derivedTheoryFiles_Aug09_YukawaSummed'
+
+
+# ======================================
 # Scans
 
 # ---------------------------
@@ -95,6 +105,7 @@ scan_yukawa_hgg_profiled_asimov      = 'Scan_yukawa_Aug22_asimov_1'
 
 scan_top_combined_profiled           = 'Scan_Top_Aug21_0'
 scan_top_hzz_profiled                = 'Scan_Top_Aug22'
+scan_top_hgg_profiled                = 'Scan_Top_Aug22_0'
 
 
 def main():
@@ -110,6 +121,7 @@ def main():
         print getattr( current_module, args.varName )
     else:
         print 'Variable \'{0}\' was not found in module \'{1}\''.format( args.varName, __name__ )
+
 
 ########################################
 # End of Main

@@ -17,7 +17,7 @@ import combineCommands
 import plotCommands
 import yukawaCommands
 import topCommands
-import highLumiStudyCommands
+# import highLumiStudyCommands
 
 import sys
 sys.path.append('src')
@@ -51,7 +51,7 @@ def main():
     plotCommands.AppendParserOptions(parser)
     yukawaCommands.AppendParserOptions(parser)
     topCommands.AppendParserOptions(parser)
-    highLumiStudyCommands.AppendParserOptions(parser)
+    # highLumiStudyCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -100,12 +100,12 @@ def main():
         plotCommands.main(args)
 
 
-    ########################################
-    # High lumi study
-    ########################################
+    # ########################################
+    # # High lumi study
+    # ########################################
 
-    if args.highLumiStudyCommands:
-        highLumiStudyCommands.main(args)
+    # if args.highLumiStudyCommands:
+    #     highLumiStudyCommands.main(args)
 
 
 ########################################

@@ -81,7 +81,6 @@ def main( args ):
 
     LATESTWORKSPACE_Top           = 'workspaces_Aug11/combinedCard_Jul26_CouplingModel_Top_withTheoryUncertainties.root'
 
-    LATESTTHEORYDIR_Top           = 'derivedTheoryFiles_Aug11_Top'
     LATESTCORRELATIONMATRIX_Top   = 'plots_CorrelationMatrices_Aug11_Top/corrMat_exp.txt'
     LATESTTHEORYUNCERTAINTIES_Top = 'plots_CorrelationMatrices_Aug11_Top/errors_for_corrMat_exp.txt'
 
@@ -101,7 +100,7 @@ def main( args ):
         CorrelationMatrices.SetPlotDir( 'plots_CorrelationMatrices_{0}_Top'.format(datestr) )
 
         variationFiles = TheoryFileInterface.FileFinder(
-            directory = LATESTTHEORYDIR_Top,
+            directory = LatestPaths.derivedTheoryFilesDirectory_Top,
             ct = 1.0, cg = 1.0, cb = 1.0
             )
 
@@ -140,7 +139,7 @@ def main( args ):
         if args.hzz:
             datacard = LatestPaths.card_onlyhzz_split_renamed
 
-        TheoryFileInterface.SetFileFinderDir( LATESTTHEORYDIR_Top )
+        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFilesDirectory_Top )
 
         extraOptions = [
             '--PO verbose=2',
@@ -290,14 +289,14 @@ def main( args ):
             'combined' : 'Combination',
             }
 
-        # hgg = TheoryCommands.GetTH2FromListOfRootFiles(
-        #     glob( '{0}/*.root'.format(LatestPaths.scan_hgg_profiled) ),
-        #     xCoupling,
-        #     yCoupling,
-        #     verbose   = False,
-        #     )
-        # hgg.color = 2
-        # hgg.name = 'hgg'
+        hgg = TheoryCommands.GetTH2FromListOfRootFiles(
+            glob( '{0}/*.root'.format(LatestPaths.scan_top_hgg_profiled) ),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        hgg.color = 2
+        hgg.name = 'hgg'
 
         hzz = TheoryCommands.GetTH2FromListOfRootFiles(
             glob( '{0}/*.root'.format(LatestPaths.scan_top_hzz_profiled) ),
@@ -318,6 +317,7 @@ def main( args ):
         combined.name = 'combined'
 
         containers = [
+            hgg,
             hzz,
             combined
             ]
@@ -418,7 +418,7 @@ def main( args ):
         wsToCheck = LATESTWORKSPACE_Top
         wsParametrization = WSParametrization( wsToCheck )
 
-        theoryDir = LATESTTHEORYDIR_Top
+        theoryDir = LatestPaths.derivedTheoryFilesDirectory_Top
         TheoryFileInterface.SetFileFinderDir( theoryDir )
         topDerivedTheoryFiles = TheoryFileInterface.FileFinder(
             ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'

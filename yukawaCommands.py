@@ -82,10 +82,6 @@ def main( args ):
 
     TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
 
-    LATESTTHEORYDIR_YukawaGluonInduced = 'derivedTheoryFiles_Aug09_YukawaGluonInduced'
-    LATESTTHEORYDIR_YukawaQuarkInduced = 'derivedTheoryFiles_Aug09_YukawaQuarkInduced'
-    LATESTTHEORYDIR_YukawaSummed       = 'derivedTheoryFiles_Aug09_YukawaSummed'
-
     # ======================================
     # Dealing with theory IO
 
@@ -102,10 +98,11 @@ def main( args ):
 
     if args.mergeGluonInducedWithQuarkInduced:
         TheoryFileInterface.MergeGluonAndQuarkInduced(
-            gI_theoryFileDir = LATESTTHEORYDIR_YukawaGluonInduced,
-            qI_theoryFileDir = LATESTTHEORYDIR_YukawaQuarkInduced,
+            gI_theoryFileDir = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
+            qI_theoryFileDir = LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInduced,
             verbose = True
             )
+
 
     # ======================================
     # Dealing with theory uncertainties
@@ -113,7 +110,7 @@ def main( args ):
     if args.CorrelationMatrices_Yukawa:
 
         variationFiles = TheoryFileInterface.FileFinder(
-            directory = LATESTTHEORYDIR_YukawaGluonInduced,
+            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
             kappab = 1.0, kappac = 1.0
             )
 
@@ -157,8 +154,8 @@ def main( args ):
         if args.hzz:
             datacard = LatestPaths.card_onlyhzz_unsplit_OAsignal
 
-        TheoryFileInterface.SetFileFinderDir( LATESTTHEORYDIR_YukawaSummed )
-        # TheoryFileInterface.SetFileFinderDir( LATESTTHEORYDIR_YukawaGluonInduced )
+        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFilesDirectory_YukawaSummed )
+        # TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced )
 
         extraOptions = [
             '--PO verbose=2',
@@ -663,8 +660,8 @@ def main( args ):
 
         wsParametrization = WSParametrization( wsToCheck )
 
-        # theoryDir = LATESTTHEORYDIR_YukawaSummed
-        theoryDir = LATESTTHEORYDIR_YukawaGluonInduced
+        # theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed
+        theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced
         
         TheoryFileInterface.SetFileFinderDir( theoryDir )
         yukawaDerivedTheoryFiles = TheoryFileInterface.FileFinder( muF=1, muR=1, Q=1 )
