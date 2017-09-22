@@ -222,6 +222,16 @@ def ReadDerivedTheoryFileToTGraph(
     return outputcontainer.Tg
 
 
+def ReadDerivedTheoryContainerToTGraph(
+        derivedTheoryContainer,
+        name=None,
+        yAttr=None,
+        ):
+    outputcontainer = OutputContainer( derivedTheoryContainer )
+    outputcontainer.GetTGraph( name=name, yAttr=yAttr )
+    return outputcontainer.Tg
+
+
 ########################################
 # Interface fromPier
 ########################################
@@ -276,6 +286,142 @@ def addContainer( self, c2 ):
 Container.addContainer = addContainer
 
 
+
+#____________________________________________________________________
+def ScaleQuarkInduced(
+        qI_theoryFileDir,
+        verbose = True,
+        ):
+
+    # ======================================
+    # Create the scaled non-scale-variations files
+
+    # Get non-scale-variation containers
+    qI_theoryFiles = FileFinder( directory=qI_theoryFileDir, filter='muR' )
+    qI_containers = [ ReadDerivedTheoryFile(tF) for tF in qI_theoryFiles ]
+
+    # Pointer to SM containers
+    qI_SM = [ c for c in qI_containers if c.kappab == 1.0 and c.kappac == 1.0 ][0]
+
+    # Create parametrizations for qI
+    # (needed because mass effects need to be scaled)
+
+    parametrization = Parametrization()
+
+    # parametrization.Parametrize( qI_containers )
+    parametrization.ParametrizeByFitting( qI_containers )
+
+    mb_old = 4.65
+    mb_new = 2.963
+    mc_old = 1.275
+    mc_new = 0.655
+
+    qI_SM.crosssection = parametrization.Evaluate(
+        kappab = qI_SM.kappab * ( mb_new/mb_old ),
+        kappac = qI_SM.kappac * ( mc_new/mc_old )
+        )
+
+    # Calculate the effect of the different masses
+    for container in qI_containers:
+        container.crosssection = parametrization.Evaluate(
+            kappab = container.kappab * ( mb_new/mb_old ),
+            kappac = container.kappac * ( mc_new/mc_old )
+            )
+        container.ratios = [ xs / smxs if not smxs == 0. else 0. for xs, smxs in zip( container.crosssection, qI_SM.crosssection ) ]
+
+
+    outdir = 'derivedTheoryFiles_{0}_YukawaQuarkInducedScaled'.format( datestr )
+    if not isdir( outdir ): os.makedirs( outdir )
+    for container in qI_containers:
+        DumpContainerToFile( container, prefix='YukawaQuarkInducedScaled', outdir=outdir )
+
+
+    # ======================================
+    # Now do the scale variations
+    # Assume simply that the scale variations have the same proportionality w.r.t.
+    # the SM *after* the quark mass scaling as before
+
+    scaleVar_theoryFiles = [
+        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=0.5, muF=0.5, expectOneFile=True ),
+        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=0.5, muF=1.0, expectOneFile=True ),
+        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=0.5, expectOneFile=True ),
+        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=1.0, expectOneFile=True ),
+        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=2.0, muF=1.0, expectOneFile=True ),
+        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=2.0, expectOneFile=True ),
+        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=2.0, muF=2.0, expectOneFile=True ),
+        ]
+    scaleVar_containers = [ ReadDerivedTheoryFile(tF) for tF in scaleVar_theoryFiles ]
+
+    for scaleVar_container in scaleVar_containers:
+        # Take the scaled SMXS, and multiply it by the same ratio as before the mass scaling
+        scaleVar_container.crosssection = [
+            ratio * SMXS for ratio, SMXS in zip( scaleVar_container.ratios, qI_SM.crosssection )
+            ]
+        DumpContainerToFile( scaleVar_container, prefix='YukawaQuarkInducedScaled', outdir=outdir )
+
+
+def SumGluonAndQuarkFiles(
+        gI_theoryFileDir,
+        qI_theoryFileDir,
+        verbose = True,
+        ):
+
+    # ======================================
+    # IO
+
+    qI_theoryFiles = FileFinder( directory=qI_theoryFileDir )
+    gI_theoryFiles = FileFinder( directory=gI_theoryFileDir )
+    
+    qI_containers = [ ReadDerivedTheoryFile(tF) for tF in qI_theoryFiles ]
+    gI_containers = [ ReadDerivedTheoryFile(tF) for tF in gI_theoryFiles ]
+
+    qI_SMFile     = FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, Q=1.0, muF=1.0, muR=1.0, expectOneFile=True )
+    qI_SM         = ReadDerivedTheoryFile( qI_SMFile )
+    gI_SMFile     = FileFinder( directory=gI_theoryFileDir, kappab=1.0, kappac=1.0, Q=1.0, muF=1.0, muR=1.0, expectOneFile=True )
+    gI_SM         = ReadDerivedTheoryFile( gI_SMFile )
+    TheoryCommands.RebinDerivedTheoryContainer( gI_SM, qI_SM.binBoundaries )
+
+    outdir = 'derivedTheoryFiles_{0}_YukawaSummed'.format( datestr )
+    if not isdir( outdir ): os.makedirs( outdir )
+
+    summed_SM = deepcopy( qI_SM )
+    summed_SM.crosssection = [ xs_qI + xs_gI for xs_qI, xs_gI in zip( qI_SM.crosssection, gI_SM.crosssection ) ]
+    DumpContainerToFile( summed_SM, prefix='YukawaSummed', outdir=outdir )
+
+    for qI in qI_containers:
+
+        # Find matching gI container
+        for gI in gI_containers:
+
+            if ( True
+                and qI.kappac == gI.kappac
+                and qI.kappab == gI.kappab
+                and qI.muR    == gI.muR
+                and qI.muF    == gI.muF
+                and qI.Q      == gI.Q
+                ):
+
+                break
+        else:
+            print 'Could not find a matching gluon-induced container for:'
+            print '    kappac = ', qI.kappac
+            print '    kappab = ', qI.kappab
+            print '    muR    = ', qI.muR
+            print '    muF    = ', qI.muF
+            print '    Q      = ', qI.Q
+            print '    Continuing'
+            continue
+
+        TheoryCommands.RebinDerivedTheoryContainer( gI, qI_SM.binBoundaries )
+
+        summed = deepcopy( qI )
+        summed.crosssection = [ xs_qI + xs_gI for xs_qI, xs_gI in zip( qI.crosssection, gI.crosssection ) ]
+        summed.ratios = [ xs / SMxs for xs, SMxs in zip( summed.crosssection, summed_SM.crosssection ) ]
+
+        DumpContainerToFile( summed, prefix='YukawaSummed', outdir=outdir )
+
+
+
 #____________________________________________________________________
 def MergeGluonAndQuarkInduced(
         gI_theoryFileDir,
@@ -285,9 +431,6 @@ def MergeGluonAndQuarkInduced(
 
     # ======================================
     # IO
-
-    outdir = 'derivedTheoryFiles_{0}_YukawaSummed'.format( datestr )
-    if not isdir( outdir ): os.makedirs( outdir )
 
     qI_theoryFiles = FileFinder( directory=qI_theoryFileDir, filter='muR' )
     gI_theoryFiles = FileFinder( directory=gI_theoryFileDir, muR=1.0, muF=1.0, Q=1.0 )
@@ -343,6 +486,9 @@ def MergeGluonAndQuarkInduced(
             )
         container.ratios = [ xs / smxs if not smxs == 0. else 0. for xs, smxs in zip( container.crosssection, qI_SM.crosssection ) ]
 
+
+    outdir = 'derivedTheoryFiles_{0}_YukawaSummed'.format( datestr )
+    if not isdir( outdir ): os.makedirs( outdir )
 
     # Sum up; start with gluon induced
     summed_containers = deepcopy( gI_containers )

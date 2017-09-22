@@ -37,14 +37,81 @@ def makeTempDir( newTempDir=None ):
 
 def main():
 
-    xhDatacard  = '../suppliedInput/fromVittorio/differential_pT_moriond17_HxOnly_July19/Datacard_13TeV_differential_pT_moriond17_HxOnly.txt'    
-    gghDatacard = '../suppliedInput/fromVittorio/pT_ggHonly_Jun26/Datacard_13TeV_differential_pT_moriond17_ggHonly_v2.txt'
+    print 'Don\'t execute this.'
 
-    Merge_xH_ggH_hgg_cards(
-            xhDatacard,
-            gghDatacard,
+    # xhDatacard  = '../suppliedInput/fromVittorio/differential_pT_moriond17_HxOnly_July19/Datacard_13TeV_differential_pT_moriond17_HxOnly.txt'    
+    # gghDatacard = '../suppliedInput/fromVittorio/pT_ggHonly_Jun26/Datacard_13TeV_differential_pT_moriond17_ggHonly_v2.txt'
+
+    # Merge_xH_ggH_hgg_cards(
+    #         xhDatacard,
+    #         gghDatacard,
+    #         )
+
+
+########################################
+# njets combination
+########################################
+
+def RenameProcesses_Hgg_nJets(
+        indatacard,
+        globalReplace = None,
+        writeToFile = True
+        ):
+
+    with open( indatacard, 'r' ) as indatacardFp:
+        indatacardTxt = indatacardFp.read()
+
+
+    # ======================================
+    # Renaming
+
+    outdatacardTxt = indatacardTxt
+
+    # Replace multiple times to cover neighboring matches
+
+    # InsideAcceptance_myGenNjets2p5_3p5to100p0
+    # InsideAcceptance_myGenNjets2p5_2p5to3p5
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_myGenNjets2p5_3p5to100p0(\W)',
+            r'\1smH_NJ_GE4\2',
+            outdatacardTxt
             )
 
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_myGenNjets2p5_([m\d]+)p5to(\d+)p5(\W)',
+            r'\1smH_NJ_\3\4',
+            outdatacardTxt
+            )
+
+    # ======================================
+    # Process simple global replacements
+
+    if not globalReplace == None:
+        for string, replacement in globalReplace:
+            outdatacardTxt = outdatacardTxt.replace( string, replacement )
+
+
+    # ======================================
+    # Write to file / return
+
+    if writeToFile:
+        outdatacard = indatacard.replace( '.txt', '_renamedProcesses.txt'.format(datestr) )
+        with open( outdatacard, 'w' ) as outdatacardFp:
+            outdatacardFp.write( outdatacardTxt )
+        print '[info] Wrote output to ' + outdatacard
+
+    return outdatacardTxt
+
+
+
+
+
+########################################
+# pt combination
+########################################
 
 
 def RenameProcesses_Aug21(

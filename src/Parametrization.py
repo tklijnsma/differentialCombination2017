@@ -19,8 +19,8 @@ ROOT.gROOT.SetBatch(True)
 
 
 class WSParametrization():
-    def __init__( self, wsFile=None, returnWhat='theory' ):
-        self.verbose = True
+    def __init__( self, wsFile=None, returnWhat='theory', verbose=False ):
+        self.verbose = verbose
         self.Persistence = []
 
         if not returnWhat in [ 'both', 'theory', 'exp' ]:
@@ -39,10 +39,10 @@ class WSParametrization():
             self.returnExp    = True
 
         if wsFile != None:
-            self.Parametrize(wsFile)
+            self.Parametrize( wsFile, verbose = self.verbose )
 
 
-    def Parametrize( self, wsFile ):
+    def Parametrize( self, wsFile, verbose=False ):
 
         self.file = wsFile
 
@@ -80,6 +80,20 @@ class WSParametrization():
             ROOT.SetOwnership( parametrization, False )
 
         wsFp.Close()
+
+
+        if verbose:
+            print '\n--------------'
+            print 'Parametrized workspace \'{0}\''.format( wsFile )
+            print '   couplings :           len {0:<3}, '.format(len(self.couplings)), [ i.GetName() for i in self.couplings ]
+            print '   yieldParameters :     len {0:<3}, '.format(len(self.yieldParameters)), [ i.GetName() for i in self.yieldParameters ]
+            print '   parametrizations :    len {0:<3}, '.format(len(self.parametrizations)), [ i.GetName() for i in self.parametrizations ]
+
+            theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS( self.file )
+            expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
+            print '   theoryBinBoundaries : len {0:<3}, '.format(len(theoryBinBoundaries)), theoryBinBoundaries
+            print '   expBinBoundaries :    len {0:<3}, '.format(len(expBinBoundaries)), expBinBoundaries
+            print
 
 
     def Evaluate( self, **kwargs ):
@@ -312,6 +326,7 @@ class Parametrization():
 
         nBins = len(containers[0].binBoundaries) - 1
         self.nBins = nBins
+        self.binBoundaries = containers[0].binBoundaries
 
         self.nContainers = len(containers)
 
@@ -508,3 +523,25 @@ class Parametrization():
 
             self.fitEvals.append( fitEval )
 
+
+
+    def GetOutputContainer( self, **kwargs ):
+
+        # self.theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS( self.file )
+        # self.expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
+
+        mus = self.Evaluate( **kwargs )
+
+        container = OutputContainer()
+        container.mus       = mus
+        container.ratios    = mus
+        container.binValues = mus
+        container.binBoundaries = self.binBoundaries
+
+        container.name = 'param'
+        for coupling in self.couplings:
+            container.name += '_{0}_{1:.2f}'.format( coupling, getattr( self, coupling ) )
+
+        container.GetTGraph()
+
+        return container

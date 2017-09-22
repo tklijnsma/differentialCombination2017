@@ -75,8 +75,14 @@ class OutputContainer(Container):
         yValues = getattr( self, yAttr )
 
         if self.xAreBinBoundaries:
-            if not len(xValues)-1 == len(yValues):
-                Commands.ThrowError( 'len(xValues)-1 = {0}, len(yValues) = {1} ; should be the same'.format( len(xValues)-1, len(yValues) ) )
+            if len(xValues)-1 > len(yValues):
+                print 'More bins found than y-values; cutting away last bins'
+                xValues = xValues[:len(yValues)+1]
+            elif len(xValues)-1 < len(yValues):
+                Commands.ThrowError(
+                    'len(xValues)-1 = {0}, len(yValues) = {1} ; should be the same'.format( len(xValues)-1, len(yValues) ),
+                    throwException = True
+                    )
                 sys.exit()
 
         nBins = len(xValues)-1
@@ -138,14 +144,22 @@ class OutputContainer(Container):
 
         Tg.xMin = min( binBoundaries )
         Tg.xMax = max( binBoundaries )
-        Tg.fourth_xMin = sorted( binBoundaries )[4]
-        Tg.fourth_xMax = sorted( binBoundaries, reverse=True )[4]
+        if len(binBoundaries) >= 5:
+            Tg.fourth_xMin = sorted( binBoundaries )[4]
+            Tg.fourth_xMax = sorted( binBoundaries, reverse=True )[4]
+        else:
+            Tg.fourth_xMin = sorted( binBoundaries )[-1]
+            Tg.fourth_xMax = sorted( binBoundaries, reverse=True )[-1]
 
         if yAttrErrUp is None and yAttrErrDown is None:
             Tg.yMin = min( yValues )
             Tg.yMax = max( yValues )
-            Tg.fourth_yMin = sorted( yValues )[4]
-            Tg.fourth_yMax = sorted( yValues, reverse=True )[4]
+            if len(yValues) >= 5:
+                Tg.fourth_yMin = sorted( yValues )[4]
+                Tg.fourth_yMax = sorted( yValues, reverse=True )[4]
+            else:
+                Tg.fourth_yMin = sorted( yValues )[-1]
+                Tg.fourth_yMax = sorted( yValues, reverse=True )[-1]
 
         self.Tg = Tg
         return Tg

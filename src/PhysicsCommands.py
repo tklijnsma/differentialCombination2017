@@ -9,6 +9,7 @@ Thomas Klijnsma
 
 import Commands
 import TheoryCommands
+import CorrelationMatrices
 
 import os, tempfile, shutil, re, glob, itertools, sys, numpy, operator
 from os.path import *
@@ -41,6 +42,7 @@ c.SetTopMargin( TopMargin )
 
 
 PLOTDIR = 'plots_{0}'.format(datestr)
+
 def SaveC( outname, PNG=False, asROOT=False ):
     global PLOTDIR
     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
@@ -186,7 +188,7 @@ def BasicDrawScanResults(
     base.Draw('P')
     base.GetXaxis().SetLimits( POIRange[0], POIRange[1] )
     base.SetMinimum( deltaNLLRange[0] )
-    base.SetMaximum( deltaNLLRange[1] )
+    base.SetMaximum( min( 6., deltaNLLRange[1] ) )
     base.SetMarkerColor(0)
     base.GetXaxis().SetTitle( '#mu' )
     base.GetYaxis().SetTitle( '#Delta NLL' )
@@ -217,6 +219,7 @@ def BasicDrawScanResults(
         #     'r_smH_PTH_85_200'  : ROOT.TColor.GetColor( colors[3] ),
         #     'r_smH_PTH_GT200'   : ROOT.TColor.GetColor( colors[5] ),
         #     }
+
         knownPOIs = {
             'r_smH_PTH_0_15'    : colorCycle.next(),
             'r_smH_PTH_15_30'   : colorCycle.next(),
@@ -229,7 +232,15 @@ def BasicDrawScanResults(
             'r_smH_PTH_30_85'   : colorCycle.next(),
             'r_smH_PTH_85_200'  : colorCycle.next(),
             # 'r_smH_PTH_GT200'   : colorCycle.next(),
+            'dummy'             : [ colorCycle.next() for i in xrange(5) ],
+            # 
+            'r_smH_NJ_0'        : colorCycle.next(),
+            'r_smH_NJ_1'        : colorCycle.next(),
+            'r_smH_NJ_2'        : colorCycle.next(),
+            'r_smH_NJ_3'        : colorCycle.next(),
+            'r_smH_NJ_GE4'      : colorCycle.next(),
             }
+
         if POI in knownPOIs:
             return knownPOIs[POI]
         elif '_GT' in POI:
@@ -278,6 +289,33 @@ def BasicDrawScanResults(
         lMin.SetLineWidth(2)
         lMin.Draw()
 
+
+        # Dots at the error bounds
+
+        rightDot = ROOT.TGraph(
+            1, array( 'f', [ minimaAndUncertainties['rightBound'] ] ), array( 'f', [ 0.5 ] )
+            )
+        ROOT.SetOwnership( rightDot, False )
+        if minimaAndUncertainties['wellDefinedRightBound']:
+            rightDot.SetMarkerStyle( 8 )
+        else:
+            rightDot.SetMarkerStyle( 5 )
+        rightDot.SetMarkerSize(0.8)
+        rightDot.SetMarkerColor(color)
+        rightDot.Draw('PSAME')
+
+        leftDot = ROOT.TGraph(
+            1, array( 'f', [ minimaAndUncertainties['leftBound'] ] ), array( 'f', [ 0.5 ] )
+            )
+        ROOT.SetOwnership( leftDot, False )
+        if minimaAndUncertainties['wellDefinedLeftBound']:
+            leftDot.SetMarkerStyle( 8 )
+        else:
+            leftDot.SetMarkerStyle( 5 )
+        leftDot.SetMarkerSize(0.8)
+        leftDot.SetMarkerColor(color)
+        leftDot.Draw('PSAME')
+
         leg.AddEntry( Tg.GetName(), POI, 'l' )
 
     leg.Draw()
@@ -290,7 +328,7 @@ def FigureOutBinning( POIs ):
     POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
     Ranges = [ Commands.InterpretPOI( POI )[2] for POI in POIs ]
 
-    rangeLengthList = list(set(map( len, Ranges )))
+    rangeLengthList = list(set(map( len, Ranges[:-1] )))
     if len(rangeLengthList) != 1:
         print 'ERROR: Ranges are inconsistent:'
         print Ranges
@@ -317,8 +355,10 @@ def FigureOutBinning( POIs ):
                 binBoundaries.append( rightBound )
 
     elif rangeLength == 1:
-        print 'ERROR: Bin observable range has length 1, not yet implemented'
-        return
+        binBoundaries = [ element[0] for element in Ranges ]
+        lastBinWidth = binBoundaries[-1] - binBoundaries[-2]
+        binBoundaries.append( binBoundaries[-1] + lastBinWidth )
+
     else:
         print 'ERROR: Bin observable range has length {0}, which does not make sense'.format( rangeLength )
         return
@@ -504,6 +544,16 @@ def BasicCombineSpectra(
                 line2 += '{0:<9.2f}'.format( Tg.POIErrsSymm[iBin] )
             print line2
 
+            line2a = '{0:<15s}'.format( 'err down' )
+            for iBin in xrange(len(Tg.binBoundaries)-1):
+                line2a += '{0:<9.2f}'.format( Tg.POIErrsLeft[iBin] )
+            print line2a
+
+            line2b = '{0:<15s}'.format( 'err up' )
+            for iBin in xrange(len(Tg.binBoundaries)-1):
+                line2b += '{0:<9.2f}'.format( Tg.POIErrsRight[iBin] )
+            print line2b
+
             line3 = '{0:<15s}'.format( Tg.name )
             for iBin in xrange(len(Tg.binBoundaries)-1):
                 line3 += '{0:<+9.2f}'.format( Tg.POICenters[iBin] )
@@ -531,6 +581,7 @@ def BasicCombineSpectra(
         'hgg'         : 'H #rightarrow #gamma#gamma',
         'hzz'         : 'H #rightarrow ZZ',
         'PTH'         : 'p_{T}^{H} [GeV]',
+        'NJ'          : 'N_{jets}'
         }
 
     c.Clear()
@@ -538,8 +589,8 @@ def BasicCombineSpectra(
     if not isRatioPlot:
         c.SetLogy()
         yMax = yMax * 2.
-        yMin = max( yMin, 0.0001 )
-        xMax = 600.
+        yMin = max( yMin, 0.01 )
+        # xMax = 600.
 
     if IsBottomRatioPlot:
         c.SetTopMargin( 0.65 )
@@ -558,7 +609,7 @@ def BasicCombineSpectra(
         base.GetYaxis().SetTitleSize( 0.06 )
     else:
         # 'd#sigma/dp_{T} [pb/GeV]'
-        base.GetYaxis().SetTitle( '#frac{#Delta#sigma(p_{T}^{H})}{#Delta p_{T}^{H}} [pb/GeV]' )
+        base.GetYaxis().SetTitle( '#frac{{#Delta#sigma({0})}}{{#Delta {0}}} [pb/GeV]'.format( titledict.get( observableName, observableName ) ) )
         base.GetYaxis().SetTitleSize( 0.05 )
 
     if IsBottomRatioPlot:
@@ -578,7 +629,10 @@ def BasicCombineSpectra(
         # lineAtOne.SetLineStyle(2)
         lineAtOne.Draw()
 
-    leg = ROOT.TLegend( 1-RightMargin-0.23, 1-TopMargin-0.3, 1-RightMargin, 1-TopMargin )
+    if kwargs.get( 'legendLeft', False ):
+        leg = ROOT.TLegend( c.GetLeftMargin()+0.02, 1-TopMargin-0.3, c.GetLeftMargin()+0.25, 1-TopMargin )
+    else:
+        leg = ROOT.TLegend( 1-RightMargin-0.23, 1-TopMargin-0.3, 1-RightMargin, 1-TopMargin )
     leg.SetFillStyle(0)
     leg.SetBorderSize(0)
 
@@ -601,66 +655,76 @@ def BasicCombineSpectra(
 
         if Tg.DrawAsBlocks:
 
-            # This is already transparent!
-            # Regular color 4 becomes something like 972 when transparent
-            fillColor = Tg.GetFillColor()
-            fillStyle = Tg.GetFillStyle()
-            lineColor = Tg.GetLineColor()
+            CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                Tg,
+                drawImmediately=True,
+                legendObject=leg,
+                verbose=False,
+                noBoxes=False,
+                xMaxExternal=xMax,
+                yMinExternal=yMin,
+                )
 
-            for iBin in xrange(len(Tg.binBoundaries)-1):
+            # # This is already transparent!
+            # # Regular color 4 becomes something like 972 when transparent
+            # fillColor = Tg.GetFillColor()
+            # fillStyle = Tg.GetFillStyle()
+            # lineColor = Tg.GetLineColor()
 
-                if Tg.binBoundaries[iBin] > xMax:
-                    continue
+            # for iBin in xrange(len(Tg.binBoundaries)-1):
 
-                revertChange = False
-                if Tg.binBoundaries[iBin+1] > xMax:
-                    # Change this back at end of loop
-                    actualBound = Tg.binBoundaries[iBin+1]
-                    Tg.binBoundaries[iBin+1] = xMax
-                    revertChange = True
+            #     if Tg.binBoundaries[iBin] > xMax:
+            #         continue
 
-                box = ROOT.TBox(
-                    Tg.binBoundaries[iBin],
-                    Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin] if Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin] > yMin else yMin,
-                    Tg.binBoundaries[iBin+1]                 if Tg.binBoundaries[iBin+1] < xMax else xMax,
-                    Tg.POICenters[iBin]+Tg.POIErrsRight[iBin]
-                    )
-                ROOT.SetOwnership( box, False )
+            #     revertChange = False
+            #     if Tg.binBoundaries[iBin+1] > xMax:
+            #         # Change this back at end of loop
+            #         actualBound = Tg.binBoundaries[iBin+1]
+            #         Tg.binBoundaries[iBin+1] = xMax
+            #         revertChange = True
 
-                box.SetLineWidth(0)
-                box.SetFillColor( fillColor )
-                if not fillStyle == 0: box.SetFillStyle( fillStyle )
-                box.Draw()
+            #     box = ROOT.TBox(
+            #         Tg.binBoundaries[iBin],
+            #         Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin] if Tg.POICenters[iBin]-Tg.POIErrsLeft[iBin] > yMin else yMin,
+            #         Tg.binBoundaries[iBin+1]                 if Tg.binBoundaries[iBin+1] < xMax else xMax,
+            #         Tg.POICenters[iBin]+Tg.POIErrsRight[iBin]
+            #         )
+            #     ROOT.SetOwnership( box, False )
 
-                line = ROOT.TLine(
-                    Tg.binBoundaries[iBin], Tg.POICenters[iBin],
-                    Tg.binBoundaries[iBin+1], Tg.POICenters[iBin],
-                    )
-                ROOT.SetOwnership( line, False )
+            #     box.SetLineWidth(0)
+            #     box.SetFillColor( fillColor )
+            #     if not fillStyle == 0: box.SetFillStyle( fillStyle )
+            #     box.Draw()
 
-                line.SetLineColor( lineColor )
-                line.SetLineWidth( Tg.GetLineWidth() )
-                line.Draw()
+            #     line = ROOT.TLine(
+            #         Tg.binBoundaries[iBin], Tg.POICenters[iBin],
+            #         Tg.binBoundaries[iBin+1], Tg.POICenters[iBin],
+            #         )
+            #     ROOT.SetOwnership( line, False )
 
-                if revertChange:
-                    Tg.binBoundaries[iBin+1] = actualBound
-                    revertChange = False
+            #     line.SetLineColor( lineColor )
+            #     line.SetLineWidth( Tg.GetLineWidth() )
+            #     line.Draw()
+
+            #     if revertChange:
+            #         Tg.binBoundaries[iBin+1] = actualBound
+            #         revertChange = False
 
 
-            # Dummy for the legend
-            TgDummy = ROOT.TGraph( 1, array( 'd', [-999.]), array( 'd', [-999.]) )
-            ROOT.SetOwnership( TgDummy, False )
-            TgDummy.SetLineColor( lineColor )
-            TgDummy.SetLineWidth( Tg.GetLineWidth() )
-            TgDummy.SetFillColor( fillColor )
-            if not fillStyle == 0: TgDummy.SetFillStyle( fillStyle )
-            TgDummy.SetMarkerStyle(8)
-            TgDummy.SetMarkerColor( lineColor )
-            TgDummy.SetMarkerSize(0)
-            TgDummy.SetName( Tg.name + '_dummy' )
-            TgDummy.Draw('SAME')
+            # # Dummy for the legend
+            # TgDummy = ROOT.TGraph( 1, array( 'd', [-999.]), array( 'd', [-999.]) )
+            # ROOT.SetOwnership( TgDummy, False )
+            # TgDummy.SetLineColor( lineColor )
+            # TgDummy.SetLineWidth( Tg.GetLineWidth() )
+            # TgDummy.SetFillColor( fillColor )
+            # if not fillStyle == 0: TgDummy.SetFillStyle( fillStyle )
+            # TgDummy.SetMarkerStyle(8)
+            # TgDummy.SetMarkerColor( lineColor )
+            # TgDummy.SetMarkerSize(0)
+            # TgDummy.SetName( Tg.name + '_dummy' )
+            # TgDummy.Draw('SAME')
 
-            leg.AddEntry( TgDummy.GetName(), Tg.title, 'lf' )
+            # leg.AddEntry( TgDummy.GetName(), Tg.title, 'lf' )
 
 
         else:
@@ -929,10 +993,12 @@ def FindMinimaAndErrors( POIvals, deltaNLLs ):
     errReturn = {
         'imin'       : iMin,
         'min'        : minimumPOIval,
-        'leftError'  : 999,
-        'leftBound'  : 999,
+        'leftError'  : -999,
+        'leftBound'  : -999,
         'rightError' : 999,
         'rightBound' : 999,
+        'wellDefinedRightBound' : False,
+        'wellDefinedLeftBound'  : False,
         }
 
     if iMin > 2:
@@ -991,6 +1057,8 @@ def FindMinimaAndErrors( POIvals, deltaNLLs ):
         'leftBound'  : leftBound,
         'rightError' : rightError,
         'rightBound' : rightBound,
+        'wellDefinedRightBound' : wellDefinedRightBound,
+        'wellDefinedLeftBound'  : wellDefinedLeftBound,
         }
 
 

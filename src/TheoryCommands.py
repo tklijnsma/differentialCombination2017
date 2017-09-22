@@ -957,6 +957,7 @@ def GetTH2FromListOfRootFiles(
         yCoupling = 'cg',
         verbose   = False,
         xMin = None, xMax = None, yMin = None, yMax = None,
+        multiplyByTwo = True,
         ):
 
     # Read values from specified rootfiles
@@ -1035,7 +1036,10 @@ def GetTH2FromListOfRootFiles(
             print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][yCoupling] )
             continue
 
-        H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint]['deltaNLL'] )
+        if multiplyByTwo:
+            H2.SetBinContent( iBinX+1, iBinY+1, 2.*scan[iPoint]['deltaNLL'] )
+        else:
+            H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint]['deltaNLL'] )
 
 
     # for iPoint in xrange(nPoints):

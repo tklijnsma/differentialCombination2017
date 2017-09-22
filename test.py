@@ -14,9 +14,11 @@ Thomas Klijnsma
 # from copy import deepcopy
 
 import combineCommands
+import njetsCommands
 import plotCommands
 import yukawaCommands
 import topCommands
+import onetimeplotsCommands
 # import highLumiStudyCommands
 
 import sys
@@ -48,10 +50,12 @@ def main():
     parser.add_argument( '--notFastscan',                     action='store_true' )
 
     combineCommands.AppendParserOptions(parser)
+    njetsCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
     yukawaCommands.AppendParserOptions(parser)
     topCommands.AppendParserOptions(parser)
     # highLumiStudyCommands.AppendParserOptions(parser)
+    onetimeplotsCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -91,6 +95,9 @@ def main():
     if args.combineCommands:
         combineCommands.main(args)
 
+    if args.njetsCommands:
+        njetsCommands.main(args)
+
 
     ########################################
     # Result and Test Plotting
@@ -98,6 +105,9 @@ def main():
 
     if args.plotCommands:
         plotCommands.main(args)
+
+    if args.onetimeplotsCommands:
+        onetimeplotsCommands.main(args)
 
 
     # ########################################

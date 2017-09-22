@@ -1,3 +1,5 @@
+YR4_totalXS = 55.70628722 # pb
+
 # ======================================
 # Text card paths
 
@@ -19,10 +21,19 @@ card_onlyhzz_unsplit_OAsignal        = 'suppliedInput/fromDavid/PTH_May15/hzz4l_
 card_onlyhzz_split_unrenamed         = 'suppliedInput/fromDavid/ggHonly_Jun26/hzz4l_all_13TeV_xs.txt'
 card_onlyhzz_split_renamed           = 'suppliedInput/fromDavid/ggHonly_Jun26/hzz4l_all_13TeV_xs_processesShifted.txt'
 
-
 card_combined_unsplit                = 'suppliedInput/combinedCard_Jul26.txt'
-
 card_combined_split                  = 'suppliedInput/combinedCard_Aug21.txt'
+
+# -----------------
+# nJets
+
+card_njets_hgg_unsplit_unrenamed     = 'suppliedInput/fromVittorio/nJets2p5_v5_Mar15/Datacard_13TeV_differential_Njets_moriond17_skipAndDebug_reminiaod_corrections_genJetID_v5.txt'
+card_njets_hgg_unsplit_renamed       = 'suppliedInput/fromVittorio/nJets2p5_v5_Mar15/Datacard_13TeV_differential_Njets_moriond17_skipAndDebug_reminiaod_corrections_genJetID_v5_renamedProcesses.txt'
+
+card_njets_hzz_unsplit               = 'suppliedInput/fromDavid/nJets_Sep19/smH/hzz4l_comb_13TeV_xs.txt'
+
+card_njets_combined_unsplit          = 'suppliedInput/combinedCard_nJets_Sep19.txt'
+
 
 
 # ======================================
@@ -42,10 +53,18 @@ ws_onlyhzz_unsplit_yukawa             = 'workspaces_Aug13/hzz4l_comb_13TeV_xs_pr
 ws_combined_unsplit_yukawa            = 'workspaces_Aug10/combinedCard_Jul26_CouplingModel_Yukawa_withTheoryUncertainties.root'
 ws_combined_unsplit_yukawa_onlyGluonInduced = 'workspaces_Aug17/combinedCard_Jul26_CouplingModel_Yukawa_withTheoryUncertainties.root'
 
+# Has proper theory uncertainties as well now
+ws_combined_split_yukawa              = 'workspaces_Sep14/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_onlyhgg_split_yukawa               = 'workspaces_Sep14/Datacard_13TeV_differential_PtGghPlusHx_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_onlyhzz_split_yukawa               = 'workspaces_Sep15/hzz4l_all_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_onlyhzz_split_yukawa               = 'workspaces_Sep18/hzz4l_all_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_onlyhzz_split_yukawa               = 'workspaces_Sep19/hzz4l_all_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+
 # Lumi scalable
 ws_combined_unsplit_lumiScalableWS    = 'workspaces_Aug18/combinedCard_Jul26_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
+ws_combined_split_lumiScalableWS      = 'workspaces_Sep19/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
 
-
+ws_onlyhzz_split         = 'workspaces_Sep15/hzz4l_all_13TeV_xs_processesShifted.root'
 ws_onlyhgg_split           = 'workspaces_Aug21/Datacard_13TeV_differential_PtGghPlusHx_renamedProcesses.root'
 ws_combined_split          = 'workspaces_Aug21/combinedCard_Aug21.root'
 
@@ -54,16 +73,41 @@ ws_combined_split_top      = 'workspaces_Aug21/combinedCard_Aug21_CouplingModel_
 ws_onlyhgg_split_top       = 'workspaces_Aug22/Datacard_13TeV_differential_PtGghPlusHx_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
 ws_onlyhzz_split_top       = 'workspaces_Aug22/hzz4l_all_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
 
+ws_combined_split_top_lumiScalableWS   = 'workspaces_Sep20/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
+
+# NOT ACTUALLY TOP!! CHANGE TO YUKAWA!!
+ws_combined_split_top_notheoryunc  = 'workspaces_Sep19/combinedCard_Aug21_CouplingModel_Yukawa.root'
+ws_combined_split_top_uncorrelated = 'workspaces_Sep19/combinedCard_Aug21_CouplingModel_Yukawa_withUncorrelatedTheoryUncertainties.root'
+
+
+ws_njets_combined_unsplit = 'workspaces_Sep19/combinedCard_nJets_Sep19.root'
+ws_njets_hgg_unsplit      = 'workspaces_Sep19/Datacard_13TeV_differential_Njets_moriond17_skipAndDebug_reminiaod_corrections_genJetID_v5_renamedProcesses.root'
+ws_njets_hzz_unsplit      = 'workspaces_Sep19/hzz4l_comb_13TeV_xs.root'
+
 
 # ======================================
 # Derived theory files
 
-derivedTheoryFilesDirectory_Top = 'derivedTheoryFiles_Aug11_Top'
+derivedTheoryFilesDirectory_Top                      = 'derivedTheoryFiles_Aug11_Top'
 
-derivedTheoryFilesDirectory_YukawaGluonInduced = 'derivedTheoryFiles_Aug09_YukawaGluonInduced'
-derivedTheoryFilesDirectory_YukawaQuarkInduced = 'derivedTheoryFiles_Aug09_YukawaQuarkInduced'
-derivedTheoryFilesDirectory_YukawaSummed       = 'derivedTheoryFiles_Aug09_YukawaSummed'
+derivedTheoryFilesDirectory_YukawaGluonInduced       = 'derivedTheoryFiles_Aug09_YukawaGluonInduced'
+derivedTheoryFilesDirectory_YukawaQuarkInduced       = 'derivedTheoryFiles_Aug09_YukawaQuarkInduced'
+derivedTheoryFilesDirectory_YukawaQuarkInducedScaled = 'derivedTheoryFiles_Sep14_YukawaQuarkInducedScaled'
+# derivedTheoryFilesDirectory_YukawaSummed             = 'derivedTheoryFiles_Aug09_YukawaSummed'
+derivedTheoryFilesDirectory_YukawaSummed             = 'derivedTheoryFiles_Sep14_YukawaSummed'
 
+
+# ======================================
+# Correlation matrices and uncertainties
+
+correlationMatrix_Yukawa_uncorrelated = 'plots_CorrelationMatrices_Sep14/corrMat_exp_uncorrelated.txt'
+correlationMatrix_Yukawa              = 'plots_CorrelationMatrices_Sep14/corrMat_exp.txt'
+theoryUncertainties_Yukawa            = 'plots_CorrelationMatrices_Sep14/errors_for_corrMat_exp.txt'
+correlationMatrix_Top                 = 'plots_CorrelationMatrices_Aug11_Top/corrMat_exp.txt'
+theoryUncertainties_Top               = 'plots_CorrelationMatrices_Aug11_Top/errors_for_corrMat_exp.txt'
+
+correlationMatrix_YukawaGluon         = 'plots_CorrelationMatrices_Aug09/corrMat_exp.txt'
+theoryUncertainties_YukawaGluon       = 'plots_CorrelationMatrices_Aug09/errors_for_corrMat_exp.txt'
 
 # ======================================
 # Scans
@@ -74,6 +118,10 @@ derivedTheoryFilesDirectory_YukawaSummed       = 'derivedTheoryFiles_Aug09_Yukaw
 scan_ptcombination_combined_profiled_asimov = 'Scan_Aug22_1'
 scan_ptcombination_hgg_profiled_asimov      = 'Scan_Aug22_2'
 scan_ptcombination_hzz_profiled_asimov      = 'Scan_Aug22_3'
+
+scan_ptcombination_combined_profiled        = 'Scan_May15'
+scan_ptcombination_hgg_profiled             = 'Scan_May15'
+scan_ptcombination_hzz_profiled             = 'Scan_May15'
 
 # ---------------------------
 # Yukawa results
@@ -100,12 +148,39 @@ scan_combined_profiled_asimov_lum8   = 'Scan_yukawa_Aug21_asimov_0'
 scan_yukawa_hzz_profiled_asimov      = 'Scan_yukawa_Aug22_asimov_0'
 scan_yukawa_hgg_profiled_asimov      = 'Scan_yukawa_Aug22_asimov_1'
 
+scan_combined_split_fastscan         = 'Scan_yukawa_Sep14'
+
+
+scan_yukawa_combined_split_profiled         = 'Scan_yukawa_Sep14_0'
+scan_yukawa_hgg_split_profiled              = 'Scan_yukawa_Sep14_1'
+# scan_yukawa_hzz_split_profiled              = 'Scan_yukawa_Sep18_0'
+scan_yukawa_hzz_split_profiled              = 'Scan_yukawa_Sep19'
+
+scan_yukawa_combined_split_profiled_asimov  = 'Scan_yukawa_Sep18_asimov'
+scan_yukawa_hgg_split_profiled_asimov       = 'Scan_yukawa_Sep18_asimov_0'
+# scan_yukawa_hzz_split_profiled_asimov       = 'Scan_yukawa_Sep18_asimov_1'
+scan_yukawa_hzz_split_profiled_asimov       = 'Scan_yukawa_Sep19_asimov'
+
+
+scan_yukawa_combined_split_profiled_uncorrelated  = 'Scan_yukawa_Sep19_0'
+scan_yukawa_combined_split_profiled_notheoryunc   = 'Scan_yukawa_Sep19_1'
+
+scan_yukawa_combined_split_profiled_uncorrelated_asimov  = 'Scan_yukawa_Sep19_asimov_0'
+scan_yukawa_combined_split_profiled_notheoryunc_asimov   = 'Scan_yukawa_Sep19_asimov_1'
+scan_yukawa_combined_split_profiled_asimov_lum8          = 'Scan_yukawa_Sep19_asimov_2'
+
 # ---------------------------
 # Top results
 
 scan_top_combined_profiled           = 'Scan_Top_Aug21_0'
 scan_top_hzz_profiled                = 'Scan_Top_Aug22'
 scan_top_hgg_profiled                = 'Scan_Top_Aug22_0'
+
+scan_top_combined_profiled_asimov    = 'Scan_Top_Sep20_asimov'
+scan_top_hzz_profiled_asimov         = 'Scan_Top_Sep20_asimov_0'
+scan_top_hgg_profiled_asimov         = 'Scan_Top_Sep20_asimov_1'
+scan_top_combined_profiled_asimov_lum8 = 'Scan_Top_Sep20_asimov_2'
+# scan_top_combined_profiled_asimov_lum8 = 'Scan_Top_Sep22_asimov' # New one, wait till finished
 
 
 def main():

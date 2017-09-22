@@ -33,6 +33,7 @@ class CouplingModel( PhysicsModel ):
 
         self.manualExpBinBoundaries = []
         self.skipBins = []
+        self.skipOverflowBin = False
         
 
 
@@ -182,6 +183,12 @@ class CouplingModel( PhysicsModel ):
             elif optionName == 'skipBins':
                 self.skipBins = optionValue.split(',')
 
+                for skipBin in self.skipBins:
+                    if 'GT' in skipBin:
+                        self.skipOverflowBin = True
+                        break
+
+
             elif optionName == 'theory':
                 # Syntax: --PO theory=[ct=1,cg=1,file=some/path/.../] , brackets optional
 
@@ -266,6 +273,16 @@ class CouplingModel( PhysicsModel ):
         
         if self.splitggH:
             signals = [ s for s in signals if 'ggH' in s ]
+
+        # if self.skipBins:
+        #     signalsFiltered = []
+        #     for signal in signals:
+        #         for skipBin in self.skipBins:
+        #             if skipBin in signal:
+        #                 break
+        #         else:
+        #             signalsFiltered.append(signal)
+        #     signals = signalsFiltered
 
         signals.sort( key = lambda n: float(
             n.split('_')[2].replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','') ) )
@@ -493,6 +510,12 @@ class CouplingModel( PhysicsModel ):
         self.yieldParameterNames = []
         for iExpBin in xrange(nExpBins):
 
+            if self.skipOverflowBin and iExpBin == nExpBins-1 :
+                if self.verbose:
+                    print '\n' + '='*80
+                    print 'Skipping bin {0} (Overflow bin)'.format(iExpBin)
+                continue
+
             expBoundLeft  = expBinBoundaries[iExpBin]
             expBoundRight = expBinBoundaries[iExpBin+1]
             # expBinStr     = signals[iExpBin]
@@ -508,6 +531,11 @@ class CouplingModel( PhysicsModel ):
                     expBoundLeft  if not expBoundLeft.is_integer() else int(expBoundLeft),
                     expBoundRight if not expBoundRight.is_integer() else int(expBoundRight)
                     )
+
+
+            if self.verbose:
+                print '\n' + '='*80
+                print 'Processing bin {0}: {1}'.format( iExpBin, expBinStr )
 
             theoryBinBoundariesInsideExperimentalBin = []
             parametrizationIndices                   = []
@@ -556,13 +584,17 @@ class CouplingModel( PhysicsModel ):
 
 
             if self.verbose:
-                print '\nProcessing experimental bin {0}'.format(expBinStr)
+                # print '\nProcessing experimental bin {0}'.format(expBinStr)
                 print 'Found the following theory bin boundaries inside experimental bin {0} to {1}:'.format(
                     expBoundLeft, expBoundRight )
                 print '  ', theoryBinBoundariesInsideExperimentalBin
                 print '   The following parametrizations will be used to evaluate the cross section:'
                 print '  ', parametrizationIndices
 
+
+            if self.verbose:
+                print '\n' + '-'*60
+                print 'Calculating cross section'
 
             # Calculate total cross section (*not* /GeV) in experimental bin
             SMXSInsideExperimentalBin = 0.
@@ -576,8 +608,7 @@ class CouplingModel( PhysicsModel ):
                     print '      contribution                = ', self.SMXS[iParametrization] * binWidth
 
             if self.verbose:
-                print '\nTotal cross section in {0} is {1}'.format( SMXSInsideExperimentalBin, expBinStr )
-            SMXSInsideExperimentalBins.append( SMXSInsideExperimentalBin )
+                print '\nTotal cross section in {1} is {0}'.format( SMXSInsideExperimentalBin, expBinStr )
 
             # if self.verbose:
             #     print '   Which will carry the following weights:'
@@ -590,6 +621,12 @@ class CouplingModel( PhysicsModel ):
                 self.modelBuilder.doVar( 'r_{0}[1.0]'.format( expBinStr ))
                 continue
 
+            SMXSInsideExperimentalBins.append( SMXSInsideExperimentalBin )
+
+
+            if self.verbose:
+                print '\n' + '-'*60
+                print 'Creating expression for yield parameter'
 
             componentWeights = []
             for iComponent in xrange(nComponents):
@@ -721,6 +758,10 @@ class CouplingModel( PhysicsModel ):
         # Handle theory uncertainties
         ########################################
 
+        if self.verbose:
+            print '\n' + '='*80
+            print 'Inserting theory uncertainties\n'
+
         def printMatrix( matrix, indent = '    ', scientific=True ):
             for row in matrix:
                 print indent + ' '.join([ '{0:<+10.2{1}}'.format( number, 'E' if scientific else 'f' ) for number in row ])
@@ -813,12 +854,20 @@ class CouplingModel( PhysicsModel ):
 
                         errDict[binName][processName] = 0.
 
+                        for skipBin in self.skipBins:
+                            if skipBin in processName:
+                                continue
+
                         if processName in signals:
                             iProcess = signals.index(processName)
                             if iProcess < self.nTheoryUncertainties:
                                 errDict[binName][processName] = decorrelatedMatrixNormalized[iTheoryUncertainty][iProcess]
                         
-                systematicName = 'theoryUncertainty_{0}'.format( signals[iTheoryUncertainty] )
+                        
+                systematicName = 'theoryUncertainty_{0}'.format(
+                    # signals[iTheoryUncertainty] # This is even incorrect I think
+                    iTheoryUncertainty
+                    )
 
                 self.DC.systs.append(
                     ( systematicName, False, 'lnN', [], errDict )
@@ -843,6 +892,7 @@ class CouplingModel( PhysicsModel ):
 
         expBinBoundarySet = []
         for i, expBinBoundary in enumerate(expBinBoundaries):
+            if self.skipOverflowBin and expBinBoundary == expBinBoundaries[-1]: continue
             self.modelBuilder.doVar( 'expBinBound{0}[{1}]'.format( i, expBinBoundary ) )
             expBinBoundarySet.append( 'expBinBound{0}'.format(i) )
         self.modelBuilder.out.defineSet( 'expBinBoundaries', ','.join(expBinBoundarySet) )
@@ -879,24 +929,33 @@ class CouplingModel( PhysicsModel ):
                         p( one )
                         return one
                     else:
+
+                        # Still check if the bin is supposed to be skipped
+                        for skipBin in self.skipBins:
+                            if skipBin in process:
+                                p(one)
+                                return one
+
                         leftBound  = float(match.group(1))
                         rightBound = float(match.group(2))
 
                         for iBin in xrange(self.nExpBins):
                             if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
-                                yieldParameter = self.yieldParameterNames[iBin]
 
-                                # Still check if the bin is supposed to be skipped
-                                for skipBin in self.skipBins:
-                                    if skipBin in process:
-                                        yieldParameter = one
+                                if iBin >= len(self.yieldParameterNames):
+                                    # This case can happen when binBoundaries are manually specified
+                                    # up until x, but the theory spectra allow yieldParameter construction
+                                    # up to <x
+                                    p( one )
+                                    return one
+
+                                yieldParameter = self.yieldParameterNames[iBin]
 
                                 p(yieldParameter)
                                 return yieldParameter
 
-                        else:
-                            print 'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
-                            sys.exit()
+                        print 'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
+                        sys.exit()
 
                 else:
                     # Case for when no manual bin boundaries were specified

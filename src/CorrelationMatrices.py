@@ -7,7 +7,7 @@ Thomas Klijnsma
 # Imports
 ########################################
 
-import os, re, itertools
+import os, re, itertools, sys
 from os.path import *
 from glob import glob
 from sys import exit
@@ -16,6 +16,11 @@ from numpy import corrcoef, var, std
 
 from time import strftime
 datestr = strftime( '%b%d' )
+
+datestr_detailed = strftime( '%y-%m-%d %H:%M:%S' )
+src = os.path.basename(__file__)
+from subprocess import check_output
+currentcommit = check_output(['git', 'log', '-1', '--oneline' ])
 
 
 import Commands
@@ -141,6 +146,16 @@ def GetCorrelationMatrix(
                 0.5*(variation.binBoundaries[i]+variation.binBoundaries[i+1]) for i in xrange(len(variation.binValues))
                 ]
 
+    INCLUDE_LABELS = True
+
+    if INCLUDE_LABELS:
+        labels = []
+        for variation in variations:
+            labels.append(
+                '(#mu_{{R}}={0}, #mu_{{F}}={1})'.format( variation.muR, variation.muF )
+                )
+
+
     if not makeScatterPlots:
         halfNumberOfPlots = True
 
@@ -182,7 +197,13 @@ def GetCorrelationMatrix(
 
             corr = corrcoef( iBinValues, jBinValues )[0][1]
 
-            corrMatrix[iPoint][jPoint] = corr
+            try:
+                corrMatrix[iPoint][jPoint] = corr
+            except IndexError:
+                print 'Problem with the dimensions of corrMatrix'
+                print '  nRows = {0} ;  nCols = {1}'.format( len(corrMatrix), len(corrMatrix[0]) )
+                print '  Trying to access point ( {0} , {1} )'.format( iPoint, jPoint )
+                sys.exit()
             
             if halfNumberOfPlots:
                 corrMatrix[jPoint][iPoint] = corr
@@ -216,6 +237,13 @@ def GetCorrelationMatrix(
                 Tg.SetMarkerStyle(8)
                 Tg.SetMarkerSize(0.8)
                 Tg.Draw('PSAME')
+
+                if INCLUDE_LABELS:
+                    l = ROOT.TLatex()
+                    l.SetTextSize( 0.03 )
+                    # l.SetTextAlign(21)
+                    for iVariation in xrange( len( iBinValues ) ):
+                        l.DrawLatex( iBinValues[iVariation], jBinValues[iVariation], labels[iVariation] )
 
 
                 # ======================================
@@ -269,6 +297,29 @@ def GetCorrelationMatrix(
             errorsFp.write(
                 '{0:+.8f} {1:+.8f}\n'.format( up, down )
                 )
+
+    with open( join( CPlotDir, 'errors_for_{0}.tex'.format(outname) ), 'w' ) as errorsFp:
+
+        header    = [ 'Bin boundaries (GeV)' ]
+        scaleDown = [ '$\\Delta^\\text{scale}_-$ (pb)' ]
+        scaleUp   = [ '$\\Delta^\\text{scale}_+$ (pb)' ]
+
+        for iBin in xrange(len(binBoundaries)-1):
+            up, down = errors[iBin]
+            down = -abs(down)
+
+            binBoundLeft  = int(binBoundaries[iBin])
+            binBoundRight = int(binBoundaries[iBin+1])
+
+            header.append( '{0} to {1}'.format( binBoundLeft, binBoundRight ) )
+            scaleDown.append( '{0:+.2f}'.format(down) )
+            scaleUp.append(   '{0:+.2f}'.format(up) )
+
+        errorsFp.write( '% File generated on {0} by the script {1}\n'.format( datestr_detailed, src ) )
+        errorsFp.write( '% Current git commit: {0}'.format( currentcommit ) )
+        errorsFp.write( ' & '.join(header) + ' \\\\\n' )
+        errorsFp.write( ' & '.join(scaleDown) + ' \\\\\n' )
+        errorsFp.write( ' & '.join(scaleUp) + ' \\\\' )
 
 
     if makeCorrelationMatrixPlot:
@@ -770,7 +821,7 @@ def ConvertTGraphToLinesAndBoxes(
         verbose=False,
         noBoxes=False,
         xMaxExternal=None,
-        # yMinExternal=None,
+        yMinExternal=None,
         ):
 
     yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
@@ -845,8 +896,23 @@ def ConvertTGraphToLinesAndBoxes(
         boxes.append(box)
 
         if drawImmediately:
-            if not noBoxes: box.Draw()
-            line.Draw()
+
+            if yMinExternal is None:
+                if not noBoxes: box.Draw()
+                line.Draw()
+            else:
+                if y < yMinExternal:
+                    if y+yMax > yMinExternal and not noBoxes:
+                        box.SetY1( yMinExternal )
+                        box.Draw()
+                elif y-yMin < yMinExternal:
+                    if not noBoxes:
+                        box.SetY1( yMinExternal )
+                        box.Draw()
+                    line.Draw()
+                else:
+                    if not noBoxes: box.Draw()
+                    line.Draw()
 
 
     # Create a dummy for the legend

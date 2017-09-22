@@ -180,7 +180,8 @@ def main( args ):
 
         # Specific for HZZ
         Commands.BasicT2WS(
-            'suppliedInput/hzz_ggH_xH_split_Jun26/hzz4l_all_13TeV_xs.txt',
+            # 'suppliedInput/hzz_ggH_xH_split_Jun26/hzz4l_all_13TeV_xs.txt',
+            card_onlyhzz_split_renamed,
             manualMaps=[
                 '--PO \'map=.*/ggH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
                 '--PO \'map=.*/xH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
@@ -207,7 +208,7 @@ def main( args ):
         Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
         Commands.BasicBestfit(
             ws,
-            onBatch=True,
+            onBatch=False,
             batchJobSubDir = 'job_{0}'.format( basename(ws).replace('/','').replace('.root','') ),
             extraOptions = [
                 '-m 125',
@@ -318,8 +319,9 @@ def main( args ):
         hggPOIs = Commands.ListPOIs( ws_onlyhgg_unsplit )
         hggscans = PhysicsCommands.GetScanResults(
             hggPOIs,
-            scan_ptcombination_hgg_profiled_asimov,
-            # pattern = 'Datacard_13TeV_differential_pT'
+            # scan_ptcombination_hgg_profiled_asimov,
+            scan_ptcombination_hgg_profiled,
+            pattern = 'Datacard_13TeV_differential_pT'
             )
         PhysicsCommands.BasicDrawScanResults( hggPOIs, hggscans, name='hgg' )
         PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
@@ -328,8 +330,9 @@ def main( args ):
         hzzPOIs = Commands.ListPOIs( ws_onlyhzz_unsplit )
         hzzscans = PhysicsCommands.GetScanResults(
             hzzPOIs,
-            scan_ptcombination_hzz_profiled_asimov,
-            # pattern = 'usingDavidsCommand_OAshifted'
+            # scan_ptcombination_hzz_profiled_asimov,
+            scan_ptcombination_hzz_profiled,
+            pattern = 'usingDavidsCommand_OAshifted'
             )
         PhysicsCommands.BasicDrawScanResults( hzzPOIs, hzzscans, name='hzz' )
         PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
@@ -338,8 +341,9 @@ def main( args ):
         combinationPOIs = Commands.ListPOIs( ws_combined_unsplit )
         combinationscans = PhysicsCommands.GetScanResults(
             combinationPOIs,
-            scan_ptcombination_combined_profiled_asimov,
-            # pattern = 'combinedCard'
+            # scan_ptcombination_combined_profiled_asimov,
+            scan_ptcombination_combined_profiled,
+            pattern = 'combinedCard'
             )
         PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
         PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )

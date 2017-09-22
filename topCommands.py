@@ -62,7 +62,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--coupling2Dplot_Top',                            action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top',                       action=CustomAction )
     parser.add_argument( '--checkWSParametrization_Top',                    action=CustomAction )
-
+    parser.add_argument( '--couplingContourPlot_Top_lumiStudy',             action=CustomAction )
 
 
 ########################################
@@ -133,6 +133,9 @@ def main( args ):
         INCLUDE_THEORY_UNCERTAINTIES = True
         # INCLUDE_THEORY_UNCERTAINTIES = False
 
+        # MAKELUMISCALABLE = True
+        MAKELUMISCALABLE = False
+
         datacard = LatestPaths.card_combined_split
         if args.hgg:
             datacard = LatestPaths.card_onlyhgg_split_both_renamed
@@ -178,6 +181,11 @@ def main( args ):
                 '--PO theoryUncertainties={0}'.format(LATESTTHEORYUNCERTAINTIES_Top) )
             suffix += '_withTheoryUncertainties'
 
+        if MAKELUMISCALABLE:
+            extraOptions.append(
+                '--PO lumiScale=True' )
+            suffix += '_lumiScale'
+
 
         # Scale these bins with 1.0 regardless of parametrization
         extraOptions.append(
@@ -198,14 +206,20 @@ def main( args ):
         doFastscan = True
         if args.notFastscan: doFastscan = False
 
-        ASIMOV = False
-        # ASIMOV = True
+        # ASIMOV = False
+        ASIMOV = True
+
+        LUMISTUDY = True
+        # LUMISTUDY = False
 
         datacard = LatestPaths.ws_combined_split_top
+        if LUMISTUDY:
+            datacard = LatestPaths.ws_combined_split_top_lumiScalableWS
         if args.hgg:
             datacard = LatestPaths.ws_onlyhgg_split_top
         if args.hzz:
             datacard = LatestPaths.ws_onlyhzz_split_top
+
 
 
         ct_ranges = [ -1., 2. ]
@@ -225,9 +239,15 @@ def main( args ):
             nPoints = 6400
             nPointsPerJob = 8
             queue = 'all.q'
+            # if ASIMOV:
+            #     # This does not converge in time
+            #     queue = 'short.q'
+            #     nPoints = 1600
+            #     nPointsPerJob = 2
             if args.hzz:
                 nPointsPerJob = 80
                 queue = 'short.q'
+
 
 
         Commands.MultiDimCombineTool(
@@ -239,11 +259,11 @@ def main( args ):
             jobDirectory  = jobDirectory,
             fastscan      = doFastscan,
             asimov        = ASIMOV,
-            jobPriority   = -2,
+            jobPriority   = -8,
             extraOptions  = [
                 # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
                 '-P ct -P cg',
-                '--setPhysicsModelParameters ct=1.0,cg=0.0',
+                '--setPhysicsModelParameters ct=1.0,cg=0.0' + ( ',lumiScale=8.356546' if LUMISTUDY else '' ),
                 '--setPhysicsModelParameterRanges ct={0},{1}:cg={2},{3}'.format(
                     ct_ranges[0], ct_ranges[1], cg_ranges[0], cg_ranges[1] ),
                 '--saveSpecifiedFunc {0}'.format(','.join(
@@ -257,12 +277,13 @@ def main( args ):
     if args.coupling2Dplot_Top:
 
         datacard = LatestPaths.ws_combined_split_top
-        
-        # scandir  = 'Scan_couplings_Aug11'
-        # scandir  = 'Scan_couplings_Aug11_0'
-        # scandir  = 'Scan_couplings_Aug11_1'
-        # scandir  = 'Scan_Top_Aug21'
         scandir    = LatestPaths.scan_top_combined_profiled
+        if args.hgg:
+            datacard = LatestPaths.ws_onlyhgg_split_top
+            scandir = LatestPaths.scan_top_hgg_profiled
+        if args.hzz:
+            datacard = LatestPaths.ws_onlyhzz_split_top
+            scandir = LatestPaths.scan_top_hzz_profiled
 
         res = TheoryCommands.PlotCouplingScan2D(
             datacard,
@@ -289,8 +310,12 @@ def main( args ):
             'combined' : 'Combination',
             }
 
+        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled ) )
+        hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_top_hgg_profiled) )
+        hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_top_hzz_profiled) )
+
         hgg = TheoryCommands.GetTH2FromListOfRootFiles(
-            glob( '{0}/*.root'.format(LatestPaths.scan_top_hgg_profiled) ),
+            hgg_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
@@ -299,7 +324,7 @@ def main( args ):
         hgg.name = 'hgg'
 
         hzz = TheoryCommands.GetTH2FromListOfRootFiles(
-            glob( '{0}/*.root'.format(LatestPaths.scan_top_hzz_profiled) ),
+            hzz_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
@@ -308,7 +333,7 @@ def main( args ):
         hzz.name = 'hzz'
 
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
-            glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled ) ),
+            combined_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
@@ -320,6 +345,369 @@ def main( args ):
             hgg,
             hzz,
             combined
+            ]
+
+
+        for container in containers:
+            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
+            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
+            # container.contours_1sigma.sort( key = lambda Tg: -Tg.GetN() )
+            # container.contours_2sigma.sort( key = lambda Tg: -Tg.GetN() )
+            # container.contours_1sigma = container.contours_1sigma[0:3]
+            # container.contours_2sigma = container.contours_2sigma[0:3]
+
+
+        c.cd()
+        c.Clear()
+        SetCMargins()
+
+        # xMin = -0.2
+        # xMax = 1.35
+        # yMin = -0.03
+        # yMax = 0.135
+
+        xMin = -0.2
+        xMax = 2.0
+        yMin = -0.08
+        yMax = 0.135
+
+        base = GetPlotBase(
+            xMin = xMin,
+            xMax = xMax,
+            yMin = yMin,
+            yMax = yMax,
+            xTitle = titles.get( xCoupling, xCoupling ),
+            yTitle = titles.get( yCoupling, yCoupling ),
+            )
+        base.Draw('P')
+
+        base.GetXaxis().SetTitleSize(0.06)
+        base.GetXaxis().SetLabelSize(0.05)
+        base.GetYaxis().SetTitleSize(0.06)
+        base.GetYaxis().SetLabelSize(0.05)
+
+
+        # leg = ROOT.TLegend(
+        #     1 - c.GetRightMargin() - 0.22,
+        #     c.GetBottomMargin() + 0.02,
+        #     1 - c.GetRightMargin(),
+        #     c.GetBottomMargin() + 0.21
+        #     )
+
+        leg = ROOT.TLegend(
+            c.GetLeftMargin() + 0.01,
+            c.GetBottomMargin() + 0.02,
+            1 - c.GetRightMargin() - 0.01,
+            c.GetBottomMargin() + 0.09
+            )
+        leg.SetNColumns(3)
+        leg.SetBorderSize(0)
+        leg.SetFillStyle(0)
+
+        for container in containers:
+
+            for Tg in container.contours_1sigma:
+                Tg.SetLineWidth(2)
+                Tg.SetLineColor( container.color )
+                Tg.SetLineStyle(1)
+                Tg.Draw('CSAME')
+                if Tg == container.contours_1sigma[0]:
+                    Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
+                    leg.AddEntry( Tg.GetName(), titles.get( container.name, container.name ), 'l' )
+
+            for Tg in container.contours_2sigma:
+                Tg.SetLineWidth(2)
+                Tg.SetLineColor( container.color )
+                Tg.SetLineStyle(2)
+                Tg.Draw('CSAME')
+
+            Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
+            ROOT.SetOwnership( Tpoint, False )
+            Tpoint.SetMarkerSize(2)
+            Tpoint.SetMarkerStyle(34)
+            Tpoint.SetMarkerColor( container.color )
+            Tpoint.Draw('PSAME')
+            Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
+
+        TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [0.0] ) )
+        ROOT.SetOwnership( TpointSM, False )
+        TpointSM.SetMarkerSize(2)
+        TpointSM.SetMarkerStyle(21)
+        TpointSM.SetMarkerColor( 12 )
+        TpointSM.Draw('PSAME')
+
+        leg.Draw()
+
+        SaveC( 'contours' )
+
+
+    #____________________________________________________________________
+    if args.checkWSParametrization_Top:
+
+        # plotCombination = True
+        plotCombination = False
+
+        DrawExperimentalBinLines = False
+        # DrawExperimentalBinLines = True
+
+        # wsToCheck = 'workspaces_Aug11/combinedCard_Jul26_CouplingModel_Top_withTheoryUncertainties.root'
+        # wsToCheck = LATESTWORKSPACE_Top
+        wsToCheck = LatestPaths.ws_combined_split_top
+        wsParametrization = WSParametrization( wsToCheck )
+
+        theoryDir = LatestPaths.derivedTheoryFilesDirectory_Top
+        TheoryFileInterface.SetFileFinderDir( theoryDir )
+        topDerivedTheoryFiles = TheoryFileInterface.FileFinder(
+            ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
+            )
+
+        containers = []
+        colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
+        for topDerivedTheoryFile in topDerivedTheoryFiles:
+            color = next(colorCycle)
+
+            print topDerivedTheoryFile
+
+            container = TheoryFileInterface.ReadDerivedTheoryFile( topDerivedTheoryFile )
+            container.name = 'ct_{0}_cg_{1}'.format(
+                Commands.ConvertFloatToStr( container.ct ),
+                Commands.ConvertFloatToStr( container.cg ),
+                )
+
+            container.Tg_theory = TheoryFileInterface.ReadDerivedTheoryFileToTGraph( topDerivedTheoryFile, name = container.name )
+            container.Tg_theory.SetLineWidth(2)
+            container.Tg_theory.SetLineColor(color)
+            container.Tg_theory.SetMarkerColor(color)
+            container.Tg_theory.SetLineStyle(1)
+            container.Tg_theory.SetMarkerStyle(8)
+            container.Tg_theory.SetMarkerSize(0.8)
+
+            container.Tg_parametrization = wsParametrization.GetOutputContainer(
+                ct = container.ct , cg = container.cg,
+                returnWhat='theory' ).Tg
+            container.Tg_parametrization.SetLineColor(color)
+            container.Tg_parametrization.SetMarkerColor(color)
+            container.Tg_parametrization.SetLineStyle(1)
+
+            container.Tg_parametrization_expBinning = wsParametrization.GetOutputContainer(
+                ct = container.ct , cg = container.cg,
+                returnWhat='exp' ).Tg
+            container.Tg_parametrization_expBinning.SetLineColor(color)
+            container.Tg_parametrization_expBinning.SetMarkerColor(color)
+            container.Tg_parametrization_expBinning.SetLineStyle(1)
+
+            containers.append( container )
+
+
+        # ======================================
+        # Additional lines to check
+
+        extraTestCouplings = [
+            # { 'ct' : -0.565910458565, 'cg' : 9.62666416168 },
+            ]
+
+        extraTestContainers = []
+        for testCouplings in extraTestCouplings:
+            color = next(colorCycle)
+
+            container = Container(
+                name = '_'.join([ '{0}_{1:.2f}'.format(key, value) for key, value in sorted(testCouplings.iteritems()) ])
+                )
+            container.binBoundaries = containers[0].binBoundaries
+
+            container.Tg_parametrization = wsParametrization.GetOutputContainer(
+                ct = testCouplings['ct'] , cg = testCouplings['cg'],
+                returnWhat='theory' ).Tg
+            container.Tg_parametrization.SetLineColor(color)
+            container.Tg_parametrization.SetMarkerColor(color)
+            container.Tg_parametrization.SetLineStyle(1)
+
+            container.Tg_parametrization_expBinning = wsParametrization.GetOutputContainer(
+                ct = testCouplings['ct'] , cg = testCouplings['cg'],
+                returnWhat='exp' ).Tg
+            container.Tg_parametrization_expBinning.SetLineColor(color)
+            container.Tg_parametrization_expBinning.SetMarkerColor(color)
+            container.Tg_parametrization_expBinning.SetLineStyle(1)
+
+            extraTestContainers.append( container )
+
+
+
+        # ======================================
+        # Make plot
+
+
+        doBigLegend = False
+
+        c.cd()
+        c.Clear()
+        if doBigLegend:
+            SetCMargins( RightMargin=0.3 )
+        else:
+            SetCMargins()
+
+        xMinAbs = min([ container.Tg_theory.xMin for container in containers ])
+        xMaxAbs = max([ container.Tg_theory.xMax for container in containers ])
+        yMinAbs = min([ container.Tg_theory.yMin for container in containers ])
+        yMaxAbs = 1.4*max([ container.Tg_theory.yMax for container in containers ])
+
+        xMin = xMinAbs - 0.1*( xMaxAbs - xMinAbs )
+        xMax = xMaxAbs + 0.1*( xMaxAbs - xMinAbs )
+        yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
+        yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
+
+        base = GetPlotBase(
+            xMin = xMin,
+            xMax = xMax,
+            yMin = yMin,
+            yMax = yMax,
+            xTitle = 'p_{T} [GeV]', yTitle = '#mu'
+            )
+        base.Draw('P')
+
+
+        if doBigLegend:
+            leg = ROOT.TLegend(
+                1 - 0.3,
+                c.GetBottomMargin(),
+                1 - 0.02 ,
+                1 - c.GetTopMargin() 
+                )
+        else:
+            leg = ROOT.TLegend(
+                c.GetLeftMargin(),
+                1 - c.GetTopMargin() - 0.25,
+                1 - c.GetRightMargin(),
+                1 - c.GetTopMargin() 
+                )
+        leg.SetBorderSize(0)
+        leg.SetFillStyle(0)
+        leg.SetNColumns(3)
+
+
+        Tg_dotDummy = ROOT.TGraph( 1, array( 'f', [-999.] ), array( 'f', [-999.] ) )
+        Tg_dotDummy.SetMarkerStyle(8)
+        Tg_dotDummy.SetMarkerSize(0.8)
+        Tg_dotDummy.SetMarkerColor(49)
+        Tg_dotDummy.SetName( 'dotDummy' )
+        ROOT.SetOwnership( Tg_dotDummy, False )
+        Tg_dotDummy.Draw('P')
+
+        Tg_lineDummy = ROOT.TGraph( 1, array( 'f', [-999.] ), array( 'f', [-999.] ) )
+        Tg_lineDummy.SetLineWidth(2)
+        Tg_lineDummy.SetLineColor(49)
+        Tg_lineDummy.SetName( 'lineDummy' )
+        ROOT.SetOwnership( Tg_lineDummy, False )
+        Tg_lineDummy.Draw('L')
+
+        leg.AddEntry( Tg_dotDummy.GetName(),  'Theory calc.', 'P' )
+        leg.AddEntry( Tg_lineDummy.GetName(), 'Parametrization', 'L' )
+
+
+        if plotCombination:
+            # Combination scan result
+            combinationPOIs = Commands.ListPOIs( LatestPaths.ws_combined_unsplit )
+            combinationscans = PhysicsCommands.GetScanResults(
+                combinationPOIs,
+                'Scan_May15',
+                pattern = 'combinedCard'
+                )
+            TgCombination = PhysicsCommands.GetTGraphForSpectrum( combinationPOIs, combinationscans, name='Combination' )
+            TgCombination.SetLineColor(1)
+            TgCombination.SetFillColorAlpha( 1, 0.2 )
+            TgCombination.SetName('Combination')
+
+            CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                TgCombination,
+                drawImmediately=True, legendObject=leg, noBoxes=False, xMaxExternal=xMax, yMinExternal=yMin )
+
+
+        for container in containers:
+            container.Tg_theory.Draw('XP')
+            container.Tg_parametrization.Draw('XL')
+
+            if DrawExperimentalBinLines:
+                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                    container.Tg_parametrization_expBinning,
+                    drawImmediately=True,
+                    # legendObject=leg,
+                    noBoxes=True,
+                    xMaxExternal=xMax
+                    )
+
+
+            if doBigLegend:
+                leg.AddEntry( container.Tg_theory.GetName(), container.name, 'p' )
+            else:
+                leg.AddEntry(
+                    container.Tg_theory.GetName(),
+                    '#kappa_{{t}} = {0:.2f}, #kappa_{{g}} = {1:.2f}'.format( container.ct, container.cg ),
+                    'lp'
+                    )
+
+
+        for container in extraTestContainers:
+            container.Tg_parametrization.Draw('XL')
+            if DrawExperimentalBinLines:
+                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                    container.Tg_parametrization_expBinning,
+                    drawImmediately=True, legendObject=leg, noBoxes=True, xMaxExternal=xMax )
+
+
+        leg.Draw()
+
+        outname = '{0}_parametrizationCheck'.format( basename(wsToCheck) )
+        SaveC( outname )
+
+
+
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top_lumiStudy:
+
+        xCoupling = 'ct'
+        yCoupling = 'cg'
+        titles = {
+            'ct': '#kappa_{t}', 'cg' : '#kappa_{g}',
+            'hgg' : 'H #rightarrow #gamma#gamma',
+            'hzz' : 'H #rightarrow 4l',
+            'combined' : 'Combination',
+            'regularLumi' : 'Expected at 35.9 fb^{-1}',
+            'highLumi' : 'Expected at 300 fb^{-1}',
+            }
+
+        ASIMOV = True
+
+        if ASIMOV:
+            combined_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
+            combined_lum8_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov_lum8 ) )
+        else:
+            print 'ERROR: Only implemented for Asimov now'
+            sys.exit()
+
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'regularLumi'
+
+        combined_lum8 = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_lum8_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined_lum8.color = 2
+        combined_lum8.name = 'highLumi'
+
+
+        containers = [
+            combined,
+            combined_lum8
             ]
 
 
@@ -403,176 +791,7 @@ def main( args ):
 
         leg.Draw()
 
-        SaveC( 'contours' )
-
-
-    #____________________________________________________________________
-    if args.checkWSParametrization_Top:
-
-        plotCombination = False
-
-        # DrawExperimentalBinLines = False
-        DrawExperimentalBinLines = True
-
-        # wsToCheck = 'workspaces_Aug11/combinedCard_Jul26_CouplingModel_Top_withTheoryUncertainties.root'
-        wsToCheck = LATESTWORKSPACE_Top
-        wsParametrization = WSParametrization( wsToCheck )
-
-        theoryDir = LatestPaths.derivedTheoryFilesDirectory_Top
-        TheoryFileInterface.SetFileFinderDir( theoryDir )
-        topDerivedTheoryFiles = TheoryFileInterface.FileFinder(
-            ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
-            )
-
-        containers = []
-        colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
-        for topDerivedTheoryFile in topDerivedTheoryFiles:
-            color = next(colorCycle)
-
-            print topDerivedTheoryFile
-
-            container = TheoryFileInterface.ReadDerivedTheoryFile( topDerivedTheoryFile )
-            container.name = 'ct_{0}_cg_{1}'.format(
-                Commands.ConvertFloatToStr( container.ct ),
-                Commands.ConvertFloatToStr( container.cg ),
-                )
-
-            container.Tg_theory = TheoryFileInterface.ReadDerivedTheoryFileToTGraph( topDerivedTheoryFile, name = container.name )
-            container.Tg_theory.SetLineWidth(2)
-            container.Tg_theory.SetLineColor(color)
-            container.Tg_theory.SetMarkerColor(color)
-            container.Tg_theory.SetLineStyle(2)
-            container.Tg_theory.SetMarkerStyle(8)
-            container.Tg_theory.SetMarkerSize(0.8)
-
-            container.Tg_parametrization = wsParametrization.GetOutputContainer(
-                ct = container.ct , cg = container.cg,
-                returnWhat='theory' ).Tg
-            container.Tg_parametrization.SetLineColor(color)
-            container.Tg_parametrization.SetMarkerColor(color)
-            container.Tg_parametrization.SetLineStyle(1)
-
-            container.Tg_parametrization_expBinning = wsParametrization.GetOutputContainer(
-                ct = container.ct , cg = container.cg,
-                returnWhat='exp' ).Tg
-            container.Tg_parametrization_expBinning.SetLineColor(color)
-            container.Tg_parametrization_expBinning.SetMarkerColor(color)
-            container.Tg_parametrization_expBinning.SetLineStyle(1)
-
-            containers.append( container )
-
-
-        # ======================================
-        # Additional lines to check
-
-        extraTestCouplings = [
-            # { 'ct' : -0.565910458565, 'cg' : 9.62666416168 },
-            ]
-
-        extraTestContainers = []
-        for testCouplings in extraTestCouplings:
-            color = next(colorCycle)
-
-            container = Container(
-                name = '_'.join([ '{0}_{1:.2f}'.format(key, value) for key, value in sorted(testCouplings.iteritems()) ])
-                )
-            container.binBoundaries = containers[0].binBoundaries
-
-            container.Tg_parametrization = wsParametrization.GetOutputContainer(
-                ct = testCouplings['ct'] , cg = testCouplings['cg'],
-                returnWhat='theory' ).Tg
-            container.Tg_parametrization.SetLineColor(color)
-            container.Tg_parametrization.SetMarkerColor(color)
-            container.Tg_parametrization.SetLineStyle(1)
-
-            container.Tg_parametrization_expBinning = wsParametrization.GetOutputContainer(
-                ct = testCouplings['ct'] , cg = testCouplings['cg'],
-                returnWhat='exp' ).Tg
-            container.Tg_parametrization_expBinning.SetLineColor(color)
-            container.Tg_parametrization_expBinning.SetMarkerColor(color)
-            container.Tg_parametrization_expBinning.SetLineStyle(1)
-
-            extraTestContainers.append( container )
-
-
-
-        # ======================================
-        # Make plot
-
-        c.cd()
-        c.Clear()
-        SetCMargins( RightMargin=0.3 )
-
-        xMinAbs = min([ container.Tg_theory.xMin for container in containers ])
-        xMaxAbs = max([ container.Tg_theory.xMax for container in containers ])
-        yMinAbs = min([ container.Tg_theory.yMin for container in containers ])
-        yMaxAbs = max([ container.Tg_theory.yMax for container in containers ])
-
-        xMin = xMinAbs - 0.1*( xMaxAbs - xMinAbs )
-        xMax = xMaxAbs + 0.1*( xMaxAbs - xMinAbs )
-        yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
-        yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
-
-        base = GetPlotBase(
-            xMin = xMin,
-            xMax = xMax,
-            yMin = yMin,
-            yMax = yMax,
-            xTitle = 'p_{T} [GeV]', yTitle = '#mu'
-            )
-        base.Draw('P')
-
-        leg = ROOT.TLegend(
-            1 - 0.3,
-            c.GetBottomMargin(),
-            1 - 0.02 ,
-            1 - c.GetTopMargin() 
-            )
-        leg.SetBorderSize(0)
-        leg.SetFillStyle(0)
-
-
-        if plotCombination:
-            # Combination scan result
-            combinationPOIs = Commands.ListPOIs( 'workspaces_May15/combinedCard_May15.root' )
-            combinationscans = PhysicsCommands.GetScanResults(
-                combinationPOIs,
-                'Scan_May15',
-                pattern = 'combinedCard'
-                )
-            TgCombination = PhysicsCommands.GetTGraphForSpectrum( combinationPOIs, combinationscans, name='Combination' )
-            TgCombination.SetLineColor(1)
-            TgCombination.SetFillColorAlpha( 1, 0.2 )
-
-            CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
-                TgCombination,
-                drawImmediately=True, legendObject=leg, noBoxes=False, xMaxExternal=xMax )
-
-
-        for container in containers:
-            container.Tg_theory.Draw('XP')
-            container.Tg_parametrization.Draw('XL')
-
-            if DrawExperimentalBinLines:
-                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
-                    container.Tg_parametrization_expBinning,
-                    drawImmediately=True, legendObject=leg, noBoxes=True, xMaxExternal=xMax )
-
-            leg.AddEntry( container.Tg_theory.GetName(), container.name, 'p' )
-
-
-        for container in extraTestContainers:
-            container.Tg_parametrization.Draw('XL')
-            if DrawExperimentalBinLines:
-                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
-                    container.Tg_parametrization_expBinning,
-                    drawImmediately=True, legendObject=leg, noBoxes=True, xMaxExternal=xMax )
-
-
-        leg.Draw()
-
-        outname = '{0}_parametrizationCheck'.format( basename(wsToCheck) )
-        SaveC( outname )
+        SaveC( 'contours_Top_lumiStudy', asROOT=True )
 
 
 

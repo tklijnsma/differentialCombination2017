@@ -231,6 +231,58 @@ def BasicT2WSwithModel(
 
     
 
+def BasicGenericCombineCommand(
+        cmd,
+        batchJobSubDir = None,
+        onBatch        = False,
+        sendEmail      = True,
+        ):
+    
+    if onBatch:
+
+        if not batchJobSubDir:
+            batchJobSubDir = 'job_{0}'.format( strftime( '%H%M%S' ) )
+        tempdir = abspath( join( TEMPJOBDIR, batchJobSubDir ) )
+        tempdir = AppendNumberToDirNameUntilItDoesNotExistAnymore( tempdir )
+
+        if not TESTMODE:
+
+            if not isdir(tempdir): os.makedirs(tempdir)
+
+            osHandle, shFile =  tempfile.mkstemp(
+                prefix = 'basicbestfitjob_',
+                suffix = '.sh',
+                dir = tempdir
+                )
+            shFile = abspath( shFile )
+
+            cmsswPath = join( os.environ['CMSSW_BASE'], 'src' )
+
+            with open( shFile, 'w' ) as shFp:
+                if sendEmail:
+                    shFp.write( '#$ -M tklijnsm@gmail.com \n' )
+                    shFp.write( '#$ -m eas \n' )
+                shFp.write( '#$ -o {0} \n'.format( tempdir ) )
+                shFp.write( '#$ -e {0} \n'.format( tempdir ) )
+                shFp.write( 'export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch/ \n' )
+                shFp.write( 'source /cvmfs/cms.cern.ch/cmsset_default.sh \n' )
+                shFp.write( 'source /swshare/psit3/etc/profile.d/cms_ui_env.sh \n' )
+                shFp.write( 'cd {0} \n'.format( cmsswPath ) )
+                shFp.write( 'eval `scramv1 runtime -sh` \n')
+                shFp.write( 'cd {0} \n'.format( tempdir ) )
+                shFp.write( ' '.join(cmd) )
+
+            qsubCmd = 'qsub -q short.q {0}'.format( shFile )
+            executeCommand( qsubCmd )
+
+        else:
+            print 'TESTMODE + onBatch not implemented'
+
+    else:
+        executeCommand( cmd )
+
+
+
 
 def BasicBestfit(
         datacard,
@@ -847,18 +899,26 @@ def InterpretPOI( POI ):
 
 
 
+class AnalysisError(Exception):
+    pass
+
 def ThrowError(
-    errstr = ''
+    errstr = '',
+    throwException = False
     ):
 
-    stack = traceback.extract_stack(None, 2)[0]
-    linenumber = stack[1]
-    funcname = stack[2]
+    if throwException:
+        raise AnalysisError( errstr )
 
-    cwd = abspath( os.getcwd() )
-    modulefilename = relpath( stack[0], cwd )
+    else:
+        stack = traceback.extract_stack(None, 2)[0]
+        linenumber = stack[1]
+        funcname = stack[2]
 
-    print 'ERROR in {0}:{1} {2}:\n    {3}'.format( modulefilename, linenumber, funcname, errstr )
+        cwd = abspath( os.getcwd() )
+        modulefilename = relpath( stack[0], cwd )
+
+        print 'ERROR in {0}:{1} {2}:\n    {3}'.format( modulefilename, linenumber, funcname, errstr )
 
 
 
