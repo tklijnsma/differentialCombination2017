@@ -983,7 +983,7 @@ def rindex( someList, val ):
     # Regular list.index() finds first instance in list, this function finds the last
     return len(someList) - someList[::-1].index(val) - 1
 
-def FindMinimaAndErrors( POIvals, deltaNLLs ):
+def FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=False ):
 
     minDeltaNLL   = min(deltaNLLs)
     iMin          = rindex( deltaNLLs, minDeltaNLL )
@@ -1000,6 +1000,11 @@ def FindMinimaAndErrors( POIvals, deltaNLLs ):
         'wellDefinedRightBound' : False,
         'wellDefinedLeftBound'  : False,
         }
+    if returnContainer:
+        errReturnContainer = TheoryCommands.Container()
+        for key, value in errReturn.iteritems():
+            setattr( errReturnContainer, key, value )
+        errReturn = errReturnContainer
 
     if iMin > 2:
         # Find left minimum
@@ -1050,7 +1055,8 @@ def FindMinimaAndErrors( POIvals, deltaNLLs ):
     leftError = abs(minimumPOIval - leftBound)
     rightError = abs(minimumPOIval - rightBound)
 
-    return {
+
+    returnDict = {
         'imin'       : iMin,
         'min'        : minimumPOIval,
         'leftError'  : leftError,
@@ -1060,6 +1066,16 @@ def FindMinimaAndErrors( POIvals, deltaNLLs ):
         'wellDefinedRightBound' : wellDefinedRightBound,
         'wellDefinedLeftBound'  : wellDefinedLeftBound,
         }
+
+    if returnContainer:
+        container = TheoryCommands.Container()
+        for key, value in returnDict.iteritems():
+            setattr( container, key, value )
+        return container
+    else:
+        return returnDict
+
+
 
 
 

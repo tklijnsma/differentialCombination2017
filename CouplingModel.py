@@ -1,5 +1,6 @@
 
 from HiggsAnalysis.CombinedLimit.PhysicsModel import *
+from HiggsAnalysis.CombinedLimit.SMHiggsBuilder import SMHiggsBuilder
 
 import os, sys, numpy, itertools, re
 import ROOT
@@ -7,6 +8,10 @@ from math import sqrt
 from copy import deepcopy
 from array import array
 
+from time import sleep
+
+class CouplingModelError(Exception):
+    pass
 
 class CouplingModel( PhysicsModel ):
     ''' Model used to unfold differential distributions '''
@@ -18,6 +23,8 @@ class CouplingModel( PhysicsModel ):
         self.mass = 125.
         self.verbose = 1
 
+        self.Persistence = []
+
         self.theories = []
 
         self.SMbinBoundaries = []
@@ -26,6 +33,7 @@ class CouplingModel( PhysicsModel ):
         self.includeLinearTerms = False
         self.splitggH           = False
         self.MakeLumiScalable   = False
+        self.FitBR              = False
 
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
@@ -37,128 +45,11 @@ class CouplingModel( PhysicsModel ):
         
 
 
-    def chapter( self, text, indent=0 ):
-        if self.verbose:
-            print '\n{tabs}{line}\n{tabs}{text}\n'.format(
-                tabs = '    ' * indent,
-                line = '-' * 70,
-                text = text
-                )
+    ################################################################################
+    # Standard methods
+    ################################################################################
 
-    def readTheoryFile( self, theoryFile ):
-        with open( theoryFile, 'r' ) as theoryFp:
-            lines = [ l.strip() for l in theoryFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
-
-        couplings    = {}
-        ratios       = []
-        crosssection = []
-
-        for line in lines:
-            key, value = line.split('=',1)
-            key = key.strip()
-            if key == 'binBoundaries':
-                binBoundaries = [ float(v) for v in value.split(',') ]
-            elif key == 'crosssection':
-                crosssection = [ float(v) for v in value.split(',') ]
-            elif key == 'ratios':
-                ratios = [ float(v) for v in value.split(',') ]
-            else:
-                try:
-                    couplings[key] = float(value)
-                except ValueError:
-                    # print '[error]: Could not call float(value) for key/value pair:'
-                    # print '    key   : {0}'.format( key )
-                    # print '    value :'
-                    # print value
-                    # sys.exit()
-                    continue
-
-        return binBoundaries, ratios, crosssection
-
-
-    def readCorrelationMatrixFile( self, correlationMatrixFile ):
-        with open( correlationMatrixFile, 'r' ) as correlationMatrixFp:
-            lines = [ l.strip() for l in correlationMatrixFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
-
-        corrMat = [ [ float(number) for number in line.split() ] for line in lines ]
-
-        # Check if it is square
-        if not all([ len(row) == len(corrMat) for row in corrMat ]):
-            print '[ERROR] inputted matrix is not square - Found:'
-            print corrMat
-
-        return corrMat
-
-
-    def readErrorFile( self, errorFile ):
-        with open( errorFile, 'r' ) as errorFp:
-            lines = [ l.strip() for l in errorFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
-
-        symmErrors = []
-        for line in lines:
-            line = line.split()
-
-            if len(line) == 1:
-                symmErrors.append( abs(float(line[0])) )
-            elif len(line) == 2:
-                symmErrors.append( 0.5*( abs(float(line[0])) + abs(float(line[1])) ) )
-            else:
-                print '[ERROR] Found {0} elements on line in \'{1}\''.format( len(line), errorFile )
-                return
-            
-        return symmErrors
-
-    # Literal example from Pasquale:
-
-    # def Decorrelate( correlationMatrix, errors ):
-
-    #     ndim = 2
-    #     covariance = ROOT.TMatrixDSym(ndim)
-    #     errors = [ 0.7, 1 ]
-    #     correlations = [ [1, 0.5], [0.5, 1] ]
-    #     transform = [ [1, 0], [0, 1] ]
-
-    #     for ix in xrange(ndim):
-    #         for iy in xrange(ndim):
-    #             covariance[ix][iy] = correlations[ix][iy]*errors[ix]*errors[iy]
-    #     covariance.Print()
-
-    #     eigen = ROOT.TMatrixDSymEigen(covariance)
-    #     vectors = eigen.GetEigenVectors()
-    #     values  = eigen.GetEigenValues()
-
-    #     vectors.Print()
-    #     values.Print()
-
-
-    #     for ix in xrange(ndim):
-    #         for iy in xrange(ndim):
-    #             transform[ix][iy] = vectors(ix,iy) * sqrt(values(iy))
-
-    #     print transform
-
-    def Decorrelate( self, covarianceMatrix ):
-
-        N = len(covarianceMatrix)
-
-        covarianceTMatrix = ROOT.TMatrixDSym(N)
-        for i in xrange(N):
-            for j in xrange(N):
-                # covarianceTMatrix[i][j] = covarianceMatrix[i][j]
-                covarianceTMatrix[i,j] = covarianceMatrix[i][j]
-
-        eigenObject  = ROOT.TMatrixDSymEigen(covarianceTMatrix)
-        eigenVectors = eigenObject.GetEigenVectors()
-        eigenValues  = eigenObject.GetEigenValues()
-
-        decorrelatedMatrix = [ [ 999 for j in xrange(N) ] for i in xrange(N) ]
-        for i in xrange(N):
-            for j in xrange(N):
-                decorrelatedMatrix[i][j] = eigenVectors(i,j) * sqrt( eigenValues(j) )
-
-        return decorrelatedMatrix
-
-
+    #____________________________________________________________________
     def setPhysicsOptions( self, physOptions ):
         self.chapter( 'Starting model.setPhysicsOptions()' )
 
@@ -170,6 +61,9 @@ class CouplingModel( PhysicsModel ):
 
             elif optionName == 'lumiScale':
                 self.MakeLumiScalable = eval(optionValue)
+
+            elif optionName == 'FitBR':
+                self.FitBR = eval(optionValue)
 
             elif optionName == 'splitggH':
                 self.splitggH = eval(optionValue)
@@ -232,7 +126,8 @@ class CouplingModel( PhysicsModel ):
                     self.SMDict['couplings'][couplingName] = float(couplingValue)
 
                 # SM cross section extended with underflow and overflow bin
-                self.SMXS = [ self.SMDict['crosssection'][0] ] + self.SMDict['crosssection'] + [ self.SMDict['crosssection'][-1] ]
+                # self.SMXS = [ self.SMDict['crosssection'][0] ] + self.SMDict['crosssection'] + [ self.SMDict['crosssection'][-1] ]
+                self.SMXS = [ 0.0 ] + self.SMDict['crosssection']
 
 
             elif optionName == 'higgsMassRange':
@@ -263,29 +158,180 @@ class CouplingModel( PhysicsModel ):
                 continue
 
 
-
+    #____________________________________________________________________
     def doParametersOfInterest(self):
         self.chapter( 'Starting model.doParametersOfInterest()' )
 
-        bins    = self.DC.bins
-        signals = self.DC.signals
-        signals = [ s for s in signals if not 'OutsideAcceptance' in s ]
-        
-        if self.splitggH:
-            signals = [ s for s in signals if 'ggH' in s ]
+        self.setMH()
 
-        # if self.skipBins:
-        #     signalsFiltered = []
-        #     for signal in signals:
-        #         for skipBin in self.skipBins:
-        #             if skipBin in signal:
-        #                 break
-        #         else:
-        #             signalsFiltered.append(signal)
-        #     signals = signalsFiltered
+        self.figureOutBinning()
 
-        signals.sort( key = lambda n: float(
-            n.split('_')[2].replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','') ) )
+        self.makeParametrizationsFromTheory()
+
+        self.defineYieldParameters()
+
+        self.addTheoryUncertaintyNuisances()
+
+        self.chapter( 'Starting model.getYieldScale()' )
+
+
+
+    #____________________________________________________________________
+    def getYieldScale( self, bin, process ):
+
+        def p( yieldScale ):
+            if self.verbose > 0:
+                print 'Getting yield scale: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldScale )
+
+        one = 1 if not self.MakeLumiScalable else 'lumiScale'
+
+        if not self.DC.isSignal[process]:
+            p( one )
+            return one
+
+        else:
+            
+            if process == 'OutsideAcceptance':
+                p( one )
+                return one
+            
+            elif self.splitggH and not 'ggH' in process:
+
+                if self.FitBR and self.BinIsHgg( bin ):
+                    p( 'Scaling_hgg' )
+                    return 'Scaling_hgg'
+
+                p( one )
+                return one
+
+            else:
+
+                # Try to determine bin boundaries from process name
+                match = re.search( r'([\dmp]+)_([\dmp]+)', process )
+
+                if not match:
+                    p( one )
+                    return one
+                else:
+
+                    leftBound  = float(match.group(1))
+                    rightBound = float(match.group(2))
+
+                    for iBin in xrange(self.nExpBins):
+                        if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
+
+                            if iBin >= len(self.yieldParameterNames):
+                                # This case can happen when binBoundaries are manually specified
+                                # up until x, but the theory spectra allow yieldParameter construction
+                                # up to <x.
+                                # This can be prevented by passing less bins in the command line
+                                p( one )
+                                return one
+
+                            yieldParameter = self.yieldParameterNames[iBin]
+                            if self.FitBR and self.BinIsHgg( bin ):
+                                yieldParameter = self.hgg_yieldParameterNames[iBin]
+
+                            p(yieldParameter)
+                            return yieldParameter
+
+                    # raise CouplingModelError( 
+                    #     'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
+                    #     )
+
+                    print 'Process \'{0}\' is outside the specified binning ({1}-{2}), and will be scaled with 1'.format(
+                        process, self.expBinBoundaries[0], self.expBinBoundaries[-1]
+                        )
+                    p( one )
+                    return one
+
+
+    #____________________________________________________________________
+    def getYieldScale_OLD( self, bin, process ):
+
+        def p( yieldScale ):
+            if self.verbose > 0:
+                print 'Getting yield scale: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldScale )
+
+        one = 1 if not self.MakeLumiScalable else 'lumiScale'
+
+        if not self.DC.isSignal[process]:
+            p( one )
+            return one
+        else:
+            if process == 'OutsideAcceptance':
+                p( one )
+                return one
+            elif self.splitggH and not 'ggH' in process:
+                p( one )
+                return one
+            else:
+
+                if not( self.manualExpBinBoundaries is None ):
+
+                    # Try to determine bin boundaries from process name
+                    match = re.search( r'([\dmp]+)_([\dmp]+)', process )
+
+                    if not match:
+                        p( one )
+                        return one
+                    else:
+
+                        # Still check if the bin is supposed to be skipped
+                        for skipBin in self.skipBins:
+                            if skipBin in process:
+                                p(one)
+                                return one
+
+                        leftBound  = float(match.group(1))
+                        rightBound = float(match.group(2))
+
+                        for iBin in xrange(self.nExpBins):
+                            if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
+
+                                if iBin >= len(self.yieldParameterNames):
+                                    # This case can happen when binBoundaries are manually specified
+                                    # up until x, but the theory spectra allow yieldParameter construction
+                                    # up to <x
+                                    p( one )
+                                    return one
+
+                                yieldParameter = self.yieldParameterNames[iBin]
+                                if self.FitBR and self.BinIsHgg( bin ):
+                                    yieldParameter = self.hgg_yieldParameterNames[iBin]
+
+                                p(yieldParameter)
+                                return yieldParameter
+
+                        # raise CouplingModelError( 
+                        #     'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
+                        #     )
+                        print 'Process \'{0}\' is outside the specified binning ({1}-{2}), and will be scaled with 1'.format(
+                            process, expBinBoundaries[0], expBinBoundaries[-1]
+                            )
+                        p( one )
+                        return one
+
+                else:
+                    # Case for when no manual bin boundaries were specified
+
+                    yieldParameter = 'r_' + process
+
+                    for skipBin in self.skipBins:
+                        if skipBin in process:
+                            yieldParameter = one
+
+                    p( yieldParameter )
+                    return yieldParameter
+
+
+
+    ################################################################################
+    # Split parts of doParametersOfInterest
+    ################################################################################
+
+    #____________________________________________________________________
+    def setMH( self ):
 
         if self.modelBuilder.out.var("MH"):
             if len(self.mHRange):
@@ -305,38 +351,8 @@ class CouplingModel( PhysicsModel ):
                 self.modelBuilder.doVar("MH[%g]" % self.mass)
 
 
-        # ======================================
-        # Figure out experimental binning from signals
-
-        productionMode, observableName = signals[0].split('_')[:2]
-
-        if len(self.manualExpBinBoundaries) > 0:
-            expBinBoundaries = self.manualExpBinBoundaries
-            expBinBoundaries.append( 500. )
-            nExpBins = len(expBinBoundaries) - 1
-            print 'Taking manually specified bin boundaries:', expBinBoundaries
-
-        else:
-            expBinBoundaries = []
-            for signal in signals:
-                if 'OutsideAcceptance' in signal: continue
-                bounds = signal.split('_')[2:]
-                for bound in bounds:
-                    bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
-                    expBinBoundaries.append( float(bound) )
-            expBinBoundaries = list(set(expBinBoundaries))
-            expBinBoundaries.sort()
-            expBinBoundaries.append( 500. )  # Overflow bin
-            nExpBins = len(expBinBoundaries) - 1
-
-            print 'Determined the following experimental bin boundaries:', expBinBoundaries
-            print '   from the following signals:'
-            print '   ' + '\n   '.join( signals )
-
-        # Also attach to class so they are accesible in other methods
-        self.expBinBoundaries = expBinBoundaries
-        self.nExpBins         = nExpBins
-
+    #____________________________________________________________________
+    def makeParametrizationsFromTheory( self ):
 
         ########################################
         # Handling theory
@@ -370,7 +386,7 @@ class CouplingModel( PhysicsModel ):
             nComponents += len(couplings) + 1
 
         if not len(couplingCombinations) == nComponents:
-            print 'ERROR: amount of coupling combinations should be equal to number of expected parameters'
+            raise CouplingModelError( 'ERROR: amount of coupling combinations should be equal to number of expected parameters' )
             sys.exit()
 
         if len(self.theories) > nComponents:
@@ -381,13 +397,12 @@ class CouplingModel( PhysicsModel ):
             for theory in self.theories:
                 print '    ' + ', '.join([ '{0:10} = {1:10}'.format( cName, cValue ) for cName, cValue in theory['couplings'].iteritems() ])
         elif len(self.theories) < nComponents:
-            print 'ERROR: cannot parametrize because number of supplied theories is too small (need {0} theories, found {1})'.format(
-                nComponents, len(self.theories) )
-            sys.exit()
+            raise CouplingModelError( 'ERROR: cannot parametrize because number of supplied theories is too small (need {0} theories, found {1})'.format(
+                nComponents, len(self.theories) ) )
 
 
         # ======================================
-        # Find the parametrizations for all nTheorybins, plus 1 underflow and 1 overflow parametrization
+        # Find the parametrizations for all nTheoryBins, plus 1 underflow and 1 overflow parametrization
 
         # First make sure there are RooRealVars for all the couplings in the workspace
         for coupling in couplings:
@@ -439,11 +454,13 @@ class CouplingModel( PhysicsModel ):
 
         # Use the SAME parametrization for the underflow bin as the first actually defined bin
         # Otherwise the zero contribution pulls down the integral
-        parametrizations[0] = deepcopy( parametrizations[1] )
+        #   Sep28: Actually just put 0.0. The underflow bin is considered to have no contribution
+        # parametrizations[0] = deepcopy( parametrizations[1] )
 
         # Overflow (right extrapolation)
-        # parametrizations.append( [ 0. for i in xrange(nComponents) ] )
-        parametrizations.append( parametrizations[-1][:] )
+        #   Sep28: Stop adding the overflow parametrization.
+        #          Just use whatever parametrizations there are in the overflow bin, or return 1.0
+        # parametrizations.append( parametrizations[-1][:] )
 
         if self.verbose:
             print '\nParametrizations per theory bin:'
@@ -497,37 +514,142 @@ class CouplingModel( PhysicsModel ):
         self.modelBuilder.out.defineSet( 'parametrizations', ','.join(parametrizationNames) )
 
 
-        ########################################
-        # Find the theory bin widths and parametrization indices inside the experimental bins
-        ########################################
+
+        # Attach to class
+
+        self.parametrizations     = parametrizations
+
+        self.couplingCombinations = couplingCombinations
+        self.nComponents          = nComponents
+
+        self.nCouplings           = nCouplings
+        self.couplings            = couplings
+        self.nTheoryBins          = nTheoryBins
+        self.theoryBinBoundaries  = theoryBinBoundaries
+
+
+
+    #____________________________________________________________________
+    def figureOutBinning( self ):
+
+        bins    = self.DC.bins
+        signals = self.DC.signals
+        signals = [ s for s in signals if not 'OutsideAcceptance' in s ]
+        
+        # Determine all available production modes
+        productionModes = list(set([ s.split('_')[0] for s in signals ]))
+
+        if self.splitggH:
+            signals = [ s for s in signals if 'ggH' in s ]
+
+        signals.sort( key = lambda n: float(
+            n.split('_')[2].replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','') ) )
+
+
+        # ======================================
+        # Figure out experimental binning from signals
+
+        productionMode, observableName = signals[0].split('_')[:2]
+
+        if len(self.manualExpBinBoundaries) > 0:
+            expBinBoundaries = self.manualExpBinBoundaries
+            # Overflow bin should be added on command line, is safer
+            # expBinBoundaries.append( 500. )
+            nExpBins = len(expBinBoundaries) - 1
+            if self.verbose:
+                print 'Taking manually specified bin boundaries:', expBinBoundaries
+
+        else:
+            raise CouplingModelError(
+                'Specify \'--PO binBoundaries=0,15,...\' on the command line. Automatic boundary determination no longer supported.'
+                )
+            # expBinBoundaries = []
+            # for signal in signals:
+            #     if 'OutsideAcceptance' in signal: continue
+            #     bounds = signal.split('_')[2:]
+            #     for bound in bounds:
+            #         bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
+            #         expBinBoundaries.append( float(bound) )
+            # expBinBoundaries = list(set(expBinBoundaries))
+            # expBinBoundaries.sort()
+            # expBinBoundaries.append( 500. )  # Overflow bin
+            # nExpBins = len(expBinBoundaries) - 1
+
+            # if self.verbose:
+            #     print 'Determined the following experimental bin boundaries:', expBinBoundaries
+            #     print '   from the following signals:'
+            #     print '   ' + '\n   '.join( signals )
+
+
+        self.allProcessBinBoundaries = []
+        for signal in signals:
+            if 'OutsideAcceptance' in signal: continue
+            bounds = signal.split('_')[2:]
+            for bound in bounds:
+                bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
+                self.allProcessBinBoundaries.append( float(bound) )
+
+
+        # Attach to class so they are accesible in other methods
+        self.expBinBoundaries = expBinBoundaries
+        self.nExpBins         = nExpBins
+
+        self.signals          = signals
+        self.productionMode   = productionMode
+        self.observableName   = observableName
+
+
+    #____________________________________________________________________
+    def defineYieldParameters( self ):
+        self.chapter( 'Starting model.defineYieldParameters()' )
+
+        # Define some variables in local for convenience
+        nExpBins            = self.nExpBins
+        expBinBoundaries    = self.expBinBoundaries
+        nTheoryBins         = self.nTheoryBins
+        theoryBinBoundaries = self.theoryBinBoundaries
+        parametrizations    = self.parametrizations
+
+
+        # ======================================
+        # Extra variables for further studies
 
         if self.MakeLumiScalable:
             self.modelBuilder.doVar( 'lumiScale[1.0]' )
             self.modelBuilder.out.var('lumiScale').setConstant()
 
+        if self.FitBR:
+            self.importHGamGamScaler()
+
+
+        # ======================================
+        # Start of loop over experimental bins
 
         SMXSInsideExperimentalBins = []
         self.yieldParameterNames = []
         for iExpBin in xrange(nExpBins):
 
-            if self.skipOverflowBin and iExpBin == nExpBins-1 :
-                if self.verbose:
-                    print '\n' + '='*80
-                    print 'Skipping bin {0} (Overflow bin)'.format(iExpBin)
-                continue
-
             expBoundLeft  = expBinBoundaries[iExpBin]
             expBoundRight = expBinBoundaries[iExpBin+1]
-            # expBinStr     = signals[iExpBin]
 
-            if iExpBin == nExpBins-1:
-                expBinStr     =  '{0}_{1}_GT{2}'.format(
-                    productionMode, observableName,
+            # Determine if bin is the overflow bin
+            isOverflowBin = False
+            if expBoundLeft == self.allProcessBinBoundaries[-1]:
+                isOverflowBin = True
+
+            # if iExpBin == nExpBins-1:
+            #     expBinStr     =  '{0}_{1}_GT{2}'.format(
+            #         self.productionMode, self.observableName,
+            #         expBoundLeft if not expBoundLeft.is_integer() else int(expBoundLeft)
+            #         )
+            if isOverflowBin:
+                expBinStr     = '{0}_{1}_GT{2}'.format(
+                    self.productionMode, self.observableName,
                     expBoundLeft if not expBoundLeft.is_integer() else int(expBoundLeft)
                     )
             else:
                 expBinStr     =  '{0}_{1}_{2}_{3}'.format(
-                    productionMode, observableName,
+                    self.productionMode, self.observableName,
                     expBoundLeft  if not expBoundLeft.is_integer() else int(expBoundLeft),
                     expBoundRight if not expBoundRight.is_integer() else int(expBoundRight)
                     )
@@ -544,6 +666,10 @@ class CouplingModel( PhysicsModel ):
             if expBoundLeft < theoryBinBoundaries[0]:
                 theoryBinBoundariesInsideExperimentalBin.append( expBoundLeft )
                 parametrizationIndices.append( 0 )
+
+
+            # ======================================
+            # Determine which parametrizations enter into the experimental bin
 
             for iTheoryBin in xrange(nTheoryBins):
 
@@ -572,9 +698,12 @@ class CouplingModel( PhysicsModel ):
                     break
 
             # Extrapolation on right of theory spectrum
+            # Sep28: Stop doing this
+            #        Use only the parametrizations defined by theorists
             if expBoundRight > theoryBinBoundaries[-1]:
-                theoryBinBoundariesInsideExperimentalBin.append( expBoundRight )
-                parametrizationIndices.append( nTheoryBins+1 )
+                # theoryBinBoundariesInsideExperimentalBin.append( expBoundRight )
+                # parametrizationIndices.append( nTheoryBins+1 )
+                theoryBinBoundariesInsideExperimentalBin.append( theoryBinBoundaries[-1] )
 
 
             nTheoryBinsInsideExperimentalBin = len(theoryBinBoundariesInsideExperimentalBin)-1
@@ -610,9 +739,6 @@ class CouplingModel( PhysicsModel ):
             if self.verbose:
                 print '\nTotal cross section in {1} is {0}'.format( SMXSInsideExperimentalBin, expBinStr )
 
-            # if self.verbose:
-            #     print '   Which will carry the following weights:'
-            #     print '   [ ' + ', '.join([ '{0:.4f}'.format(w) for w in theoryBinWidthsInsideExperimentalBin ]) + ']'
 
             if len(theoryBinWidthsInsideExperimentalBin) == 0:
                 print '  Did not find any theoretical bin boundaries inside this experimental bin'
@@ -629,7 +755,7 @@ class CouplingModel( PhysicsModel ):
                 print 'Creating expression for yield parameter'
 
             componentWeights = []
-            for iComponent in xrange(nComponents):
+            for iComponent in xrange(self.nComponents):
                 parametrizationWeights = []
                 for iParametrization, binWidth in zip( parametrizationIndices, theoryBinWidthsInsideExperimentalBin ):
                     weight = (
@@ -656,10 +782,10 @@ class CouplingModel( PhysicsModel ):
                 print '\nCalculating weighted average components'
 
             averageComponents = []
-            for iComponent in xrange(nComponents):
+            for iComponent in xrange(self.nComponents):
 
                 if self.verbose > 1:
-                    print '\n  Component {0}:'.format(iComponent)
+                    print '\n  Component {0} ('.format(iComponent), self.couplingCombinations[iComponent], '):'
 
                 averageComponent = 0.
                 parametrizationWeights = componentWeights[iComponent]
@@ -673,22 +799,35 @@ class CouplingModel( PhysicsModel ):
                         print '      product         = ', weight * parametrizations[iParametrization][iComponent]
 
                 if self.verbose > 1:
-                    print '  average Compontent {0} = {1}'.format( iComponent, averageComponent )
+                    print '  average Component {0} = {1}'.format( iComponent, averageComponent )
 
                 averageComponents.append( averageComponent )
+
+
+            if self.verbose:
+                print '\nThe determined polynomial for bin {0} is:\n'.format(expBinStr)
+
+                line = 'r_{0} = '.format(expBinStr)
+                for iComponent in xrange(self.nComponents):
+
+                    line += '{0}*{1} + '.format(
+                        averageComponents[iComponent],
+                        '*'.join(self.couplingCombinations[iComponent])
+                        )
+                print line [:-2]
 
 
             # ======================================
             # Importing into WS is somewhat delicate
 
-            argumentIndices = { coupling : '@{0}'.format(iCoupling) for iCoupling, coupling in enumerate(couplings) }
+            argumentIndices = { coupling : '@{0}'.format(iCoupling) for iCoupling, coupling in enumerate(self.couplings) }
 
             averageComponentNames = []
             productNames = []
             yieldParameterFormula = []
             for iAverageComponent, averageComponent in enumerate(averageComponents):
 
-                couplingList = couplingCombinations[iAverageComponent]
+                couplingList = self.couplingCombinations[iAverageComponent]
                 nCouplingsForThisParameter = len(couplingList)
 
                 averageComponentName = 'averageComponent_{signal}_{whichCouplings}'.format(
@@ -714,22 +853,22 @@ class CouplingModel( PhysicsModel ):
                 yieldParameterFormula.append( yieldParameterFormulaComponent )
 
             # Compile expression string for final yieldParameter
-            if not self.MakeLumiScalable:
-                yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                    signal                   = expBinStr,
-                    formulaString            = '+'.join(yieldParameterFormula),
-                    commaSeparatedParameters = ','.join( couplings + averageComponentNames )
-                    )
-            else:
+            if self.MakeLumiScalable:
                 argumentIndices['lumiScale'] = '@{0}'.format( len(argumentIndices) )
                 yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
                     signal                   = expBinStr,
                     formulaString            =  '{0}*({1})'.format( argumentIndices['lumiScale'], '+'.join(yieldParameterFormula) ),
                     commaSeparatedParameters = ','.join( couplings + averageComponentNames + ['lumiScale'] )
                     )
+            else:
+                yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                    signal                   = expBinStr,
+                    formulaString            = '+'.join(yieldParameterFormula),
+                    commaSeparatedParameters = ','.join( self.couplings + averageComponentNames )
+                    )
 
             if self.verbose:
-                print 'Final yield parameter expression: {0}'.format(yieldParameterExpression)
+                print '\nFinal yield parameter expression: {0}'.format(yieldParameterExpression)
                 print '  Overview:'
                 for key, value in argumentIndices.iteritems():
                     print '    {0:4} = {1}'.format( value, key )
@@ -738,26 +877,66 @@ class CouplingModel( PhysicsModel ):
 
             if self.verbose:
                 print '\nTest evaluation of yieldParameter:'
-                for coupling in couplings:
+                for coupling in self.couplings:
                     self.modelBuilder.out.var(coupling).Print()
                 self.modelBuilder.out.function( 'r_{0}'.format(expBinStr) ).Print()
                 print ''
 
+
             self.yieldParameterNames.append( 'r_{0}'.format(expBinStr) )
 
 
-        self.modelBuilder.out.defineSet( 'POI', ','.join(couplings) )
+            if self.FitBR:
+                # Multiply the yieldParameters by a BR modifier which can be fitted as well
+                # No real way to make this more general; very hardcoded for hgg
 
-        # Define 2 extra sets for plotting convenience
-        self.modelBuilder.out.defineSet( 'couplings', ','.join(couplings) )
-        # self.modelBuilder.out.defineSet( 'yieldParameters', ','.join([ 'r_' + s for s in signals ]) )
+                if not hasattr( self, 'hgg_yieldParameterNames' ):
+                    self.hgg_yieldParameterNames = []
+
+                hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                    signal                   = expBinStr,
+                    formulaString            = '@0*@1',
+                    commaSeparatedParameters = 'Scaling_hgg,r_{0}'.format( expBinStr )
+                    )
+                print 'Doing expr: ', hgg_yieldParameterExpression
+                self.modelBuilder.factory_( hgg_yieldParameterExpression )
+
+                self.hgg_yieldParameterNames.append( 'r_hgg_{0}'.format(expBinStr) )
+                
+
+        # Define sets in output datacard
+        self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
+
+        # These for convenience when plotting/testing
+        self.modelBuilder.out.defineSet( 'couplings', ','.join(self.couplings) )
         self.modelBuilder.out.defineSet( 'yieldParameters', ','.join(self.yieldParameterNames) )
 
+        if self.FitBR:
+            self.modelBuilder.out.defineSet( 'hgg_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
 
-        ########################################
-        # Handle theory uncertainties
-        ########################################
+        self.SMXSInsideExperimentalBins = SMXSInsideExperimentalBins
 
+
+        # Define boundaries also in output workspace
+
+        theoryBinBoundarySet = []
+        for i, theoryBinBoundary in enumerate(theoryBinBoundaries):
+            self.modelBuilder.doVar( 'theoryBinBound{0}[{1}]'.format( i, theoryBinBoundary ) )
+            theoryBinBoundarySet.append( 'theoryBinBound{0}'.format(i) )
+        self.modelBuilder.out.defineSet( 'theoryBinBoundaries', ','.join(theoryBinBoundarySet) )
+
+        expBinBoundarySet = []
+        for i, expBinBoundary in enumerate(expBinBoundaries):
+            if self.skipOverflowBin and expBinBoundary == expBinBoundaries[-1]: continue
+            self.modelBuilder.doVar( 'expBinBound{0}[{1}]'.format( i, expBinBoundary ) )
+            expBinBoundarySet.append( 'expBinBound{0}'.format(i) )
+        self.modelBuilder.out.defineSet( 'expBinBoundaries', ','.join(expBinBoundarySet) )
+
+
+
+    #____________________________________________________________________
+    def addTheoryUncertaintyNuisances( self ):
+    
         if self.verbose:
             print '\n' + '='*80
             print 'Inserting theory uncertainties\n'
@@ -785,7 +964,7 @@ class CouplingModel( PhysicsModel ):
                 print '[ERROR] Cannot build a covariance matrix out of given input'
                 print '        len(self.theoryUncertainties) = {0}'.format( len(self.theoryUncertainties) )
                 print '        len(self.correlationMatrix)   = {0}'.format( len(self.correlationMatrix) )
-                return
+                raise CouplingModelError()
 
             self.covarianceMatrix = []
             self.nTheoryUncertainties = len(self.theoryUncertainties)
@@ -819,7 +998,7 @@ class CouplingModel( PhysicsModel ):
             print '        self.theoryUncertaintiesPassed = ', self.theoryUncertaintiesPassed
             print '        self.correlationMatrixPassed   = ', self.correlationMatrixPassed
             print '        self.covarianceMatrixPassed    = ', self.covarianceMatrixPassed
-            return
+            raise CouplingModelError()
 
 
         if doDecorrelation:
@@ -834,9 +1013,9 @@ class CouplingModel( PhysicsModel ):
 
             print '  Divided by SM cross section:'
             decorrelatedMatrixNormalized = deepcopy( decorrelatedMatrix )
-            for i in xrange( min( self.nTheoryUncertainties, len(SMXSInsideExperimentalBins) ) ):
-                for j in xrange( min( self.nTheoryUncertainties, len(SMXSInsideExperimentalBins) ) ):
-                    decorrelatedMatrixNormalized[i][j] = 1 + decorrelatedMatrix[i][j] / SMXSInsideExperimentalBins[i]
+            for i in xrange( min( self.nTheoryUncertainties, len(self.SMXSInsideExperimentalBins) ) ):
+                for j in xrange( min( self.nTheoryUncertainties, len(self.SMXSInsideExperimentalBins) ) ):
+                    decorrelatedMatrixNormalized[i][j] = 1 + decorrelatedMatrix[i][j] / self.SMXSInsideExperimentalBins[i]
                     # # Skip some uncertainties if the effect is too small
                     # if abs(decorrelatedMatrixNormalized[i][j] - 1) < 0.0005:
                     #     decorrelatedMatrixNormalized[i][j] = 0.
@@ -858,8 +1037,8 @@ class CouplingModel( PhysicsModel ):
                             if skipBin in processName:
                                 continue
 
-                        if processName in signals:
-                            iProcess = signals.index(processName)
+                        if processName in self.signals:
+                            iProcess = self.signals.index(processName)
                             if iProcess < self.nTheoryUncertainties:
                                 errDict[binName][processName] = decorrelatedMatrixNormalized[iTheoryUncertainty][iProcess]
                         
@@ -877,155 +1056,167 @@ class CouplingModel( PhysicsModel ):
                     print 'Added nuisance \'{0}\''.format( systematicName )
                         
 
-
-        # Import also the theory and exp binBoundaries into workspace
-        # theoryBinBoundariesTVectorD = ROOT.TVectorD( len(theoryBinBoundaries) )
-        # for i, theoryBinBoundary in enumerate(theoryBinBoundaries):
-        #     theoryBinBoundariesTVectorD[i] = theoryBinBoundary
+    ################################################################################
+    # Helper functions
+    ################################################################################
 
 
-        theoryBinBoundarySet = []
-        for i, theoryBinBoundary in enumerate(theoryBinBoundaries):
-            self.modelBuilder.doVar( 'theoryBinBound{0}[{1}]'.format( i, theoryBinBoundary ) )
-            theoryBinBoundarySet.append( 'theoryBinBound{0}'.format(i) )
-        self.modelBuilder.out.defineSet( 'theoryBinBoundaries', ','.join(theoryBinBoundarySet) )
+    #____________________________________________________________________
+    def importHGamGamScaler( self ):
 
-        expBinBoundarySet = []
-        for i, expBinBoundary in enumerate(expBinBoundaries):
-            if self.skipOverflowBin and expBinBoundary == expBinBoundaries[-1]: continue
-            self.modelBuilder.doVar( 'expBinBound{0}[{1}]'.format( i, expBinBoundary ) )
-            expBinBoundarySet.append( 'expBinBound{0}'.format(i) )
-        self.modelBuilder.out.defineSet( 'expBinBoundaries', ','.join(expBinBoundarySet) )
+        # ======================================
+        # Collect the needed input couplings
 
-        self.chapter( 'Starting model.getYieldScale()' )
-
-
-    def getYieldScale( self, bin, process ):
-
-        def p( yieldScale ):
-            if self.verbose > 0:
-                print 'Getting yield scale: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldScale )
-
-        one = 1 if not self.MakeLumiScalable else 'lumiScale'
-
-        if not self.DC.isSignal[process]:
-            p( one )
-            return one
-        else:
-            if process == 'OutsideAcceptance':
-                p( one )
-                return one
-            elif self.splitggH and not 'ggH' in process:
-                p( one )
-                return one
+        def GetCouplingOrDefineNew( couplingName, possibyExistingCouplings=[] ):
+            # Look for possibly existing couplings that also define the desired coupling
+            for coupling in self.couplings:
+                if coupling in possibyExistingCouplings:
+                    if self.verbose:
+                        print 'Using existing variable \'{0}\' for \'{1}\''.format( coupling, couplingName )
+                    usedCouplingName = coupling
+                    break    
             else:
+                if self.verbose:
+                    print 'Creating new variable \'{0}\''.format( couplingName )
+                self.modelBuilder.doVar( '{0}[1.0]'.format(couplingName) )
+                usedCouplingName = couplingName
 
-                if not( self.manualExpBinBoundaries is None ):
+            couplingVar = self.modelBuilder.out.var(usedCouplingName)
+            return couplingVar
 
-                    # Try to determine bin boundaries from process name
-                    match = re.search( r'([\dmp]+)_([\dmp]+)', process )
+        kappa_t   = GetCouplingOrDefineNew( 'kappa_t', [ 'kappa_t', 'kappat', 'ct' ] )
+        kappa_b   = GetCouplingOrDefineNew( 'kappa_b', [ 'kappa_b', 'kappab', 'cb' ] )
+        kappa_c   = GetCouplingOrDefineNew( 'kappa_c', [ 'kappa_c', 'kappac', 'cc' ] )
+        kappa_W   = GetCouplingOrDefineNew( 'kappa_W', [ 'kappa_W', 'kappaW', 'cW' ] )
+        kappa_tau = GetCouplingOrDefineNew( 'kappa_tau' )
 
-                    if not match:
-                        p( one )
-                        return one
-                    else:
+        if not hasattr( self, 'SMH' ): self.SMH = SMHiggsBuilder(self.modelBuilder)
 
-                        # Still check if the bin is supposed to be skipped
-                        for skipBin in self.skipBins:
-                            if skipBin in process:
-                                p(one)
-                                return one
-
-                        leftBound  = float(match.group(1))
-                        rightBound = float(match.group(2))
-
-                        for iBin in xrange(self.nExpBins):
-                            if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
-
-                                if iBin >= len(self.yieldParameterNames):
-                                    # This case can happen when binBoundaries are manually specified
-                                    # up until x, but the theory spectra allow yieldParameter construction
-                                    # up to <x
-                                    p( one )
-                                    return one
-
-                                yieldParameter = self.yieldParameterNames[iBin]
-
-                                p(yieldParameter)
-                                return yieldParameter
-
-                        print 'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
-                        sys.exit()
-
-                else:
-                    # Case for when no manual bin boundaries were specified
-
-                    yieldParameter = 'r_' + process
-
-                    for skipBin in self.skipBins:
-                        if skipBin in process:
-                            yieldParameter = one
-
-                    p( yieldParameter )
-                    return yieldParameter
+        self.SMH.makeScaling(
+            'hgg',
+            Ctop = kappa_t.GetName(),
+            Cb   = kappa_b.GetName(),
+            CW   = kappa_W.GetName(),
+            Ctau = kappa_tau.GetName(),
+            )
 
 
 
-    def getYieldScaleOLD( self, bin, process ):
 
-        def p( yieldScale ):
-            if self.verbose > 0:
-                print 'Getting yield scale: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldScale )
 
-        if not self.DC.isSignal[process]:
-            p( 1 )
-            return 1
-        else:
-            if process == 'OutsideAcceptance':
-                p( 1 )
-                return 1
+    #____________________________________________________________________
+    def chapter( self, text, indent=0 ):
+        if self.verbose:
+            print '\n{tabs}{line}\n{tabs}{text}\n'.format(
+                tabs = '    ' * indent,
+                line = '-' * 70,
+                text = text
+                )
+
+
+    #____________________________________________________________________
+    def readTheoryFile( self, theoryFile ):
+        with open( theoryFile, 'r' ) as theoryFp:
+            lines = [ l.strip() for l in theoryFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
+
+        couplings    = {}
+        ratios       = []
+        crosssection = []
+
+        for line in lines:
+            key, value = line.split('=',1)
+            key = key.strip()
+            if key == 'binBoundaries':
+                binBoundaries = [ float(v) for v in value.split(',') ]
+            elif key == 'crosssection':
+                crosssection = [ float(v) for v in value.split(',') ]
+            elif key == 'ratios':
+                ratios = [ float(v) for v in value.split(',') ]
             else:
+                try:
+                    couplings[key] = float(value)
+                except ValueError:
+                    # print '[error]: Could not call float(value) for key/value pair:'
+                    # print '    key   : {0}'.format( key )
+                    # print '    value :'
+                    # print value
+                    # sys.exit()
+                    continue
 
-                if not( self.manualExpBinBoundaries is None ):
+        return binBoundaries, ratios, crosssection
 
-                    # Try to determine bin boundaries from process name
-                    match = re.search( r'([\dmp]+)_([\dmp]+)', process )
 
-                    if not match:
-                        p( 1 )
-                        return 1
-                    else:
-                        leftBound  = float(match.group(1))
-                        rightBound = float(match.group(2))
+    #____________________________________________________________________
+    def readCorrelationMatrixFile( self, correlationMatrixFile ):
+        with open( correlationMatrixFile, 'r' ) as correlationMatrixFp:
+            lines = [ l.strip() for l in correlationMatrixFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
 
-                        for iBin in xrange(self.nExpBins):
-                            if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
-                                yieldParameter = self.yieldParameterNames[iBin]
+        corrMat = [ [ float(number) for number in line.split() ] for line in lines ]
 
-                                # Still check if the bin is supposed to be skipped
-                                for skipBin in self.skipBins:
-                                    if skipBin in process:
-                                        yieldParameter = 1
+        # Check if it is square
+        if not all([ len(row) == len(corrMat) for row in corrMat ]):
+            print corrMat
+            raise CouplingModelError( '[ERROR] inputted matrix is not square - Found ^ ' )
 
-                                p(yieldParameter)
-                                return yieldParameter
+        return corrMat
 
-                        else:
-                            print 'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
-                            sys.exit()
 
-                else:
-                    # Case for when no manual bin boundaries were specified
+    #____________________________________________________________________
+    def readErrorFile( self, errorFile ):
+        with open( errorFile, 'r' ) as errorFp:
+            lines = [ l.strip() for l in errorFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
 
-                    yieldParameter = 'r_' + process
+        symmErrors = []
+        for line in lines:
+            line = line.split()
 
-                    for skipBin in self.skipBins:
-                        if skipBin in process:
-                            yieldParameter = 1
+            if len(line) == 1:
+                symmErrors.append( abs(float(line[0])) )
+            elif len(line) == 2:
+                symmErrors.append( 0.5*( abs(float(line[0])) + abs(float(line[1])) ) )
+            else:
+                raise CouplingModelError(
+                    '[ERROR] Found {0} elements on line in \'{1}\''.format( len(line), errorFile )
+                    )
+                return
+            
+        return symmErrors
 
-                    p( yieldParameter )
-                    return yieldParameter
 
+    #____________________________________________________________________
+    def Decorrelate( self, covarianceMatrix ):
+
+        N = len(covarianceMatrix)
+
+        covarianceTMatrix = ROOT.TMatrixDSym(N)
+        for i in xrange(N):
+            for j in xrange(N):
+                # covarianceTMatrix[i][j] = covarianceMatrix[i][j]
+                covarianceTMatrix[i,j] = covarianceMatrix[i][j]
+
+        eigenObject  = ROOT.TMatrixDSymEigen(covarianceTMatrix)
+        eigenVectors = eigenObject.GetEigenVectors()
+        eigenValues  = eigenObject.GetEigenValues()
+
+        decorrelatedMatrix = [ [ 999 for j in xrange(N) ] for i in xrange(N) ]
+        for i in xrange(N):
+            for j in xrange(N):
+                decorrelatedMatrix[i][j] = eigenVectors(i,j) * sqrt( eigenValues(j) )
+
+        return decorrelatedMatrix
+
+
+    #____________________________________________________________________
+    def BinIsHgg( self, bin ):
+        # This is not robust coding AT ALL
+        if bin.startswith('ch1'):
+            if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
+            return True
+        elif bin.startswith('ch2'):
+            if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
+            return False
+        else:
+            raise CouplingModelError( 'Bin \'{0}\' can not be classified as either a hgg or hzz bin' )
 
 
 

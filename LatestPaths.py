@@ -84,6 +84,20 @@ ws_njets_combined_unsplit = 'workspaces_Sep19/combinedCard_nJets_Sep19.root'
 ws_njets_hgg_unsplit      = 'workspaces_Sep19/Datacard_13TeV_differential_Njets_moriond17_skipAndDebug_reminiaod_corrections_genJetID_v5_renamedProcesses.root'
 ws_njets_hzz_unsplit      = 'workspaces_Sep19/hzz4l_comb_13TeV_xs.root'
 
+ws_FitBR_combined_unsplit = 'workspaces_Sep25/combinedCard_Jul26_FitBRModel.root'
+
+ws_combined_split_top_couplingDependentBR = 'workspaces_Sep27/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
+
+
+# Also scaling xH with the BR modifier, and better binning decisions w.r.t. underflow and overflow
+ws_combined_split_betterTop                        = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties.root'
+ws_combined_split_betterTop_couplingDependentBR    = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
+
+ws_combined_split_betterYukawa                     = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
+
+
+
 
 # ======================================
 # Derived theory files
@@ -181,6 +195,10 @@ scan_top_hzz_profiled_asimov         = 'Scan_Top_Sep20_asimov_0'
 scan_top_hgg_profiled_asimov         = 'Scan_Top_Sep20_asimov_1'
 scan_top_combined_profiled_asimov_lum8 = 'Scan_Top_Sep20_asimov_2'
 # scan_top_combined_profiled_asimov_lum8 = 'Scan_Top_Sep22_asimov' # New one, wait till finished
+
+
+scan_top_combined_profiled_asimov_couplingDependentBR = 'Scan_Top_Sep27_asimov'
+
 
 
 def main():

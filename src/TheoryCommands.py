@@ -42,20 +42,11 @@ def SetCMargins(
     c.SetTopMargin( TopMargin )
 
 
-########################################
-# Main
-########################################
-
-class Container:
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
-
-
 PLOTDIR = 'plots_{0}'.format(datestr)
 def SetPlotDir( newdir ):
     global PLOTDIR
     PLOTDIR = newdir
-def SaveC( outname, PNG=False, asROOT=False ):
+def SaveC( outname, asPNG=False, asROOT=False ):
     global PLOTDIR
     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
 
@@ -66,17 +57,12 @@ def SaveC( outname, PNG=False, asROOT=False ):
 
     outname = join( PLOTDIR, subdir, basename(outname).replace('.pdf','').replace('.png','') )
     c.SaveAs( outname + '.pdf' )
-    if PNG:
+    if asPNG:
         c.SaveAs( outname + '.png' )
 
     if asROOT:
         c.SaveAs( outname + '.root' )
 
-
-
-########################################
-# Common functions
-########################################
 
 ROOTCOUNTER = 1000
 def GetUniqueRootName():
@@ -110,6 +96,18 @@ def GetPlotBase(
     return base
 
 
+
+# class Container:
+#     def __init__(self, **kwds):
+#         print 'Warning: Should replace this class with the more common Container.Container'
+#         self.__dict__.update(kwds)
+from Container import Container
+
+
+########################################
+# Derived Theory Containers
+########################################
+
 #____________________________________________________________________
 def RebinDerivedTheoryContainer( container, newBinBoundaries ):
 
@@ -136,7 +134,7 @@ def RebinDerivedTheoryContainer( container, newBinBoundaries ):
     container.ratios        = newRatios
 
 
-
+#____________________________________________________________________
 # Theory files contain a somewhat non-consistent binning, turn it into a well-defined binning
 def BinningHeuristic(
     binCenters,
@@ -179,6 +177,7 @@ def BinningHeuristic(
 
 
 
+#____________________________________________________________________
 def GetTheoryTGraph(
     name,
     ptPoints,
@@ -187,7 +186,8 @@ def GetTheoryTGraph(
     muBoundRight  = None,
     boundaries    = False,
     ):
-
+    
+    print 'WARNING: Better to use OutputInterface.OutputContainer.GetTGraph()'
 
     if not boundaries:
         # Default setting; supplied pt points are bin centers
@@ -305,7 +305,8 @@ def GetTheoryTGraph(
 
 
 
-
+#____________________________________________________________________
+# Generic function the returns a function integral( a, b, verbose=False ), which is evaluated for binBoundaries and binValues
 def GetIntegral( binBoundaries, binValues ):
     nBins = len(binValues)
     binCenters = [ 0.5*( binBoundaries[i+1] + binBoundaries[i] ) for i in xrange(nBins-1) ]
@@ -393,7 +394,8 @@ def GetIntegral( binBoundaries, binValues ):
 
     return integralfunction
 
-
+#____________________________________________________________________
+# Rebin from any binning scheme to another using the integral function
 def Rebin(
         theoryBinBoundaries,
         theoryBinValues,
@@ -415,87 +417,12 @@ def Rebin(
     return expBinValues
 
 
-def MapFineToCoarse(
-        theoryBinBoundaries,
-        theoryBinValues,
-        expBinBoundaries,
-        lastBinIsOverflow = False,
-        verbose = False,
-        ):
-
-    print '[warning] \'MapFineToCoarse\' is now just an alias of \'Rebin\', and should no longer be used' 
-    
-    Rebin(
-        theoryBinBoundaries,
-        theoryBinValues,
-        expBinBoundaries,
-        lastBinIsOverflow = False,
-        verbose = False,
-        )
-
-# def Rebin(
-#     ptFine, sigmasFine,
-#     ptCoarse,
-#     verbose=False,
-#     ):
-
-#     integralfunction = GetIntegral( ptFine, sigmasFine )
-    
-#     sigmasCoarse = []
-#     for iBinCoarse in xrange( len(ptCoarse)-1 ):
-#         integral       = integralfunction( ptCoarse[iBinCoarse], ptCoarse[iBinCoarse+1], verbose=verbose )
-#         integralPerGeV = integral / ( ptCoarse[iBinCoarse+1] - ptCoarse[iBinCoarse] )
-#         if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( ptCoarse[iBinCoarse], ptCoarse[iBinCoarse+1], integralPerGeV )
-#         sigmasCoarse.append( integralPerGeV )
-
-#     return sigmasCoarse
-
-
-
-
-def BasicTheoryPlot( Tgs, drawErrors=True ):
-
-    c.Clear()
-
-    xMin = min( [ Tg.xMin for Tg in Tgs ] )
-    xMax = max( [ Tg.xMax for Tg in Tgs ] )
-
-    # Actually take 1.1 * 4th maximum to kill some spikes
-    # yMin = min( [ Tg.yMin for Tg in Tgs ] )
-    # yMax = max( [ Tg.yMax for Tg in Tgs ] )
-    yMin = min( [ Tg.fourth_yMin for Tg in Tgs ] )
-    yMax = max( [ Tg.fourth_yMax for Tg in Tgs ] )
-
-
-    base = GetPlotBase(
-        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
-        xTitle = 'PTH', yTitle = '#sigma'
-        )
-    base.Draw('P')
-
-    leg = ROOT.TLegend( 1-RightMargin-0.3, 1-TopMargin-0.3, 1-RightMargin, 1-TopMargin )
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
-
-    colorCycle = itertools.cycle( range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 ) )
-    for Tg in Tgs:
-        color = next(colorCycle)
-
-        if drawErrors:
-            Tg.Draw('L')
-        else:
-            Tg.Draw('L X')
-        
-        Tg.SetLineColor(color)
-        leg.AddEntry( Tg.GetName(), Tg.name, 'l' )
-
-    leg.Draw()
-
-    SaveC( 'theory_{0}'.format( GetShortTheoryName([ Tg.name for Tg in Tgs ]) ) )
-
-
-
+#____________________________________________________________________
+# Not sure which funcion uses this
 def GetShortTheoryName( names ):
+
+    print 'Notification: TheoryCommands.GetShortTheoryName() was called'
+
     keyStrings = [ 'ct', 'cb', 'cg' ]
 
     uniqueCombinations = set()
@@ -508,154 +435,48 @@ def GetShortTheoryName( names ):
 
 
 
-
-
-def GetParametrization(
-    points,
-    # = [
-    #    ( 0.1**2 , 0.1*0.075 , 0.075 ),
-    #    ( 0.5**2 , 0.5*0.042 , 0.042 ),
-    #    ( 1.5**2 , 1.5*-0.042 , -0.042 ),
-    #    ( 2.0**2 , 2.0*-0.083 , -0.083 ),
-    #    ],
-    yValues,
-    testMode = False,
-    ):
-
-    # function = 'y = A*x1 + B*x2 + C*x3'
-
-    nPoints = len(points)
-    nPars = len(points[0])
-
-    if nPoints > nPars:
-        print 'More points than parameters given, system is overconstrained; Taking only the first {0} points'.format( nPars )
-        nPoints = nPars
-        points = points[:nPars]
-        yValues = yValues[:nPars]
-    elif nPars < nPoints:
-        print 'Less points than parameters given, system is underconstrained'
-        return
-
-
-    if testMode:
-        print 'Used points:'
-        for point in points:
-            print 'y = fn( {0} )'.format( ', '.join([ str(p) for p in point]) )
-
-
-    xMatrix = numpy.array(points)
-    xInv = numpy.linalg.inv(xMatrix)
-
-
-    pointFunctions = []
-    parameterValuesPerPoint = []
-    for i in xrange(len(yValues[0])):
-
-        yValsPerPoint = numpy.array( [ [ys[i]] for ys in yValues ])
-        parameterValues = list(itertools.chain.from_iterable( xInv.dot( yValsPerPoint ) ))
-        parameterValuesPerPoint.append( parameterValues )
-
-        # NOTE THE i=i! otherwise i always points to the last element of the loop
-        pointFunction = lambda point, i=i: sum([ parValue * arg for parValue, arg in zip( point, parameterValuesPerPoint[i] ) ])
-        pointFunctions.append( pointFunction )
-
-
-        if testMode:
-
-            print '\n' + '-'*70 + '\nPoint {0}'.format(i)
-            print '\nxInv:'
-            print xInv
-            print '\nyValsPerPoint:'
-            print yValsPerPoint
-            print '\nparameterValues:'
-            print parameterValues
-
-            print '\nPoint function tests:'
-            print 'Real value = {1},  pointFunction = {0}'.format( pointFunction( points[0] ), yValsPerPoint[0] )
-            copy = list(points[0][:])
-
-            copy[0] = 1.1*points[0][0]
-            print 'small up variation of pointFunction   = {0}'.format( pointFunction( copy ) )
-            copy[0] = 0.9*points[0][0]
-            print 'small down variation of pointFunction = {0}'.format( pointFunction( copy ) )
-
-
-    functionForList = lambda *args: [ function(args) for function in pointFunctions ]
-    return functionForList
-
-
-
-
-def MapPredictionToExperimental(
-    ptTheory, sigmaTheory,
-    binning,
-    verbose = False,
-    makeTGraph = None,
-    ):
-
-    Commands.ThrowError( '\'MapPredictionToExperimental\' should really not be used anymore; use \'Rebin\' instead' )
-    sys.exit()
-
-
-    sigmas        = sigmaTheory
-    binBoundaries = ptTheory
-    nBins         = len(binBoundaries)-1
-    binCenters    = [ 0.5*( binBoundaries[i] + binBoundaries[i+1] ) for i in xrange(nBins) ]
-    binWidths     = [ ( binBoundaries[i+1] - binBoundaries[i] ) for i in xrange(nBins) ]
-    halfBinWidths = [ 0.5*( binBoundaries[i+1] - binBoundaries[i] ) for i in xrange(nBins) ]
-
-    nBinsExp      = len(binning)-1
-    binCentersExp    = [ 0.5*( binning[i] + binning[i+1] ) for i in xrange(nBinsExp) ]
-    binWidthsExp     = [ ( binning[i+1] - binning[i] ) for i in xrange(nBinsExp) ]
-    halfBinWidthsExp = [ 0.5*( binning[i+1] - binning[i] ) for i in xrange(nBinsExp) ]
-
-
-    if verbose:
-        print 'Theory curve:'
-        print '{0:9}  |  {1:9}  |  {2:9}  |  {3:9}'.format( 'pt left', 'pt right', 'pt center', 'sigma' )
-        for iBin in xrange(nBins):
-            print '{0:+9.2f}  |  {1:+9.2f}  |  {2:+9.2f}  |  {3:+9.5f}'.format(
-                binBoundaries[iBin], binBoundaries[iBin+1], binCenters[iBin], sigmas[iBin]
-                )
-
-    if verbose: print '\nInterpolating and rebinning'
-    # integralfunction = GetIntegral( binCenters, sigmas )
-    integralfunction = GetIntegral( binBoundaries, sigmas )
-
-    sigmaExpBinning = []
-    for iBinExp in xrange(nBinsExp):
-        leftBound      = binning[iBinExp]
-        rightBound     = binning[iBinExp+1]
-        integral       = integralfunction( leftBound, rightBound, verbose=verbose )
-        integralPerGeV = integral / ( rightBound - leftBound )
-        if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( leftBound, rightBound, integralPerGeV )
-        sigmaExpBinning.append( integralPerGeV )
-
-
-    if not makeTGraph == None:
-
-        Tg = ROOT.TGraphAsymmErrors(
-            nBinsExp,
-            array( 'd', binCentersExp ),
-            array( 'd', sigmaExpBinning, ),
-            array( 'd', halfBinWidthsExp ),
-            array( 'd', halfBinWidthsExp ),
-            array( 'd', [ 0 for i in xrange(nBinsExp) ] ),
-            array( 'd', [ 0 for i in xrange(nBinsExp) ] ),
-            )
-        ROOT.SetOwnership( Tg, False )
-        Tg.SetName( makeTGraph )
-        Tg.name = makeTGraph
-        return Tg
-
-    else:
-        return sigmaExpBinning
-
-
 ########################################
-# Making plots with output workspaces
+# Helper functions for plotting
 ########################################
 
+#____________________________________________________________________
+def BasicReadScan(
+        rootfiles,
+        xAttr,
+        yAttr = 'deltaNLL',
+        ):
+    
+    containers = Commands.ConvertTChainToArray(
+        rootfiles,
+        'limit',
+        r'{0}|{1}'.format( xAttr, yAttr ),
+        returnStyle == 'containerPerPoint'
+        )
+
+    # Filter out duplicate x values
+    unique_xs = list(set([ getattr( c, xAttr ) for c in container ]))
+
+    filteredContainers = []
+    for container in containers:
+        x = getattr( container, xAttr )
+        if x in unique_xs:
+            filteredContainers.append( container )
+            unique_xs.pop( unique_xs.index(x) )
+
+        if len(unique_xs) == 0:
+            break
+
+
+    # Sort along x
+    containers.sort( key = lambda c: getattr( c, xAttr ) )
+
+    xs = [ getattr( c, xAttr ) for c in container ]
+    ys = [ getattr( c, yAttr ) for c in container ]
+
+    return xs, ys
+
+
+#____________________________________________________________________
 def WriteTH2DToFile(
         rootfiles,
         xCoupling = 'ct',
@@ -732,14 +553,189 @@ def WriteTH2DToFile(
     H2outFp.Close()
 
 
+#____________________________________________________________________
+def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
 
-def PlotCouplingScan2D(
-        datacard,
+    # Open a temporary canvas so the contour business does not screw up other plots
+    ctemp = ROOT.TCanvas( 'ctemp', 'ctemp', 1000, 800 )
+    ctemp.cd()
+
+    TH2 = TH2_original.Clone()
+    TH2.SetName( GetUniqueRootName() )
+    TH2.SetContour( 1, array( 'd', [threshold] ) )
+
+    if verbose:
+        print 'Trying to get contours from \'{0}\''.format( TH2.GetName() )
+
+    TH2.Draw( 'CONT Z LIST' )
+    ROOT.gPad.Update()
+
+    if verbose:
+        print '    Contours found'
+
+    contours_genObj = ROOT.gROOT.GetListOfSpecials().FindObject('contours')
+
+    Tgs = []
+    for iContour in xrange( contours_genObj.GetSize() ):
+        contour_TList = contours_genObj.At(iContour)
+        for iVal in xrange( contour_TList.GetSize() ):
+            Tg = contour_TList.At(iVal)
+
+            TgClone = Tg.Clone()
+            ROOT.SetOwnership( TgClone, False )
+            Tgs.append( TgClone )
+
+
+    del TH2
+    del contours_genObj
+
+    ctemp.Close()
+    del ctemp
+    c.cd()
+    ROOT.gPad.Update()
+
+    return Tgs
+
+
+#____________________________________________________________________
+def SetExtremaOfContour( Tg ):
+
+    xBuffer = Tg.GetX()
+    xs = [ xBuffer[i] for i in xrange( Tg.GetN() ) ]
+
+    yBuffer = Tg.GetY()
+    ys = [ yBuffer[i] for i in xrange( Tg.GetN() ) ]
+
+    Tg.xMin = min(xs)
+    Tg.xMax = max(xs)
+    Tg.yMin = min(ys)
+    Tg.yMax = max(ys)
+
+
+#____________________________________________________________________
+def GetTH2FromListOfRootFiles(
         rootfiles,
         xCoupling = 'ct',
         yCoupling = 'cg',
-        SM = None,
-        verbose = True,
+        verbose   = False,
+        xMin = None, xMax = None, yMin = None, yMax = None,
+        multiplyByTwo = True,
+        ):
+
+    # Read values from specified rootfiles
+    scan = Commands.ConvertTChainToArray(
+        rootfiles,
+        returnStyle = 'dictPerPoint'
+        )
+    if xMin: scan = [ s for s in scan if s[xCoupling] >= xMin ]
+    if xMax: scan = [ s for s in scan if s[xCoupling] <= xMax ]
+    if yMin: scan = [ s for s in scan if s[yCoupling] >= yMin ]
+    if yMax: scan = [ s for s in scan if s[yCoupling] <= yMax ]
+    nPoints = len(scan)
+
+    GetListFromScan = lambda key: [ s[key] for s in scan ]
+
+    # keys = [ yCoupling, xCoupling, 'deltaNLL' ]
+    # ret = Container( scanPoints=[] )
+    # for iPoint in xrange(nPoints):
+    #     ret.scanPoints.append( [ scan[key][iPoint] for key in keys ] )
+    # if verbose:
+    #     pprint.pprint( [ keys ] + ret.scanPoints )
+
+
+    def inferBinBoundaries( binCenters ):
+        binBoundaries = []
+        for iBin in xrange(len(binCenters)-1):
+            binBoundaries.append( 0.5*(binCenters[iBin]+binCenters[iBin]) )
+        binBoundaries = (
+            [ binCenters[0] - (binBoundaries[0]-binCenters[0]) ] +
+            binBoundaries +
+            [ binCenters[-1] + (binCenters[-1]-binBoundaries[-1]) ]
+            )
+        return binBoundaries
+
+
+    iBestfit = GetListFromScan('deltaNLL').index( 0.0 )
+    xBestfit = GetListFromScan(xCoupling)[iBestfit]
+    yBestfit = GetListFromScan(yCoupling)[iBestfit]
+
+    xBinCenters = list(set( GetListFromScan(xCoupling) ))
+    xBinCenters.pop( xBinCenters.index(xBestfit) )
+    xBinCenters.sort()
+    xNBins = len(xBinCenters)
+    xBinBoundaries = inferBinBoundaries( xBinCenters )
+
+    yBinCenters = list(set( GetListFromScan(yCoupling) ))
+    yBinCenters.pop( yBinCenters.index(yBestfit) )
+    yBinCenters.sort()
+    yNBins = len(yBinCenters)
+    yBinBoundaries = inferBinBoundaries( yBinCenters )
+
+
+    H2name = GetUniqueRootName()
+    H2 = ROOT.TH2D(
+        H2name, '',
+        xNBins, array( 'd', xBinBoundaries ),
+        yNBins, array( 'd', yBinBoundaries ),
+        )
+    ROOT.SetOwnership( H2, False )
+
+
+    for iPoint in xrange(nPoints):
+
+        if scan[iPoint][xCoupling] == xBestfit and scan[iPoint][yCoupling] == yBestfit:
+            continue
+
+        try:
+            iBinX = xBinCenters.index( scan[iPoint][xCoupling] )
+        except ValueError:
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][xCoupling] )
+            continue
+
+        try:
+            iBinY = yBinCenters.index( scan[iPoint][yCoupling] )
+        except ValueError:
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][yCoupling] )
+            continue
+
+        if multiplyByTwo:
+            H2.SetBinContent( iBinX+1, iBinY+1, 2.*scan[iPoint]['deltaNLL'] )
+        else:
+            H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint]['deltaNLL'] )
+
+
+    # Open return object
+    ret = Container()
+
+    ret.H2             = H2
+    ret.xCoupling      = xCoupling
+    ret.yCoupling      = yCoupling
+    ret.iBestfit       = iBestfit
+    ret.xBestfit       = xBestfit
+    ret.yBestfit       = yBestfit
+    ret.xBinCenters    = xBinCenters
+    ret.xNBins         = xNBins
+    ret.xBinBoundaries = xBinBoundaries
+    ret.yBinCenters    = yBinCenters
+    ret.yNBins         = yNBins
+    ret.yBinBoundaries = yBinBoundaries
+
+    return ret
+    
+
+
+########################################
+# Plotting
+########################################
+
+#____________________________________________________________________
+def PlotCouplingScan2D(
+        datacard,
+        rootfiles,
+        xCoupling    = 'ct',
+        yCoupling    = 'cg',
+        SM           = None,
+        verbose      = True,
         drawContours = True,
         xMin = None, xMax = None, yMin = None, yMax = None,
         multiplyBinContents = None,
@@ -780,30 +776,6 @@ def PlotCouplingScan2D(
         TopMargin    = 0.09,
         )
 
-    # n_stops = 3
-    # stops  = [ 0.0, 0.5, 1.0 ]
-    # reds   = [ 0.0, 1.0, 1.0 ]
-    # blues  = [ 1.0, 1.0, 0.0 ]
-    # greens = [ 0.0, 1.0, 0.0 ]
-
-    # n_stops = 2
-    # stops  = [ 0.0, 1.0 ]
-    # reds   = [ 1.0, 1.0 ]
-    # blues  = [ 0.0, 1.0 ]
-    # greens = [ 0.0, 1.0 ]
-
-
-    # ROOT.TColor.CreateGradientColorTable(
-    #     n_stops,
-    #     array('d', stops ),
-    #     array('d', reds ),
-    #     array('d', greens ),
-    #     array('d', blues ),
-    #     255 )
-
-
-    # GetContoursFromTH2( H2, 2.99, minPoints = 20 )
-    # sys.exit()
 
     H2.Draw('COLZ')
 
@@ -892,763 +864,155 @@ def PlotCouplingScan2D(
     return res
     
 
-
-def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
-
-    # Open a temporary canvas so the contour business does not screw up other plots
-    ctemp = ROOT.TCanvas( 'ctemp', 'ctemp', 1000, 800 )
-    ctemp.cd()
-
-    TH2 = TH2_original.Clone()
-    TH2.SetName( GetUniqueRootName() )
-    TH2.SetContour( 1, array( 'd', [threshold] ) )
-
-    if verbose:
-        print 'Trying to get contours from \'{0}\''.format( TH2.GetName() )
-
-    TH2.Draw( 'CONT Z LIST' )
-    ROOT.gPad.Update()
-
-    if verbose:
-        print '    Contours found'
-
-    contours_genObj = ROOT.gROOT.GetListOfSpecials().FindObject('contours')
-
-    Tgs = []
-    for iContour in xrange( contours_genObj.GetSize() ):
-        contour_TList = contours_genObj.At(iContour)
-        for iVal in xrange( contour_TList.GetSize() ):
-            Tg = contour_TList.At(iVal)
-
-            TgClone = Tg.Clone()
-            ROOT.SetOwnership( TgClone, False )
-            Tgs.append( TgClone )
+#____________________________________________________________________
+def BasicMixedContourPlot(
+        containers,
+        xMin      = 0.,
+        xMax      = 1.,
+        yMin      = 0.,
+        yMax      = 1.,
+        xTitle    = 'x',
+        yTitle    = 'y',
+        plotname  = 'contours',
+        x_SM      = 1.,
+        y_SM      = 1.,
+        plotIndividualH2s = False,
+        ):
 
 
-    del TH2
-    del contours_genObj
+    # ======================================
+    # Check whether the passed containers fulfill requirements
 
-    ctemp.Close()
-    del ctemp
+    for container in containers:
+        attrs = container.ListAttributes()
+
+        for expectedAttr in [ 'H2', 'name' ]:
+            if not expectedAttr in attrs:
+                Commands.ThrowError(
+                    'Container misses mandatory attribute \'{0}\' (defined attributes: {1})'.format( expectedAttr, ', '.join(attrs) ),
+                    throwException = True
+                    )
+
+        if not hasattr( container, 'color' ):
+            container.color = 1
+
+
+    # ======================================
+    # Calculate contours
+
+    for container in containers:
+        container.contours_1sigma = GetContoursFromTH2( container.H2, 2.30 )
+        container.contours_2sigma = GetContoursFromTH2( container.H2, 6.18 )
+
+
+
+    # ======================================
+    # Make plot
+
     c.cd()
-    ROOT.gPad.Update()
-
-    return Tgs
-
-
-def SetExtremaOfContour( Tg ):
-
-    xBuffer = Tg.GetX()
-    xs = [ xBuffer[i] for i in xrange( Tg.GetN() ) ]
-
-    yBuffer = Tg.GetY()
-    ys = [ yBuffer[i] for i in xrange( Tg.GetN() ) ]
-
-    Tg.xMin = min(xs)
-    Tg.xMax = max(xs)
-    Tg.yMin = min(ys)
-    Tg.yMax = max(ys)
-
-
-
-def GetTH2FromListOfRootFiles(
-        rootfiles,
-        xCoupling = 'ct',
-        yCoupling = 'cg',
-        verbose   = False,
-        xMin = None, xMax = None, yMin = None, yMax = None,
-        multiplyByTwo = True,
-        ):
-
-    # Read values from specified rootfiles
-    scan = Commands.ConvertTChainToArray(
-        rootfiles,
-        returnPerVariable = False
-        )
-    if xMin: scan = [ s for s in scan if s[xCoupling] >= xMin ]
-    if xMax: scan = [ s for s in scan if s[xCoupling] <= xMax ]
-    if yMin: scan = [ s for s in scan if s[yCoupling] >= yMin ]
-    if yMax: scan = [ s for s in scan if s[yCoupling] <= yMax ]
-    nPoints = len(scan)
-
-    GetListFromScan = lambda key: [ s[key] for s in scan ]
-
-    # keys = [ yCoupling, xCoupling, 'deltaNLL' ]
-    # ret = Container( scanPoints=[] )
-    # for iPoint in xrange(nPoints):
-    #     ret.scanPoints.append( [ scan[key][iPoint] for key in keys ] )
-    # if verbose:
-    #     pprint.pprint( [ keys ] + ret.scanPoints )
-
-
-    def inferBinBoundaries( binCenters ):
-        binBoundaries = []
-        for iBin in xrange(len(binCenters)-1):
-            binBoundaries.append( 0.5*(binCenters[iBin]+binCenters[iBin]) )
-        binBoundaries = (
-            [ binCenters[0] - (binBoundaries[0]-binCenters[0]) ] +
-            binBoundaries +
-            [ binCenters[-1] + (binCenters[-1]-binBoundaries[-1]) ]
-            )
-        return binBoundaries
-
-
-    iBestfit = GetListFromScan('deltaNLL').index( 0.0 )
-    xBestfit = GetListFromScan(xCoupling)[iBestfit]
-    yBestfit = GetListFromScan(yCoupling)[iBestfit]
-
-    xBinCenters = list(set( GetListFromScan(xCoupling) ))
-    xBinCenters.pop( xBinCenters.index(xBestfit) )
-    xBinCenters.sort()
-    xNBins = len(xBinCenters)
-    xBinBoundaries = inferBinBoundaries( xBinCenters )
-
-    yBinCenters = list(set( GetListFromScan(yCoupling) ))
-    yBinCenters.pop( yBinCenters.index(yBestfit) )
-    yBinCenters.sort()
-    yNBins = len(yBinCenters)
-    yBinBoundaries = inferBinBoundaries( yBinCenters )
-
-
-    H2name = GetUniqueRootName()
-    H2 = ROOT.TH2D(
-        H2name, '',
-        xNBins, array( 'd', xBinBoundaries ),
-        yNBins, array( 'd', yBinBoundaries ),
-        )
-    ROOT.SetOwnership( H2, False )
-
-
-    for iPoint in xrange(nPoints):
-
-        if scan[iPoint][xCoupling] == xBestfit and scan[iPoint][yCoupling] == yBestfit:
-            continue
-
-        try:
-            iBinX = xBinCenters.index( scan[iPoint][xCoupling] )
-        except ValueError:
-            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][xCoupling] )
-            continue
-
-        try:
-            iBinY = yBinCenters.index( scan[iPoint][yCoupling] )
-        except ValueError:
-            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][yCoupling] )
-            continue
-
-        if multiplyByTwo:
-            H2.SetBinContent( iBinX+1, iBinY+1, 2.*scan[iPoint]['deltaNLL'] )
-        else:
-            H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint]['deltaNLL'] )
-
-
-    # for iPoint in xrange(nPoints):
-
-    #     if scan[xCoupling][iPoint] == xBestfit and scan[yCoupling][iPoint] == yBestfit:
-    #         continue
-
-    #     try:
-    #         iBinX = xBinCenters.index( scan[xCoupling][iPoint] )
-    #     except ValueError:
-    #         print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[xCoupling][iPoint] )
-    #         continue
-
-    #     try:
-    #         iBinY = yBinCenters.index( scan[yCoupling][iPoint] )
-    #     except ValueError:
-    #         print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[yCoupling][iPoint] )
-    #         continue
-
-    #     H2.SetBinContent( iBinX+1, iBinY+1, scan['deltaNLL'][iPoint] )
-
-    # Open return object
-    ret = Container()
-
-    ret.H2             = H2
-    ret.xCoupling      = xCoupling
-    ret.yCoupling      = yCoupling
-    ret.iBestfit       = iBestfit
-    ret.xBestfit       = xBestfit
-    ret.yBestfit       = yBestfit
-    ret.xBinCenters    = xBinCenters
-    ret.xNBins         = xNBins
-    ret.xBinBoundaries = xBinBoundaries
-    ret.yBinCenters    = yBinCenters
-    ret.yNBins         = yNBins
-    ret.yBinBoundaries = yBinBoundaries
-
-    return ret
-    
-    
-
-def TestParametrizationsInWorkspace(
-    datacard,
-    testcouplings = [
-        { 'ct' : 1.75, 'cg' : -0.0625 },
-        ],
-    ):
-    
-    datacardFp = ROOT.TFile.Open( datacard )
-    w = datacardFp.Get('w')
-
-    couplings = []
-    couplingsList = ROOT.RooArgList( w.set('POI') )
-    for i in xrange( couplingsList.getSize() ):
-        couplings.append( couplingsList[i] )
-
-    yieldParameters = []
-    yieldParameterList = ROOT.RooArgList( w.set('yieldParameters') )
-    for i in xrange( yieldParameterList.getSize() ):
-        yieldParameters.append( yieldParameterList[i] )
-
-    parametrizations = []
-    parametrizationList = ROOT.RooArgList( w.set('parametrizations') )
-    for i in xrange( parametrizationList.getSize() ):
-        parametrizations.append( parametrizationList[i] )
-
-    datacardFp.Close()
-
-    yieldParameters.sort( key = lambda i: Commands.InterpretPOI( i.GetName() )[2][0] )
-
-
-    expBinBoundaries = [ Commands.InterpretPOI( yp.GetName() )[2][0] for yp in yieldParameters ]
-    expBinBoundaries = [ float(b) for b in expBinBoundaries if isinstance(b, float) ]
-    expBinBoundaries.append( 999. )
-
-    print '\nSM Couplings:'
-    for coupling in couplings:
-        print '    {0:5}: {1}'.format( coupling.GetName(), coupling.getVal() )
-
-    print 'SM yieldParameters:'
-    for yieldParameter in yieldParameters:
-        print '    {0:20}: {1}'.format( yieldParameter.GetName(), yieldParameter.getVal() )
-
-
-
-    containers = []
-    # yPerCoupling = []
-    for newcouplings in testcouplings:
-
-        # print '\nSetting ct = {0}, cg = {1}'.format( newcouplings['ct'], newcouplings['cg'] )
-        print '\nSetting:'
-        for coupling in couplings:
-            couplingName = coupling.GetName()
-            print '    {0} = {1}'.format( couplingName, newcouplings[couplingName] )
-
-        print '\nCouplings:'
-        for coupling in couplings:
-            coupling.setVal( newcouplings[coupling.GetName()] )
-            print '    {0:5}: {1}'.format( coupling.GetName(), coupling.getVal() )
-
-        print 'yieldParameters:'
-        y = []
-        for yieldParameter in yieldParameters:
-            print '    {0:20}: {1}'.format( yieldParameter.GetName(), yieldParameter.getVal() )
-            y.append( yieldParameter.getVal() )
-
-        print 'parametrizations:'
-        yParametrization = []
-        for parametrization in parametrizations:
-            print '    {0:20}: {1}'.format( parametrization.GetName(), parametrization.getVal() )
-            yParametrization.append( parametrization.getVal() )
-
-        # yPerCoupling.append( ( y, yParametrization ) )
-
-        container = Container()
-        container.mus_expBinning       = y
-        container.mus_expBinBoundaries = expBinBoundaries
-        container.mus_theoryBinning    = yParametrization
-
-        containers.append( container )
-
-
-    # return yPerCoupling
-    return containers
-
-
-########################################
-# Stewart-Tackmann business
-########################################
-
-# Takes either:
-# - 1 argument, which is a TGraph object
-# - 1 argument, which is a Container object created by ReadDerivedTheoryFile
-def GetStewartTackmannCovarianceMatrix(
-    theoryTg,
-    scaleToRate = True,
-    ):
-
-    if isinstance( theoryTg, Container ):
-        # Rename attributes so that it's consistent with TGraphs
-        oldContainer = theoryTg
-        theoryTg = Container(
-            name          = 'container',
-            binBoundaries = oldContainer.binBoundaries,
-            SM            = oldContainer.crosssection,
-            SM_up         = oldContainer.crosssection_up,
-            SM_down       = oldContainer.crosssection_down,
-            )
-
-
-    # From Yellow Report 4, N3LO ggH inclusive
-    # Errors are ONLY SCALE errors
-    ggHinclusive_xs           = 48.58
-    ggHinclusive_xs_errup     = 0.10
-    ggHinclusive_xs_errdown   = 1.15
-    ggHinclusive_xs_errsymm   = 0.5*( ggHinclusive_xs_errup + ggHinclusive_xs_errdown )
-    ggHinclusive_xs_ratioup   = 0.0021
-    ggHinclusive_xs_ratiodown = 0.0237
-
-    # patterns = [
-    #     r'^cg_[mp\d]+$',
-    #     r'^ct_[mp\d]+$',
-    #     r'^cb_[mp\d]+$',
-    #     r'ct_[mp\d]+_cb_[mp\d]+_cg_[mp\d]+',
-    #     r'ct_[mp\d]+_cb_([mp\d]+)$', # ct_XX_cb_XX , but not ct_XX_cb_XX_cg_XX
-    #     r'ct_[mp\d]+_cg_[mp\d]+',
-    #     ]
-    # theoryTgs = TheoryCommands.LoadTheoryCurves( r'ct_[mp\d]+_cb_([mp\d]+)$' )
-    # theoryTg = theoryTgs[0]
-
-    print '[info] Processing {0}'.format( theoryTg.name )
-
-
-    print ''
-    print '[info] Be aware there is no 1/2.27 scaling here'
-    print '[fixme] Forcing SM now'
-    xs_theoryBinning = theoryTg.SM
-
-    if not hasattr( theoryTg, 'SM_up' ):
-        xs_up_theoryBinning   = [ i*j for i, j in zip( xs_theoryBinning, theoryTg.SM_up_ratio ) ]
-        xs_down_theoryBinning = [ i*j for i, j in zip( xs_theoryBinning, theoryTg.SM_down_ratio ) ]
-    else:
-        xs_up_theoryBinning   = theoryTg.SM_up
-        xs_down_theoryBinning = theoryTg.SM_down
-
-
-    print '\n[info] Mapping fine theory binning to the experimental bins'
-    print '[fixme] expBinBoundaries now hardcoded here'
-    expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
-    expNBins = len(expBinBoundaries)-1
-    expBinWidths = [ expBinBoundaries[i+1]-expBinBoundaries[i] for i in xrange(expNBins-1) ] + [ 1. ]
-
-    def mapTheoryToExp( theoryBinBoundaries, theoryBinValues, expBinBoundaries ):
-        theoryIntegralFunction = GetIntegral( theoryBinBoundaries, theoryBinValues )
-        expBinValues = []
-        for iBinExp in xrange(len(expBinBoundaries)-1):
-            expBinValues.append(
-                theoryIntegralFunction( expBinBoundaries[iBinExp], expBinBoundaries[iBinExp+1] ) / ( expBinBoundaries[iBinExp+1] - expBinBoundaries[iBinExp] )
-                )
-        return expBinValues
-
-    xs       = mapTheoryToExp( theoryTg.binBoundaries, xs_theoryBinning, expBinBoundaries )
-    xs_up    = mapTheoryToExp( theoryTg.binBoundaries, xs_up_theoryBinning, expBinBoundaries )
-    xs_down  = mapTheoryToExp( theoryTg.binBoundaries, xs_down_theoryBinning, expBinBoundaries )
-
-    xs_symmErrs = [ 0.5*( abs(xs[iBinExp]-xs_up[iBinExp]) + abs(xs[iBinExp]-xs_down[iBinExp]) ) for iBinExp in xrange(expNBins) ]
-    xs_symmErrsInclusive = [ err*binWidth for err, binWidth in zip( xs_symmErrs, expBinWidths ) ]
-    xs_symmErrsRelative  = [ err/rate for err, rate in zip( xs_symmErrs, xs ) ]
-
-    print '[info] Found the following theory spectrum in experimental binning:'
-    for iBinExp in xrange(len(expBinBoundaries)-1):
-        print '    Bin {0} ( {1:6.1f} to {2:6.1f} ):  xs = {3:8.3f}  +/- {4:8.3f}   ({5:8.3f} inc.)'.format(
-            iBinExp,
-            expBinBoundaries[iBinExp],
-            expBinBoundaries[iBinExp+1],
-            xs[iBinExp],
-            xs_symmErrs[iBinExp],
-            xs_symmErrsInclusive[iBinExp]
-            )
-
-
-    # Build functions that evaluate the integral of spectrum in exp binning
-    xs_integralFunction       = GetIntegral( expBinBoundaries, xs )
-    xs_up_integralFunction    = GetIntegral( expBinBoundaries, xs_up )
-    xs_down_integralFunction  = GetIntegral( expBinBoundaries, xs_down )
-
-
-
-
-
-    xs_total = xs_integralFunction( 0, 1000 )
-    xs_err_total = 0.5*(
-        abs( xs_up_integralFunction( 0, 1000 ) - xs_total )
-        + abs( xs_down_integralFunction( 0, 1000 ) - xs_total )
-        )
-
-    print '\n[info] Found total inclusive cross section: {0:9.4f}   +/- {1}'.format( xs_total, xs_err_total )
-    print '[info] N3LO inclusive prediction is:        {0:9.4f}   +/- {1}'.format( ggHinclusive_xs, ggHinclusive_xs_errsymm )
-
-    print ''
-
-
-    offDiagonal = []
-    onDiagonal  = []
-
-    previous_sigma_GEcut_err = None
-    for iCut, ptcut in enumerate(expBinBoundaries[1:-1]):
-
-        sigma_GEcut = xs_integralFunction( ptcut, 1000 )
-        sigma_GEcut_err = 0.5*(
-            abs( xs_up_integralFunction( ptcut, 1000 ) - sigma_GEcut )
-            + abs( xs_down_integralFunction( ptcut, 1000 ) - sigma_GEcut )
-            )
-
-        print '    offDiagonal_{0:<2}: XS( pt >= {1:7.2f} ) = {2:8.4f}  +/- {3:8.4f}'.format(
-            iCut, ptcut, sigma_GEcut, sigma_GEcut_err )
-
-
-        if previous_sigma_GEcut_err == None:
-            Delta_iCut     = sqrt( xs_err_total**2 + sigma_GEcut_err**2 )
-        else:
-            Delta_iCut     = sqrt( previous_sigma_GEcut_err**2 + sigma_GEcut_err**2 )       
-
-        print '     onDiagonal_{0:<2}: Delta_{1:<3} = {2:8.4f}                 (for pt = {3:6.2f} to {4:6.2f} )'.format(
-            iCut, iCut, Delta_iCut, expBinBoundaries[iCut], expBinBoundaries[iCut+1] )
-
-        previous_sigma_GEcut_err = sigma_GEcut_err
-
-        offDiagonal.append( -sigma_GEcut_err**2 )
-        onDiagonal.append(  Delta_iCut**2 )
-
-    # >LastCut is the overflow
-    onDiagonal.append( sigma_GEcut_err**2 )
-
-
-    print '\n[info] Building covariance matrix:'
-    covMat = [ [] for i in xrange(expNBins) ]
-
-    for iBinExp1 in xrange(expNBins):
-        for iBinExp2 in xrange(expNBins):
-            if iBinExp1 == iBinExp2:
-                covMat[iBinExp1].append( onDiagonal[iBinExp1] )
-            elif abs(iBinExp1 - iBinExp2) == 1:
-                covMat[iBinExp1].append( offDiagonal[ min(iBinExp1,iBinExp2) ] )
-            else:
-                covMat[iBinExp1].append( 0 )
-
-    # Remove first row and column
-    # covMat = [ [ covMat[iBinExp1][iBinExp2] for iBinExp2 in xrange(1,expNBins) ] for iBinExp1 in xrange(1,expNBins) ]
-
-    numpy.set_printoptions( precision=3, linewidth=120 )
-    print numpy.matrix(covMat)
-
-
-    if scaleToRate:
-        print '\n[info] Dividing by uncertainties (turns into a correlation matrix(:'
-
-        for iBinExp1 in xrange(expNBins):
-            for iBinExp2 in xrange(expNBins):
-                if abs(iBinExp1-iBinExp2) > 1:
-                    covMat[iBinExp1][iBinExp2] = 0
-                else:
-                    covMat[iBinExp1][iBinExp2] /= ( xs_symmErrsInclusive[iBinExp1] * xs_symmErrsInclusive[iBinExp2] )
-        print numpy.matrix(covMat)
-
-        print '\n[info] Scaling each row to it\'s diagonal element:'
-        for iBinExp1 in xrange(expNBins):
-            diagonalElement = covMat[iBinExp1][iBinExp1]
-            for iBinExp2 in xrange(expNBins):
-                covMat[iBinExp1][iBinExp2] /= diagonalElement
-        print numpy.matrix(covMat)
-
-        print '\n[info] Turning each row into 1+ratio of uncertainty:'
-        for iBinExp1 in xrange(expNBins):
-            for iBinExp2 in xrange(expNBins):
-                if abs(iBinExp1-iBinExp2) > 1:
-                    continue
-                covMat[iBinExp1][iBinExp2] *= xs_symmErrsRelative[iBinExp1]
-                covMat[iBinExp1][iBinExp2] += 1
-        print numpy.matrix(covMat)
-
-        print '\n[info] Killing spikes'
-        for iBinExp1 in xrange(expNBins):
-            for iBinExp2 in xrange(expNBins):
-                if abs(iBinExp1-iBinExp2) > 1:
-                    continue
-                if covMat[iBinExp1][iBinExp2] < 0.:
-                    covMat[iBinExp1][iBinExp2] = 0.
-                elif covMat[iBinExp1][iBinExp2] > 10.:
-                    covMat[iBinExp1][iBinExp2] = 10.
-        print numpy.matrix(covMat)
-
-
-
-    return covMat
-
-
-
-# def AddCovarianceMatrixAsNuisanceParameters( datacard, covMat, verbose=True ):
-
-#     signalprocesses, processes, bins = Commands.ListProcesses( datacard )
-
-
-#     # Get the actual process line to which the nuisance parameter line should correspond
-#     with open( datacard, 'r' ) as datacardFp:
-#         for processLine in datacardFp.readlines():
-#             if processLine.startswith('process'):
-#                 break
-#     datacardProcessLine = [ i.strip() for i in processLine.split() ][1:]
-
-
-#     nuisPars = []    
-#     for iProcess, process in enumerate(signalprocesses):
-
-#         nuisPar = [ 'theoryUnc_' + process, 'lnN' ]
-
-#         for inlineProcess in datacardProcessLine:
-
-#             if inlineProcess in signalprocesses:
-#                 iInlineProcess = signalprocesses.index(inlineProcess)
-#                 if abs( iInlineProcess - iProcess ) <= 1:
-#                     nuisPar.append( '{0:.3f}'.format(covMat[iProcess][iInlineProcess]) )
-#                 else:
-#                     nuisPar.append( '-' )    
-#             else:
-#                 nuisPar.append( '-' )
-
-#         nuisPar = ' '.join( nuisPar )
-#         nuisPars.append( nuisPar )
-#         if verbose: print nuisPar
-
-
-#     datacardAppended = datacard.replace( '.txt', '_theoryUncertainties.txt' )
-#     with open( datacardAppended, 'w' ) as datacardAppendedFp:
-
-#         with open( datacard, 'r' ) as datacardFp:
-#             datacardText = datacardFp.read()
-
-#         datacardText = re.sub( r'kmax ([0-9]+)', 'kmax *', datacardText )
-
-#         datacardAppendedFp.write( datacardText + '\n\n' )
-
-#         for nuisPar in nuisPars:
-#             datacardAppendedFp.write( nuisPar + '\n' )
-
-
-
-def AddCovarianceMatrixAsNuisanceParameters( datacard, covMat, totalProcessRates, verbose=True ):
-
-    signalprocesses, processes, bins = Commands.ListProcesses( datacard )
-
-
-    ########################################
-    # Perform whitening of the covariance matrix
-    ########################################
-
-    covMat = numpy.array( covMat )
-    nPars = covMat.shape[0]
-
-    eigenValues, eigenVectors = numpy.linalg.eig(
-        covMat
-        )
-
-    # Convert to ordinary lists
-    eigenValues = list( eigenValues )
-    eigenVectors = [ list(eigenVectors[:,i]) for i in xrange(eigenVectors.shape[1]) ]
-
-    # Make eigenvectors unit length (should already be the case but to be sure)
-    eigenVectors = [ normalize(eigenVector) for eigenVector in eigenVectors ]
-
-    # Sort according to eigenvalues
-    eigenValues, eigenVectors = ( list(t) for t in zip(*sorted( zip(eigenValues, eigenVectors), reverse=True )) )
-
-
-    # ======================================
-    # Calculate whitening matrix:
-
-    oneOverSqrtD = numpy.diag( [ 1./sqrt(val) for val in eigenValues ] )
-    E            = numpy.hstack( [ numpy_column(vec) for vec in eigenVectors ] )
-    ET           = E.T
-
-    #   E * D^-0.5 * E^T
-    whiteningMatrix = E.dot( oneOverSqrtD.dot( ET ) )
-
-    # whiteningMatrix maps correlated noise to white noise;
-    # Need the inverse operation:
-    inverseWhiteningMatrix = numpy.linalg( whiteningMatrix )
-
-    print 'Map from uncorrelated to correlated:'
-    print inverseWhiteningMatrix
-
-
-    # ======================================
-    # Divide by process normalization
-    # This has to be done column-wise
-
-    for iPar in xrange(nPars):
-        totalProcessRate = totalProcessRates[iPar]
-        for iCol in xrange(nPars):
-            inverseWhiteningMatrix[iPar][iCol] /= totalProcessRate
-
-    print inverseWhiteningMatrix
-
-
-
-def normalize( l ):
-    norm = sqrt(sum([ val**2 for val in l ]))
-    l = [ val/norm for val in l ]
-    return l
-
-def numpy_column( l ):
-    return numpy.array(l)[:,numpy.newaxis]
-
-def numpy_row( l ):
-    return numpy.array(l)[:,numpy.newaxis]    
-
-
-
-
-# Takes either:
-# - 1 argument, which is a TGraph object
-# - 1 argument, which is a Container object created by ReadDerivedTheoryFile
-def PrepareRebinnedTheory(
-    theoryTg,
-    ):
-
-    if isinstance( theoryTg, Container ):
-        # Rename attributes so that it's consistent with TGraphs
-        oldContainer = theoryTg
-        theoryTg = Container(
-            name          = 'container',
-            binBoundaries = oldContainer.binBoundaries,
-            SM            = oldContainer.crosssection,
-            SM_up         = oldContainer.crosssection_up,
-            SM_down       = oldContainer.crosssection_down,
-            )
-
-    output = Container( name = 'rebinnedTheory' )
-
-
-    # From Yellow Report 4, N3LO ggH inclusive
-    # Errors are ONLY SCALE errors
-    output.ggHinclusive_xs           = 48.58
-    output.ggHinclusive_xs_errup     = 0.10
-    output.ggHinclusive_xs_errdown   = 1.15
-    output.ggHinclusive_xs_errsymm   = 0.5*( output.ggHinclusive_xs_errup + output.ggHinclusive_xs_errdown )
-    output.ggHinclusive_xs_ratioup   = 0.0021
-    output.ggHinclusive_xs_ratiodown = 0.0237
-
-    # patterns = [
-    #     r'^cg_[mp\d]+$',
-    #     r'^ct_[mp\d]+$',
-    #     r'^cb_[mp\d]+$',
-    #     r'ct_[mp\d]+_cb_[mp\d]+_cg_[mp\d]+',
-    #     r'ct_[mp\d]+_cb_([mp\d]+)$', # ct_XX_cb_XX , but not ct_XX_cb_XX_cg_XX
-    #     r'ct_[mp\d]+_cg_[mp\d]+',
-    #     ]
-    # theoryTgs = TheoryCommands.LoadTheoryCurves( r'ct_[mp\d]+_cb_([mp\d]+)$' )
-    # theoryTg = theoryTgs[0]
-
-    print '[info] Processing {0}'.format( theoryTg.name )
-
-
-    print ''
-    print '[info] Be aware there is no 1/2.27 scaling here'
-    print '[fixme] Forcing SM now'
-    xs_theoryBinning = theoryTg.SM
-
-    if not hasattr( theoryTg, 'SM_up' ):
-        xs_up_theoryBinning   = [ i*j for i, j in zip( xs_theoryBinning, theoryTg.SM_up_ratio ) ]
-        xs_down_theoryBinning = [ i*j for i, j in zip( xs_theoryBinning, theoryTg.SM_down_ratio ) ]
-    else:
-        xs_up_theoryBinning   = theoryTg.SM_up
-        xs_down_theoryBinning = theoryTg.SM_down
-
-
-    print '\n[info] Mapping fine theory binning to the experimental bins'
-    print '[fixme] expBinBoundaries now hardcoded here'
-    expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
-    expNBins = len(expBinBoundaries)-1
-    expBinWidths = [ expBinBoundaries[i+1]-expBinBoundaries[i] for i in xrange(expNBins-1) ] + [ 1. ]
-
-    def mapTheoryToExp( theoryBinBoundaries, theoryBinValues, expBinBoundaries ):
-        theoryIntegralFunction = GetIntegral( theoryBinBoundaries, theoryBinValues )
-        expBinValues = []
-        for iBinExp in xrange(len(expBinBoundaries)-1):
-            expBinValues.append(
-                theoryIntegralFunction( expBinBoundaries[iBinExp], expBinBoundaries[iBinExp+1] ) / ( expBinBoundaries[iBinExp+1] - expBinBoundaries[iBinExp] )
-                )
-        return expBinValues
-
-    output.xs       = MapFineToCoarse( theoryTg.binBoundaries, xs_theoryBinning, expBinBoundaries )
-    output.xs_up    = MapFineToCoarse( theoryTg.binBoundaries, xs_up_theoryBinning, expBinBoundaries )
-    output.xs_down  = MapFineToCoarse( theoryTg.binBoundaries, xs_down_theoryBinning, expBinBoundaries )
-    output.xs_symmErrs          = [ 0.5*( abs(output.xs[iBinExp]-output.xs_up[iBinExp]) + abs(output.xs[iBinExp]-output.xs_down[iBinExp]) ) for iBinExp in xrange(expNBins) ]
-    output.xs_symmErrsInclusive = [ err*binWidth for err, binWidth in zip( output.xs_symmErrs, expBinWidths ) ]
-    output.xs_symmErrsRelative  = [ err/rate for err, rate in zip( output.xs_symmErrs, output.xs ) ]
-
-    output.binBoundaries    = expBinBoundaries
-    output.expBinBoundaries = expBinBoundaries
-    output.expNBins         = expNBins
-    output.expBinWidths     = expBinWidths
-
-    output.originalTheory = Container(
-        name          = 'originalTheory',
-        binBoundaries = theoryTg.binBoundaries,
-        SM            = theoryTg.SM,
-        SM_up         = theoryTg.SM_up,
-        SM_down       = theoryTg.SM_down,
-        xs            = theoryTg.SM,
-        xs_up         = theoryTg.SM_up,
-        xs_down       = theoryTg.SM_down,
-        )
-
-    return output
-
-
-def MakeRebinnedTheoryPlot(
-        theoryTg
-        ):
-
     c.Clear()
     SetCMargins()
 
-    rebinnedContainer = PrepareRebinnedTheory( theoryTg )
-
-    fineTheoryTg = GetTheoryTGraph(
-        'fine',
-        rebinnedContainer.originalTheory.binBoundaries,
-        rebinnedContainer.originalTheory.xs,
-        rebinnedContainer.originalTheory.xs_down,
-        rebinnedContainer.originalTheory.xs_up,
-        boundaries = True
-        )
-    fineTheoryTg.SetLineColor(2)
-
-    coarseTheoryTg = GetTheoryTGraph(
-        'coarse',
-        rebinnedContainer.binBoundaries,
-        rebinnedContainer.xs,
-        rebinnedContainer.xs_down,
-        rebinnedContainer.xs_up,
-        boundaries = True
-        )
-    coarseTheoryTg.SetLineColor(4)
 
     base = GetPlotBase(
-        xMax = max( max(rebinnedContainer.originalTheory.binBoundaries[:-1]), max(rebinnedContainer.binBoundaries[:-1]) ),
-        yMax = max( max(rebinnedContainer.originalTheory.xs_up), max(rebinnedContainer.xs_up) ),
-        xTitle = 'pT [GeV]', yTitle='d#sigma/dp_{T} [pb/GeV]'
+        xMin = xMin,
+        xMax = xMax,
+        yMin = yMin,
+        yMax = yMax,
+        xTitle = xTitle,
+        yTitle = yTitle,
         )
-    base.Draw()
+    base.Draw('P')
 
-    coarseTheoryTg.Draw( 'P' )
+    base.GetXaxis().SetTitleSize(0.06)
+    base.GetXaxis().SetLabelSize(0.05)
+    base.GetYaxis().SetTitleSize(0.06)
+    base.GetYaxis().SetLabelSize(0.05)
 
-    leg = ROOT.TLegend( 1-RightMargin-0.5, 1-TopMargin-0.25, 1-RightMargin, 1-TopMargin )
+
+    leg = ROOT.TLegend(
+        c.GetLeftMargin() + 0.01,
+        c.GetBottomMargin() + 0.02,
+        1 - c.GetRightMargin() - 0.01,
+        c.GetBottomMargin() + 0.09
+        )
+    leg.SetNColumns(3)
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
-    leg.AddEntry( coarseTheoryTg.GetName(), 'Theory spectrum in exp. bins', 'l' )
+
+    for container in containers:
+
+        for Tg in container.contours_1sigma:
+            Tg.SetLineWidth(2)
+            Tg.SetLineColor( container.color )
+            Tg.SetLineStyle(1)
+            Tg.Draw('CSAME')
+            if Tg == container.contours_1sigma[0]:
+                Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
+                leg.AddEntry(
+                    Tg.GetName(),
+                    container.name if not hasattr( container, 'title' ) else container.title,
+                    'l' )
+
+        for Tg in container.contours_2sigma:
+            Tg.SetLineWidth(2)
+            Tg.SetLineColor( container.color )
+            Tg.SetLineStyle(2)
+            Tg.Draw('CSAME')
+
+        Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
+        ROOT.SetOwnership( Tpoint, False )
+        Tpoint.SetMarkerSize(2)
+        Tpoint.SetMarkerStyle(34)
+        Tpoint.SetMarkerColor( container.color )
+        Tpoint.Draw('PSAME')
+        Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
+        container.bestfitPoint = Tpoint
+
+    TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [0.0] ) )
+    ROOT.SetOwnership( TpointSM, False )
+    TpointSM.SetMarkerSize(2)
+    TpointSM.SetMarkerStyle(21)
+    TpointSM.SetMarkerColor( 12 )
+    TpointSM.Draw('PSAME')
+
     leg.Draw()
 
-    SaveC( 'RebinnedTheoryPlot_onlyCoarse' )
+    SaveC( plotname )
 
-    fineTheoryTg.Draw(   'P' )
-    leg.AddEntry( fineTheoryTg.GetName(),   'Given theory spectrum', 'l' )
-    leg.Draw()
 
-    SaveC( 'RebinnedTheoryPlot' )
+    if plotIndividualH2s:
+
+        for container in containers:
+
+            c.Clear()
+            SetCMargins(
+                LeftMargin   = 0.12,
+                RightMargin  = 0.10,
+                BottomMargin = 0.12,
+                TopMargin    = 0.09,
+                )
+
+            container.H2.Draw('COLZ')
+
+            container.H2.GetXaxis().SetRangeUser( xMin, xMax )
+            container.H2.GetYaxis().SetRangeUser( yMin, yMax )
+            container.H2.SetMaximum( 7. )
+
+            container.H2.GetXaxis().SetTitle( xTitle )
+            container.H2.GetYaxis().SetTitle( yTitle )
+            container.H2.GetXaxis().SetTitleSize(0.06)
+            container.H2.GetXaxis().SetLabelSize(0.05)
+            container.H2.GetYaxis().SetTitleSize(0.06)
+            container.H2.GetYaxis().SetLabelSize(0.05)
+
+            for Tg in container.contours_1sigma: Tg.Draw('CSAME')
+            for Tg in container.contours_2sigma: Tg.Draw('CSAME')
+            container.bestfitPoint.Draw('PSAME')
+
+            SaveC( plotname + '_' + container.name )
+
 
 
 

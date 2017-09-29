@@ -14,6 +14,8 @@ from glob import glob
 from time import strftime
 datestr = strftime( '%b%d' )
 
+from Container import Container
+
 import ROOT
 
 ########################################
@@ -186,6 +188,9 @@ def BasicT2WSwithModel(
     modelName=None,
     suffix=None,
     extraOptions=None,
+    smartMaps=None,
+    manualMaps=None,
+    verbose=True,
     ):
 
     # ======================================
@@ -226,6 +231,56 @@ def BasicT2WSwithModel(
         cmd.append( extraOptions )
     else:
         cmd.extend( extraOptions )
+
+
+    # ======================================
+    # Possibility to use maps here as well
+
+    if smartMaps:
+
+        # Manual maps should override smart maps; gather all the patters that are already in a manualMap
+        if manualMaps:
+            manualMapPats = []
+            for manualMap in manualMaps:
+                match = re.search( r'map=(.*):', manualMap )
+                if not match: continue
+                manualMapPats.append( match.group(1) )
+
+        newMaps = []
+        for binprocPat, yieldParPat in smartMaps:
+
+            for proc in signalprocesses:
+                for bin in bins:
+
+                    binprocStr = '{0}/{1}'.format( bin, proc )
+
+                    manualMapAvailable = False
+                    if manualMaps:
+                        for manualMapPat in manualMapPats:
+                            if re.match( manualMapPat, binprocStr ):
+                                manualMapAvailable = True
+
+                    if manualMapAvailable:
+                        continue
+                    elif not re.match( binprocPat, binprocStr ):
+                        continue
+
+                    if verbose: print 'Pattern \"{0}\" matches with \"{1}\"'.format( binprocPat, binprocStr )
+
+                    yieldPar = re.sub( binprocPat, yieldParPat, binprocStr )
+                    newMap = '--PO \'map={0}:{1}\''.format( binprocStr, yieldPar )
+
+                    newMaps.append( newMap )
+
+
+        for newMap in newMaps:
+            cmd.append(newMap)
+
+    if manualMaps:
+        for manualMap in manualMaps:
+            cmd.append( manualMap )
+
+
 
     executeCommand( cmd )
 
@@ -767,13 +822,15 @@ def ConvertTChainToArray(
     rootFileList,
     treeName = 'limit',
     variablePattern = '*',
-    returnPerVariable = True,
+    returnStyle = 'dict',
+    verbose = False
     ):
 
     if len(rootFileList) == 0:
         ThrowError( 'rootFileList has length 0' )
         sys.exit()
 
+    if verbose: 'Looking for at least one filled root file to obtain the variable list from...'
     foundTree = False
     for rootFile in rootFileList:
 
@@ -781,46 +838,19 @@ def ConvertTChainToArray(
         allKeys = rootFp.GetListOfKeys()
 
         if not allKeys.Contains( 'limit' ):
-            print 'No tree \'{0}\' in \'{1}\''.format( treeName, rootFile )
+            if verbose: print '    No tree \'{0}\' in \'{1}\''.format( treeName, rootFile )
             rootFp.Close()
         else:
             tree = rootFp.Get( treeName )
             allVarObjArray = tree.GetListOfBranches()
             treeLoaded = True
-            print 'Found tree in {0}'.format( rootFile )
+            if verbose: print '    Found tree in {0}'.format( rootFile )
             break
+    else:
+        ThrowError( 'Not a single root file had a tree called \'{0}\'; Cannot extract any data', throwException=True )
 
 
-    # tryFile = 0
-    # treeLoaded = False
-    # while tryFile < len(rootFileList):
-    #     try:
-    #         # Open first file to get list of all variables
-    #         rootFp = ROOT.TFile.Open( rootFileList[tryFile] )
-    #         allkeys = rootFp.GetListOfKeys()
-
-    #         print rootFileList[tryFile]
-
-    #         allkeys.Print()
-
-    #         print allkeys.Contains( 'limit' )
-    #         sys.exit()
-
-    #         tree = rootFp.Get( treeName )
-    #         allVarObjArray = tree.GetListOfBranches()
-    #         treeLoaded = True
-    #         print 'Found tree in {0}'.format( rootFileList[tryFile] )
-    #     except AttributeError:
-    #         print 'No tree \'{0}\' in \'{1}\''.format( treeName, rootFileList[tryFile] )
-    #         rootFp.Close()
-    #     finally:
-    #         tryFile += 1
-
-    # if not treeLoaded:
-    #     print 'ERROR: Could not load tree \{0}\' for any file'.format( treeName )
-    #     return
-
-
+    # Get the variable list from this one file
     nAllVars = allVarObjArray.GetEntries()
 
     useVars = []
@@ -834,12 +864,17 @@ def ConvertTChainToArray(
 
     rootFp.Close()
 
+
     # Now read the entries from the chain
     chain = ROOT.TChain( treeName )
     for rootFile in rootFileList:
         chain.Add( rootFile )
 
-    if returnPerVariable:
+
+    # Return an object
+
+    if returnStyle == 'dict':
+
         res = {}
         for varName in useVars:
             res[varName] = []
@@ -848,7 +883,8 @@ def ConvertTChainToArray(
             for varName in useVars:
                 res[varName].append( getattr( event, varName ) )
 
-    else:
+
+    elif returnStyle == 'dictPerPoint':
 
         res = []
         for event in chain:
@@ -858,13 +894,37 @@ def ConvertTChainToArray(
             res.append( entry )
 
 
+    elif returnStyle == 'container':
+
+        res = Container()
+
+        for varName in useVars:
+            setattr( res. varName, [] )
+
+        for event in chain:
+            for varName in useVars:
+                getattr( res, varName ).append( getattr( event, varName ) )
+
+
+    elif returnStyle == 'containerPerPoint':
+
+        res = []
+
+        for event in chain:
+            entry = Container()
+            for varName in useVars:
+                setattr( entry, varName, getattr( event, varName ) )
+            res.append( entry )
+
+
     return res
 
 
 def InterpretPOI( POI ):
+
     # Assume it starts with 'r_'
     if not POI.startswith('r_'):
-        print 'WARNING: POI {0} does not start with \'r_\'; Will now try to manually add it'.format( POI )
+        # print 'WARNING: POI {0} does not start with \'r_\'; Will now try to manually add it'.format( POI )
         POI = 'r_' + POI
     components = POI.split('_')[1:]
 

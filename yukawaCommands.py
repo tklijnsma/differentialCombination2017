@@ -77,11 +77,11 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
-    expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
-    # expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
-    print 'Hardcoded binBoundaries for Yukawa:'
-    print expBinBoundaries
-    print ''
+    # expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
+    # # expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
+    # print 'Hardcoded binBoundaries for Yukawa:'
+    # print expBinBoundaries
+    # print ''
 
     TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
 
@@ -167,12 +167,9 @@ def main( args ):
         # MAKELUMISCALABLE = True
         MAKELUMISCALABLE = False
 
+        INCLUDE_BR_COUPLING_DEPENDENCY = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY = False
 
-        # datacard = LatestPaths.card_combined_unsplit
-        # if args.hgg:
-        #     datacard = LatestPaths.card_onlyhgg_unsplit_renamed
-        # if args.hzz:
-        #     datacard = LatestPaths.card_onlyhzz_unsplit_OAsignal
 
         datacard = LatestPaths.card_combined_split
         if args.hgg:
@@ -191,26 +188,9 @@ def main( args ):
             '--PO splitggH=True',
             ]
 
-        # if args.hzz:
-        #     extraOptions.append(
-        #         # '--PO binBoundaries=0,15,30,85,200'
-        #         '--PO binBoundaries=0,15,30,85'
-        #         # '--PO binBoundaries=15,30'
-        #         )
-        #     extraOptions.append(
-        #         '--PO skipBins=85_125,125_200,200_350,GT350'
-        #         # '--PO skipBins=0_15,30_85,85_125,125_200,200_350,GT3500'
-        #         )
-
-        # else:
-        #     extraOptions.append(
-        #         '--PO binBoundaries=0,15,30,45,85,125,200'
-        #         )
-
         extraOptions.append(
-            '--PO binBoundaries=0,15,30,45,85,125,200'
+            '--PO binBoundaries=0,15,30,45,85,125'
             )
-
 
         extraOptions.append(
             '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
@@ -250,11 +230,11 @@ def main( args ):
                 '--PO lumiScale=True' )
             suffix += '_lumiScale'
 
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            extraOptions.append(
+                '--PO FitBR=True' )
+            suffix += '_couplingDependentBR'
 
-        # # Scale these bins with 1.0 regardless of parametrization
-        # extraOptions.append(
-        #     '--PO skipBins=200_350,GT350,GT200'
-        #     )
 
 
         import random
@@ -274,8 +254,8 @@ def main( args ):
         doFastscan = True
         if args.notFastscan: doFastscan = False
 
-        # ASIMOV = True
-        ASIMOV = False
+        ASIMOV = True
+        # ASIMOV = False
         
         # LUMISTUDY = True
         LUMISTUDY = False
@@ -285,8 +265,12 @@ def main( args ):
         UNCORRELATED_THEORY_UNCERTAINTIES = False
         NO_THEORY_UNCERTAINTIES           = False
 
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        INCLUDE_BR_COUPLING_DEPENDENCY    = False
+
         if SPLIT:
-            combinedDatacard = LatestPaths.ws_combined_split_yukawa
+            # combinedDatacard = LatestPaths.ws_combined_split_yukawa
+            combinedDatacard = LatestPaths.ws_combined_split_betterYukawa
             hggDatacard = LatestPaths.ws_onlyhgg_split_yukawa
             hzzDatacard = LatestPaths.ws_onlyhzz_split_yukawa
 
@@ -296,6 +280,9 @@ def main( args ):
                 combinedDatacard = LatestPaths.ws_combined_split_top_uncorrelated
             if NO_THEORY_UNCERTAINTIES:
                 combinedDatacard = LatestPaths.ws_combined_split_top_notheoryunc
+
+            if INCLUDE_BR_COUPLING_DEPENDENCY:
+                combinedDatacard = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
 
         else:
             combinedDatacard = LatestPaths.ws_combined_unsplit_lumiScalableWS
@@ -322,8 +309,10 @@ def main( args ):
             nPointsPerJob = 800
             queue = 'short.q'
         else:
-            nPoints = 6400
-            nPointsPerJob = 8
+            # nPoints = 6400
+            # nPointsPerJob = 8
+            nPoints = 4900
+            nPointsPerJob = 14
             queue = 'all.q'
             if UNCORRELATED_THEORY_UNCERTAINTIES or NO_THEORY_UNCERTAINTIES or LUMISTUDY:
                 nPoints = 3200
@@ -351,7 +340,10 @@ def main( args ):
                 '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
                     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
                 '--saveSpecifiedFunc {0}'.format(','.join(
-                    Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                    Commands.ListSet( datacard, 'yieldParameters' )
+                    + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]
+                    + ( Commands.ListSet( datacard, 'hgg_yieldParameters' ) + [ 'Scaling_hgg' ] if INCLUDE_BR_COUPLING_DEPENDENCY else [] )
+                    ) ),
                 '--squareDistPoiStep',
                 ]
             )

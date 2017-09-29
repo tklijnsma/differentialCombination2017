@@ -49,9 +49,10 @@ class OutputContainer(Container):
             xAttrErrUp=None,
             yAttrErrDown=None,
             yAttrErrUp=None,
+            xAreBinBoundaries=True,
             ):
+        self.xAreBinBoundaries = xAreBinBoundaries
 
-        self.xAreBinBoundaries = True
 
         if xAttr is None:
             for attempt in [ 'binBoundaries' ]:
@@ -83,13 +84,29 @@ class OutputContainer(Container):
                     'len(xValues)-1 = {0}, len(yValues) = {1} ; should be the same'.format( len(xValues)-1, len(yValues) ),
                     throwException = True
                     )
-                sys.exit()
 
-        nBins = len(xValues)-1
-        binBoundaries = xValues
-        binCenters    = [ 0.5*(binBoundaries[i]+binBoundaries[i+1]) for i in xrange(nBins) ]
-        binWidths     = [ (binBoundaries[i+1]-binBoundaries[i]) for i in xrange(nBins) ]
-        halfBinWidths = [ 0.5*(binBoundaries[i+1]-binBoundaries[i]) for i in xrange(nBins) ]
+            nBins = len(xValues)-1
+            binBoundaries = xValues
+            binCenters    = [ 0.5*(binBoundaries[i]+binBoundaries[i+1]) for i in xrange(nBins) ]
+            binWidths     = [ (binBoundaries[i+1]-binBoundaries[i]) for i in xrange(nBins) ]
+            halfBinWidths = [ 0.5*(binBoundaries[i+1]-binBoundaries[i]) for i in xrange(nBins) ]
+
+        else:
+            if len(xValues) != len(yValues):
+                Commands.ThrowError(
+                    'len(xValues) = {0}, len(yValues) = {1} ; should be the same'.format( len(xValues), len(yValues) ),
+                    throwException = True
+                    )
+
+            nBins = len(xValues)
+            binCenters    = xValues
+            
+            binWidths     = [ xValues[i+1] - xValues[i] for i in xrange(nBins-1) ]
+            binWidths     = [ binWidths[0] ] + binWidths + [ binWidths[-1] ]
+            halfBinWidths = [ 0.5*binWidth for binWidth in binWidths ]
+
+            binBoundaries = [ binCenters[0]-halfBinWidths[0] ] + [ center + halfBinWidth for center, halfBinWidth in zip( binCenters, halfBinWidths ) ]
+
 
         if xAttrErrDown is None:
             xErrDown = [ 0 for i in xrange(nBins) ]
@@ -122,18 +139,25 @@ class OutputContainer(Container):
         ROOT.SetOwnership( Tg, False )
         Tg.SetLineWidth(2)
 
+        # if name is None:
+        #     if not hasattr( self, 'name' ):
+        #         Commands.ThrowError( 'Need to specify a name.' )
+        #         sys.exit()
+        #     name = self.name
+        # Tg.SetName( name )
+
         if name is None:
-            if not hasattr( self, 'name' ):
-                Commands.ThrowError( 'Need to specify a name.' )
-                sys.exit()
-            name = self.name
-        Tg.SetName( name )
+            if hasattr( self, 'name' ):
+                Tg.SetName( self.name )
+        else:
+            Tg.SetName( name )
 
 
         # ======================================
         # Set additional attributes for convenience
 
         Tg.name          = name
+        Tg.xValues       = xValues
         Tg.binValues     = yValues
         Tg.yValues       = yValues
         Tg.binCenters    = binCenters

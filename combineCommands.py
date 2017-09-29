@@ -156,7 +156,6 @@ def main( args ):
 
     if args.t2ws_combined_split:
 
-        # Specific for HZZ
         Commands.BasicT2WS(
             card_combined_split,
             smartMaps = [

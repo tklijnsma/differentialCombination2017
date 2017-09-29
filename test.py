@@ -20,6 +20,7 @@ import yukawaCommands
 import topCommands
 import onetimeplotsCommands
 # import highLumiStudyCommands
+import extrastudyCommands
 
 import sys
 sys.path.append('src')
@@ -56,6 +57,7 @@ def main():
     topCommands.AppendParserOptions(parser)
     # highLumiStudyCommands.AppendParserOptions(parser)
     onetimeplotsCommands.AppendParserOptions(parser)
+    extrastudyCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -98,6 +100,8 @@ def main():
     if args.njetsCommands:
         njetsCommands.main(args)
 
+    if args.extrastudyCommands:
+        extrastudyCommands.main(args)
 
     ########################################
     # Result and Test Plotting

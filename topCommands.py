@@ -63,6 +63,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingContourPlot_Top',                       action=CustomAction )
     parser.add_argument( '--checkWSParametrization_Top',                    action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_lumiStudy',             action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Top_BRdependencyComparison',  action=CustomAction )
 
 
 ########################################
@@ -71,18 +72,18 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
-    # expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
-    expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
-    print 'Hardcoded binBoundaries for Top:'
-    print expBinBoundaries
-    print ''
+    # # expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
+    # expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
+    # print 'Hardcoded binBoundaries for Top:'
+    # print expBinBoundaries
+    # print ''
 
-    LATESTDATACARD_Top            = 'suppliedInput/combinedCard_Jul26.txt'
+    # LATESTDATACARD_Top            = 'suppliedInput/combinedCard_Jul26.txt'
 
-    LATESTWORKSPACE_Top           = 'workspaces_Aug11/combinedCard_Jul26_CouplingModel_Top_withTheoryUncertainties.root'
+    # LATESTWORKSPACE_Top           = 'workspaces_Aug11/combinedCard_Jul26_CouplingModel_Top_withTheoryUncertainties.root'
 
-    LATESTCORRELATIONMATRIX_Top   = 'plots_CorrelationMatrices_Aug11_Top/corrMat_exp.txt'
-    LATESTTHEORYUNCERTAINTIES_Top = 'plots_CorrelationMatrices_Aug11_Top/errors_for_corrMat_exp.txt'
+    # LATESTCORRELATIONMATRIX_Top   = 'plots_CorrelationMatrices_Aug11_Top/corrMat_exp.txt'
+    # LATESTTHEORYUNCERTAINTIES_Top = 'plots_CorrelationMatrices_Aug11_Top/errors_for_corrMat_exp.txt'
 
     TheoryCommands.SetPlotDir( 'plots_{0}_Top'.format(datestr) )
 
@@ -130,11 +131,20 @@ def main( args ):
     #____________________________________________________________________
     if args.couplingT2WS_Top:
 
+        # ======================================
+        # Switches
+
         INCLUDE_THEORY_UNCERTAINTIES = True
         # INCLUDE_THEORY_UNCERTAINTIES = False
 
         # MAKELUMISCALABLE = True
         MAKELUMISCALABLE = False
+
+        INCLUDE_BR_COUPLING_DEPENDENCY = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY = False
+
+
+        # ======================================
 
         datacard = LatestPaths.card_combined_split
         if args.hgg:
@@ -146,6 +156,7 @@ def main( args ):
 
         extraOptions = [
             '--PO verbose=2',
+            # '--PO verbose=0',
             '--PO \'higgsMassRange=123,127\'',
             '--PO linearTerms=False',
             '--PO splitggH=True',
@@ -186,10 +197,18 @@ def main( args ):
                 '--PO lumiScale=True' )
             suffix += '_lumiScale'
 
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            extraOptions.append(
+                '--PO FitBR=True' )
+            suffix += '_couplingDependentBR'
+
 
         # Scale these bins with 1.0 regardless of parametrization
+        # extraOptions.append(
+        #     '--PO skipBins=GT350'
+        #     )
         extraOptions.append(
-            '--PO skipBins=GT350'
+            '--PO binBoundaries=0,15,30,45,85,125,200,350,10000'
             )
 
         Commands.BasicT2WSwithModel(
@@ -209,10 +228,18 @@ def main( args ):
         # ASIMOV = False
         ASIMOV = True
 
-        LUMISTUDY = True
-        # LUMISTUDY = False
+        # LUMISTUDY = True
+        LUMISTUDY = False
 
-        datacard = LatestPaths.ws_combined_split_top
+        # INCLUDE_BR_COUPLING_DEPENDENCY = True
+        INCLUDE_BR_COUPLING_DEPENDENCY = False
+
+
+        # datacard = LatestPaths.ws_combined_split_top
+        datacard = LatestPaths.ws_combined_split_betterTop
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            # datacard = LatestPaths.ws_combined_split_top_couplingDependentBR
+            datacard = LatestPaths.ws_combined_split_betterTop_couplingDependentBR
         if LUMISTUDY:
             datacard = LatestPaths.ws_combined_split_top_lumiScalableWS
         if args.hgg:
@@ -236,8 +263,10 @@ def main( args ):
             nPointsPerJob = 800
             queue = 'short.q'
         else:
-            nPoints = 6400
-            nPointsPerJob = 8
+            # nPoints = 6400
+            # nPointsPerJob = 8
+            nPoints = 4900
+            nPointsPerJob = 14
             queue = 'all.q'
             # if ASIMOV:
             #     # This does not converge in time
@@ -259,7 +288,7 @@ def main( args ):
             jobDirectory  = jobDirectory,
             fastscan      = doFastscan,
             asimov        = ASIMOV,
-            jobPriority   = -8,
+            jobPriority   = 0,
             extraOptions  = [
                 # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
                 '-P ct -P cg',
@@ -267,7 +296,10 @@ def main( args ):
                 '--setPhysicsModelParameterRanges ct={0},{1}:cg={2},{3}'.format(
                     ct_ranges[0], ct_ranges[1], cg_ranges[0], cg_ranges[1] ),
                 '--saveSpecifiedFunc {0}'.format(','.join(
-                    Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                    Commands.ListSet( datacard, 'yieldParameters' )
+                    + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]
+                    + ( Commands.ListSet( datacard, 'hgg_yieldParameters' ) + [ 'Scaling_hgg' ] if INCLUDE_BR_COUPLING_DEPENDENCY else [] )
+                    ) ),
                 '--squareDistPoiStep',
                 ]
             )
@@ -298,17 +330,31 @@ def main( args ):
         print res.yCoupling, '=', res.yBestfit
 
 
+
     #____________________________________________________________________
-    if args.couplingContourPlot_Top:
+    if (
+        args.couplingContourPlot_Top
+        or args.couplingContourPlot_Top_lumiStudy
+        or args.couplingContourPlot_Top_BRdependencyComparison
+        ):
 
         xCoupling = 'ct'
         yCoupling = 'cg'
         titles = {
-            'ct': '#kappa_{t}', 'cg' : '#kappa_{g}',
-            'hgg' : 'H #rightarrow #gamma#gamma',
-            'hzz' : 'H #rightarrow 4l',
-            'combined' : 'Combination',
+            'ct'          : '#kappa_{t}',
+            'cg'          : '#kappa_{g}',
+            'hgg'         : 'H #rightarrow #gamma#gamma',
+            'hzz'         : 'H #rightarrow 4l',
+            'combined'    : 'Combination',
+            # For lumi study:
+            'regularLumi' : 'Expected at 35.9 fb^{-1}',
+            'highLumi'    : 'Expected at 300 fb^{-1}',
             }
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top:
+
 
         combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled ) )
         hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_top_hgg_profiled) )
@@ -341,104 +387,122 @@ def main( args ):
         combined.color = 1
         combined.name = 'combined'
 
+
         containers = [
             hgg,
             hzz,
             combined
             ]
+        for container in containers: container.title = titles.get( container.name, container.name )
 
-
-        for container in containers:
-            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
-            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
-            # container.contours_1sigma.sort( key = lambda Tg: -Tg.GetN() )
-            # container.contours_2sigma.sort( key = lambda Tg: -Tg.GetN() )
-            # container.contours_1sigma = container.contours_1sigma[0:3]
-            # container.contours_2sigma = container.contours_2sigma[0:3]
-
-
-        c.cd()
-        c.Clear()
-        SetCMargins()
-
-        # xMin = -0.2
-        # xMax = 1.35
-        # yMin = -0.03
-        # yMax = 0.135
-
-        xMin = -0.2
-        xMax = 2.0
-        yMin = -0.08
-        yMax = 0.135
-
-        base = GetPlotBase(
-            xMin = xMin,
-            xMax = xMax,
-            yMin = yMin,
-            yMax = yMax,
-            xTitle = titles.get( xCoupling, xCoupling ),
-            yTitle = titles.get( yCoupling, yCoupling ),
+        TheoryCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -0.2,
+            xMax = 2.0,
+            yMin = -0.08,
+            yMax = 0.135,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours',
+            x_SM      = 1.,
+            y_SM      = 0.,
             )
-        base.Draw('P')
-
-        base.GetXaxis().SetTitleSize(0.06)
-        base.GetXaxis().SetLabelSize(0.05)
-        base.GetYaxis().SetTitleSize(0.06)
-        base.GetYaxis().SetLabelSize(0.05)
 
 
-        # leg = ROOT.TLegend(
-        #     1 - c.GetRightMargin() - 0.22,
-        #     c.GetBottomMargin() + 0.02,
-        #     1 - c.GetRightMargin(),
-        #     c.GetBottomMargin() + 0.21
-        #     )
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top_lumiStudy:
 
-        leg = ROOT.TLegend(
-            c.GetLeftMargin() + 0.01,
-            c.GetBottomMargin() + 0.02,
-            1 - c.GetRightMargin() - 0.01,
-            c.GetBottomMargin() + 0.09
+        ASIMOV = True
+
+        if ASIMOV:
+            combined_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
+            combined_lum8_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov_lum8 ) )
+        else:
+            print 'ERROR: Only implemented for Asimov now'
+            sys.exit()
+
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
             )
-        leg.SetNColumns(3)
-        leg.SetBorderSize(0)
-        leg.SetFillStyle(0)
+        combined.color = 1
+        combined.name = 'regularLumi'
 
-        for container in containers:
+        combined_lum8 = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_lum8_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined_lum8.color = 2
+        combined_lum8.name = 'highLumi'
 
-            for Tg in container.contours_1sigma:
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(1)
-                Tg.Draw('CSAME')
-                if Tg == container.contours_1sigma[0]:
-                    Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
-                    leg.AddEntry( Tg.GetName(), titles.get( container.name, container.name ), 'l' )
 
-            for Tg in container.contours_2sigma:
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(2)
-                Tg.Draw('CSAME')
+        containers = [
+            combined,
+            combined_lum8
+            ]
 
-            Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
-            ROOT.SetOwnership( Tpoint, False )
-            Tpoint.SetMarkerSize(2)
-            Tpoint.SetMarkerStyle(34)
-            Tpoint.SetMarkerColor( container.color )
-            Tpoint.Draw('PSAME')
-            Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
+        for container in containers: container.title = titles.get( container.name, container.name )
 
-        TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [0.0] ) )
-        ROOT.SetOwnership( TpointSM, False )
-        TpointSM.SetMarkerSize(2)
-        TpointSM.SetMarkerStyle(21)
-        TpointSM.SetMarkerColor( 12 )
-        TpointSM.Draw('PSAME')
+        TheoryCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -0.2,
+            xMax = 2.0,
+            yMin = -0.08,
+            yMax = 0.135,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_LumiStudy',
+            x_SM      = 1.,
+            y_SM      = 0.,
+            )
 
-        leg.Draw()
 
-        SaveC( 'contours' )
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top_BRdependencyComparison:
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
+        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov_couplingDependentBR ) )
+
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'regularBR'
+        combined.title = 'BR constant'
+
+        scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
+            scalingBR_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBR.color = 2
+        scalingBR.name = 'scalingBR'
+        scalingBR.title = 'BR(#kappa_{t})'
+
+
+        TheoryCommands.BasicMixedContourPlot(
+            [ combined, scalingBR ],
+            xMin = -0.2,
+            xMax = 2.0,
+            yMin = -0.08,
+            yMax = 0.135,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_BRcouplingDependency',
+            x_SM      = 1.,
+            y_SM      = 0.,
+            plotIndividualH2s = True,
+            )
+
+
 
 
     #____________________________________________________________________
@@ -660,138 +724,6 @@ def main( args ):
         SaveC( outname )
 
 
-
-
-
-    #____________________________________________________________________
-    if args.couplingContourPlot_Top_lumiStudy:
-
-        xCoupling = 'ct'
-        yCoupling = 'cg'
-        titles = {
-            'ct': '#kappa_{t}', 'cg' : '#kappa_{g}',
-            'hgg' : 'H #rightarrow #gamma#gamma',
-            'hzz' : 'H #rightarrow 4l',
-            'combined' : 'Combination',
-            'regularLumi' : 'Expected at 35.9 fb^{-1}',
-            'highLumi' : 'Expected at 300 fb^{-1}',
-            }
-
-        ASIMOV = True
-
-        if ASIMOV:
-            combined_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
-            combined_lum8_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov_lum8 ) )
-        else:
-            print 'ERROR: Only implemented for Asimov now'
-            sys.exit()
-
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
-            combined_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        combined.color = 1
-        combined.name = 'regularLumi'
-
-        combined_lum8 = TheoryCommands.GetTH2FromListOfRootFiles(
-            combined_lum8_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        combined_lum8.color = 2
-        combined_lum8.name = 'highLumi'
-
-
-        containers = [
-            combined,
-            combined_lum8
-            ]
-
-
-        for container in containers:
-            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
-            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
-
-        c.cd()
-        c.Clear()
-        SetCMargins()
-
-        xMin = -0.2
-        xMax = 1.35
-        yMin = -0.03
-        yMax = 0.135
-
-        base = GetPlotBase(
-            xMin = xMin,
-            xMax = xMax,
-            yMin = yMin,
-            yMax = yMax,
-            xTitle = titles.get( xCoupling, xCoupling ),
-            yTitle = titles.get( yCoupling, yCoupling ),
-            )
-        base.Draw('P')
-
-        base.GetXaxis().SetTitleSize(0.06)
-        base.GetXaxis().SetLabelSize(0.05)
-        base.GetYaxis().SetTitleSize(0.06)
-        base.GetYaxis().SetLabelSize(0.05)
-
-
-        # leg = ROOT.TLegend(
-        #     1 - c.GetRightMargin() - 0.22,
-        #     c.GetBottomMargin() + 0.02,
-        #     1 - c.GetRightMargin(),
-        #     c.GetBottomMargin() + 0.21
-        #     )
-
-        leg = ROOT.TLegend(
-            c.GetLeftMargin() + 0.01,
-            c.GetBottomMargin() + 0.02,
-            1 - c.GetRightMargin() - 0.01,
-            c.GetBottomMargin() + 0.09
-            )
-        leg.SetNColumns(3)
-        leg.SetBorderSize(0)
-        leg.SetFillStyle(0)
-
-        for container in containers:
-
-            for Tg in container.contours_1sigma:
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(1)
-                Tg.Draw('CSAME')
-                if Tg == container.contours_1sigma[0]:
-                    Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
-                    leg.AddEntry( Tg.GetName(), titles.get( container.name, container.name ), 'l' )
-
-            for Tg in container.contours_2sigma:
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(2)
-                Tg.Draw('CSAME')
-
-            Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
-            ROOT.SetOwnership( Tpoint, False )
-            Tpoint.SetMarkerSize(2)
-            Tpoint.SetMarkerStyle(34)
-            Tpoint.SetMarkerColor( container.color )
-            Tpoint.Draw('PSAME')
-            Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
-
-        TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [0.0] ) )
-        ROOT.SetOwnership( TpointSM, False )
-        TpointSM.SetMarkerSize(2)
-        TpointSM.SetMarkerStyle(21)
-        TpointSM.SetMarkerColor( 12 )
-        TpointSM.Draw('PSAME')
-
-        leg.Draw()
-
-        SaveC( 'contours_Top_lumiStudy', asROOT=True )
 
 
 
