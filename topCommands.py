@@ -187,9 +187,9 @@ def main( args ):
         suffix = 'Top'
         if INCLUDE_THEORY_UNCERTAINTIES:
             extraOptions.append(
-                '--PO correlationMatrix={0}'.format(LATESTCORRELATIONMATRIX_Top) )
+                '--PO correlationMatrix={0}'.format(  LatestPaths.correlationMatrix_Top ) )
             extraOptions.append(
-                '--PO theoryUncertainties={0}'.format(LATESTTHEORYUNCERTAINTIES_Top) )
+                '--PO theoryUncertainties={0}'.format(  LatestPaths.theoryUncertainties_Top ) )
             suffix += '_withTheoryUncertainties'
 
         if MAKELUMISCALABLE:
@@ -198,8 +198,7 @@ def main( args ):
             suffix += '_lumiScale'
 
         if INCLUDE_BR_COUPLING_DEPENDENCY:
-            extraOptions.append(
-                '--PO FitBR=True' )
+            extraOptions.append( '--PO FitBR=True' )
             suffix += '_couplingDependentBR'
 
 
@@ -231,8 +230,8 @@ def main( args ):
         # LUMISTUDY = True
         LUMISTUDY = False
 
-        # INCLUDE_BR_COUPLING_DEPENDENCY = True
-        INCLUDE_BR_COUPLING_DEPENDENCY = False
+        INCLUDE_BR_COUPLING_DEPENDENCY = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY = False
 
 
         # datacard = LatestPaths.ws_combined_split_top
@@ -240,6 +239,7 @@ def main( args ):
         if INCLUDE_BR_COUPLING_DEPENDENCY:
             # datacard = LatestPaths.ws_combined_split_top_couplingDependentBR
             datacard = LatestPaths.ws_combined_split_betterTop_couplingDependentBR
+
         if LUMISTUDY:
             datacard = LatestPaths.ws_combined_split_top_lumiScalableWS
         if args.hgg:
@@ -278,6 +278,30 @@ def main( args ):
                 queue = 'short.q'
 
 
+        extraOptions = [
+            '-P ct -P cg' + ( ' -P kappa_V' if INCLUDE_BR_COUPLING_DEPENDENCY else '' ),
+            '--squareDistPoiStep',
+            # 
+            ( '--setPhysicsModelParameters ct=1.0,cg=0.0'
+                + ( ',lumiScale=8.356546' if LUMISTUDY else '' )
+                + ( ',kappa_V=1.0' if INCLUDE_BR_COUPLING_DEPENDENCY else '' )
+                ),
+            # 
+            ( '--setPhysicsModelParameterRanges ct={0},{1}:cg={2},{3}'.format( ct_ranges[0], ct_ranges[1], cg_ranges[0], cg_ranges[1] )
+                + ( ':kappa_V=-10.0,10.0' if INCLUDE_BR_COUPLING_DEPENDENCY else '' )
+                ),
+            ]
+
+        variablesToSave = []
+        variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
+        variablesToSave.extend( [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ] )
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            variablesToSave.extend( Commands.ListSet( datacard, 'hgg_yieldParameters' ) )
+            variablesToSave.extend( Commands.ListSet( datacard, 'hzz_yieldParameters' ) )
+            variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
+
+        extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
+
 
         Commands.MultiDimCombineTool(
             datacard,
@@ -289,19 +313,7 @@ def main( args ):
             fastscan      = doFastscan,
             asimov        = ASIMOV,
             jobPriority   = 0,
-            extraOptions  = [
-                # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
-                '-P ct -P cg',
-                '--setPhysicsModelParameters ct=1.0,cg=0.0' + ( ',lumiScale=8.356546' if LUMISTUDY else '' ),
-                '--setPhysicsModelParameterRanges ct={0},{1}:cg={2},{3}'.format(
-                    ct_ranges[0], ct_ranges[1], cg_ranges[0], cg_ranges[1] ),
-                '--saveSpecifiedFunc {0}'.format(','.join(
-                    Commands.ListSet( datacard, 'yieldParameters' )
-                    + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]
-                    + ( Commands.ListSet( datacard, 'hgg_yieldParameters' ) + [ 'Scaling_hgg' ] if INCLUDE_BR_COUPLING_DEPENDENCY else [] )
-                    ) ),
-                '--squareDistPoiStep',
-                ]
+            extraOptions  = extraOptions
             )
 
 
@@ -464,8 +476,12 @@ def main( args ):
     #____________________________________________________________________
     if args.couplingContourPlot_Top_BRdependencyComparison:
 
-        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
-        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov_couplingDependentBR ) )
+        # combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
+        # scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov_couplingDependentBR ) )
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_betterTop_combined_asimov ) )
+        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_betterTop_combined_asimov_couplingDependentBR ) )
+
 
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,

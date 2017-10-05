@@ -44,6 +44,13 @@ class CouplingModel( PhysicsModel ):
         self.skipOverflowBin = False
         
 
+        self.SM_HIGG_DECAYS = [ "hww", "hzz", "hgg", "htt", "hbb", 'hzg', 'hmm', 'hcc', 'hgluglu' ]
+        self.SM_HIGG_DECAYS.append( 'hss' )
+
+
+
+
+
 
     ################################################################################
     # Standard methods
@@ -179,151 +186,129 @@ class CouplingModel( PhysicsModel ):
     #____________________________________________________________________
     def getYieldScale( self, bin, process ):
 
-        def p( yieldScale ):
-            if self.verbose > 0:
-                print 'Getting yield scale: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldScale )
+        if self.verbose:
+            print 'Getting scale for process = {0:21}, bin = {1}'.format( process, bin )
+
+        # ======================================
+        # Define some default yieldParameters
 
         one = 1 if not self.MakeLumiScalable else 'lumiScale'
 
+        if self.FitBR:
+            if self.MakeLumiScalable:
+                one_hgg = 'lumiScale_times_hggBRmodifier'
+                one_hzz = 'lumiScale_times_hzzBRmodifier'
+            else:
+                one_hgg = 'hggBRmodifier'
+                one_hzz = 'hzzBRmodifier'
+
+
+        # ======================================
+        
+
         if not self.DC.isSignal[process]:
-            p( one )
-            return one
+            # If it's a background, always return the 1.0 yieldParameter
+            yieldParameter = one
+
+        elif 'OutsideAcceptance' in process:
+            # If it's OutsideAcceptance, return one, but scale with BRmodifier if necessary
+            if self.FitBR:
+                if self.BinIsHgg(bin):
+                    yieldParameter = one_hgg
+                else:
+                    yieldParameter = one_hzz
+            else:
+                yieldParameter = one
 
         else:
-            
-            if process == 'OutsideAcceptance':
-                p( one )
-                return one
-            
-            elif self.splitggH and not 'ggH' in process:
 
-                if self.FitBR and self.BinIsHgg( bin ):
-                    p( 'Scaling_hgg' )
-                    return 'Scaling_hgg'
-
-                p( one )
-                return one
-
-            else:
-
-                # Try to determine bin boundaries from process name
-                match = re.search( r'([\dmp]+)_([\dmp]+)', process )
-
-                if not match:
-                    p( one )
-                    return one
+            if self.splitggH and 'xH' in process:
+                # If it's an xH process, still multiply by the BRmodifier
+                if self.FitBR:
+                    if self.BinIsHgg(bin) and self.MakeLumiScalable:
+                        yieldParameter = 'lumiScale_times_hggBRmodifier_times_xHmodifier'
+                    elif not self.BinIsHgg(bin) and self.MakeLumiScalable:
+                        yieldParameter = 'lumiScale_times_hzzBRmodifier_times_xHmodifier'
+                    elif self.BinIsHgg(bin) and not self.MakeLumiScalable:
+                        yieldParameter = 'hggBRmodifier_times_xHmodifier'
+                    elif not self.BinIsHgg(bin) and not self.MakeLumiScalable:
+                        yieldParameter = 'hzzBRmodifier_times_xHmodifier'
                 else:
+                    yieldParameter = one
 
-                    leftBound  = float(match.group(1))
-                    rightBound = float(match.group(2))
 
+            elif ( self.splitggH and 'ggH' in process ) or ( 'smH' in process ):
+                # If it's a ggH process
+
+                isOverflowBin = False
+                isInsideUserBinBoundaries = False
+
+                matchRegularBin = re.search( r'([\dmp]+)_([\dmp]+)', process )
+                matchOverflow   = re.search( r'([GTLE]+)([\dmp]+)', process )
+
+                if matchRegularBin:
+
+                    isOverflowBin = False
+                    leftBound, rightBound = float(matchRegularBin.group(1)), float(matchRegularBin.group(2))
                     for iBin in xrange(self.nExpBins):
                         if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
-
-                            if iBin >= len(self.yieldParameterNames):
-                                # This case can happen when binBoundaries are manually specified
-                                # up until x, but the theory spectra allow yieldParameter construction
-                                # up to <x.
-                                # This can be prevented by passing less bins in the command line
-                                p( one )
-                                return one
-
-                            yieldParameter = self.yieldParameterNames[iBin]
-                            if self.FitBR and self.BinIsHgg( bin ):
-                                yieldParameter = self.hgg_yieldParameterNames[iBin]
-
-                            p(yieldParameter)
-                            return yieldParameter
-
-                    # raise CouplingModelError( 
-                    #     'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
-                    #     )
-
-                    print 'Process \'{0}\' is outside the specified binning ({1}-{2}), and will be scaled with 1'.format(
-                        process, self.expBinBoundaries[0], self.expBinBoundaries[-1]
-                        )
-                    p( one )
-                    return one
-
-
-    #____________________________________________________________________
-    def getYieldScale_OLD( self, bin, process ):
-
-        def p( yieldScale ):
-            if self.verbose > 0:
-                print 'Getting yield scale: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldScale )
-
-        one = 1 if not self.MakeLumiScalable else 'lumiScale'
-
-        if not self.DC.isSignal[process]:
-            p( one )
-            return one
-        else:
-            if process == 'OutsideAcceptance':
-                p( one )
-                return one
-            elif self.splitggH and not 'ggH' in process:
-                p( one )
-                return one
-            else:
-
-                if not( self.manualExpBinBoundaries is None ):
-
-                    # Try to determine bin boundaries from process name
-                    match = re.search( r'([\dmp]+)_([\dmp]+)', process )
-
-                    if not match:
-                        p( one )
-                        return one
+                            isInsideUserBinBoundaries = True
+                            break
                     else:
+                        isInsideUserBinBoundaries = False
 
-                        # Still check if the bin is supposed to be skipped
-                        for skipBin in self.skipBins:
-                            if skipBin in process:
-                                p(one)
-                                return one
-
-                        leftBound  = float(match.group(1))
-                        rightBound = float(match.group(2))
-
-                        for iBin in xrange(self.nExpBins):
-                            if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
-
-                                if iBin >= len(self.yieldParameterNames):
-                                    # This case can happen when binBoundaries are manually specified
-                                    # up until x, but the theory spectra allow yieldParameter construction
-                                    # up to <x
-                                    p( one )
-                                    return one
-
-                                yieldParameter = self.yieldParameterNames[iBin]
-                                if self.FitBR and self.BinIsHgg( bin ):
-                                    yieldParameter = self.hgg_yieldParameterNames[iBin]
-
-                                p(yieldParameter)
-                                return yieldParameter
-
-                        # raise CouplingModelError( 
-                        #     'ERROR: Could not find an appropriate yield parameter for \'{0}\''.format( process )
-                        #     )
-                        print 'Process \'{0}\' is outside the specified binning ({1}-{2}), and will be scaled with 1'.format(
-                            process, expBinBoundaries[0], expBinBoundaries[-1]
-                            )
-                        p( one )
-                        return one
-
-                else:
-                    # Case for when no manual bin boundaries were specified
-
-                    yieldParameter = 'r_' + process
-
-                    for skipBin in self.skipBins:
-                        if skipBin in process:
+                    if isInsideUserBinBoundaries:
+                        if self.FitBR:
+                            if self.BinIsHgg(bin):
+                                yieldParameter = self.hgg_yieldParameterNames[iBin]
+                            else:
+                                yieldParameter = self.hzz_yieldParameterNames[iBin]
+                        else:
+                            yieldParameter = self.yieldParameterNames[iBin]
+                    else:
+                        if self.FitBR:
+                            if self.BinIsHgg(bin):
+                                yieldParameter = one_hgg
+                            else:
+                                yieldParameter = one_hzz
+                        else:
                             yieldParameter = one
 
-                    p( yieldParameter )
-                    return yieldParameter
 
+                elif matchOverflow:
+                    # overflowType = matchOverflow.group(1)
+                    # leftBound    = float( matchOverflow.group(2) )
+
+                    if self.FitBR:
+                        if self.BinIsHgg(bin):
+                            lastYieldParameter = self.hgg_yieldParameterNames[-1]
+                            alternative        = one_hgg
+                        else:
+                            lastYieldParameter = self.hzz_yieldParameterNames[-1]
+                            alternative        = one_hzz
+                    else:
+                        lastYieldParameter = self.yieldParameterNames[-1]
+                        alternative        = one
+
+                    if matchOverflow.group() in lastYieldParameter:
+                        yieldParameter = lastYieldParameter
+                    else:
+                        yieldParameter = alternative
+
+                else:
+                    raise CouplingModelError( 'Failure for process \'{0}\': Could not extract any bin boundary information'.format(process) )
+
+            else:
+                raise CouplingModelError( 'Failure for process \'{0}\': Production process is not \'xH\', \'ggH\' or \'smH\''.format(process) )
+
+
+        # if self.verbose > 0:
+        #     print 'Scaling: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldParameter )
+
+        if self.verbose:
+            print '    --> Scaling with \'{0}\''.format( yieldParameter )
+
+        return yieldParameter
 
 
     ################################################################################
@@ -563,32 +548,13 @@ class CouplingModel( PhysicsModel ):
             raise CouplingModelError(
                 'Specify \'--PO binBoundaries=0,15,...\' on the command line. Automatic boundary determination no longer supported.'
                 )
-            # expBinBoundaries = []
-            # for signal in signals:
-            #     if 'OutsideAcceptance' in signal: continue
-            #     bounds = signal.split('_')[2:]
-            #     for bound in bounds:
-            #         bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
-            #         expBinBoundaries.append( float(bound) )
-            # expBinBoundaries = list(set(expBinBoundaries))
-            # expBinBoundaries.sort()
-            # expBinBoundaries.append( 500. )  # Overflow bin
-            # nExpBins = len(expBinBoundaries) - 1
-
-            # if self.verbose:
-            #     print 'Determined the following experimental bin boundaries:', expBinBoundaries
-            #     print '   from the following signals:'
-            #     print '   ' + '\n   '.join( signals )
-
 
         self.allProcessBinBoundaries = []
         for signal in signals:
             if 'OutsideAcceptance' in signal: continue
-            bounds = signal.split('_')[2:]
-            for bound in bounds:
+            for bound in signal.split('_')[2:]:
                 bound = bound.replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','')
                 self.allProcessBinBoundaries.append( float(bound) )
-
 
         # Attach to class so they are accesible in other methods
         self.expBinBoundaries = expBinBoundaries
@@ -619,7 +585,10 @@ class CouplingModel( PhysicsModel ):
             self.modelBuilder.out.var('lumiScale').setConstant()
 
         if self.FitBR:
-            self.importHGamGamScaler()
+            # self.importHGamGamScaler()
+            self.MakeWidthExpressions()
+            self.hgg_yieldParameterNames = []
+            self.hzz_yieldParameterNames = []
 
 
         # ======================================
@@ -853,7 +822,7 @@ class CouplingModel( PhysicsModel ):
                 yieldParameterFormula.append( yieldParameterFormulaComponent )
 
             # Compile expression string for final yieldParameter
-            if self.MakeLumiScalable:
+            if self.MakeLumiScalable and not self.FitBR:
                 argumentIndices['lumiScale'] = '@{0}'.format( len(argumentIndices) )
                 yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
                     signal                   = expBinStr,
@@ -888,21 +857,40 @@ class CouplingModel( PhysicsModel ):
 
             if self.FitBR:
                 # Multiply the yieldParameters by a BR modifier which can be fitted as well
-                # No real way to make this more general; very hardcoded for hgg
+                # No real way to make this more general; very hardcoded for hgg/hzz
 
-                if not hasattr( self, 'hgg_yieldParameterNames' ):
-                    self.hgg_yieldParameterNames = []
-
-                hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                    signal                   = expBinStr,
-                    formulaString            = '@0*@1',
-                    commaSeparatedParameters = 'Scaling_hgg,r_{0}'.format( expBinStr )
-                    )
-                print 'Doing expr: ', hgg_yieldParameterExpression
+                if self.MakeLumiScalable:
+                    hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                        signal                   = expBinStr,
+                        formulaString            = '@0*@1*@2',
+                        commaSeparatedParameters = 'lumiScale,hggBRmodifier,r_{0}'.format( expBinStr )
+                        )
+                else:
+                    hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                        signal                   = expBinStr,
+                        formulaString            = '@0*@1',
+                        commaSeparatedParameters = 'hggBRmodifier,r_{0}'.format( expBinStr )
+                        )
+                if self.verbose: print 'Doing expr: ', hgg_yieldParameterExpression
                 self.modelBuilder.factory_( hgg_yieldParameterExpression )
-
                 self.hgg_yieldParameterNames.append( 'r_hgg_{0}'.format(expBinStr) )
                 
+                if self.MakeLumiScalable:
+                    hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                        signal                   = expBinStr,
+                        formulaString            = '@0*@1*@2',
+                        commaSeparatedParameters = 'lumiScale,hzzBRmodifier,r_{0}'.format( expBinStr )
+                        )
+                else:
+                    hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                        signal                   = expBinStr,
+                        formulaString            = '@0*@1',
+                        commaSeparatedParameters = 'hzzBRmodifier,r_{0}'.format( expBinStr )
+                        )
+                if self.verbose: print 'Doing expr: ', hzz_yieldParameterExpression
+                self.modelBuilder.factory_( hzz_yieldParameterExpression )
+                self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
+
 
         # Define sets in output datacard
         self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
@@ -913,6 +901,7 @@ class CouplingModel( PhysicsModel ):
 
         if self.FitBR:
             self.modelBuilder.out.defineSet( 'hgg_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
+            self.modelBuilder.out.defineSet( 'hzz_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
 
         self.SMXSInsideExperimentalBins = SMXSInsideExperimentalBins
 
@@ -1060,48 +1049,287 @@ class CouplingModel( PhysicsModel ):
     # Helper functions
     ################################################################################
 
-
     #____________________________________________________________________
-    def importHGamGamScaler( self ):
+    def GetCouplingOrDefineNew( self, couplingName, possibyExistingCouplings=None, defaultValue=1. ):
+        # Look for possibly existing couplings that also define the desired coupling
+
+        if possibyExistingCouplings is None:
+            possibyExistingCouplings = [ couplingName ]
+        if not couplingName in possibyExistingCouplings:
+            possibyExistingCouplings.append( couplingName )
 
         # ======================================
-        # Collect the needed input couplings
+        # Get list of all components in workspace
 
-        def GetCouplingOrDefineNew( couplingName, possibyExistingCouplings=[] ):
-            # Look for possibly existing couplings that also define the desired coupling
-            for coupling in self.couplings:
-                if coupling in possibyExistingCouplings:
-                    if self.verbose:
-                        print 'Using existing variable \'{0}\' for \'{1}\''.format( coupling, couplingName )
-                    usedCouplingName = coupling
-                    break    
-            else:
+        componentArgset   = self.modelBuilder.out.components()
+        nComponents       = componentArgset.getSize()
+        componentIterator = self.modelBuilder.out.componentIterator()
+        allComponentsList = []
+        for i in xrange(nComponents):
+            element = componentIterator.Next()
+            allComponentsList.append( element.GetName() )
+
+        # ======================================
+        # Check for possibly existing couplings
+
+        for possibyExistingCoupling in possibyExistingCouplings:
+            if possibyExistingCoupling in allComponentsList:
                 if self.verbose:
-                    print 'Creating new variable \'{0}\''.format( couplingName )
-                self.modelBuilder.doVar( '{0}[1.0]'.format(couplingName) )
-                usedCouplingName = couplingName
+                    print 'Found pre-existing coupling \'{0}\', which will be used for \'{1}\''.format( possibyExistingCoupling, couplingName )
+                usedCouplingName = possibyExistingCoupling
+                break
+        else:
+            if self.verbose:
+                print 'Creating new variable \'{0}\''.format( couplingName )
+            self.modelBuilder.doVar( '{0}[{1},0.999*{1},{1}]'.format( couplingName, defaultValue ) )
+            self.modelBuilder.out.var(couplingName).setConstant(False)
+            usedCouplingName = couplingName
 
-            couplingVar = self.modelBuilder.out.var(usedCouplingName)
-            return couplingVar
+        # If the possibly existing variable was actually a function, this will break...
+        couplingVar = self.modelBuilder.out.var(usedCouplingName)
 
-        kappa_t   = GetCouplingOrDefineNew( 'kappa_t', [ 'kappa_t', 'kappat', 'ct' ] )
-        kappa_b   = GetCouplingOrDefineNew( 'kappa_b', [ 'kappa_b', 'kappab', 'cb' ] )
-        kappa_c   = GetCouplingOrDefineNew( 'kappa_c', [ 'kappa_c', 'kappac', 'cc' ] )
-        kappa_W   = GetCouplingOrDefineNew( 'kappa_W', [ 'kappa_W', 'kappaW', 'cW' ] )
-        kappa_tau = GetCouplingOrDefineNew( 'kappa_tau' )
+        return couplingVar
+
+
+    #____________________________________________________________________
+    def MakeWidthExpressions( self ):
+
+        # ======================================
+        # Prepare some variables in expressions in WS
+
+        # Make sure couplings are defined
+        kappa_t   = self.GetCouplingOrDefineNew( 'kappa_t', [ 'kappat', 'ct' ] )
+        kappa_b   = self.GetCouplingOrDefineNew( 'kappa_b', [ 'kappab', 'cb' ] )
+        kappa_c   = self.GetCouplingOrDefineNew( 'kappa_c', [ 'kappac', 'cc' ] )
+        kappa_glu = self.GetCouplingOrDefineNew(
+            'kappa_glu',
+            [ 'kappaglu', 'cglu', 'cg', 'kappag', 'kappa_g' ],
+            defaultValue = 0.0
+            )
+
+        kappa_V   = self.GetCouplingOrDefineNew( 'kappa_V' )
+        kappa_W   = self.GetCouplingOrDefineNew( 'kappa_V' )
+        kappa_Z   = self.GetCouplingOrDefineNew( 'kappa_V' )
+
+        kappa_tau = self.GetCouplingOrDefineNew( 'kappa_tau' )
+        kappa_mu  = self.GetCouplingOrDefineNew( 'kappa_mu' )
+
+        if self.verbose:
+            print '\nPrintout of couplings:'
+            kappa_t.Print()
+            kappa_b.Print()
+            kappa_c.Print()
+            kappa_W.Print()
+            kappa_Z.Print()
+            kappa_tau.Print()
+            kappa_mu.Print()
+            print ''
+
+        # Other needed expressions
+        self.modelBuilder.factory_("expr::kappa_mu_expr(\"@0*@1+(1-@0)*@2\", CMS_use_kmu[0], kappa_mu, kappa_tau)")
+
+        # Invisible BR, needed for the other expressions but fixing to 0. now
+        self.modelBuilder.doVar("BRinv[0.,0.,1.]")
+        self.modelBuilder.out.var("BRinv").setConstant(True)
+
+
+        # ======================================
+        # Application of SMHiggsBuilder
 
         if not hasattr( self, 'SMH' ): self.SMH = SMHiggsBuilder(self.modelBuilder)
 
+        # SM BR's, called 'SM_BR_(decayChannel)'
+        for decayChannel in self.SM_HIGG_DECAYS:
+            self.SMH.makeBR( decayChannel )
+
+        # BR uncertainties
+        doBRU = False
+        if doBRU:
+            self.SMH.makePartialWidthUncertainties()
+        else:
+            for decayChannel in self.SM_HIGG_DECAYS: 
+                self.modelBuilder.factory_( 'HiggsDecayWidth_UncertaintyScaling_%s[1.0]' % decayChannel )
+
+        # makeScaling functions copied from https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit/blob/74x-root6/python/LHCHCGModels.py#L355-L358
+
+        self.modelBuilder.factory_( 'expr::kappa_t_plus_kappa_glu( "@0+@1", {0}, {1} )'.format( kappa_t.GetName(), kappa_glu.GetName() ) )
+        self.SMH.makeScaling(
+            'hgluglu',
+            Cb      = kappa_b.GetName(),
+            Ctop    = 'kappa_t_plus_kappa_glu'
+            )
         self.SMH.makeScaling(
             'hgg',
-            Ctop = kappa_t.GetName(),
-            Cb   = kappa_b.GetName(),
-            CW   = kappa_W.GetName(),
-            Ctau = kappa_tau.GetName(),
+            Cb      = kappa_b.GetName(),
+            Ctop    = kappa_t.GetName(),
+            CW      = kappa_W.GetName(),
+            Ctau    = kappa_tau.GetName()
+            )
+        self.SMH.makeScaling(
+            'hzg',
+            Cb      = kappa_b.GetName(),
+            Ctop    = kappa_t.GetName() ,
+            CW      = kappa_W.GetName(),
+            Ctau    = kappa_tau.GetName()
+            )
+
+        ## partial witdhs, normalized to the SM one
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_Z('
+            '"@0*@0*@1*@2",'
+            ' {0}, SM_BR_hzz, HiggsDecayWidth_UncertaintyScaling_hzz)'.format( kappa_Z.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_W('
+            '"@0*@0*@1*@2",'
+            ' {0}, SM_BR_hww, HiggsDecayWidth_UncertaintyScaling_hww)'.format( kappa_W.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_tau('
+            '"@0*@0*@1*@4+@2*@2*@3*@5",'
+            ' {0}, SM_BR_htt, kappa_mu_expr, SM_BR_hmm, HiggsDecayWidth_UncertaintyScaling_htt, HiggsDecayWidth_UncertaintyScaling_hmm)'.format( kappa_tau.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_bottom('
+            '"@0*@0 * (@1*@3+@2)",'
+            ' {0}, SM_BR_hbb, SM_BR_hss, HiggsDecayWidth_UncertaintyScaling_hbb)'.format( kappa_b.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_gluon('
+            '"  @0  * @1 * @2",'
+            ' Scaling_hgluglu, SM_BR_hgluglu, HiggsDecayWidth_UncertaintyScaling_hgluglu)'
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_gamma('
+            '"@0*@1*@4 + @2*@3*@5",'
+            '  Scaling_hgg, SM_BR_hgg, Scaling_hzg, SM_BR_hzg, HiggsDecayWidth_UncertaintyScaling_hgg, HiggsDecayWidth_UncertaintyScaling_hzg)'
+            )
+        kappa_c_ForBR = kappa_c if kappa_c.GetName() in self.couplings else kappa_t
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_top('
+            '"@0*@0 * @1*@2",'
+            ' {0}, SM_BR_hcc, HiggsDecayWidth_UncertaintyScaling_hcc)'.format( kappa_c_ForBR.GetName() )
             )
 
 
+        ## fix to have all BRs add up to unity
+        self.modelBuilder.factory_(
+            'sum::c7_SMBRs({0})'.format(
+                ','.join([ 'SM_BR_{0}'.format(decayChannel) for decayChannel in self.SM_HIGG_DECAYS ])
+                # "SM_BR_"+X for X in "hzz hww htt hmm hcc hbb hss hgluglu hgg hzg".split())
+                ))
+        self.modelBuilder.out.function("c7_SMBRs").Print("")      
 
+        ## total witdh, normalized to the SM one
+        self.modelBuilder.factory_(
+            'expr::c7_Gscal_tot('
+            '"(@1+@2+@3+@4+@5+@6+@7)/@8/(1-@0)", BRinv, c7_Gscal_Z, c7_Gscal_W, c7_Gscal_tau, c7_Gscal_top, c7_Gscal_bottom, c7_Gscal_gluon, c7_Gscal_gamma, c7_SMBRs)'
+            )
+
+        ## BRs, normalized to the SM ones: they scale as (partial/partial_SM) / (total/total_SM) 
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hww('
+            '"@0*@0*@2/@1", {0}, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hww)'.format( kappa_W.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hzz('
+            '"@0*@0*@2/@1", {0}, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hzz)'.format( kappa_Z.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_htt('
+            '"@0*@0*@2/@1", {0}, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_htt)'.format( kappa_tau.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hmm('
+            '"@0*@0*@2/@1", kappa_mu_expr, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hmm)'
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hbb('
+            '"@0*@0*@2/@1", {0}, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hbb)'.format( kappa_b.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hcc('
+            '"@0*@0*@2/@1", {0}, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hcc)'.format( kappa_t.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hgg('
+            '"@0*@2/@1", Scaling_hgg, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hgg)'
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hzg('
+            '"@0*@2/@1", Scaling_hzg, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hzg)'
+            )
+        self.modelBuilder.factory_(
+            'expr::c7_BRscal_hgluglu('
+            '"@0*@2/@1", Scaling_hgluglu, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hgluglu)'
+            )
+
+
+        # ======================================
+        # The final scaling parameters used will be called 'hggBRmodifier' and 'hzzBRmodifier'
+
+        self.modelBuilder.factory_(
+            'expr::hggBRmodifier('
+            '"@0", c7_BRscal_hgg )'
+            )
+
+        self.modelBuilder.factory_(
+            'expr::hzzBRmodifier('
+            '"@0", c7_BRscal_hzz )'
+            )
+
+        # xH modifier
+        self.modelBuilder.factory_(
+            'expr::xHmodifier('
+            '"@0*@0", {0} )'.format( kappa_V.GetName() )
+            )
+        self.modelBuilder.factory_(
+            'expr::hggBRmodifier_times_xHmodifier('
+            '"@0*@1", hggBRmodifier, xHmodifier )'
+            )
+        self.modelBuilder.factory_(
+            'expr::hzzBRmodifier_times_xHmodifier('
+            '"@0*@1", hzzBRmodifier, xHmodifier )'
+            )
+
+
+        if self.MakeLumiScalable:
+
+            self.modelBuilder.factory_(
+                'expr::lumiScale_times_hggBRmodifier('
+                '"@0*@1", lumiScale, hggBRmodifier )'
+                )
+
+            self.modelBuilder.factory_(
+                'expr::lumiScale_times_hzzBRmodifier('
+                '"@0*@1", lumiScale, hzzBRmodifier )'
+                )
+
+            # xH
+            self.modelBuilder.factory_(
+                'expr::lumiScale_times_hggBRmodifier_times_xHmodifier('
+                '"@0*@1*@2", lumiScale, hggBRmodifier, xHmodifier )'
+                )
+            self.modelBuilder.factory_(
+                'expr::lumiScale_times_hzzBRmodifier_times_xHmodifier('
+                '"@0*@1*@2", lumiScale, hzzBRmodifier, xHmodifier )'
+                )
+
+        self.modelBuilder.out.defineSet( 'BRvariables', ','.join([
+            kappa_t.GetName(),
+            kappa_b.GetName(),
+            kappa_c.GetName(),
+            kappa_W.GetName(),
+            kappa_Z.GetName(),
+            kappa_tau.GetName(),
+            kappa_mu.GetName(),
+            'hggBRmodifier',
+            'hzzBRmodifier',
+            'xHmodifier',
+            'Scaling_hgg',
+            'Scaling_hzg',
+            'Scaling_hgluglu',
+            ] ) )
 
 
     #____________________________________________________________________
@@ -1210,10 +1438,10 @@ class CouplingModel( PhysicsModel ):
     def BinIsHgg( self, bin ):
         # This is not robust coding AT ALL
         if bin.startswith('ch1'):
-            if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
+            # if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
             return True
         elif bin.startswith('ch2'):
-            if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
+            # if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
             return False
         else:
             raise CouplingModelError( 'Bin \'{0}\' can not be classified as either a hgg or hzz bin' )

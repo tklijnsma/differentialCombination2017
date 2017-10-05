@@ -69,6 +69,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingContourPlotAsimov_Yukawa',                    action=CustomAction )
     parser.add_argument( '--checkWSParametrization_Yukawa',                       action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_TheoryUncertainties',      action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_BRdependencyComparison',   action=CustomAction )
 
 
 ########################################
@@ -265,8 +266,8 @@ def main( args ):
         UNCORRELATED_THEORY_UNCERTAINTIES = False
         NO_THEORY_UNCERTAINTIES           = False
 
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        INCLUDE_BR_COUPLING_DEPENDENCY    = False
+        INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
         if SPLIT:
             # combinedDatacard = LatestPaths.ws_combined_split_yukawa
@@ -305,7 +306,7 @@ def main( args ):
 
 
         if doFastscan:
-            nPoints = 12800
+            nPoints = 6400
             nPointsPerJob = 800
             queue = 'short.q'
         else:
@@ -322,6 +323,34 @@ def main( args ):
                 queue = 'short.q'
 
 
+        extraOptions = [
+            '-P kappab -P kappac',
+            '--squareDistPoiStep',
+            # 
+            ( '--setPhysicsModelParameters kappab=1.0,kappac=1.0'
+                + ( ',lumiScale=8.356546' if LUMISTUDY else '' )
+                + ( ',kappa_V=1.0' if INCLUDE_BR_COUPLING_DEPENDENCY else '' )
+                ),
+            # 
+            ( '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format( kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] )
+                + ( ':kappa_V=-10.0,10.0' if INCLUDE_BR_COUPLING_DEPENDENCY else '' )
+                ),
+            ]
+
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            extraOptions.append( '--floatNuisances kappa_V' )
+
+        variablesToSave = []
+        variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
+        variablesToSave.extend( [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ] )
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            variablesToSave.extend( Commands.ListSet( datacard, 'hgg_yieldParameters' ) )
+            variablesToSave.extend( Commands.ListSet( datacard, 'hzz_yieldParameters' ) )
+            variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
+
+        extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
+
+
         Commands.MultiDimCombineTool(
             datacard,
             nPoints       = nPoints,
@@ -332,20 +361,7 @@ def main( args ):
             fastscan      = doFastscan,
             asimov        = ASIMOV,
             jobPriority   = 0,
-            extraOptions  = [
-                # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
-                '-P kappab -P kappac',
-                '--setPhysicsModelParameters kappab=1.0,kappac=1.0' + ( ',lumiScale=8.356546' if LUMISTUDY else '' ),
-                # '--setPhysicsModelParameters kappab=1.0,kappac=1.0,lumiScale=10.',
-                '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
-                    kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
-                '--saveSpecifiedFunc {0}'.format(','.join(
-                    Commands.ListSet( datacard, 'yieldParameters' )
-                    + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]
-                    + ( Commands.ListSet( datacard, 'hgg_yieldParameters' ) + [ 'Scaling_hgg' ] if INCLUDE_BR_COUPLING_DEPENDENCY else [] )
-                    ) ),
-                '--squareDistPoiStep',
-                ]
+            extraOptions  = extraOptions
             )
 
 
@@ -412,6 +428,50 @@ def main( args ):
         print res.xCoupling, '=', res.xBestfit
         print res.yCoupling, '=', res.yBestfit
 
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_BRdependencyComparison:
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_betterYukawa_combined_asimov ) )
+        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_betterYukawa_combined_asimov_couplingDependentBR_fast ) )
+
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'regularBR'
+        combined.title = 'BR constant'
+
+        scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
+            scalingBR_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBR.color = 2
+        scalingBR.name = 'scalingBR'
+        scalingBR.title = 'BR(#kappa_{t})'
+
+        TheoryCommands.BasicMixedContourPlot(
+            [ combined, scalingBR ],
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_BRcouplingDependency',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
 
 
     if args.couplingContourPlot_Yukawa:

@@ -970,7 +970,7 @@ def BasicMixedContourPlot(
         Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
         container.bestfitPoint = Tpoint
 
-    TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [0.0] ) )
+    TpointSM = ROOT.TGraph( 1, array( 'd', [x_SM] ), array( 'd', [y_SM] ) )
     ROOT.SetOwnership( TpointSM, False )
     TpointSM.SetMarkerSize(2)
     TpointSM.SetMarkerStyle(21)

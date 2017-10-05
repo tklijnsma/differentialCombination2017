@@ -91,11 +91,13 @@ ws_combined_split_top_couplingDependentBR = 'workspaces_Sep27/combinedCard_Aug21
 
 # Also scaling xH with the BR modifier, and better binning decisions w.r.t. underflow and overflow
 ws_combined_split_betterTop                        = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties.root'
-ws_combined_split_betterTop_couplingDependentBR    = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
+# ws_combined_split_betterTop_couplingDependentBR    = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
+ws_combined_split_betterTop_couplingDependentBR    = 'workspaces_Sep29/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
 
 ws_combined_split_betterYukawa                     = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
-ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
-
+# ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
+# ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Sep29/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
+ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Oct02/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
 
 
 
@@ -199,6 +201,14 @@ scan_top_combined_profiled_asimov_lum8 = 'Scan_Top_Sep20_asimov_2'
 
 scan_top_combined_profiled_asimov_couplingDependentBR = 'Scan_Top_Sep27_asimov'
 
+
+scan_betterTop_combined_asimov                        = 'Scan_Top_Sep28_asimov'
+# scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep28_asimov_0'
+scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep29_asimov'
+scan_betterYukawa_combined_asimov                     = 'Scan_yukawa_Sep28_asimov'
+# scan_betterYukawa_combined_asimov_couplingDependentBR = 'Scan_yukawa_Sep28_asimov_0'
+scan_betterYukawa_combined_asimov_couplingDependentBR = 'Scan_yukawa_Sep29_asimov'
+scan_betterYukawa_combined_asimov_couplingDependentBR_fast = 'Scan_yukawa_Oct02_asimov'
 
 
 def main():
