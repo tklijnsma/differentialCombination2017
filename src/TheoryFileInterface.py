@@ -233,6 +233,26 @@ def ReadDerivedTheoryContainerToTGraph(
 
 
 ########################################
+# General operations
+########################################
+
+def NormalizeToSMCrossSection(
+        container,
+        SMXS = 55.70628722,
+        ):
+
+    # HIER VERDER
+    # Functie om per file te normalizeren naar SM XS schrijven
+
+    # Kan eventueel de integral function van TheoryCommands gebruiken
+
+    pass
+
+
+
+
+
+########################################
 # Interface fromPier
 ########################################
 

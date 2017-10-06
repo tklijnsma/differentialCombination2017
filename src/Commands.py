@@ -703,7 +703,8 @@ def MultiDimCombineTool(
 
             if not queue in [ '8nm', '1nh', '8nh', '1nd', '2nd' ]:
                 print 'Queue \'{0}\' is not available on lxplus'.format(queue)
-                return
+                if not IsTestMode():
+                    return
 
             cmd.append(
                 '--job-mode lxbatch --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),

@@ -63,6 +63,12 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--FitBR_scan',              action=CustomAction )
     parser.add_argument( '--FitBR_plot',              action=CustomAction )
 
+    parser.add_argument( '--TotalXS_t2ws',            action=CustomAction )
+    parser.add_argument( '--TotalXS_bestfit',         action=CustomAction )
+    parser.add_argument( '--TotalXS_scan',            action=CustomAction )
+    parser.add_argument( '--TotalXS_plot',            action=CustomAction )
+
+
 
 ########################################
 # Methods
@@ -272,6 +278,124 @@ def main( args ):
 
 
         SaveC( 'BRscan' )
+
+
+
+
+    #____________________________________________________________________
+    if args.TotalXS_t2ws:
+
+        extraOptions = [
+            '--PO verbose=2',
+            '--PO \'higgsMassRange=123,127\'',
+            ]
+
+        Commands.BasicT2WSwithModel(
+            LatestPaths.card_combined_unsplit,
+            pathToModel = 'FitBRModel.py',
+            modelName   = 'fitTotalXSModel',
+            suffix       = 'fitTotalXS',
+            extraOptions = extraOptions,
+            # smartMaps    = [
+            #     ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+            #     ],
+            )
+
+    #____________________________________________________________________
+    if args.TotalXS_bestfit:
+
+        print 'Note: Move workspace to LatestPaths.py'
+        ws = abspath( 'workspaces_Oct05/combinedCard_Jul26_FitBRModel_fitTotalXS.root' )
+
+        cmd = [
+            'combine',
+            ws,
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            # '--algo=grid',
+            '--floatOtherPOIs=1',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '-P r',
+            # '--fastScan',
+            # '-P kappab',
+            # '-P kappac',
+            # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
+            # '--saveSpecifiedFunc {0}'.format(','.join(
+            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            '--squareDistPoiStep',
+            '-M MultiDimFit',
+            '-m 125.00',
+            # '--setPhysicsModelParameterRanges kappab=-20.0,20.0:kappac=-50.0,50.0',
+            # '--setPhysicsModelParameterRanges kappab=0.5,1.0:kappac=1.0,2.0',
+            # '--points 12800',
+            # '--firstPoint 0',
+            # '--lastPoint 799',
+            '-n testjob',
+            # '-v 3',
+            ]
+
+        Commands.BasicGenericCombineCommand(
+            cmd,
+            onBatch = False,
+            )
+
+
+    #____________________________________________________________________
+    if args.TotalXS_scan:
+
+        print 'Note: Move workspace to LatestPaths.py'
+        ws = abspath( 'workspaces_Oct05/combinedCard_Jul26_FitBRModel_fitTotalXS.root' )
+
+        doFastscan = True
+        if args.notFastscan: doFastscan = False
+
+        # ASIMOV = True
+        ASIMOV = False
+        
+        datacard = ws
+
+        totalXS_ranges = [ 0., 2. ]
+
+        jobDirectory = 'Scan_TotalXS_{0}'.format( datestr )
+        if ASIMOV: jobDirectory += '_asimov'
+        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+
+        if doFastscan:
+            nPoints = 42
+            nPointsPerJob = 42
+            queue = 'short.q'
+            queue = '8nm'
+        else:
+            nPoints = 42
+            nPointsPerJob = 3
+            queue = 'short.q'
+
+        Commands.MultiDimCombineTool(
+            datacard,
+            nPoints       = nPoints,
+            nPointsPerJob = nPointsPerJob,
+            queue         = queue,
+            notOnBatch    = True,
+            jobDirectory  = jobDirectory,
+            fastscan      = doFastscan,
+            asimov        = ASIMOV,
+            jobPriority   = -5,
+            extraOptions  = [
+                # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
+                '-P r',
+                '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
+                # '--setPhysicsModelParameters {0}'.format(
+                #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
+                #     ),
+                # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
+                #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
+                # '--saveSpecifiedFunc {0}'.format(','.join(
+                #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                '--squareDistPoiStep',
+                ]
+            )
+
 
 
 

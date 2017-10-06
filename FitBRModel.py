@@ -11,8 +11,9 @@ from array import array
 class FitBRModelError(Exception):
     pass
 
-class FitBRModel( MultiSignalModel ):
-    ''' Model used to unfold differential distributions '''
+
+
+class GeneralDifferentialModel( MultiSignalModel ):
 
     def __init__(self):
         MultiSignalModel.__init__(self)
@@ -29,36 +30,59 @@ class FitBRModel( MultiSignalModel ):
                 line = '-' * 70,
                 text = text
                 )
-
     def setPhysicsOptions( self, physOptions ):
         MultiSignalModel.setPhysicsOptions( self, physOptions )
-        # for po in physOptions:
-        #     if po.startswith("higgsMassRange="):
-        #         self.mHRange = po.replace("higgsMassRange=","").split(",")
-        #         if len(self.mHRange) != 2:
-        #             raise RuntimeError, "Higgs mass range definition requires two extrema"
-        #         elif float(self.mHRange[0]) >= float(self.mHRange[1]):
-        #             raise RuntimeError, "Extrema for Higgs mass range defined with inverterd order. Second must be larger the first"
-        #     if po.startswith("verbose"):
-        #         self.verbose = True
-        #     if po.startswith("map="):
-        #         (maplist,poi) = po.replace("map=","").split(":",1)
-        #         maps = maplist.split(",")
-        #         poiname = re.sub("\[.*","", poi)
-        #         if "=" in poi:
-        #             poiname,expr = poi.split("=")
-        #             poi = expr.replace(";",":")
-        #             if self.verbose: print "Will create expression ",poiname," with factory ",poi
-        #             self.factories.append(poi)
-        #         elif poiname not in self.pois and poi not in [ "1", "0"]:
-        #             if self.verbose: print "Will create a POI ",poiname," with factory ",poi
-        #             self.pois[poiname] = poi
-        #         if self.verbose:  print "Mapping ",poiname," to ",maps," patterns"
-        #         self.poiMap.append((poiname, maps))
+
+
+    def BinIsHzz( self, bin ):
+        # This is not robust coding AT ALL
+        if bin.startswith('ch2'):
+            if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
+            return True
+        elif bin.startswith('ch1'):
+            if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
+            return False
+        else:
+            raise FitBRModelError( 'Bin \'{0}\' raises an error when determining the channel'.format( bin ) )
+
+
+
+
+class FitTotalXSModel( GeneralDifferentialModel ):
+
+    def __init__(self):
+        GeneralDifferentialModel.__init__(self)
 
 
     def doParametersOfInterest(self):
-        MultiSignalModel.doParametersOfInterest( self )
+        GeneralDifferentialModel.doParametersOfInterest( self )
+        self.modelBuilder.doVar( 'r[1.0,-2.0,4.0]' )
+
+
+    def getYieldScale( self, bin, process ):
+
+        if not self.DC.isSignal[process]:
+            # If it's a background, always return the 1.0 yieldParameter
+            yieldParameter = 1.0
+
+        else:
+            yieldParameter = 'r'
+
+        print 'Scaling {0}/{1} by {2}'.format( bin, process, yieldParameter )
+
+        return yieldParameter
+
+
+
+
+class FitBRModel( GeneralDifferentialModel ):
+
+    def __init__(self):
+        GeneralDifferentialModel.__init__(self)
+
+
+    def doParametersOfInterest(self):
+        GeneralDifferentialModel.doParametersOfInterest( self )
         # self.chapter( 'Starting model.doParametersOfInterest()' )
 
         self.modelBuilder.doVar( 'hgg_BRmodifier[1.0,-2.0,4.0]' )
@@ -151,17 +175,5 @@ class FitBRModel( MultiSignalModel ):
         return poi;
 
 
-    def BinIsHzz( self, bin ):
-        # This is not robust coding AT ALL
-        if bin.startswith('ch2'):
-            if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
-            return True
-        elif bin.startswith('ch1'):
-            if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
-            return False
-        else:
-            raise FitBRModelError( 'Bin \'{0}\' raises an error when determining the channel'.format( bin ) )
-
-
-
 fitBRModel=FitBRModel()
+fitTotalXSModel=FitTotalXSModel()
