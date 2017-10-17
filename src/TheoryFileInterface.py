@@ -83,11 +83,17 @@ def FileFinder( **kwargs ):
 
     acceptedFiles = []
     for theoryFile in allFiles:
+        fullPathTheoryFile = theoryFile
+        theoryFile = basename(theoryFile)
+
+        if verbose: print '\nChecking acceptance of file \'{0}\''.format(theoryFile)
 
         passedFilter = True
         for filefilter in filefilters:
             if filefilter in theoryFile: passedFilter = False
-        if not passedFilter: continue
+        if not passedFilter:
+            if verbose: print '  Not accepted by filters {0}'.format(filefilters)
+            continue
 
         acceptancePerKey = []
         for key, value in kwargs.iteritems():
@@ -103,10 +109,16 @@ def FileFinder( **kwargs ):
                 acceptedByThisKey = False
             else:
                 acceptedByThisKey = True
+
+            if verbose:
+                print '  Key = {0:10}, Value = {1:10}, Accepted = {2}'.format( key, value, acceptedByThisKey )
+
             acceptancePerKey.append(acceptedByThisKey)
 
         if all(acceptancePerKey):
-            acceptedFiles.append( theoryFile )
+            acceptedFiles.append( fullPathTheoryFile )
+            if verbose:
+                print '  File was accepted'
 
 
     if len(acceptedFiles) == 0:
@@ -126,7 +138,7 @@ def FileFinder( **kwargs ):
         sys.exit()
 
     if verbose:
-        print '[info] FileFinder: Using the following keys:'
+        print '\n[info] FileFinder: Using the following keys:'
         print '    ' + '\n    '.join( [ '{0} = {1}'.format(key,value) for key, value in kwargs.iteritems() ] )
         print '  Found the following file(s):'
         print '    ' + '\n    '.join([ relpath( f, '.' ) for f in acceptedFiles ])
@@ -239,17 +251,22 @@ def ReadDerivedTheoryContainerToTGraph(
 def NormalizeToSMCrossSection(
         container,
         SMXS = 55.70628722,
+        extraCheck = False,
         ):
 
-    # HIER VERDER
-    # Functie om per file te normalizeren naar SM XS schrijven
+    integralFn = TheoryCommands.GetIntegral( container.binBoundaries, container.crosssection )
 
-    # Kan eventueel de integral function van TheoryCommands gebruiken
+    rescale = SMXS / integralFn( 0., container.binBoundaries[-1]*10 )
 
-    pass
+    container.crosssection = [ rescale * xs for xs in container.crosssection ]
+    container.ratios       = [ rescale * r  for r  in container.ratios ]
 
-
-
+    if extraCheck:
+        print '\nIntegral before scaling:'
+        print integralFn( 0., container.binBoundaries[-1]*10 )
+        print 'Integral after scaling (should be {0}):'.format( SMXS )
+        newintegralFn = TheoryCommands.GetIntegral( container.binBoundaries, container.crosssection )
+        print newintegralFn( 0., container.binBoundaries[-1]*10 )
 
 
 ########################################
@@ -328,8 +345,12 @@ def ScaleQuarkInduced(
 
     parametrization = Parametrization()
 
-    # parametrization.Parametrize( qI_containers )
-    parametrization.ParametrizeByFitting( qI_containers )
+
+    parametrization.SetSM( qI_SM )
+    parametrization.ParametrizeByFitting( qI_containers, fitWithScipy=True )
+
+    # parametrization.ParametrizeByFitting( qI_containers )
+
 
     mb_old = 4.65
     mb_new = 2.963
@@ -879,6 +900,8 @@ def DumpContainerToFile_Top( container, prefix, outdir ):
     outname += '.txt'
 
     container.derivedTheoryFilePath = abspath( join( outdir, outname ) )
+
+    if not isdir( outdir ): os.makedirs( outdir )
 
     with open( container.derivedTheoryFilePath, 'w' ) as outFp:
         w = lambda text: outFp.write( text + ' \n' )

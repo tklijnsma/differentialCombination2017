@@ -450,11 +450,11 @@ def BasicReadScan(
         rootfiles,
         'limit',
         r'{0}|{1}'.format( xAttr, yAttr ),
-        returnStyle == 'containerPerPoint'
+        returnStyle = 'containerPerPoint',
         )
 
     # Filter out duplicate x values
-    unique_xs = list(set([ getattr( c, xAttr ) for c in container ]))
+    unique_xs = list(set([ getattr( c, xAttr ) for c in containers ]))
 
     filteredContainers = []
     for container in containers:
@@ -470,8 +470,8 @@ def BasicReadScan(
     # Sort along x
     containers.sort( key = lambda c: getattr( c, xAttr ) )
 
-    xs = [ getattr( c, xAttr ) for c in container ]
-    ys = [ getattr( c, yAttr ) for c in container ]
+    xs = [ getattr( c, xAttr ) for c in containers ]
+    ys = [ getattr( c, yAttr ) for c in containers ]
 
     return xs, ys
 
@@ -620,6 +620,7 @@ def GetTH2FromListOfRootFiles(
         verbose   = False,
         xMin = None, xMax = None, yMin = None, yMax = None,
         multiplyByTwo = True,
+        zVariable = 'deltaNLL'
         ):
 
     # Read values from specified rootfiles
@@ -699,15 +700,16 @@ def GetTH2FromListOfRootFiles(
             continue
 
         if multiplyByTwo:
-            H2.SetBinContent( iBinX+1, iBinY+1, 2.*scan[iPoint]['deltaNLL'] )
+            H2.SetBinContent( iBinX+1, iBinY+1, 2.*scan[iPoint][zVariable] )
         else:
-            H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint]['deltaNLL'] )
+            H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint][zVariable] )
 
 
     # Open return object
     ret = Container()
 
     ret.H2             = H2
+    ret.zVariable      = zVariable
     ret.xCoupling      = xCoupling
     ret.yCoupling      = yCoupling
     ret.iBestfit       = iBestfit
@@ -730,7 +732,7 @@ def GetTH2FromListOfRootFiles(
 
 #____________________________________________________________________
 def PlotCouplingScan2D(
-        datacard,
+        # datacard,
         rootfiles,
         xCoupling    = 'ct',
         yCoupling    = 'cg',
@@ -739,6 +741,10 @@ def PlotCouplingScan2D(
         drawContours = True,
         xMin = None, xMax = None, yMin = None, yMax = None,
         multiplyBinContents = None,
+        # 
+        zVariable = 'deltaNLL',
+        multiplyByTwo = True,
+        zMin = None, zMax = None,
         ):
 
     res = GetTH2FromListOfRootFiles(
@@ -746,10 +752,14 @@ def PlotCouplingScan2D(
         xCoupling,
         yCoupling,
         verbose,
-        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax
+        xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
+        zVariable = zVariable,
+        multiplyByTwo = multiplyByTwo,
         )
     H2 = res.H2
 
+    if not zVariable == 'deltaNLL':
+        H2.SetTitle(zVariable)
 
     if verbose or multiplyBinContents:
         for iX in xrange( H2.GetNbinsX() ):
@@ -757,10 +767,11 @@ def PlotCouplingScan2D(
 
                 if verbose:
                     if abs(iX-(H2.GetNbinsX()/2)) < 5 and abs(iY-(H2.GetNbinsY()/2)) < 5:
-                        print 'iX = {0:2d}, iY = {1:2d}, X = {2:+5.2f}, Y = {3:+5.2f}, deltaNLL = {4}'.format(
+                        print 'iX = {0:2d}, iY = {1:2d}, X = {2:+5.2f}, Y = {3:+5.2f}, {5} = {4}'.format(
                             iX, iY,
                             H2.GetXaxis().GetBinCenter(iX+1), H2.GetYaxis().GetBinCenter(iY+1),
-                            H2.GetBinContent( iX+1, iY+1 )
+                            H2.GetBinContent( iX+1, iY+1 ),
+                            res.zVariable
                             )
                 if multiplyBinContents:
                     H2.SetBinContent(
@@ -819,7 +830,14 @@ def PlotCouplingScan2D(
 
     # H2.GetZaxis().SetLimits( 0., 50. )
     # H2.GetZaxis().SetRange( 0, 10 )
-    H2.SetMaximum( 7. )
+
+    if zMax:
+        H2.SetMaximum(zMax)
+    elif res.zVariable == 'deltaNLL':
+        H2.SetMaximum( 7. )
+
+    if zMin: H2.SetMinimum(zMin)
+
     c.Update()
 
 
@@ -858,7 +876,8 @@ def PlotCouplingScan2D(
         leg.Draw()
 
     outname = 'couplingscan2D_{0}'.format( basename(dirname(rootfiles[0])).replace('/','') )
-    SaveC( outname, asROOT=True )
+    if not zVariable == 'deltaNLL': outname = outname.replace( 'couplingscan2D_', 'couplingscan2D_{0}_'.format(zVariable) )
+    SaveC( outname )
     SetCMargins()
 
     return res

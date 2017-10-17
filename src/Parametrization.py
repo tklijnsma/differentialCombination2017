@@ -162,12 +162,20 @@ class WSParametrization():
 
 
 class Parametrization():
-    def __init__(self):
+    def __init__( self, SM=None ):
         self.verbose = True
         self.Persistence = []
 
         self.parametrizedByMatrixInversion = False
         self.parametrizedByFitting         = False
+
+        self.hasSM = False
+        if SM:
+            self.SetSM(SM)
+
+    def SetSM( self, SM ):
+        self.SM = SM
+        self.hasSM = True
 
 
     def Parametrize(
@@ -221,6 +229,7 @@ class Parametrization():
 
         nBins = len(containers[0].binBoundaries) - 1
         self.nBins = nBins
+        self.binBoundaries = containers[0].binBoundaries
 
         # ======================================
         # Create parametrization per bin
@@ -261,6 +270,15 @@ class Parametrization():
         self.componentsPerBin = componentsPerBin
 
 
+        # ======================================
+        # If a SM was set, calculate the SM cross section based on this parametrization
+
+        if self.hasSM:
+            self.SMXS_fromParametrization = deepcopy( self.Evaluate(**{
+                'kappab' : 1, 'kappac' : 1, 'ct' : 1, 'cg' : 0, 'kappab' : 1,
+                }) )
+
+
     def Evaluate( self, **kwargs ):
         for key, value in kwargs.iteritems():
             setattr( self, key, value )
@@ -286,21 +304,174 @@ class Parametrization():
 
         elif self.ParametrizeByFitting:
 
-            # Set RooRealVars to the right couplings
-            for couplingRooRealVar in self.couplingRooRealVars:
-                couplingRooRealVar.setVal(
-                    getattr( self, couplingRooRealVar.GetName() )
-                    )
+            if self.fitWithScipy:
 
-            xs = []
-            for fitEval in self.fitEvals:
-                xs.append( fitEval.getVal() )
+                xs = []
+                for coefficients in self.coefficientsPerBin:
+                    C = tuple([ getattr( self, coupling ) for coupling in self.couplings ])
+                    xs.append(
+                        self.parabolicParametrizationFunction( C, *coefficients )
+                        )
+                return xs
 
-            return xs
+            else:
+
+                # Set RooRealVars to the right couplings
+                for couplingRooRealVar in self.couplingRooRealVars:
+                    couplingRooRealVar.setVal(
+                        getattr( self, couplingRooRealVar.GetName() )
+                        )
+
+                xs = []
+                for fitEval in self.fitEvals:
+                    xs.append( fitEval.getVal() )
+
+                return xs
 
 
 
-    def ParametrizeByFitting(
+    def ParametrizeByFitting( self, *args, **kwargs ):
+        self.fitWithScipy = False
+        if 'fitWithScipy' in kwargs:
+            self.fitWithScipy = kwargs['fitWithScipy']
+            del kwargs['fitWithScipy']
+
+        if self.fitWithScipy:
+            self.ParametrizeByFitting_Scipy( *args, **kwargs )
+        else:
+            self.ParametrizeByFitting_RooFit( *args, **kwargs )
+
+        # ======================================
+        # If a SM was set, calculate the SM cross section based on this parametrization
+
+        if self.hasSM:
+            self.SMXS_fromParametrization = deepcopy( self.Evaluate(**{
+                'kappab' : 1, 'kappac' : 1, 'ct' : 1, 'cg' : 0, 'kappab' : 1,
+                }) )
+
+
+
+    def ParametrizeByFitting_Scipy(
+            self,
+            containers,
+            couplingsToParametrize = [ 'kappab', 'kappac' ],
+            includeLinearTerms = True,
+            ):
+
+        print 'Trying to import scipy.optimize.curve_fit'
+        from scipy.optimize import curve_fit
+
+        self.parametrizedByFitting = True
+
+        self.couplings = couplingsToParametrize
+        self.nCouplings = len(self.couplings)
+
+        couplingCombinations = []
+        couplingCombinations += [ list(couplingTuple) for couplingTuple in itertools.combinations( self.couplings, 2 ) ]
+        couplingCombinations += [ [ coupling, coupling ] for coupling in self.couplings ]
+        if includeLinearTerms:
+            couplingCombinations += [ [coupling] for coupling in self.couplings ] + [[]]
+        self.couplingCombinations = couplingCombinations
+
+        nComponents = len(couplingCombinations)
+        self.nComponents = nComponents
+
+        if len(containers) < nComponents:
+            Commands.ThrowError( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
+            sys.exit()
+
+        nBins = len(containers[0].binBoundaries) - 1
+        self.nBins = nBins
+        self.binBoundaries = containers[0].binBoundaries
+
+        self.nContainers = len(containers)
+
+        # ======================================
+        # Fitting
+
+
+        # Construct function to be minimized
+
+        couplingNameToIndex = { coupling : iCoupling for iCoupling, coupling in enumerate(self.couplings) }
+        couplingIndexToName = { iCoupling : coupling for iCoupling, coupling in enumerate(self.couplings) }
+
+        def parabolicParametrization( C, *coefficients ):
+            paramValue = 0.
+            for couplingList, coefficient in zip( self.couplingCombinations, coefficients ):
+                component = coefficient
+                for coupling in couplingList:
+                    component *= C[ couplingNameToIndex[coupling] ]
+                paramValue += component
+            return paramValue
+        self.parabolicParametrizationFunction = parabolicParametrization
+
+
+        self.coefficientsPerBin = []
+
+        for iBin in xrange(self.nBins):
+            # if iBin == 0: continue
+
+            print '\n' + '='*50 + '\nFitting bin {0}'.format(iBin)
+
+            # Construct input for least_sq: ( c1, c2 ) per input container
+            couplingTuple = [ [] for coupling in self.couplings ]
+            for iCoupling, coupling in enumerate(self.couplings):
+                for container in containers:
+                    couplingTuple[iCoupling].append( getattr(container, coupling) )
+            couplingTuple = tuple(couplingTuple)
+
+            # Construct input for least_sq: xs[iBin] per input container
+            xsTuple = tuple([ container.crosssection[iBin] for container in containers ])
+
+            # initial guess for coefficients
+            p0 = tuple([ 1. for i in xrange(self.nComponents) ])
+
+
+            print '\n    Overview of given input to minimizer:'
+            print '    couplingTuple :', couplingTuple
+            print '    xsTuple       :', xsTuple
+            print '    p0            :', p0
+
+            print '\n    Fitting...'
+            fittedCoefficients, covMat = curve_fit(
+                parabolicParametrization,
+                couplingTuple,
+                xsTuple,
+                p0
+                )
+            fittedCoefficients = list(fittedCoefficients)
+            print '\n    fittedCoefficients:', fittedCoefficients
+
+
+            print '\n    Test evaluations'
+
+            for i in xrange(len(xsTuple)):
+
+                couplings = tuple([ couplingTuple[iCoupling][i] for iCoupling in xrange(len(self.couplings)) ])
+                xs        = xsTuple[i]
+
+                xsParametrization = parabolicParametrization( couplings, *fittedCoefficients )
+
+                line = []
+                for iCoupling, couplingValue in enumerate(couplings):
+                    couplingName = couplingIndexToName[iCoupling]
+                    line.append( '{0:7} = {1:+5.1f}'.format( couplingName, couplingValue ) )
+
+                line.append( 'xs_file = {0:10.4f}'.format(xs) )
+                line.append( 'xs_param = {0:10.4f}'.format(xsParametrization) )
+
+                print '    ' + ' | '.join(line)
+
+            self.coefficientsPerBin.append( fittedCoefficients )
+
+
+
+
+
+
+
+
+    def ParametrizeByFitting_RooFit(
             self,
             containers,
             couplingsToParametrize = [ 'kappab', 'kappac' ],
@@ -515,11 +686,14 @@ class Parametrization():
 
                     line = []
                     for coupling in self.couplings:
-                        line .append( '{0} = {1:5.1f}'.format( coupling, getattr( container, coupling ) ) )
+                        line.append( '{0} = {1:5.1f}'.format( coupling, getattr( container, coupling ) ) )
                     line.append( 'exp. xs = {0:8.3f}'.format( container.crosssection[iBin] ) )
                     line.append( 'param. xs = {0:8.3f}'.format( fitEval.getVal() ) )
 
-                    print '    ' + ' | '.join(line)
+                    if self.hasSM and container == self.SM:
+                        print '*   ' + ' | '.join(line)
+                    else:
+                        print '    ' + ' | '.join(line)
 
             self.fitEvals.append( fitEval )
 
@@ -530,16 +704,28 @@ class Parametrization():
         # self.theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS( self.file )
         # self.expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
 
-        mus = self.Evaluate( **kwargs )
+        crosssection = self.Evaluate( **kwargs )
+
 
         container = OutputContainer()
+
+        container.crosssection = crosssection
+        container.binBoundaries = self.binBoundaries
+
+        if self.hasSM:
+            mus = [ xs / SMxs if not SMxs == 0. else 0. for xs, SMxs in zip( crosssection, self.SMXS_fromParametrization ) ]
+            binWidths = [ 0.5*(container.binBoundaries[i]+container.binBoundaries[i+1]) for i in xrange(len(container.binBoundaries)-1) ]
+            container.integral = [ width * xs for width, crosssection in zip( binWidths, crosssection ) ]
+        else:
+            mus = crosssection
+
         container.mus       = mus
         container.ratios    = mus
         container.binValues = mus
-        container.binBoundaries = self.binBoundaries
 
         container.name = 'param'
         for coupling in self.couplings:
+            setattr( container, coupling, getattr( self, coupling ) )
             container.name += '_{0}_{1:.2f}'.format( coupling, getattr( self, coupling ) )
 
         container.GetTGraph()

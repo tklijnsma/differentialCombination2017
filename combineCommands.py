@@ -83,6 +83,10 @@ def AppendParserOptions( parser ):
 
     parser.add_argument( '--plot_ptSpectra',                action=CustomAction )
 
+
+    parser.add_argument( '--redoPostfit',                   action=CustomAction )
+    parser.add_argument( '--corrMat_combined_unsplit',      action=CustomAction )
+
     # group = parser.add_mutually_exclusive_group(required=False)
     # group.add_argument( '--latest', dest='latest', action='store_true', default=True )
     # group.add_argument( '--older',  dest='latest', action='store_false' )
@@ -156,12 +160,27 @@ def main( args ):
 
     if args.t2ws_combined_split:
 
-        Commands.BasicT2WS(
-            card_combined_split,
-            smartMaps = [
-                ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
-                ],
-            )
+        FIXXH = True
+
+        if not FIXXH:
+
+            Commands.BasicT2WS(
+                card_combined_split,
+                smartMaps = [
+                    ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+                    ],
+                )
+
+        else:
+
+            datacard = card_combined_split
+            Commands.BasicT2WS(
+                datacard,
+                smartMaps = [
+                    ( r'.*/ggH_PTH_([\d\_GT]+)', r'r_ggH_PTH_\1[1.0,-1.0,4.0]' )
+                    ],
+                outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
+                )
 
 
     if args.t2ws_hgg_split:
@@ -245,6 +264,53 @@ def main( args ):
     #     queue         = 'short.q',
     #     )
 
+
+    #____________________________________________________________________
+
+    if args.corrMat_combined_unsplit:
+
+        # ws = ws_combined_unsplit
+        ws = ws_combined_split
+
+        Commands.SetTempJobDir( 'corrMat_{0}'.format(datestr) )
+
+        wsTag = basename(ws).replace('/','').replace('.root','')
+        postfitFilename = join( Commands.TEMPJOBDIR, 'higgsCombine_POSTFIT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
+        corrmatFilename = join( Commands.TEMPJOBDIR, 'higgsCombine_CORRMAT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
+
+        if args.redoPostfit:
+
+            # First regular best fit
+            Commands.BasicBestfit(
+                ws,
+                onBatch=False,
+                batchJobSubDir = 'job_{0}'.format( basename(ws).replace('/','').replace('.root','') ),
+                extraOptions = [
+                    '-m 125',
+                    '--floatOtherPOIs=1',
+                    # '--computeCovarianceMatrix=1',
+                    '--saveWorkspace',
+                    '-n _POSTFIT_{0}'.format( wsTag )
+                    ]
+                )
+
+        pdfIndicesToFreeze = Commands.ListOfPDFIndicesToFreeze( postfitFilename, verbose=False )
+
+        Commands.BasicBestfit(
+            postfitFilename,
+            onBatch=False,
+            batchJobSubDir = 'job_{0}'.format( basename(ws).replace('/','').replace('.root','') ),
+            extraOptions = [
+                '-m 125',
+                '--floatOtherPOIs=1',
+                '--algo none',
+                '--snapshotName MultiDimFit',
+                '--saveWorkspace',
+                '--computeCovarianceMatrix=1',
+                '--freezeNuisances {0}'.format( ','.join(pdfIndicesToFreeze) ),
+                '-n _CORRMAT_{0}'.format( wsTag )
+                ]
+            )
 
 
     #____________________________________________________________________

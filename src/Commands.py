@@ -36,7 +36,9 @@ TEMPJOBDIR = abspath( 'tmp' )
 def SetTempJobDir( newdirname='tmp' ):
     global TEMPJOBDIR
     TEMPJOBDIR = newdirname
-
+def GetTempJobDir():
+    global TEMPJOBDIR
+    return TEMPJOBDIR
 
 def AppendNumberToDirNameUntilItDoesNotExistAnymore(
         dirName,
@@ -427,7 +429,89 @@ def BasicBestfit(
             print 'TESTMODE + onBatch not implemented'
 
     else:
-        executeCommand( cmd )
+
+        moveBack = False
+
+        jobdir = GetTempJobDir()
+        if basename(jobdir).replace('/','') != 'tmp':
+            if not isdir(jobdir): os.makedirs(jobdir)
+            backDir = os.getcwd()
+            os.chdir(jobdir)
+            moveBack = True
+
+        try:
+            executeCommand( cmd )
+        finally:
+            if moveBack: os.chdir( backDir )
+
+
+
+def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False, snapshotName='MultiDimFit' ):
+
+    wsFp = ROOT.TFile.Open( postfitFile )
+    ws   = wsFp.Get('w')
+    loadedSnapshot = ws.loadSnapshot(snapshotName)
+
+    if not loadedSnapshot:
+        ThrowError( 'Could not load {0} snapshot - are you passing the post fit workspace?'.format( snapshotName ), throwException=True )
+
+    varsToFreeze = []
+    varsToFloat = []
+    
+    # Find all pdf indexes 
+    allCats = ws.allCats()
+    catitr = allCats.createIterator()
+    cat = catitr.Next()
+    while cat:
+        if cat.GetName().startswith("pdfindex"):
+            varsToFreeze.append( cat.GetName() )
+        cat = catitr.Next()
+        
+    # Find all background pdfs
+    allPdfs = ws.allPdfs()
+
+    if verbose:
+        nPdfs = allPdfs.getSize()
+        print 'Looping over {0} pdfs in the workspace'.format(nPdfs)
+
+    pdfitr = allPdfs.createIterator()
+    pdf = pdfitr.Next()
+    while pdf:
+        if pdf.GetName().startswith("shapeBkg_bkg"):
+            # bgks from hzz are RooHistPdfs, not RooMultiPdfs
+            if hasattr( pdf, 'getNumPdfs' ):
+                print pdf
+                pdf.Print()
+                # Loop over all shapes in the envelope
+                for ishape in xrange(pdf.getNumPdfs()):
+
+                    shape = pdf.getPdf( ishape )
+                    observables = ROOT.RooArgList(shape.getObservables( ws.allVars() ))
+                    observables = filter(lambda x: not x.startswith('CMS_hgg_mass'), map(lambda x: observables[x].GetName(), xrange(observables.getSize()) ) )
+
+                    # Freeze all pdf parameters except those from the best fit function
+                    if ishape == pdf.getCurrentIndex() and not freezeAllIndices:
+                        varsToFloat.extend( observables )
+                    else:
+                        varsToFreeze.extend( observables )
+        pdf = pdfitr.Next()
+
+    # For some reason, the first variable is never frozen; simply append it again at end of list
+    varsToFreeze.append( varsToFreeze[0] )
+
+    if verbose:
+        print '\n\nFreezing the following variables:'
+        for i in varsToFreeze:
+            print i
+
+        print '\n\nFloating the following variables:'
+        for i in varsToFloat:
+            print i
+
+    wsFp.Close()
+
+    return varsToFreeze
+
 
 
 def ConvertFloatToStr( number ):
