@@ -175,6 +175,8 @@ class CouplingModel( PhysicsModel ):
 
         self.makeParametrizationsFromTheory()
 
+        self.MakeTotalXSExpression()
+
         self.defineYieldParameters()
 
         self.addTheoryUncertaintyNuisances()
@@ -498,8 +500,6 @@ class CouplingModel( PhysicsModel ):
 
         self.modelBuilder.out.defineSet( 'parametrizations', ','.join(parametrizationNames) )
 
-
-
         # Attach to class
 
         self.parametrizations     = parametrizations
@@ -511,6 +511,13 @@ class CouplingModel( PhysicsModel ):
         self.couplings            = couplings
         self.nTheoryBins          = nTheoryBins
         self.theoryBinBoundaries  = theoryBinBoundaries
+
+
+        theoryBinBoundarySet = []
+        for i, theoryBinBoundary in enumerate(self.theoryBinBoundaries):
+            self.modelBuilder.doVar( 'theoryBinBound{0}[{1}]'.format( i, theoryBinBoundary ) )
+            theoryBinBoundarySet.append( 'theoryBinBound{0}'.format(i) )
+        self.modelBuilder.out.defineSet( 'theoryBinBoundaries', ','.join(theoryBinBoundarySet) )
 
 
 
@@ -563,6 +570,15 @@ class CouplingModel( PhysicsModel ):
         self.signals          = signals
         self.productionMode   = productionMode
         self.observableName   = observableName
+
+
+        expBinBoundarySet = []
+        for i, expBinBoundary in enumerate(self.expBinBoundaries):
+            if self.skipOverflowBin and expBinBoundary == expBinBoundaries[-1]: continue
+            self.modelBuilder.doVar( 'expBinBound{0}[{1}]'.format( i, expBinBoundary ) )
+            expBinBoundarySet.append( 'expBinBound{0}'.format(i) )
+        self.modelBuilder.out.defineSet( 'expBinBoundaries', ','.join(expBinBoundarySet) )
+
 
 
     #____________________________________________________________________
@@ -851,8 +867,21 @@ class CouplingModel( PhysicsModel ):
                 self.modelBuilder.out.function( 'r_{0}'.format(expBinStr) ).Print()
                 print ''
 
-
             self.yieldParameterNames.append( 'r_{0}'.format(expBinStr) )
+
+
+
+
+            # ======================================
+            # Add other modifiers
+
+
+
+
+
+
+
+
 
 
             if self.FitBR:
@@ -892,6 +921,11 @@ class CouplingModel( PhysicsModel ):
                 self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
 
 
+
+
+
+
+
         # Define sets in output datacard
         self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
 
@@ -904,22 +938,6 @@ class CouplingModel( PhysicsModel ):
             self.modelBuilder.out.defineSet( 'hzz_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
 
         self.SMXSInsideExperimentalBins = SMXSInsideExperimentalBins
-
-
-        # Define boundaries also in output workspace
-
-        theoryBinBoundarySet = []
-        for i, theoryBinBoundary in enumerate(theoryBinBoundaries):
-            self.modelBuilder.doVar( 'theoryBinBound{0}[{1}]'.format( i, theoryBinBoundary ) )
-            theoryBinBoundarySet.append( 'theoryBinBound{0}'.format(i) )
-        self.modelBuilder.out.defineSet( 'theoryBinBoundaries', ','.join(theoryBinBoundarySet) )
-
-        expBinBoundarySet = []
-        for i, expBinBoundary in enumerate(expBinBoundaries):
-            if self.skipOverflowBin and expBinBoundary == expBinBoundaries[-1]: continue
-            self.modelBuilder.doVar( 'expBinBound{0}[{1}]'.format( i, expBinBoundary ) )
-            expBinBoundarySet.append( 'expBinBound{0}'.format(i) )
-        self.modelBuilder.out.defineSet( 'expBinBoundaries', ','.join(expBinBoundarySet) )
 
 
 
@@ -1049,6 +1067,30 @@ class CouplingModel( PhysicsModel ):
     # Helper functions
     ################################################################################
 
+    def MakeTotalXSExpression( self ):
+
+        thingsToSum = []
+
+        for iTheoryBin in xrange( self.nTheoryBins ):
+
+            binWidth = self.theoryBinBoundaries[iTheoryBin+1] - self.theoryBinBoundaries[iTheoryBin]
+
+            self.modelBuilder.factory_(
+                'expr::IncXS{0}( "{1}*{2}*@0", parametrization{0} )'.format(
+                    iTheoryBin, binWidth, self.SMXS[iTheoryBin]
+                    )
+                )
+
+            thingsToSum.append( 'IncXS{0}'.format(iTheoryBin) )
+
+        self.modelBuilder.factory_(
+            'sum::totalXS( {0} )'.format(
+                ','.join(thingsToSum)
+                )
+            )
+
+
+
     #____________________________________________________________________
     def GetCouplingOrDefineNew( self, couplingName, possibyExistingCouplings=None, defaultValue=1. ):
         # Look for possibly existing couplings that also define the desired coupling
@@ -1081,8 +1123,8 @@ class CouplingModel( PhysicsModel ):
         else:
             if self.verbose:
                 print 'Creating new variable \'{0}\''.format( couplingName )
-            self.modelBuilder.doVar( '{0}[{1},0.999*{1},{1}]'.format( couplingName, defaultValue ) )
-            self.modelBuilder.out.var(couplingName).setConstant(False)
+            self.modelBuilder.doVar( '{0}[{1}]'.format( couplingName, defaultValue ) )
+            self.modelBuilder.out.var(couplingName).setConstant(True)
             usedCouplingName = couplingName
 
         # If the possibly existing variable was actually a function, this will break...

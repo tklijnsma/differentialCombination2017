@@ -105,12 +105,13 @@ ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Oct02/combinedC
 # Derived theory files
 
 derivedTheoryFilesDirectory_Top                      = 'derivedTheoryFiles_Aug11_Top'
-
 derivedTheoryFilesDirectory_YukawaGluonInduced       = 'derivedTheoryFiles_Aug09_YukawaGluonInduced'
 derivedTheoryFilesDirectory_YukawaQuarkInduced       = 'derivedTheoryFiles_Aug09_YukawaQuarkInduced'
-derivedTheoryFilesDirectory_YukawaQuarkInducedScaled = 'derivedTheoryFiles_Sep14_YukawaQuarkInducedScaled'
+# derivedTheoryFilesDirectory_YukawaQuarkInducedScaled = 'derivedTheoryFiles_Sep14_YukawaQuarkInducedScaled'
+derivedTheoryFilesDirectory_YukawaQuarkInducedScaled = 'derivedTheoryFiles_Oct13_YukawaQuarkInducedScaled'
 # derivedTheoryFilesDirectory_YukawaSummed             = 'derivedTheoryFiles_Aug09_YukawaSummed'
-derivedTheoryFilesDirectory_YukawaSummed             = 'derivedTheoryFiles_Sep14_YukawaSummed'
+# derivedTheoryFilesDirectory_YukawaSummed             = 'derivedTheoryFiles_Sep14_YukawaSummed'
+derivedTheoryFilesDirectory_YukawaSummed             = 'derivedTheoryFiles_Oct13_YukawaSummed'
 
 
 # ======================================
