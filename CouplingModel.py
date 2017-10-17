@@ -195,52 +195,21 @@ class CouplingModel( PhysicsModel ):
         if self.verbose:
             print 'Getting scale for process = {0:21}, bin = {1}'.format( process, bin )
 
-        # ======================================
-        # Define some default yieldParameters
-
-        one = 1 if not self.MakeLumiScalable else 'lumiScale'
-
-        if self.FitBR:
-            if self.MakeLumiScalable:
-                one_hgg = 'lumiScale_times_hggBRmodifier'
-                one_hzz = 'lumiScale_times_hzzBRmodifier'
-            else:
-                one_hgg = 'hggBRmodifier'
-                one_hzz = 'hzzBRmodifier'
-
-
-        # ======================================
-        
+        # 'hgg_xH_modifier',
+        # 'hzz_xH_modifier',
+        # 'hgg_OutsideAcceptance_modifier',
+        # 'hzz_OutsideAcceptance_modifier',
+        # 'bkg_modifier',
 
         if not self.DC.isSignal[process]:
-            # If it's a background, always return the 1.0 yieldParameter
-            yieldParameter = one
+            yieldParameter = 'bkg_modifier'
 
         elif 'OutsideAcceptance' in process:
-            # If it's OutsideAcceptance, return one, but scale with BRmodifier if necessary
-            if self.FitBR:
-                if self.BinIsHgg(bin):
-                    yieldParameter = one_hgg
-                else:
-                    yieldParameter = one_hzz
-            else:
-                yieldParameter = one
+            yieldParameter = 'hgg_OutsideAcceptance_modifier' if self.BinIsHgg(bin) else 'hzz_OutsideAcceptance_modifier'
 
         else:
-
             if self.splitggH and 'xH' in process:
-                # If it's an xH process, still multiply by the BRmodifier
-                if self.FitBR:
-                    if self.BinIsHgg(bin) and self.MakeLumiScalable:
-                        yieldParameter = 'lumiScale_times_hggBRmodifier_times_xHmodifier'
-                    elif not self.BinIsHgg(bin) and self.MakeLumiScalable:
-                        yieldParameter = 'lumiScale_times_hzzBRmodifier_times_xHmodifier'
-                    elif self.BinIsHgg(bin) and not self.MakeLumiScalable:
-                        yieldParameter = 'hggBRmodifier_times_xHmodifier'
-                    elif not self.BinIsHgg(bin) and not self.MakeLumiScalable:
-                        yieldParameter = 'hzzBRmodifier_times_xHmodifier'
-                else:
-                    yieldParameter = one
+                yieldParameter = 'hgg_xH_modifier' if self.BinIsHgg(bin) else 'hzz_xH_modifier'
 
 
             elif ( self.splitggH and 'ggH' in process ) or ( 'smH' in process ):
@@ -249,57 +218,26 @@ class CouplingModel( PhysicsModel ):
                 isOverflowBin = False
                 isInsideUserBinBoundaries = False
 
-                matchRegularBin = re.search( r'([\dmp]+)_([\dmp]+)', process )
-                matchOverflow   = re.search( r'([GTLE]+)([\dmp]+)', process )
+                matchRegularBin  = re.search( r'([\dmp]+)_([\dmp]+)', process )
+                matchOverflowBin = re.search( r'([GTLE]+)([\dmp]+)', process )
 
                 if matchRegularBin:
-
-                    isOverflowBin = False
-                    leftBound, rightBound = float(matchRegularBin.group(1)), float(matchRegularBin.group(2))
+                    leftBound  = float(matchRegularBin.group(1).replace('m','-').replace('p','.'))
+                    rightBound = float(matchRegularBin.group(2).replace('m','-').replace('p','.'))
                     for iBin in xrange(self.nExpBins):
                         if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
-                            isInsideUserBinBoundaries = True
+                            yieldParameter = self.hgg_yieldParameterNames[iBin] if self.BinIsHgg(bin) else self.hzz_yieldParameterNames[iBin]
                             break
                     else:
-                        isInsideUserBinBoundaries = False
+                        yieldParameter = 'hgg_OutsideAcceptance_modifier' if self.BinIsHgg(bin) else 'hzz_OutsideAcceptance_modifier'
 
-                    if isInsideUserBinBoundaries:
-                        if self.FitBR:
-                            if self.BinIsHgg(bin):
-                                yieldParameter = self.hgg_yieldParameterNames[iBin]
-                            else:
-                                yieldParameter = self.hzz_yieldParameterNames[iBin]
-                        else:
-                            yieldParameter = self.yieldParameterNames[iBin]
-                    else:
-                        if self.FitBR:
-                            if self.BinIsHgg(bin):
-                                yieldParameter = one_hgg
-                            else:
-                                yieldParameter = one_hzz
-                        else:
-                            yieldParameter = one
-
-
-                elif matchOverflow:
-                    # overflowType = matchOverflow.group(1)
-                    # leftBound    = float( matchOverflow.group(2) )
-
-                    if self.FitBR:
-                        if self.BinIsHgg(bin):
-                            lastYieldParameter = self.hgg_yieldParameterNames[-1]
-                            alternative        = one_hgg
-                        else:
-                            lastYieldParameter = self.hzz_yieldParameterNames[-1]
-                            alternative        = one_hzz
-                    else:
-                        lastYieldParameter = self.yieldParameterNames[-1]
-                        alternative        = one
-
-                    if matchOverflow.group() in lastYieldParameter:
+                elif matchOverflowBin:
+                    # bound = float(matchOverflowBin.group(1).replace('m','-').replace('p','.'))
+                    lastYieldParameter = self.hgg_yieldParameterNames[-1] if self.BinIsHgg(bin) else self.hzz_yieldParameterNames[-1]
+                    if matchOverflowBin.group() in lastYieldParameter:
                         yieldParameter = lastYieldParameter
                     else:
-                        yieldParameter = alternative
+                        yieldParameter = 'hgg_OutsideAcceptance_modifier' if self.BinIsHgg(bin) else 'hzz_OutsideAcceptance_modifier'
 
                 else:
                     raise CouplingModelError( 'Failure for process \'{0}\': Could not extract any bin boundary information'.format(process) )
@@ -308,13 +246,10 @@ class CouplingModel( PhysicsModel ):
                 raise CouplingModelError( 'Failure for process \'{0}\': Production process is not \'xH\', \'ggH\' or \'smH\''.format(process) )
 
 
-        # if self.verbose > 0:
-        #     print 'Scaling: bin: {0:30} | process: {1:16} | yieldScale: {2}'.format( bin, process, yieldParameter )
-
         if self.verbose:
             print '    --> Scaling with \'{0}\''.format( yieldParameter )
-
         return yieldParameter
+
 
 
     ################################################################################
@@ -903,56 +838,84 @@ class CouplingModel( PhysicsModel ):
             self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
 
 
-            # if self.FitBR:
-            #     # Multiply the yieldParameters by a BR modifier which can be fitted as well
-            #     # No real way to make this more general; very hardcoded for hgg/hzz
+        # ======================================
+        # Other yield parameters: xH, OutsideAcceptance, and background
 
-            #     if self.MakeLumiScalable:
-            #         hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-            #             signal                   = expBinStr,
-            #             formulaString            = '@0*@1*@2',
-            #             commaSeparatedParameters = 'lumiScale,hggBRmodifier,r_{0}'.format( expBinStr )
-            #             )
-            #     else:
-            #         hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-            #             signal                   = expBinStr,
-            #             formulaString            = '@0*@1',
-            #             commaSeparatedParameters = 'hggBRmodifier,r_{0}'.format( expBinStr )
-            #             )
-            #     if self.verbose: print 'Doing expr: ', hgg_yieldParameterExpression
-            #     self.modelBuilder.factory_( hgg_yieldParameterExpression )
-            #     self.hgg_yieldParameterNames.append( 'r_hgg_{0}'.format(expBinStr) )
-                
-            #     if self.MakeLumiScalable:
-            #         hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-            #             signal                   = expBinStr,
-            #             formulaString            = '@0*@1*@2',
-            #             commaSeparatedParameters = 'lumiScale,hzzBRmodifier,r_{0}'.format( expBinStr )
-            #             )
-            #     else:
-            #         hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-            #             signal                   = expBinStr,
-            #             formulaString            = '@0*@1',
-            #             commaSeparatedParameters = 'hzzBRmodifier,r_{0}'.format( expBinStr )
-            #             )
-            #     if self.verbose: print 'Doing expr: ', hzz_yieldParameterExpression
-            #     self.modelBuilder.factory_( hzz_yieldParameterExpression )
-            #     self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
+        self.modelBuilder.doVar( 'one[1]' )
+        self.modelBuilder.out.var('one').setConstant(True)
 
+        # xH
+        hgg_xH_modifier = [ 'one' ]
+        hzz_xH_modifier = [ 'one' ]
 
-        # Define sets in output datacard
-        self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
+        if self.MakeLumiScalable:
+            hgg_xH_modifier.append( 'lumiScale' )
+            hzz_xH_modifier.append( 'lumiScale' )
+        if self.FitBR:
+            hgg_xH_modifier.extend([ 'xH_modifier', 'hggBRmodifier' ])
+            hzz_xH_modifier.extend([ 'xH_modifier', 'hzzBRmodifier' ])
 
-        # These for convenience when plotting/testing
-        self.modelBuilder.out.defineSet( 'couplings', ','.join(self.couplings) )
-        self.modelBuilder.out.defineSet( 'yieldParameters', ','.join(self.yieldParameterNames) )
+        self.modelBuilder.factory_( 'prod::hgg_xH_modifier({0})'.format( ','.join(hgg_xH_modifier) ) )
+        self.modelBuilder.factory_( 'prod::hzz_xH_modifier({0})'.format( ','.join(hzz_xH_modifier) ) )
+
+        # OutsideAcceptance
+        hgg_OutsideAcceptance_modifier = [ 'one' ]
+        hzz_OutsideAcceptance_modifier = [ 'one' ]
 
         if self.FitBR:
-            self.modelBuilder.out.defineSet( 'hgg_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
-            self.modelBuilder.out.defineSet( 'hzz_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
+            hgg_OutsideAcceptance_modifier.append( 'hggBRmodifier' )
+            hzz_OutsideAcceptance_modifier.append( 'hzzBRmodifier' )
+        if self.MakeLumiScalable:
+            hgg_OutsideAcceptance_modifier.append( 'lumiScale' )
+            hzz_OutsideAcceptance_modifier.append( 'lumiScale' )
+        
+        self.modelBuilder.factory_( 'prod::hgg_OutsideAcceptance_modifier({0})'.format( ','.join(hgg_OutsideAcceptance_modifier) ) )
+        self.modelBuilder.factory_( 'prod::hzz_OutsideAcceptance_modifier({0})'.format( ','.join(hzz_OutsideAcceptance_modifier) ) )
+
+        # bkg
+        bkg_modifier = [ 'one' ]
+        if self.MakeLumiScalable:
+            bkg_modifier.append( 'lumiScale' )
+        self.modelBuilder.factory_( 'prod::bkg_modifier({0})'.format( ','.join(bkg_modifier) ) )
+
+
+        # ======================================
+        # Save some sets to ws
+
+        self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
+        self.modelBuilder.out.defineSet( 'couplings', ','.join(self.couplings) )
+        self.modelBuilder.out.defineSet( 'yieldParameters', ','.join(self.yieldParameterNames) )
+        self.modelBuilder.out.defineSet( 'hgg_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
+        self.modelBuilder.out.defineSet( 'hzz_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
+
+        self.modelBuilder.out.defineSet( 'modifiers', ','.join([
+            'hgg_xH_modifier',
+            'hzz_xH_modifier',
+            'hgg_OutsideAcceptance_modifier',
+            'hzz_OutsideAcceptance_modifier',
+            'bkg_modifier',
+            ]))
 
         self.SMXSInsideExperimentalBins = SMXSInsideExperimentalBins
 
+
+        if self.verbose:
+
+            print '\n\n*** Done defining all yield parameters; control printout:'
+
+            allVarsToPrint = self.hgg_yieldParameterNames + self.hzz_yieldParameterNames + [
+                'hgg_xH_modifier',
+                'hzz_xH_modifier',
+                'hgg_OutsideAcceptance_modifier',
+                'hzz_OutsideAcceptance_modifier',
+                'bkg_modifier',
+                ]
+
+            for name in allVarsToPrint:
+                print ''
+                self.modelBuilder.out.function(name).Print()
+
+            print '\n'
 
 
     #____________________________________________________________________
@@ -1338,40 +1301,42 @@ class CouplingModel( PhysicsModel ):
 
         # xH modifier
         self.modelBuilder.factory_(
-            'expr::xHmodifier('
+            'expr::xH_modifier('
             '"@0*@0", {0} )'.format( kappa_V.GetName() )
             )
-        self.modelBuilder.factory_(
-            'expr::hggBRmodifier_times_xHmodifier('
-            '"@0*@1", hggBRmodifier, xHmodifier )'
-            )
-        self.modelBuilder.factory_(
-            'expr::hzzBRmodifier_times_xHmodifier('
-            '"@0*@1", hzzBRmodifier, xHmodifier )'
-            )
 
 
-        if self.MakeLumiScalable:
+        # self.modelBuilder.factory_(
+        #     'expr::hggBRmodifier_times_xHmodifier('
+        #     '"@0*@1", hggBRmodifier, xHmodifier )'
+        #     )
+        # self.modelBuilder.factory_(
+        #     'expr::hzzBRmodifier_times_xHmodifier('
+        #     '"@0*@1", hzzBRmodifier, xHmodifier )'
+        #     )
 
-            self.modelBuilder.factory_(
-                'expr::lumiScale_times_hggBRmodifier('
-                '"@0*@1", lumiScale, hggBRmodifier )'
-                )
 
-            self.modelBuilder.factory_(
-                'expr::lumiScale_times_hzzBRmodifier('
-                '"@0*@1", lumiScale, hzzBRmodifier )'
-                )
+        # if self.MakeLumiScalable:
 
-            # xH
-            self.modelBuilder.factory_(
-                'expr::lumiScale_times_hggBRmodifier_times_xHmodifier('
-                '"@0*@1*@2", lumiScale, hggBRmodifier, xHmodifier )'
-                )
-            self.modelBuilder.factory_(
-                'expr::lumiScale_times_hzzBRmodifier_times_xHmodifier('
-                '"@0*@1*@2", lumiScale, hzzBRmodifier, xHmodifier )'
-                )
+        #     self.modelBuilder.factory_(
+        #         'expr::lumiScale_times_hggBRmodifier('
+        #         '"@0*@1", lumiScale, hggBRmodifier )'
+        #         )
+
+        #     self.modelBuilder.factory_(
+        #         'expr::lumiScale_times_hzzBRmodifier('
+        #         '"@0*@1", lumiScale, hzzBRmodifier )'
+        #         )
+
+        #     # xH
+        #     self.modelBuilder.factory_(
+        #         'expr::lumiScale_times_hggBRmodifier_times_xHmodifier('
+        #         '"@0*@1*@2", lumiScale, hggBRmodifier, xHmodifier )'
+        #         )
+        #     self.modelBuilder.factory_(
+        #         'expr::lumiScale_times_hzzBRmodifier_times_xHmodifier('
+        #         '"@0*@1*@2", lumiScale, hzzBRmodifier, xHmodifier )'
+        #         )
 
         self.modelBuilder.out.defineSet( 'BRvariables', ','.join([
             kappa_t.GetName(),
