@@ -159,6 +159,9 @@ def main( args ):
 
     if args.couplingT2WS_Yukawa:
 
+        # ======================================
+        # Flags
+
         INCLUDE_THEORY_UNCERTAINTIES = True
         # INCLUDE_THEORY_UNCERTAINTIES = False
 
@@ -171,6 +174,11 @@ def main( args ):
         INCLUDE_BR_COUPLING_DEPENDENCY = True
         # INCLUDE_BR_COUPLING_DEPENDENCY = False
 
+        PROFILE_TOTAL_XS                  = True
+        # PROFILE_TOTAL_XS                  = False
+
+        # ======================================
+        # 
 
         datacard = LatestPaths.card_combined_split
         if args.hgg:
@@ -227,15 +235,16 @@ def main( args ):
             suffix += '_withTheoryUncertainties'
 
         if MAKELUMISCALABLE:
-            extraOptions.append(
-                '--PO lumiScale=True' )
+            extraOptions.append( '--PO lumiScale=True' )
             suffix += '_lumiScale'
 
         if INCLUDE_BR_COUPLING_DEPENDENCY:
-            extraOptions.append(
-                '--PO FitBR=True' )
+            extraOptions.append( '--PO FitBR=True' )
             suffix += '_couplingDependentBR'
 
+        if PROFILE_TOTAL_XS:
+            extraOptions.append( '--PO ProfileTotalXS=True' )
+            suffix += '_profiledTotalXS'
 
 
         import random
@@ -255,12 +264,14 @@ def main( args ):
         doFastscan = True
         if args.notFastscan: doFastscan = False
 
+        # ======================================
+        # Flags
+
         ASIMOV = True
         # ASIMOV = False
         
         # LUMISTUDY = True
         LUMISTUDY = False
-
 
         SPLIT = True
         UNCORRELATED_THEORY_UNCERTAINTIES = False
@@ -268,6 +279,13 @@ def main( args ):
 
         INCLUDE_BR_COUPLING_DEPENDENCY    = True
         # INCLUDE_BR_COUPLING_DEPENDENCY    = False
+
+        PROFILE_TOTAL_XS                  = True
+        # PROFILE_TOTAL_XS                  = False
+
+
+        # ======================================
+        # 
 
         if SPLIT:
             # combinedDatacard = LatestPaths.ws_combined_split_yukawa
@@ -347,6 +365,8 @@ def main( args ):
             variablesToSave.extend( Commands.ListSet( datacard, 'hgg_yieldParameters' ) )
             variablesToSave.extend( Commands.ListSet( datacard, 'hzz_yieldParameters' ) )
             variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
+        if PROFILE_TOTAL_XS:
+            variablesToSave.extend([ 'r_totalXS', 'totalXS', 'totalXS_SM' ])
 
         extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
 

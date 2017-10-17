@@ -34,6 +34,7 @@ class CouplingModel( PhysicsModel ):
         self.splitggH           = False
         self.MakeLumiScalable   = False
         self.FitBR              = False
+        self.ProfileTotalXS     = False
 
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
@@ -71,6 +72,9 @@ class CouplingModel( PhysicsModel ):
 
             elif optionName == 'FitBR':
                 self.FitBR = eval(optionValue)
+
+            elif optionName == 'ProfileTotalXS':
+                self.ProfileTotalXS = eval(optionValue)
 
             elif optionName == 'splitggH':
                 self.splitggH = eval(optionValue)
@@ -596,15 +600,19 @@ class CouplingModel( PhysicsModel ):
         # ======================================
         # Extra variables for further studies
 
+        self.hgg_yieldParameterNames = []
+        self.hzz_yieldParameterNames = []
+
         if self.MakeLumiScalable:
             self.modelBuilder.doVar( 'lumiScale[1.0]' )
             self.modelBuilder.out.var('lumiScale').setConstant()
 
         if self.FitBR:
-            # self.importHGamGamScaler()
             self.MakeWidthExpressions()
-            self.hgg_yieldParameterNames = []
-            self.hzz_yieldParameterNames = []
+    
+        if self.ProfileTotalXS:
+            self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,2.0]' )
+            self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS_SM, totalXS )' )
 
 
         # ======================================
@@ -870,60 +878,66 @@ class CouplingModel( PhysicsModel ):
             self.yieldParameterNames.append( 'r_{0}'.format(expBinStr) )
 
 
-
-
             # ======================================
             # Add other modifiers
 
+            hgg_modifiers = [ 'r_{0}'.format(expBinStr) ]
+            hzz_modifiers = [ 'r_{0}'.format(expBinStr) ]
 
-
-
-
-
-
-
-
+            if self.MakeLumiScalable:
+                hgg_modifiers.append( 'lumiScale' )
+                hzz_modifiers.append( 'lumiScale' )
 
             if self.FitBR:
-                # Multiply the yieldParameters by a BR modifier which can be fitted as well
-                # No real way to make this more general; very hardcoded for hgg/hzz
+                hgg_modifiers.append( 'hggBRmodifier' )
+                hzz_modifiers.append( 'hzzBRmodifier' )
 
-                if self.MakeLumiScalable:
-                    hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                        signal                   = expBinStr,
-                        formulaString            = '@0*@1*@2',
-                        commaSeparatedParameters = 'lumiScale,hggBRmodifier,r_{0}'.format( expBinStr )
-                        )
-                else:
-                    hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                        signal                   = expBinStr,
-                        formulaString            = '@0*@1',
-                        commaSeparatedParameters = 'hggBRmodifier,r_{0}'.format( expBinStr )
-                        )
-                if self.verbose: print 'Doing expr: ', hgg_yieldParameterExpression
-                self.modelBuilder.factory_( hgg_yieldParameterExpression )
-                self.hgg_yieldParameterNames.append( 'r_hgg_{0}'.format(expBinStr) )
+            if self.ProfileTotalXS:
+                hgg_modifiers.append( 'totalXSmodifier' )
+                hzz_modifiers.append( 'totalXSmodifier' )
+
+            self.modelBuilder.factory_( 'prod::r_hgg_{0}({1})'.format( expBinStr, ','.join(hgg_modifiers) ) )
+            self.modelBuilder.factory_( 'prod::r_hzz_{0}({1})'.format( expBinStr, ','.join(hzz_modifiers) ) )
+
+            self.hgg_yieldParameterNames.append( 'r_hgg_{0}'.format(expBinStr) )
+            self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
+
+
+            # if self.FitBR:
+            #     # Multiply the yieldParameters by a BR modifier which can be fitted as well
+            #     # No real way to make this more general; very hardcoded for hgg/hzz
+
+            #     if self.MakeLumiScalable:
+            #         hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+            #             signal                   = expBinStr,
+            #             formulaString            = '@0*@1*@2',
+            #             commaSeparatedParameters = 'lumiScale,hggBRmodifier,r_{0}'.format( expBinStr )
+            #             )
+            #     else:
+            #         hgg_yieldParameterExpression = 'expr::r_hgg_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+            #             signal                   = expBinStr,
+            #             formulaString            = '@0*@1',
+            #             commaSeparatedParameters = 'hggBRmodifier,r_{0}'.format( expBinStr )
+            #             )
+            #     if self.verbose: print 'Doing expr: ', hgg_yieldParameterExpression
+            #     self.modelBuilder.factory_( hgg_yieldParameterExpression )
+            #     self.hgg_yieldParameterNames.append( 'r_hgg_{0}'.format(expBinStr) )
                 
-                if self.MakeLumiScalable:
-                    hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                        signal                   = expBinStr,
-                        formulaString            = '@0*@1*@2',
-                        commaSeparatedParameters = 'lumiScale,hzzBRmodifier,r_{0}'.format( expBinStr )
-                        )
-                else:
-                    hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                        signal                   = expBinStr,
-                        formulaString            = '@0*@1',
-                        commaSeparatedParameters = 'hzzBRmodifier,r_{0}'.format( expBinStr )
-                        )
-                if self.verbose: print 'Doing expr: ', hzz_yieldParameterExpression
-                self.modelBuilder.factory_( hzz_yieldParameterExpression )
-                self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
-
-
-
-
-
+            #     if self.MakeLumiScalable:
+            #         hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+            #             signal                   = expBinStr,
+            #             formulaString            = '@0*@1*@2',
+            #             commaSeparatedParameters = 'lumiScale,hzzBRmodifier,r_{0}'.format( expBinStr )
+            #             )
+            #     else:
+            #         hzz_yieldParameterExpression = 'expr::r_hzz_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+            #             signal                   = expBinStr,
+            #             formulaString            = '@0*@1',
+            #             commaSeparatedParameters = 'hzzBRmodifier,r_{0}'.format( expBinStr )
+            #             )
+            #     if self.verbose: print 'Doing expr: ', hzz_yieldParameterExpression
+            #     self.modelBuilder.factory_( hzz_yieldParameterExpression )
+            #     self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
 
 
         # Define sets in output datacard
@@ -1089,6 +1103,8 @@ class CouplingModel( PhysicsModel ):
                 )
             )
 
+        self.modelBuilder.doVar( 'totalXS_SM[55.70628722]' )
+        self.modelBuilder.out.var('totalXS_SM').setConstant(True)
 
 
     #____________________________________________________________________
