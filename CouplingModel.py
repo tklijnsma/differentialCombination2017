@@ -1270,7 +1270,7 @@ class CouplingModel( PhysicsModel ):
             )
         self.modelBuilder.factory_(
             'expr::c7_BRscal_hcc('
-            '"@0*@0*@2/@1", {0}, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hcc)'.format( kappa_t.GetName() )
+            '"@0*@0*@2/@1", {0}, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hcc)'.format( kappa_c_ForBR.GetName() )
             )
         self.modelBuilder.factory_(
             'expr::c7_BRscal_hgg('
@@ -1307,12 +1307,12 @@ class CouplingModel( PhysicsModel ):
 
 
         # self.modelBuilder.factory_(
-        #     'expr::hggBRmodifier_times_xHmodifier('
-        #     '"@0*@1", hggBRmodifier, xHmodifier )'
+        #     'expr::hggBRmodifier_times_xH_modifier('
+        #     '"@0*@1", hggBRmodifier, xH_modifier )'
         #     )
         # self.modelBuilder.factory_(
-        #     'expr::hzzBRmodifier_times_xHmodifier('
-        #     '"@0*@1", hzzBRmodifier, xHmodifier )'
+        #     'expr::hzzBRmodifier_times_xH_modifier('
+        #     '"@0*@1", hzzBRmodifier, xH_modifier )'
         #     )
 
 
@@ -1330,12 +1330,12 @@ class CouplingModel( PhysicsModel ):
 
         #     # xH
         #     self.modelBuilder.factory_(
-        #         'expr::lumiScale_times_hggBRmodifier_times_xHmodifier('
-        #         '"@0*@1*@2", lumiScale, hggBRmodifier, xHmodifier )'
+        #         'expr::lumiScale_times_hggBRmodifier_times_xH_modifier('
+        #         '"@0*@1*@2", lumiScale, hggBRmodifier, xH_modifier )'
         #         )
         #     self.modelBuilder.factory_(
-        #         'expr::lumiScale_times_hzzBRmodifier_times_xHmodifier('
-        #         '"@0*@1*@2", lumiScale, hzzBRmodifier, xHmodifier )'
+        #         'expr::lumiScale_times_hzzBRmodifier_times_xH_modifier('
+        #         '"@0*@1*@2", lumiScale, hzzBRmodifier, xH_modifier )'
         #         )
 
         self.modelBuilder.out.defineSet( 'BRvariables', ','.join([
@@ -1348,7 +1348,7 @@ class CouplingModel( PhysicsModel ):
             kappa_mu.GetName(),
             'hggBRmodifier',
             'hzzBRmodifier',
-            'xHmodifier',
+            'xH_modifier',
             'Scaling_hgg',
             'Scaling_hzg',
             'Scaling_hgluglu',

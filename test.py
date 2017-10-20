@@ -48,6 +48,8 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument( '--test',                            action='store_true' )
+
+    parser.add_argument( '--fastscan',                        action='store_true' )
     parser.add_argument( '--notFastscan',                     action='store_true' )
 
     combineCommands.AppendParserOptions(parser)

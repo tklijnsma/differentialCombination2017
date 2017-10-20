@@ -76,6 +76,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--scan_combined_unsplit',         action=CustomAction )
     parser.add_argument( '--scan_hgg_unsplit',              action=CustomAction )
     parser.add_argument( '--scan_hzz_unsplit',              action=CustomAction )
+    parser.add_argument( '--scan_combined_split_xHfixed',   action=CustomAction )
 
     parser.add_argument( '--RenameHggProcesses_Aug21',      action=CustomAction )
     parser.add_argument( '--RenumberHzzProcesses_Aug21',    action=CustomAction )
@@ -266,11 +267,11 @@ def main( args ):
 
 
     #____________________________________________________________________
-
     if args.corrMat_combined_unsplit:
 
         # ws = ws_combined_unsplit
-        ws = ws_combined_split
+        # ws = ws_combined_split
+        ws = ws_combined_split_xHfixed
 
         Commands.SetTempJobDir( 'corrMat_{0}'.format(datestr) )
 
@@ -315,7 +316,8 @@ def main( args ):
 
     #____________________________________________________________________
 
-    ASIMOV = True
+    # ASIMOV = True
+    ASIMOV = False
 
     if args.scan_combined_unsplit:
         Commands.BasicCombineTool(
@@ -349,6 +351,17 @@ def main( args ):
             queue         = 'short.q',
             asimov        = ASIMOV,
             POIRange      = [ 0.0, 3.0 ]
+            )
+
+    if args.scan_combined_split_xHfixed:
+        Commands.BasicCombineTool(
+            ws_combined_split_xHfixed,
+            POIpattern    = '*',
+            nPoints       = 39,
+            nPointsPerJob = 3,
+            jobDirectory  = 'Scan_{0}'.format(datestr),
+            queue         = 'short.q',
+            asimov        = ASIMOV,
             )
 
 
@@ -405,9 +418,10 @@ def main( args ):
 
         combinationPOIs = Commands.ListPOIs( ws_combined_unsplit )
         combinationscans = PhysicsCommands.GetScanResults(
-            combinationPOIs,
+            [ p.replace('smH','ggH') for p in combinationPOIs ],
             # scan_ptcombination_combined_profiled_asimov,
-            scan_ptcombination_combined_profiled,
+            # scan_ptcombination_combined_profiled,
+            scan_ptcombination_combined_profiled_xHfixed,
             pattern = 'combinedCard'
             )
         PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
@@ -427,18 +441,18 @@ def main( args ):
                 # # ( 'SetFillStyle', 3544 ),
                 # ( 'SetFillStyle', 3345 ),
                 ),
-            ( 'hgg', hggPOIs, hggscans,
-                ( 'SetLineColor', 2 ),
-                ( 'SetMarkerStyle', 5 ),
-                ( 'SetFillColorAlpha', 2, 0.2 ),
-                ),
-            ( 'hzz', hzzPOIs, hzzscans,
-                ( 'SetLineColor', 4 ),
-                ( 'SetMarkerStyle', 8 ),
-                ( 'SetFillColorAlpha', 4, 0.2 ),
-                ),
-            hzz_SMXS         = hzz_crosssections,
-            hgg_SMXS         = hgg_crosssections,
+            # ( 'hgg', hggPOIs, hggscans,
+            #     ( 'SetLineColor', 2 ),
+            #     ( 'SetMarkerStyle', 5 ),
+            #     ( 'SetFillColorAlpha', 2, 0.2 ),
+            #     ),
+            # ( 'hzz', hzzPOIs, hzzscans,
+            #     ( 'SetLineColor', 4 ),
+            #     ( 'SetMarkerStyle', 8 ),
+            #     ( 'SetFillColorAlpha', 4, 0.2 ),
+            #     ),
+            # hzz_SMXS         = hzz_crosssections,
+            # hgg_SMXS         = hgg_crosssections,
             combination_SMXS = hgg_crosssections,
             )
 
@@ -456,16 +470,16 @@ def main( args ):
                 # # ( 'SetFillStyle', 3544 ),
                 # ( 'SetFillStyle', 3345 ),
                 ),
-            ( 'hgg', hggPOIs, hggscans,
-                ( 'SetLineColor', 2 ),
-                ( 'SetMarkerStyle', 5 ),
-                ( 'SetFillColorAlpha', 2, 0.2 ),
-                ),
-            ( 'hzz', hzzPOIs, hzzscans,
-                ( 'SetLineColor', 4 ),
-                ( 'SetMarkerStyle', 8 ),
-                ( 'SetFillColorAlpha', 4, 0.2 ),
-                ),
+            # ( 'hgg', hggPOIs, hggscans,
+            #     ( 'SetLineColor', 2 ),
+            #     ( 'SetMarkerStyle', 5 ),
+            #     ( 'SetFillColorAlpha', 2, 0.2 ),
+            #     ),
+            # ( 'hzz', hzzPOIs, hzzscans,
+            #     ( 'SetLineColor', 4 ),
+            #     ( 'SetMarkerStyle', 8 ),
+            #     ( 'SetFillColorAlpha', 4, 0.2 ),
+            #     ),
             printTable=True,
             bottomRatioPlot = True,
             )

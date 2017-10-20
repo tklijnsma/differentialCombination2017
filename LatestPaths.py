@@ -64,9 +64,10 @@ ws_onlyhzz_split_yukawa               = 'workspaces_Sep19/hzz4l_all_13TeV_xs_pro
 ws_combined_unsplit_lumiScalableWS    = 'workspaces_Aug18/combinedCard_Jul26_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
 ws_combined_split_lumiScalableWS      = 'workspaces_Sep19/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
 
-ws_onlyhzz_split         = 'workspaces_Sep15/hzz4l_all_13TeV_xs_processesShifted.root'
+ws_onlyhzz_split           = 'workspaces_Sep15/hzz4l_all_13TeV_xs_processesShifted.root'
 ws_onlyhgg_split           = 'workspaces_Aug21/Datacard_13TeV_differential_PtGghPlusHx_renamedProcesses.root'
 ws_combined_split          = 'workspaces_Aug21/combinedCard_Aug21.root'
+ws_combined_split_xHfixed  = 'workspaces_Oct19/combinedCard_Aug21_xHfixed.root'
 
 
 ws_combined_split_top      = 'workspaces_Aug21/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties.root'
@@ -100,6 +101,10 @@ ws_combined_split_betterYukawa                     = 'workspaces_Sep28/combinedC
 ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Oct02/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
 
 
+# New wss after su
+ws_combined_yukawa                                 = 'workspaces_Oct18/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_combined_yukawa_couplingDependentBR             = 'workspaces_Oct19/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
+
 
 # ======================================
 # Derived theory files
@@ -132,13 +137,17 @@ theoryUncertainties_YukawaGluon       = 'plots_CorrelationMatrices_Aug09/errors_
 # ---------------------------
 # Not-coupling results (yieldParameter per bin)
 
-scan_ptcombination_combined_profiled_asimov = 'Scan_Aug22_1'
-scan_ptcombination_hgg_profiled_asimov      = 'Scan_Aug22_2'
-scan_ptcombination_hzz_profiled_asimov      = 'Scan_Aug22_3'
+scan_ptcombination_combined_profiled_asimov          = 'Scan_Aug22_1'
+scan_ptcombination_hgg_profiled_asimov               = 'Scan_Aug22_2'
+scan_ptcombination_hzz_profiled_asimov               = 'Scan_Aug22_3'
 
-scan_ptcombination_combined_profiled        = 'Scan_May15'
-scan_ptcombination_hgg_profiled             = 'Scan_May15'
-scan_ptcombination_hzz_profiled             = 'Scan_May15'
+scan_ptcombination_combined_profiled                 = 'Scan_May15'
+scan_ptcombination_hgg_profiled                      = 'Scan_May15'
+scan_ptcombination_hzz_profiled                      = 'Scan_May15'
+
+scan_ptcombination_combined_profiled_xHfixed_asimov  = 'Scan_Oct19'
+scan_ptcombination_combined_profiled_xHfixed         = 'Scan_Oct20'
+
 
 # ---------------------------
 # Yukawa results
@@ -206,10 +215,23 @@ scan_top_combined_profiled_asimov_couplingDependentBR = 'Scan_Top_Sep27_asimov'
 scan_betterTop_combined_asimov                        = 'Scan_Top_Sep28_asimov'
 # scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep28_asimov_0'
 scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep29_asimov'
-scan_betterYukawa_combined_asimov                     = 'Scan_yukawa_Sep28_asimov'
-# scan_betterYukawa_combined_asimov_couplingDependentBR = 'Scan_yukawa_Sep28_asimov_0'
-scan_betterYukawa_combined_asimov_couplingDependentBR = 'Scan_yukawa_Sep29_asimov'
-scan_betterYukawa_combined_asimov_couplingDependentBR_fast = 'Scan_yukawa_Oct02_asimov'
+
+
+# scan_betterYukawa_combined_asimov                     = 'Scan_yukawa_Sep28_asimov'
+# # scan_betterYukawa_combined_asimov_couplingDependentBR = 'Scan_yukawa_Sep28_asimov_0'
+# scan_betterYukawa_combined_asimov_couplingDependentBR = 'Scan_yukawa_Sep29_asimov'
+# scan_betterYukawa_combined_asimov_couplingDependentBR_fast = 'Scan_yukawa_Oct02_asimov'
+
+
+scan_yukawa_combined_asimov                                 = 'Scan_yukawa_Sep28_asimov' # Only the last bin is different w.r.t. 'Scan_yukawa_Sep18_asimov'
+
+# !!: Wrong implementation of kappac
+scan_yukawa_combined_asimov_couplingDependentBR             = 'Scan_yukawa_Oct10_asimov_1'
+scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV = 'Scan_yukawa_Oct10_asimov_0'
+
+# New kappac implementation
+scan_yukawa_combined_asimov_couplingDependentBR             = 'Scan_yukawa_Oct18_asimov'
+scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV = 'Scan_yukawa_Oct19_asimov'
 
 
 def main():

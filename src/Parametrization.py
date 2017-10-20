@@ -10,6 +10,7 @@ from time import strftime
 datestr = strftime( '%b%d' )
 
 import Commands
+import TheoryCommands
 from OutputInterface import OutputContainer
 
 import ROOT
@@ -328,6 +329,28 @@ class Parametrization():
 
                 return xs
 
+
+    def EvaluateForBinning( self, theory_binning, exp_binning, returnRatios=True, **kwargs ):
+        theory_xs = self.Evaluate(**kwargs)
+        integral = TheoryCommands.GetIntegral( theory_binning, theory_xs )
+        exp_xs = []
+        for left, right in zip( exp_binning[:-1], exp_binning[1:] ):
+            exp_xs.append( integral( left, right ) / ( right - left ) )
+
+        if returnRatios:
+            if not self.hasSM:
+                Commands.ThrowError( 'Use \'SetSM(container)\' method before calling \'Parametrize()\'', throwException=True )
+            exp_xs_SM_integral = TheoryCommands.GetIntegral( self.SM.binBoundaries, self.SM.crosssection )
+            exp_xs_SM = []
+            for left, right in zip( exp_binning[:-1], exp_binning[1:] ):
+                exp_xs_SM.append( exp_xs_SM_integral( left, right ) / ( right - left ) )
+
+            ratios = [ xs / SMxs if SMxs != 0. else 0. for xs, SMxs in zip( exp_xs, exp_xs_SM ) ]
+
+            return ratios
+
+        else:
+            return exp_xs
 
 
     def ParametrizeByFitting( self, *args, **kwargs ):

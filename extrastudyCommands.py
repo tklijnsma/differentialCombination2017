@@ -74,6 +74,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--Make2DPlotOfVariableInWS',               action=CustomAction )
     parser.add_argument( '--PlotOfTotalXSInYukawaWS',                action=CustomAction )
     parser.add_argument( '--PlotOfTotalXS_FromParametrization',      action=CustomAction )
+    parser.add_argument( '--PlotBRsInOnePlot',                       action=CustomAction )
 
 
 ########################################
@@ -500,42 +501,86 @@ def main( args ):
 
 
     if args.chi2fitToCombination_Yukawa:
+        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
 
         # Workspace to get the parametrization from
-        ws = LatestPaths.ws_combined_split_betterYukawa
+        # ws = LatestPaths.ws_combined_split_betterYukawa
+
+        # Derived theory files to get the parametrization from
+
+        # File to get the correlation matrix from
         # corrMatFile = 'corrMat_Oct17/higgsCombine_CORRMAT_combinedCard_Jul26.MultiDimFit.mH125.root'
-        corrMatFile = 'corrMat_Oct17/higgsCombine_CORRMAT_combinedCard_Aug21.MultiDimFit.mH125.root'
+        # corrMatFile = 'corrMat_Oct17/higgsCombine_CORRMAT_combinedCard_Aug21.MultiDimFit.mH125.root'
+        corrMatFile = 'corrMat_Oct19/higgsCombine_CORRMAT_combinedCard_Aug21_xHfixed.MultiDimFit.mH125.root'
 
-        rootFp = ROOT.TFile.Open(ws)
-        w = rootFp.Get('w')
+        # Scan to get the uncertainties from
+        # scanDir = LatestPaths.scan_ptcombination_combined_profiled
+        scanDir = LatestPaths.scan_ptcombination_combined_profiled_xHfixed
 
-        yieldParameterNames = Commands.ListSet( ws, 'yieldParameters' )
-        yieldParameters = [ w.var(yPName) for yPName in yieldParameterNames ]
-        kappacRealVar = w.var('kappac')
-        kappabRealVar = w.var('kappab')
-
-        binBoundaries   = [ w.var(binBoundName).getVal() for binBoundName in Commands.ListSet( ws, 'expBinBoundaries' ) ]
-        nBins = len(binBoundaries)-1
+        expBinning = [ 0., 15., 30., 45., 85., 125. ]
+        yieldParameterNames = []
+        for left, right in zip( expBinning[:-1], expBinning[1:] ):
+            yieldParameterNames.append( 'r_ggH_PTH_{0}_{1}'.format( int(left), int(right) ) )
+        nBinsExp = len(expBinning) - 1
 
 
-        # Get the combination result
-        combinationPOIs = Commands.ListPOIs( LatestPaths.ws_combined_unsplit )
+        # # ======================================
+        # # Load parametrization from WS
+
+        # rootFp = ROOT.TFile.Open(ws)
+        # w = rootFp.Get('w')
+
+        # yieldParameterNames = Commands.ListSet( ws, 'yieldParameters' )
+        # yieldParameters = [ w.function(yPName) for yPName in yieldParameterNames ]
+        # kappacRealVar = w.var('kappac')
+        # kappabRealVar = w.var('kappab')
+
+        # binBoundaries   = [ w.var(binBoundName).getVal() for binBoundName in Commands.ListSet( ws, 'expBinBoundaries' ) ]
+        # nBins = len(binBoundaries)-1
+
+
+        # ======================================
+        # Load parametrization from derived theory files
+
+        SM = derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+            kappab=1, kappac=1, muR=1, muF=1, Q=1,
+            expectOneFile=True,
+            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
+            loadImmediately=True
+            )
+
+        derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+            kappab='*', kappac='*', muR=1, muF=1, Q=1,
+            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
+            loadImmediately=True
+            )
+        parametrization = Parametrization()
+        parametrization.SetSM(SM)
+        parametrization.Parametrize( derivedTheoryFileContainers )
+
+        theoryBinBoundaries = derivedTheoryFileContainers[0].binBoundaries
+
+
+        # ======================================
+        # Get the combination result (center values + uncertainties)
+
         combinationscans = PhysicsCommands.GetScanResults(
-            combinationPOIs,
-            LatestPaths.scan_ptcombination_combined_profiled,
+            yieldParameterNames,
+            scanDir,
             pattern = 'combinedCard'
             )
-        TgCombination = PhysicsCommands.GetTGraphForSpectrum( combinationPOIs, combinationscans, name='Combination' )
-        # binBoundaries, binCenters, binWidths, halfBinWidths, POICenters, POIErrsLeft, POIErrsRight, POIErrsSymm
+        TgCombination = PhysicsCommands.GetTGraphForSpectrum( yieldParameterNames, combinationscans, name='Combination' )
 
         # Get relevant bins and errors from scan
-        bestfitCenters  = TgCombination.POICenters[:nBins]
-        bestfitDownErrs = TgCombination.POIErrsLeft[:nBins]
-        bestfitUpErrs   = TgCombination.POIErrsRight[:nBins]
-        bestfitSymmErrs = TgCombination.POIErrsSymm[:nBins]
+        bestfitCenters  = TgCombination.POICenters[:nBinsExp]
+        bestfitDownErrs = TgCombination.POIErrsLeft[:nBinsExp]
+        bestfitUpErrs   = TgCombination.POIErrsRight[:nBinsExp]
+        bestfitSymmErrs = TgCombination.POIErrsSymm[:nBinsExp]
 
 
+        # ======================================
         # Get the correlation matrix
+
         corrMat = []
         corrMatFp = ROOT.TFile.Open(corrMatFile)
         fit = corrMatFp.Get('fit')
@@ -545,33 +590,66 @@ def main( args ):
                 corrMatRow.append( fit.correlation( poi1, poi2 ) )
             corrMat.append( corrMatRow )
 
-        print corrMat
-        sys.exit()
+        print '\nFound corrMat from {0}:'.format(corrMatFile)
+        print numpy.array(corrMat)
+
+        # Compute covariance matrix
+        covMat = [ [ 0. for i in xrange(nBinsExp) ] for j in xrange(nBinsExp) ]
+        for i in xrange(nBinsExp):
+            for j in xrange(nBinsExp):
+                covMat[i][j] = bestfitSymmErrs[i] * bestfitSymmErrs[j] * corrMat[i][j]
+
+        print '\nComputed covMat:'
+        print numpy.array(covMat)
+
+        covMat_npArray = numpy.array(covMat)
+        covMat_inversed_npArray = numpy.linalg.inv( covMat_npArray )
 
 
+        # ======================================
+        # Doing a bestfit
 
         # Build simple chi2 function
-        def chi2_function( kappac, kappab ):
-            kappacRealVar.setVal(kappac)
-            kappabRealVar.setVal(kappab)
+        def chi2_function( inputTuple ):
+            kappac, kappab = inputTuple
 
-            yP_column = numpy.array( [ y.getVal() for y in yieldParameters ] ).T
+            mus_parametrization = parametrization.EvaluateForBinning(
+                theoryBinBoundaries, expBinning,
+                kappab = kappab, kappac = kappac,
+                returnRatios=True
+                )
+
+            x_column = numpy.array( [ mu - 1.0 for mu in mus_parametrization ] ).T
+
+            # x_column = numpy.array( [ y.getVal() for y in yieldParameters ] ).T
 
             # chi2Val = 0.
-            # for i in xrange(nBins):
+            # for i in xrange(nBinsExp):
             #     chi2Val += (yieldParameterValues[i]-bestfitCenters[i])**2 / bestfitSymmErrs[i]**2
 
-            chi2 = yP_column.T.dot(  corrMat.dot( yP_column )  )
+            chi2 = x_column.T.dot(  covMat_inversed_npArray.dot( x_column )  )
 
             return chi2
 
 
+        # Do a best fit
+        from scipy.optimize import minimize
+        print ''
+        res = minimize( chi2_function, [ 1., 1. ], method='Nelder-Mead', tol=1e-6 )
+        print 'End of minimization'
+        print res
+
+        chi2_bestfit = res.fun
+        kappac_bestfit = res.x[0]
+        kappab_bestfit = res.x[1]
+
+
         # Do a scan
 
-        kappacMin = -35.,
-        kappacMax = 35.,
-        kappabMin = -13.,
-        kappabMax = 13.,
+        kappacMin = -35.
+        kappacMax = 35.
+        kappabMin = -13.
+        kappabMax = 13.
 
         kappacNPoints = 100
         kappabNPoints = 100
@@ -580,20 +658,68 @@ def main( args ):
         kappacBinBoundaries = [ kappacMin + i*(kappacMax-kappacMin)/float(kappacNPoints) for i in xrange(kappacNPoints+1) ]
         kappabBinBoundaries = [ kappabMin + i*(kappabMax-kappabMin)/float(kappabNPoints) for i in xrange(kappabNPoints+1) ]
 
-        kappacPoints = [ 0.5*(kappacBinBoundaries[i]+kappacBinBoundaries[i+1]) for i in xrange(kappacNPoints+1) ]
-        kappabPoints = [ 0.5*(kappabBinBoundaries[i]+kappabBinBoundaries[i+1]) for i in xrange(kappabNPoints+1) ]
+        kappacPoints = [ 0.5*(kappacBinBoundaries[i]+kappacBinBoundaries[i+1]) for i in xrange(kappacNPoints) ]
+        kappabPoints = [ 0.5*(kappabBinBoundaries[i]+kappabBinBoundaries[i+1]) for i in xrange(kappabNPoints) ]
 
 
-        for kappacVal, kappabVal in zip( kappacPoints, kappabPoints ):
+        H2 = ROOT.TH2F(
+            'H2', '',
+            kappacNPoints, array( 'f', kappacBinBoundaries ),
+            kappabNPoints, array( 'f', kappabBinBoundaries ),
+            )
 
-            print cchi2_function()
+        for i_kappab, kappabVal in enumerate(kappabPoints):
+            for i_kappac, kappacVal in enumerate(kappacPoints):
+                H2.SetBinContent( i_kappac, i_kappab, 2. * (chi2_function( (kappacVal, kappabVal) ) - chi2_bestfit) )
 
 
-            break
+        print ''
+        contours_1sigma = TheoryCommands.GetContoursFromTH2( H2, 2.30 )
+        contours_2sigma = TheoryCommands.GetContoursFromTH2( H2, 6.18 )
 
 
+        # ======================================
+        # Plotting
 
-        rootFp.Close()
+        H2.SetTitle('')
+        H2.GetXaxis().SetTitle( '#kappa_{c}' )
+        H2.GetYaxis().SetTitle( '#kappa_{b}' )
+        
+        H2.SetMaximum(7.0)
+
+        c.Clear()
+        SetCMargins(
+            LeftMargin   = 0.12,
+            RightMargin  = 0.10,
+            BottomMargin = 0.12,
+            TopMargin    = 0.09,
+            )
+
+        H2.Draw('COLZ')
+
+        for Tg in contours_1sigma:
+            Tg.SetLineWidth(2)
+            Tg.Draw('LSAME')
+        for Tg in contours_2sigma:
+            Tg.SetLineWidth(2)
+            Tg.SetLineStyle(2)
+            Tg.Draw('LSAME')
+
+
+        SMpoint = ROOT.TGraph( 1, array( 'f', [1.0] ), array( 'f', [1.0] ) )
+        SMpoint.SetMarkerStyle(21)
+        SMpoint.SetMarkerSize(2)
+        SMpoint.Draw('PSAME')
+
+        bestfitpoint = ROOT.TGraph( 1, array( 'f', [kappac_bestfit] ), array( 'f', [kappab_bestfit] ) )
+        bestfitpoint.SetMarkerStyle(34)
+        bestfitpoint.SetMarkerSize(1.1)
+        bestfitpoint.SetMarkerColor(13)
+        bestfitpoint.Draw('PSAME')
+
+        SaveC( 'AfterTheFactChi2Fit' )
+
+        # rootFp.Close()
 
 
 
@@ -602,21 +728,22 @@ def main( args ):
         TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
 
 
-        ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+        # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+        ws = LatestPaths.ws_combined_yukawa_couplingDependentBR
 
         # varToPlot = 'hggBRmodifier'
         # varToPlot = 'hzzBRmodifier'
-        # varToPlot = 'c7_BRscal_hgg'
+        varToPlot = 'c7_BRscal_hgg'
         # varToPlot = 'c7_BRscal_hzz'
-        varToPlot = 'Scaling_hgluglu'
+        # varToPlot = 'Scaling_hgluglu'
 
 
         xVar = 'kappac'
-        xRange = [ -5., 5. ]
+        xRange = [ -32., 32. ]
         xNBins = 200
 
         yVar = 'kappab'
-        yRange = [ -5., 15. ]
+        yRange = [ -15., 15. ]
         yNBins = 200
 
 
@@ -701,12 +828,208 @@ def main( args ):
         rootFp.Close()
 
 
+
+
+    #____________________________________________________________________
+    if args.PlotBRsInOnePlot:
+        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+
+        PLOT_SCALING = False
+
+        # LOGSCALE = True
+        LOGSCALE = False
+
+
+        # ======================================
+        # 
+
+        # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR_profiledTotalXS
+        # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+        ws = LatestPaths.ws_combined_yukawa_couplingDependentBR
+
+        rootFp = ROOT.TFile.Open( ws )
+        w = rootFp.Get('w')
+
+        mH = w.var('MH')
+        mH.setVal(125.)
+
+
+        titleDict = {
+            'kappab' : '#kappa_{b}',
+            'kappac' : '#kappa_{c}',
+            'kappa_V' : '#kappa_{V}',
+            }
+
+
+        SMBR = {
+            'hww'     : 2.137E-01,
+            'hzz'     : 2.619E-02,
+            'htt'     : 6.272E-02,
+            'hmm'     : 2.176E-04,
+            'hbb'     : 5.824E-01,
+            'hcc'     : 2.891E-02,
+            'hgg'     : 2.270E-03,
+            'hzg'     : 1.533E-03,
+            'hgluglu' : 8.187E-02,
+            }
+
+        SMcouplings = {
+            'kappab' : 1.0,
+            'kappac' : 1.0,
+            'kappa_V' : 1.0,
+            }
+        couplings = SMcouplings.keys()
+
+        BRfunctions = {
+            'hww'     : 'c7_BRscal_hww',
+            'hzz'     : 'c7_BRscal_hzz',
+            'htt'     : 'c7_BRscal_htt',
+            'hmm'     : 'c7_BRscal_hmm',
+            'hbb'     : 'c7_BRscal_hbb',
+            'hcc'     : 'c7_BRscal_hcc',
+            'hgg'     : 'c7_BRscal_hgg',
+            'hzg'     : 'c7_BRscal_hzg',
+            'hgluglu' : 'c7_BRscal_hgluglu',
+            }
+
+        decaysToPlot = BRfunctions.keys()
+
+
+        for xVar in couplings:
+
+            x = w.var(xVar)
+
+            # Set other couplings to their SM value
+            for otherCoupling in couplings:
+                if otherCoupling == xVar: continue
+                w.var(otherCoupling).setVal( SMcouplings[otherCoupling] )
+
+            if xVar == 'kappab':
+                kappab_min = -10
+                kappab_max = 10
+            elif xVar == 'kappac':
+                kappab_min = -30
+                kappab_max = 30
+            elif xVar == 'kappa_V':
+                kappab_min = -15
+                kappab_max = 15
+
+            # ======================================
+            # From here on, 'kappab' is the xVar
+
+            kappab = x
+
+            nPoints = 100
+            kappab_axis = [ kappab_min + i*(kappab_max-kappab_min)/(nPoints-1.) for i in xrange(nPoints) ]
+
+            BRvalues = { d : [] for d in decaysToPlot }
+            for decay in decaysToPlot:
+                y = w.function( BRfunctions[decay] )
+                for kappab_val in kappab_axis:
+                    kappab.setVal(kappab_val)
+                    BRvalues[decay].append(y.getVal())
+
+
+            # ======================================
+            # Plotting
+
+            c.Clear()
+            SetCMargins()
+
+            yMin = -0.1
+            yMax = 5.0 if PLOT_SCALING else 1.05
+
+            if LOGSCALE:
+                yMin = 0.0001
+                c.SetLogy(True)
+
+            base = GetPlotBase(
+                xMin = kappab_min,
+                xMax = kappab_max,
+                yMin = yMin,
+                yMax = yMax,
+                xTitle = titleDict.get( xVar, xVar ),
+                yTitle = 'BR scaling' if PLOT_SCALING else 'BR',
+                )
+            base.Draw('P')
+
+            leg = ROOT.TLegend(
+                1 - c.GetRightMargin() - 0.35,
+                1 - c.GetTopMargin() - 0.50,
+                1 - c.GetRightMargin(),
+                1 - c.GetTopMargin() 
+                )
+            leg.SetBorderSize(0)
+            leg.SetFillStyle(0)
+
+
+            colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
+            for decay in decaysToPlot:
+                color = next(colorCycle)
+
+                if PLOT_SCALING:
+                    yValues = BRvalues[decay]
+                else:
+                    yValues = [ SMBR[decay] * val for val in BRvalues[decay] ]
+
+                Tg = ROOT.TGraph(
+                    nPoints,
+                    array( 'd', kappab_axis ),
+                    array( 'd', yValues ),
+                    )
+                ROOT.SetOwnership( Tg, False )
+                Tg.SetLineWidth(2)
+                Tg.SetLineColor(color)
+                Tg.Draw('LSAME')
+                Tg.SetName(decay)
+
+                leg.AddEntry( Tg.GetName(), Tg.GetName(), 'l' )
+
+            if not PLOT_SCALING:
+
+                sumY = [ 0. for i in xrange(nPoints) ]
+                for i in xrange(nPoints):
+                    for d in decaysToPlot:
+                        sumY[i] +=  SMBR[d] * BRvalues[d][i]
+
+                sumTg = ROOT.TGraph(
+                    nPoints,
+                    array( 'd', kappab_axis ),
+                    array( 'd', sumY ),
+                    )
+                ROOT.SetOwnership( sumTg, False )
+                sumTg.SetLineWidth(4)
+                sumTg.SetLineStyle(2)
+                sumTg.SetLineColor(1)
+                sumTg.Draw('LSAME')
+
+
+            lineAtOne = ROOT.TLine( 1.0, yMin, 1.0, yMax )
+            lineAtOne.Draw('L')
+
+            lineAtKappabOne = ROOT.TLine( kappab_min, 1.0, kappab_max, 1.0 )
+            lineAtKappabOne.Draw('L')
+
+            leg.Draw()
+
+            SaveC(
+                ( 'BRscalings' if PLOT_SCALING else 'BRs' )
+                + ( '_logscale' if LOGSCALE else '' )
+                + '-' + xVar
+                )
+            rootFp.Close()
+
+
+
+
+
     #____________________________________________________________________
     if args.PlotOfTotalXSInYukawaWS:
         TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
 
         # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR_profiledTotalXS
-        ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+        # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+        ws = LatestPaths.ws_combined_yukawa_couplingDependentBR
 
         rootFp = ROOT.TFile.Open( ws )
         w = rootFp.Get('w')
@@ -896,7 +1219,7 @@ def main( args ):
             # yMax = max(totalXSaxis) + 0.1*(max(totalXSaxis)-min(totalXSaxis)),
 
             yMin = 0.7
-            yMax = 6.3
+            yMax = 2.3
 
             base = GetPlotBase(
                 xMin = minKappab,
@@ -936,6 +1259,31 @@ def main( args ):
                 print 'kappab = 0.0, {0} = {1}'.format( 'totalXS', totalXS_at_kappab_zero / totalXS_at_kappab_one )
 
 
+
+
+# ENV_IS_SET = False
+# def LoadHiggsAnalysis():
+#     global ENV_IS_SET
+#     if not ENV_IS_SET:
+#         # print '\nTrying \'from scipy.optimize import minimize\''
+#         # from scipy.optimize import minimize
+#         # print '    Succeeded \'from scipy.optimize import minimize\''
+
+#         backdir = os.getcwd()
+#         CMSSW_SRC = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/CMSSW_7_4_7/src'
+
+#         try:
+#             os.environ['LD_LIBRARY_PATH'] = CMSSW_SRC + ':' + os.environ['LD_LIBRARY_PATH']
+#             os.environ['PATH']            = CMSSW_SRC + ':' + os.environ['PATH']
+
+#             os.chdir( CMSSW_SRC )
+#             print '\nTrying \'ROOT.gSystem.Load("libHiggsAnalysisGBRLikelihood")\''
+#             ROOT.gSystem.Load("libHiggsAnalysisGBRLikelihood")
+#             print '    Succeeded \'ROOT.gSystem.Load("libHiggsAnalysisGBRLikelihood")\''
+#         finally:
+#             os.chdir( backdir )
+
+#         ENV_IS_SET = True
 
 
 ########################################

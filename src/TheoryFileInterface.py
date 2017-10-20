@@ -75,6 +75,11 @@ def FileFinder( **kwargs ):
     else:
         filefilters = []
 
+    loadImmediately = False
+    if 'loadImmediately' in kwargs:
+        loadImmediately = kwargs['loadImmediately']
+        del kwargs['loadImmediately']
+
 
     # ======================================
     # Find files
@@ -143,10 +148,17 @@ def FileFinder( **kwargs ):
         print '  Found the following file(s):'
         print '    ' + '\n    '.join([ relpath( f, '.' ) for f in acceptedFiles ])
 
+
     if expectOne:
-        return acceptedFiles[0]
+        if loadImmediately:
+            return ReadDerivedTheoryFile( acceptedFiles[0] )
+        else:
+            return acceptedFiles[0]
     else:
-        return acceptedFiles
+        if loadImmediately:
+            return [ ReadDerivedTheoryFile(f) for f in acceptedFiles ]
+        else:
+            return acceptedFiles
 
 
 #____________________________________________________________________

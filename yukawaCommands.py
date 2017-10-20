@@ -127,9 +127,9 @@ def main( args ):
     if args.CorrelationMatrices_Yukawa:
 
         variationFiles = TheoryFileInterface.FileFinder(
-            # directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
-            kappab = 1.0, kappac = 1.0
+            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
+            # directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
+            kappab = 2, kappac = 1
             )
 
         variations = [
@@ -146,7 +146,7 @@ def main( args ):
 
         variations_expbinning = deepcopy(variations)
         for variation in variations_expbinning:
-            TheoryCommands.RebinDerivedTheoryContainer( variation, expBinBoundaries )
+            TheoryCommands.RebinDerivedTheoryContainer( variation, [ 0., 15., 30., 45., 85., 125. ] )
 
         CorrelationMatrices.GetCorrelationMatrix(
             variations_expbinning,
@@ -174,8 +174,8 @@ def main( args ):
         INCLUDE_BR_COUPLING_DEPENDENCY = True
         # INCLUDE_BR_COUPLING_DEPENDENCY = False
 
-        PROFILE_TOTAL_XS                  = True
-        # PROFILE_TOTAL_XS                  = False
+        # PROFILE_TOTAL_XS                  = True
+        PROFILE_TOTAL_XS                  = False
 
         # ======================================
         # 
@@ -261,8 +261,13 @@ def main( args ):
 
     if args.couplingBestfit_Yukawa:
 
-        doFastscan = True
+        # doFastscan = True
+        # if args.notFastscan: doFastscan = False
+
+        doFastscan = False
         if args.notFastscan: doFastscan = False
+        if args.fastscan:    doFastscan = True
+
 
         # ======================================
         # Flags
@@ -280,8 +285,11 @@ def main( args ):
         INCLUDE_BR_COUPLING_DEPENDENCY    = True
         # INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
-        PROFILE_TOTAL_XS                  = True
-        # PROFILE_TOTAL_XS                  = False
+        # PROFILE_TOTAL_XS                  = True
+        PROFILE_TOTAL_XS                  = False
+
+        # FIX_KAPPAV                        = True
+        FIX_KAPPAV                        = False
 
 
         # ======================================
@@ -301,7 +309,9 @@ def main( args ):
                 combinedDatacard = LatestPaths.ws_combined_split_top_notheoryunc
 
             if INCLUDE_BR_COUPLING_DEPENDENCY:
-                combinedDatacard = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+                # combinedDatacard = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+                combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR
+
 
         else:
             combinedDatacard = LatestPaths.ws_combined_unsplit_lumiScalableWS
@@ -351,12 +361,15 @@ def main( args ):
                 ),
             # 
             ( '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format( kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] )
-                + ( ':kappa_V=-10.0,10.0' if INCLUDE_BR_COUPLING_DEPENDENCY else '' )
+                + ( ':kappa_V=-100.0,100.0' if ( INCLUDE_BR_COUPLING_DEPENDENCY and not FIX_KAPPAV ) else '' )
                 ),
             ]
 
         if INCLUDE_BR_COUPLING_DEPENDENCY:
-            extraOptions.append( '--floatNuisances kappa_V' )
+            if not FIX_KAPPAV:
+                extraOptions.append( '--floatNuisances kappa_V' )
+            else:
+                extraOptions.append( '--freezeNuisances kappa_V' )
 
         variablesToSave = []
         variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
@@ -456,9 +469,7 @@ def main( args ):
         yCoupling = 'kappab'
         titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
 
-        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_betterYukawa_combined_asimov ) )
-        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_betterYukawa_combined_asimov_couplingDependentBR_fast ) )
-
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov ) )
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
             xCoupling,
@@ -469,6 +480,7 @@ def main( args ):
         combined.name = 'regularBR'
         combined.title = 'BR constant'
 
+        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR ) )
         scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
             scalingBR_rootfiles,
             xCoupling,
@@ -477,10 +489,26 @@ def main( args ):
             )
         scalingBR.color = 2
         scalingBR.name = 'scalingBR'
-        scalingBR.title = 'BR(#kappa_{t})'
+        scalingBR.title = 'BR(#kappa_{t}, #kappa_{V})'
+
+        scalingBRfixedKappaV_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV ) )
+        scalingBRfixedKappaV = TheoryCommands.GetTH2FromListOfRootFiles(
+            scalingBRfixedKappaV_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBRfixedKappaV.color = 4
+        scalingBRfixedKappaV.name = 'scalingBRfixedKappaV'
+        scalingBRfixedKappaV.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
+
 
         TheoryCommands.BasicMixedContourPlot(
-            [ combined, scalingBR ],
+            [
+                combined,
+                scalingBR,
+                scalingBRfixedKappaV
+                ],
             xMin = -35.,
             xMax = 35.,
             yMin = -13.,
