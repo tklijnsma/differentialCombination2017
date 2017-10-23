@@ -129,7 +129,7 @@ def main( args ):
         variationFiles = TheoryFileInterface.FileFinder(
             directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
             # directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
-            kappab = 2, kappac = 1
+            kappab = 1, kappac = 1
             )
 
         variations = [

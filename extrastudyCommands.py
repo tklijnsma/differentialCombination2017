@@ -59,22 +59,24 @@ def AppendParserOptions( parser ):
             # super(FooAction, self).__call__( parser, namespace, values, option_string=None )
             # setattr( namespace, self.dest, values )
 
-    parser.add_argument( '--FitBR_t2ws',                             action=CustomAction )
-    parser.add_argument( '--FitBR_bestfit',                          action=CustomAction )
-    parser.add_argument( '--FitBR_scan',                             action=CustomAction )
-    parser.add_argument( '--FitBR_plot',                             action=CustomAction )
+    parser.add_argument( '--FitBR_t2ws',                              action=CustomAction )
+    parser.add_argument( '--FitBR_bestfit',                           action=CustomAction )
+    parser.add_argument( '--FitBR_scan',                              action=CustomAction )
+    parser.add_argument( '--FitBR_plot',                              action=CustomAction )
 
-    parser.add_argument( '--TotalXS_t2ws',                           action=CustomAction )
-    parser.add_argument( '--TotalXS_bestfit',                        action=CustomAction )
-    parser.add_argument( '--TotalXS_scan',                           action=CustomAction )
-    parser.add_argument( '--TotalXS_plot',                           action=CustomAction )
+    parser.add_argument( '--TotalXS_t2ws',                            action=CustomAction )
+    parser.add_argument( '--TotalXS_bestfit',                         action=CustomAction )
+    parser.add_argument( '--TotalXS_scan',                            action=CustomAction )
+    parser.add_argument( '--TotalXS_plot',                            action=CustomAction )
 
-    parser.add_argument( '--chi2fitToCombination_Yukawa',            action=CustomAction )
+    parser.add_argument( '--chi2fitToCombination_Yukawa',             action=CustomAction )
 
-    parser.add_argument( '--Make2DPlotOfVariableInWS',               action=CustomAction )
-    parser.add_argument( '--PlotOfTotalXSInYukawaWS',                action=CustomAction )
-    parser.add_argument( '--PlotOfTotalXS_FromParametrization',      action=CustomAction )
-    parser.add_argument( '--PlotBRsInOnePlot',                       action=CustomAction )
+    parser.add_argument( '--Make2DPlotOfVariableInWS',                action=CustomAction )
+    parser.add_argument( '--PlotOfTotalXSInYukawaWS',                 action=CustomAction )
+    parser.add_argument( '--PlotOfTotalXS_FromParametrization',       action=CustomAction )
+    parser.add_argument( '--PlotBRsInOnePlot',                        action=CustomAction )
+
+    parser.add_argument( '--CorrelationMatrixScaleDependence_Yukawa', action=CustomAction )
 
 
 ########################################
@@ -1260,30 +1262,45 @@ def main( args ):
 
 
 
+    if args.CorrelationMatrixScaleDependence_Yukawa:
 
-# ENV_IS_SET = False
-# def LoadHiggsAnalysis():
-#     global ENV_IS_SET
-#     if not ENV_IS_SET:
-#         # print '\nTrying \'from scipy.optimize import minimize\''
-#         # from scipy.optimize import minimize
-#         # print '    Succeeded \'from scipy.optimize import minimize\''
+        CorrelationMatrices.SetPlotDir( 'plots_CorrelationMatrixCrosscheck_{0}'.format(datestr) )
 
-#         backdir = os.getcwd()
-#         CMSSW_SRC = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/CMSSW_7_4_7/src'
+        kappabs = [ -2, -1, 0, 1, 2 ]
+        kappacs = [ -10, -5, 0, 1, 5, 10 ]
+        for kappab, kappac in itertools.product( kappabs, kappacs ):
 
-#         try:
-#             os.environ['LD_LIBRARY_PATH'] = CMSSW_SRC + ':' + os.environ['LD_LIBRARY_PATH']
-#             os.environ['PATH']            = CMSSW_SRC + ':' + os.environ['PATH']
+            variationFiles = TheoryFileInterface.FileFinder(
+                directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
+                # directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
+                kappab = kappab, kappac = kappac
+                )
 
-#             os.chdir( CMSSW_SRC )
-#             print '\nTrying \'ROOT.gSystem.Load("libHiggsAnalysisGBRLikelihood")\''
-#             ROOT.gSystem.Load("libHiggsAnalysisGBRLikelihood")
-#             print '    Succeeded \'ROOT.gSystem.Load("libHiggsAnalysisGBRLikelihood")\''
-#         finally:
-#             os.chdir( backdir )
+            variations = [
+                TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+                    for variationFile in variationFiles ]
 
-#         ENV_IS_SET = True
+            CorrelationMatrices.GetCorrelationMatrix(
+                variations,
+                makeScatterPlots          = False,
+                makeCorrelationMatrixPlot = True,
+                outname                   = 'corrMat_theory_kappab_{0}_kappac_{1}'.format( kappab, kappac ),
+                verbose                   = True,
+                )
+
+            variations_expbinning = deepcopy(variations)
+            for variation in variations_expbinning:
+                TheoryCommands.RebinDerivedTheoryContainer( variation, [ 0., 15., 30., 45., 85., 125. ] )
+
+            CorrelationMatrices.GetCorrelationMatrix(
+                variations_expbinning,
+                makeScatterPlots          = False,
+                makeCorrelationMatrixPlot = True,
+                outname                   = 'corrMat_exp_kappab_{0}_kappac_{1}'.format( kappab, kappac ),
+                verbose                   = True,
+                )
+
+
 
 
 ########################################
