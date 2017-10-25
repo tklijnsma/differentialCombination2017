@@ -177,6 +177,10 @@ def main( args ):
         # PROFILE_TOTAL_XS                  = True
         PROFILE_TOTAL_XS                  = False
 
+        DO_BR_UNCERTAINTIES               = True
+        # DO_BR_UNCERTAINTIES               = False
+
+
         # ======================================
         # 
 
@@ -242,6 +246,11 @@ def main( args ):
             extraOptions.append( '--PO FitBR=True' )
             suffix += '_couplingDependentBR'
 
+            if DO_BR_UNCERTAINTIES:
+                extraOptions.append( '--PO DoBRUncertainties=True' )
+                suffix += '_withBRUnc'
+
+
         if PROFILE_TOTAL_XS:
             extraOptions.append( '--PO ProfileTotalXS=True' )
             suffix += '_profiledTotalXS'
@@ -291,6 +300,9 @@ def main( args ):
         # FIX_KAPPAV                        = True
         FIX_KAPPAV                        = False
 
+        DO_BR_UNCERTAINTIES               = True
+        # DO_BR_UNCERTAINTIES               = False
+
 
         # ======================================
         # 
@@ -312,6 +324,8 @@ def main( args ):
                 # combinedDatacard = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
                 combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR
 
+                if DO_BR_UNCERTAINTIES:
+                    combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR_withBRunc
 
         else:
             combinedDatacard = LatestPaths.ws_combined_unsplit_lumiScalableWS
@@ -503,11 +517,24 @@ def main( args ):
         scalingBRfixedKappaV.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
 
 
+        scalingBR_withBRunc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR_withBRunc ) )
+        scalingBR_withBRunc = TheoryCommands.GetTH2FromListOfRootFiles(
+            scalingBR_withBRunc_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBR_withBRunc.color = 8
+        scalingBR_withBRunc.name = 'scalingBR_withBRunc'
+        scalingBR_withBRunc.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
+
+
         TheoryCommands.BasicMixedContourPlot(
             [
                 combined,
                 scalingBR,
-                scalingBRfixedKappaV
+                scalingBRfixedKappaV,
+                scalingBR_withBRunc,
                 ],
             xMin = -35.,
             xMax = 35.,

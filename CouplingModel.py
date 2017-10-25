@@ -35,6 +35,7 @@ class CouplingModel( PhysicsModel ):
         self.MakeLumiScalable   = False
         self.FitBR              = False
         self.ProfileTotalXS     = False
+        self.DoBRUncertainties  = False
 
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
@@ -78,6 +79,9 @@ class CouplingModel( PhysicsModel ):
 
             elif optionName == 'splitggH':
                 self.splitggH = eval(optionValue)
+
+            elif optionName == 'DoBRUncertainties':
+                self.DoBRUncertainties = eval(optionValue)
 
             elif optionName == 'binBoundaries':
                 self.manualExpBinBoundaries = [ float(i) for i in optionValue.split(',') ]
@@ -1164,9 +1168,25 @@ class CouplingModel( PhysicsModel ):
             self.SMH.makeBR( decayChannel )
 
         # BR uncertainties
-        doBRU = False
-        if doBRU:
+        # doBRU = False
+        if self.DoBRUncertainties:
             self.SMH.makePartialWidthUncertainties()
+            if self.verbose:
+                print '\nPrintout of HiggsDecayWidth_UncertaintyScaling_{decaychannel}:'
+                for decayChannel in self.SM_HIGG_DECAYS:
+                    if decayChannel == 'hss': continue
+                    print 'HiggsDecayWidth_UncertaintyScaling_{0}:'.format( decayChannel )
+                    self.modelBuilder.out.function( 'HiggsDecayWidth_UncertaintyScaling_{0}'.format( decayChannel ) ).Print()
+
+                for otherVar in [
+                        'HiggsDecayWidthTHU_hvv', 'HiggsDecayWidthTHU_hgg', 'HiggsDecayWidthTHU_hll', 'HiggsDecayWidthTHU_hqq', 'HiggsDecayWidthTHU_hzg', 'HiggsDecayWidthTHU_hll', 'HiggsDecayWidthTHU_hgluglu',
+                        'param_mt', 'param_alphaS', 'param_mB', 'param_mC',
+                        ]:
+                    try:
+                        self.modelBuilder.out.function( otherVar ).Print()
+                    except AttributeError:
+                        self.modelBuilder.out.var( otherVar ).Print()
+
         else:
             for decayChannel in self.SM_HIGG_DECAYS: 
                 self.modelBuilder.factory_( 'HiggsDecayWidth_UncertaintyScaling_%s[1.0]' % decayChannel )
@@ -1284,6 +1304,33 @@ class CouplingModel( PhysicsModel ):
             'expr::c7_BRscal_hgluglu('
             '"@0*@2/@1", Scaling_hgluglu, c7_Gscal_tot, HiggsDecayWidth_UncertaintyScaling_hgluglu)'
             )
+
+        if self.verbose:
+            print '\nPrintout of c7_Gscal_{decayChannel}:'
+            for Gscal in [
+                    'c7_Gscal_Z',
+                    'c7_Gscal_W',
+                    'c7_Gscal_tau',
+                    'c7_Gscal_bottom',
+                    'c7_Gscal_gluon',
+                    'c7_Gscal_gamma',
+                    'c7_Gscal_top',
+                    'c7_Gscal_tot',
+                    ]:
+                self.modelBuilder.out.function(Gscal).Print()
+            print '\nPrintout of c7_BRscal_{decayChannel}:'
+            for BRscal in [
+                    'c7_BRscal_hww',
+                    'c7_BRscal_hzz',
+                    'c7_BRscal_htt',
+                    'c7_BRscal_hmm',
+                    'c7_BRscal_hbb',
+                    'c7_BRscal_hcc',
+                    'c7_BRscal_hgg',
+                    'c7_BRscal_hzg',
+                    'c7_BRscal_hgluglu',
+                    ]:
+                self.modelBuilder.out.function(BRscal).Print()
 
 
         # ======================================

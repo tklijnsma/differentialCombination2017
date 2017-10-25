@@ -104,6 +104,7 @@ ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Oct02/combinedC
 # New wss after su
 ws_combined_yukawa                                 = 'workspaces_Oct18/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
 ws_combined_yukawa_couplingDependentBR             = 'workspaces_Oct19/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
+ws_combined_yukawa_couplingDependentBR_withBRunc   = 'workspaces_Oct23/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR_withBRUnc.root'
 
 
 # ======================================
@@ -232,6 +233,7 @@ scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV = 'Scan_yukawa_Oct10
 # New kappac implementation
 scan_yukawa_combined_asimov_couplingDependentBR             = 'Scan_yukawa_Oct18_asimov'
 scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV = 'Scan_yukawa_Oct19_asimov'
+scan_yukawa_combined_asimov_couplingDependentBR_withBRunc   = 'Scan_yukawa_Oct23_asimov'
 
 
 def main():

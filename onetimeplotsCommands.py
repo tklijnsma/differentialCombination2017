@@ -25,7 +25,7 @@ import MergeHGGWDatacards
 import TheoryFileInterface
 from Container import Container
 from Parametrization import Parametrization, WSParametrization
-
+import MuShapeDrawer
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -58,15 +58,209 @@ def AppendParserOptions( parser ):
             # setattr( namespace, self.dest, values )
 
     parser.add_argument( '--derivedTheoryFilePlots_Top',              action=CustomAction )
+    parser.add_argument( '--FittingMuIllustration',                   action=CustomAction )
+    parser.add_argument( '--DrawAllFits',                             action=CustomAction )
 
 
 ########################################
 # Methods
 ########################################    
 
+
+def GetTH1FExtremumInRange( H, xMin, xMax, findMinimum ):
+    
+    if findMinimum:
+        res = 10e12
+    else:
+        res = -10e12
+
+    iMinimum = -99
+
+    for iBin in xrange( H.GetNbinsX() ):
+        x = H.GetBinCenter(iBin+1)
+        if x < xMin or x > xMax: continue
+        y = H.GetBinContent(iBin+1)
+        if findMinimum:
+            if y < res:
+                res = y
+                iMinimum = iBin
+        else:
+            if y > res:
+                res = y
+                iMinimum = iBin
+    return res
+
+def GetTH1FMinimumInRange( H, xMin, xMax ):
+    return GetTH1FExtremumInRange( H, xMin, xMax, True )
+def GetTH1FMaximumInRange( H, xMin, xMax ):
+    return GetTH1FExtremumInRange( H, xMin, xMax, False )
+
+
+def GetHistFromRooDataSet( dataset, xVar, category ):
+
+    ctemp = ROOT.TCanvas( 'ctemp', 'ctemp', 1000, 800 )
+    ctemp.cd()
+    ctemp.Clear()
+
+    frame = xVar.frame()
+
+    dataset_reduced = dataset.reduce( '{0}=={1}'.format( category.GetName(), category.getIndex() ) )
+    dataset_reduced.plotOn( frame )
+    frame.Draw()
+
+    l = ctemp.GetListOfPrimitives()
+    for i in xrange(l.GetEntries()):
+        if isinstance( l.At(i), ROOT.RooHist ):
+            H = l.At(i)
+            break
+    else:
+        print 'ERROR: did not find a histogram'
+
+    Hcopy = ROOT.RooHist( H )
+    ROOT.SetOwnership( Hcopy, False )
+
+    Hcopy.SetName( TheoryCommands.GetUniqueRootName() )
+
+    ctemp.SaveAs( 'plots_{0}_onetimeplots/roodatasetplottest.pdf'.format(datestr) )
+    del ctemp
+    del frame
+
+    c.cd()
+
+    return Hcopy
+
+
+
 def main( args ):
 
     TheoryCommands.SetPlotDir( 'plots_{0}_onetimeplots'.format(datestr) )
+
+
+    #____________________________________________________________________
+    if args.DrawAllFits:
+
+        TheoryCommands.SetPlotDir( 'plots_{0}_muShapes'.format(datestr) )
+
+        # postfitFilename = 'corrMat_Oct17/higgsCombine_POSTFIT_combinedCard_Aug21.MultiDimFit.mH125.root'
+        postfitFilename = 'corrMat_Oct17/higgsCombine_POSTFIT_combinedCard_Jul26.MultiDimFit.mH125.root'
+
+        muShapeDrawer = MuShapeDrawer.MuShapeDrawer( postfitFilename )
+
+        for hggCat in xrange(3):
+            for hggBin in xrange(8):
+
+                muShapeDrawer.DrawShapes(
+                    hggBin   = hggBin,
+                    hggCat   = hggCat,
+                    muValues = [ 0.5, 1.0, 2.0 ],
+                    )
+
+        for hzzCat in [ '4e', '4mu', '2e2mu' ]:
+            for hzzBin in xrange(5):
+
+                muShapeDrawer.DrawShapes(
+                    hzzBin   = hzzBin,
+                    hzzCat   = hzzCat,
+                    muValues = [ 0.5, 1.0, 2.0 ],
+                    drawBestfit = True,
+                    )
+
+
+    #____________________________________________________________________
+    if args.FittingMuIllustration:
+        TheoryCommands.SetPlotDir( 'plots_{0}_muShapes'.format(datestr) )
+
+        # postfitFilename = 'corrMat_Oct17/higgsCombine_POSTFIT_combinedCard_Aug21.MultiDimFit.mH125.root'
+        postfitFilename = 'corrMat_Oct17/higgsCombine_POSTFIT_combinedCard_Jul26.MultiDimFit.mH125.root'
+
+        postfitFp = ROOT.TFile.Open( postfitFilename )
+        w = postfitFp.Get('w')
+        w.loadSnapshot('MultiDimFit')
+
+        mH = w.var('CMS_hgg_mass')
+
+
+        # PDFs
+
+        # mH.setBins( mH.getBinning().numBins() * 1 ) # Set per 0.25 GeV - default
+        mH.setMin(100.)
+        mH.setMax(180.)
+
+        # Get the best fit bkg
+        bkgPdfName = 'pdf_binch1_recoPt_0p0_15p0_SigmaMpTTag_0_13TeV_bonly'
+        bkgPdf = w.pdf(bkgPdfName)
+        Hbkg = bkgPdf.createHistogram( 'bkg_PTH_0_15_cat0', mH )
+        Hbkg.Scale(0.25)
+
+        Hsigs = []
+        yieldParameter = w.var('r_smH_PTH_0_15')
+        for r in [ 0.5, 1.0, 2.0 ]:
+            yieldParameter.setVal(r)
+
+            # Signal shape
+            sigPdfName = 'pdf_binch1_recoPt_0p0_15p0_SigmaMpTTag_0_13TeV'
+            sigPdf = w.pdf(sigPdfName)
+            Hsig = sigPdf.createHistogram( 'sig_PTH_0_15_cat0', mH )
+            Hsig.Scale(0.25)
+
+            Hsigs.append( Hsig )
+
+
+        # Get the data histogram
+        dataset = w.data('data_obs')
+
+        print dataset
+
+        CMS_channel = w.cat('CMS_channel')
+        CMS_channel.setIndex(0)
+        CMS_channel.Print()
+
+        mH.setRange( 120., 130. )
+        mH.setBins( 40 )
+
+        Hdata = GetHistFromRooDataSet( dataset, mH, CMS_channel )
+
+        # This works, but the errors aren't right and getting them so is a pain
+        # dataset_thisCat = dataset.reduce( '{0}=={1}'.format( CMS_channel.GetName(), CMS_channel.getIndex() ) )
+        # Hdata = ROOT.RooAbsData.createHistogram(
+        #     dataset_thisCat, 'data_PTH_0_15_cat0', mH
+        #     )
+
+        c.Clear()
+        SetCMargins()
+
+        xMin = 120.
+        xMax = 130.
+
+        # yMinAbs = min( GetTH1FMinimumInRange( Hbkg, xMin, xMax ), GetTH1FMinimumInRange( Hsig, xMin, xMax ) )
+        yMinAbs = 0.
+        yMaxAbs = max( GetTH1FMaximumInRange( Hbkg, xMin, xMax ), GetTH1FMaximumInRange( Hsig, xMin, xMax ) )
+        yMin = yMinAbs # - 0.6*(yMaxAbs-yMinAbs)
+        yMax = yMaxAbs + 0.4*(yMaxAbs-yMinAbs)
+
+
+        base = GetPlotBase(
+            xMin = xMin,
+            xMax = xMax,
+            yMin = yMin,
+            yMax = yMax,
+            xTitle = 'm_{#gamma#gamma}',
+            yTitle = '# of events / 0.25 GeV',
+            )
+        base.Draw('P')
+
+        Hbkg.SetLineColor(4)
+
+        Hdata.Draw('PSAME')
+        Hbkg.Draw('C SAME')
+
+        for Hsig in Hsigs:
+            Hsig.SetLineColor(2)
+            Hsig.Draw('C SAME')
+
+        SaveC( 'muFitIllustration1' )
+        postfitFp.Close()
+
 
 
     #____________________________________________________________________
@@ -235,7 +429,6 @@ def main( args ):
 
             xMin = 0.
             xMax = max( containers[0].binBoundaries )
-
 
             base = GetPlotBase(
                 xMin = xMin,

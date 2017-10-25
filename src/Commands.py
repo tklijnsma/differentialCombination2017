@@ -446,7 +446,7 @@ def BasicBestfit(
 
 
 
-def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False, snapshotName='MultiDimFit' ):
+def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False, snapshotName='MultiDimFit', returnAlsoFloating=False ):
 
     wsFp = ROOT.TFile.Open( postfitFile )
     ws   = wsFp.Get('w')
@@ -480,8 +480,6 @@ def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False
         if pdf.GetName().startswith("shapeBkg_bkg"):
             # bgks from hzz are RooHistPdfs, not RooMultiPdfs
             if hasattr( pdf, 'getNumPdfs' ):
-                print pdf
-                pdf.Print()
                 # Loop over all shapes in the envelope
                 for ishape in xrange(pdf.getNumPdfs()):
 
@@ -510,7 +508,10 @@ def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False
 
     wsFp.Close()
 
-    return varsToFreeze
+    if returnAlsoFloating:
+        return varsToFreeze, varsToFloat
+    else:
+        return varsToFreeze
 
 
 
@@ -551,9 +552,15 @@ def ListSet(
         setName='POI',
         pattern='*',
         ):
-    
-    datacardFp = ROOT.TFile.Open( datacardRootFile )
-    w = datacardFp.Get('w')
+
+    closeFp = False
+    if isinstance( datacardRootFile, basestring ):
+        datacardFp = ROOT.TFile.Open( datacardRootFile )
+        w = datacardFp.Get('w')
+        closeFp = True
+    elif isinstance( datacardRootFile, ROOT.RooWorkspace ):
+        w = datacardRootFile
+
     argset = w.set(setName)
     if not argset:
         print 'No set \'{0}\' in {1}'.format( setName, datacardRootFile )
@@ -571,7 +578,7 @@ def ListSet(
         else:
             varNames.append( varName )
 
-    datacardFp.Close()
+    if closeFp: datacardFp.Close()
     return varNames
 
 
