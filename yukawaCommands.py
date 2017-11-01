@@ -171,14 +171,14 @@ def main( args ):
         # MAKELUMISCALABLE = True
         MAKELUMISCALABLE = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY = False
+        # INCLUDE_BR_COUPLING_DEPENDENCY = True
+        INCLUDE_BR_COUPLING_DEPENDENCY = False
 
         # PROFILE_TOTAL_XS                  = True
         PROFILE_TOTAL_XS                  = False
 
-        DO_BR_UNCERTAINTIES               = True
-        # DO_BR_UNCERTAINTIES               = False
+        # DO_BR_UNCERTAINTIES               = True
+        DO_BR_UNCERTAINTIES               = False
 
 
         # ======================================
@@ -200,6 +200,11 @@ def main( args ):
             '--PO linearTerms=True',
             '--PO splitggH=True',
             ]
+
+        if args.hzz:
+            extraOptions.append( '--PO isOnlyHZZ=True' )
+        if args.hgg:
+            extraOptions.append( '--PO isOnlyHgg=True' )
 
         extraOptions.append(
             '--PO binBoundaries=0,15,30,45,85,125'
@@ -281,8 +286,8 @@ def main( args ):
         # ======================================
         # Flags
 
-        ASIMOV = True
-        # ASIMOV = False
+        # ASIMOV = True
+        ASIMOV = False
         
         # LUMISTUDY = True
         LUMISTUDY = False
@@ -291,8 +296,8 @@ def main( args ):
         UNCORRELATED_THEORY_UNCERTAINTIES = False
         NO_THEORY_UNCERTAINTIES           = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
         # PROFILE_TOTAL_XS                  = True
         PROFILE_TOTAL_XS                  = False
@@ -300,8 +305,17 @@ def main( args ):
         # FIX_KAPPAV                        = True
         FIX_KAPPAV                        = False
 
-        DO_BR_UNCERTAINTIES               = True
-        # DO_BR_UNCERTAINTIES               = False
+        # DO_BR_UNCERTAINTIES               = True
+        DO_BR_UNCERTAINTIES               = False
+
+
+        DO_ONLY_ONE_KAPPA                 = True
+        # DO_ONLY_ONE_KAPPA                 = False
+
+        # theKappa = 'kappab'
+        theKappa = 'kappac'
+
+        theOtherKappa = { 'kappab' : 'kappac', 'kappac' : 'kappab' }[theKappa]
 
 
         # ======================================
@@ -309,9 +323,13 @@ def main( args ):
 
         if SPLIT:
             # combinedDatacard = LatestPaths.ws_combined_split_yukawa
-            combinedDatacard = LatestPaths.ws_combined_split_betterYukawa
-            hggDatacard = LatestPaths.ws_onlyhgg_split_yukawa
-            hzzDatacard = LatestPaths.ws_onlyhzz_split_yukawa
+            # combinedDatacard = LatestPaths.ws_combined_split_betterYukawa
+            # hggDatacard      = LatestPaths.ws_onlyhgg_split_yukawa
+            # hzzDatacard      = LatestPaths.ws_onlyhzz_split_yukawa
+
+            combinedDatacard   = LatestPaths.ws_combined_yukawa
+            hggDatacard        = LatestPaths.ws_hgg_yukawa
+            hzzDatacard        = LatestPaths.ws_hzz_yukawa
 
             if LUMISTUDY:
                 combinedDatacard = LatestPaths.ws_combined_split_lumiScalableWS
@@ -364,9 +382,14 @@ def main( args ):
                 nPointsPerJob = 320
                 queue = 'short.q'
 
+        if DO_ONLY_ONE_KAPPA:
+            nPoints       = 39
+            nPointsPerJob = 3
+            queue         = 'short.q'
+
 
         extraOptions = [
-            '-P kappab -P kappac',
+            '-P kappab -P kappac' if not DO_ONLY_ONE_KAPPA else '-P {0}'.format(theKappa),
             '--squareDistPoiStep',
             # 
             ( '--setPhysicsModelParameters kappab=1.0,kappac=1.0'
@@ -384,6 +407,9 @@ def main( args ):
                 extraOptions.append( '--floatNuisances kappa_V' )
             else:
                 extraOptions.append( '--freezeNuisances kappa_V' )
+
+        if DO_ONLY_ONE_KAPPA:
+            extraOptions.append( '--floatNuisances {0}'.format(theOtherKappa) )
 
         variablesToSave = []
         variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
@@ -412,7 +438,15 @@ def main( args ):
             )
 
 
-
+    # 
+    # 
+    ################################################################################
+    ################################################################################
+    #        2 D  P L O T S
+    ################################################################################
+    ################################################################################
+    # 
+    # 
 
     if args.coupling2Dplot_Yukawa or args.couplingContourPlot_Yukawa:
 
@@ -461,13 +495,13 @@ def main( args ):
             rootfiles = hzzScanFiles
 
         res = TheoryCommands.PlotCouplingScan2D(
-            datacard,
+            # datacard,
             rootfiles,
             xCoupling = 'kappac',
             yCoupling = 'kappab',
             xMin = -35., xMax = 35.,
             yMin = -13., yMax = 13.,
-            verbose = True,
+            verbose = True
             # multiplyBinContents = 10.,
             )
 
@@ -550,6 +584,76 @@ def main( args ):
 
 
     if args.couplingContourPlot_Yukawa:
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        TH2FsToPlot = []
+
+        # combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_asimov ) )
+        # hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg_split_profiled_asimov ) )
+        # hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz_split_profiled_asimov ) )
+        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled ) )
+        hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg_split_profiled ) )
+        hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz_split_profiled ) )
+
+
+        # combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'combined'
+        combined.title = 'Combination'
+        TH2FsToPlot.append(combined)
+
+        # hgg_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg ) )
+        hgg = TheoryCommands.GetTH2FromListOfRootFiles(
+            hgg_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        hgg.color = 2
+        hgg.name = 'hgg'
+        hgg.title = 'H #rightarrow #gamma#gamma'
+        TH2FsToPlot.append(hgg)
+
+        # hzz_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz ) )
+        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
+            hzz_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        hzz.color = 4
+        hzz.name = 'hzz'
+        hzz.title = 'H #rightarrow ZZ'
+        TH2FsToPlot.append(hzz)
+
+
+        TheoryCommands.BasicMixedContourPlot(
+            TH2FsToPlot,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_perDecayChannel',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+
+
+
+    if False and args.couplingContourPlot_Yukawa:
 
         xCoupling = 'kappac'
         yCoupling = 'kappab'
@@ -854,7 +958,8 @@ def main( args ):
         # # theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed
         # theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced
 
-        wsToCheck = LatestPaths.ws_onlyhzz_split_yukawa
+        # wsToCheck = LatestPaths.ws_onlyhzz_split_yukawa
+        wsToCheck = LatestPaths.ws_combined_yukawa
         theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed
         
 
@@ -899,7 +1004,7 @@ def main( args ):
             container.Tg_parametrization_expBinning = wsParametrization.GetOutputContainer(
                 kappab = container.kappab , kappac = container.kappac,
                 returnWhat='exp' ).Tg
-            container.Tg_parametrization_expBinning.SetLineColor(color)
+            container.Tg_parametrization_expBinning.SetLineColorAlpha( color, 0.5 )
             container.Tg_parametrization_expBinning.SetMarkerColor(color)
             container.Tg_parametrization_expBinning.SetLineStyle(1)
 
@@ -967,7 +1072,7 @@ def main( args ):
             xMax = xMax,
             yMin = yMin,
             yMax = yMax,
-            xTitle = 'p_{T} [GeV]', yTitle = '#mu'
+            xTitle = 'p_{T} [GeV]', yTitle = '#mu_{ggH}'
             )
         base.Draw('P')
 
@@ -1041,6 +1146,7 @@ def main( args ):
         for container in extraTestContainers:
             container.Tg_parametrization.Draw('XL')
             if DrawExperimentalBinLines:
+                container.Tg_parametrization_expBinning.SetLineStyle(2)
                 CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
                     container.Tg_parametrization_expBinning,
                     drawImmediately=True, legendObject=leg, noBoxes=True, xMaxExternal=xMax )

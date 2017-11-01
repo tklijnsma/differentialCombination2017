@@ -137,7 +137,7 @@ class WSParametrization():
         self.expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
 
         mus = self.Evaluate( **kwargs )
-        if self.returnWhat == 'theory': mus = mus[1:-1]
+        if self.returnWhat == 'theory': mus = mus[1:]
 
         container = OutputContainer()
 

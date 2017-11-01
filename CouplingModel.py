@@ -30,6 +30,9 @@ class CouplingModel( PhysicsModel ):
         self.SMbinBoundaries = []
         self.SMXS = []
 
+        self.isOnlyHgg = False
+        self.isOnlyHZZ = False
+
         self.includeLinearTerms = False
         self.splitggH           = False
         self.MakeLumiScalable   = False
@@ -79,6 +82,12 @@ class CouplingModel( PhysicsModel ):
 
             elif optionName == 'splitggH':
                 self.splitggH = eval(optionValue)
+
+            elif optionName == 'isOnlyHZZ':
+                self.isOnlyHZZ = eval(optionValue)
+
+            elif optionName == 'isOnlyHgg':
+                self.isOnlyHgg = eval(optionValue)
 
             elif optionName == 'DoBRUncertainties':
                 self.DoBRUncertainties = eval(optionValue)
@@ -785,19 +794,11 @@ class CouplingModel( PhysicsModel ):
                 yieldParameterFormula.append( yieldParameterFormulaComponent )
 
             # Compile expression string for final yieldParameter
-            if self.MakeLumiScalable and not self.FitBR:
-                argumentIndices['lumiScale'] = '@{0}'.format( len(argumentIndices) )
-                yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                    signal                   = expBinStr,
-                    formulaString            =  '{0}*({1})'.format( argumentIndices['lumiScale'], '+'.join(yieldParameterFormula) ),
-                    commaSeparatedParameters = ','.join( couplings + averageComponentNames + ['lumiScale'] )
-                    )
-            else:
-                yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                    signal                   = expBinStr,
-                    formulaString            = '+'.join(yieldParameterFormula),
-                    commaSeparatedParameters = ','.join( self.couplings + averageComponentNames )
-                    )
+            yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
+                signal                   = expBinStr,
+                formulaString            = '+'.join(yieldParameterFormula),
+                commaSeparatedParameters = ','.join( self.couplings + averageComponentNames )
+                )
 
             if self.verbose:
                 print '\nFinal yield parameter expression: {0}'.format(yieldParameterExpression)
@@ -1506,6 +1507,13 @@ class CouplingModel( PhysicsModel ):
 
     #____________________________________________________________________
     def BinIsHgg( self, bin ):
+
+        # If the input is hardcoded to be only hzz or hgg:
+        if self.isOnlyHgg:
+            return True
+        if self.isOnlyHZZ:
+            return False
+        
         # This is not robust coding AT ALL
         if bin.startswith('ch1'):
             # if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
@@ -1514,7 +1522,7 @@ class CouplingModel( PhysicsModel ):
             # if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
             return False
         else:
-            raise CouplingModelError( 'Bin \'{0}\' can not be classified as either a hgg or hzz bin' )
+            raise CouplingModelError( 'Bin \'{0}\' can not be classified as either a hgg or hzz bin'.format(bin) )
 
 
 

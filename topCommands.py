@@ -134,14 +134,14 @@ def main( args ):
         # ======================================
         # Switches
 
-        INCLUDE_THEORY_UNCERTAINTIES = True
-        # INCLUDE_THEORY_UNCERTAINTIES = False
+        # INCLUDE_THEORY_UNCERTAINTIES = True
+        INCLUDE_THEORY_UNCERTAINTIES = False
 
-        # MAKELUMISCALABLE = True
-        MAKELUMISCALABLE = False
+        MAKELUMISCALABLE = True
+        # MAKELUMISCALABLE = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY = False
+        # INCLUDE_BR_COUPLING_DEPENDENCY = True
+        INCLUDE_BR_COUPLING_DEPENDENCY = False
 
 
         # ======================================
@@ -221,17 +221,18 @@ def main( args ):
     #____________________________________________________________________
     if args.couplingBestfit_Top:
 
-        doFastscan = True
+        doFastscan = False
         if args.notFastscan: doFastscan = False
+        if args.fastscan:    doFastscan = True
 
         # ASIMOV = False
         ASIMOV = True
 
-        # LUMISTUDY = True
-        LUMISTUDY = False
+        LUMISTUDY = True
+        # LUMISTUDY = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY = False
+        # INCLUDE_BR_COUPLING_DEPENDENCY = True
+        INCLUDE_BR_COUPLING_DEPENDENCY = False
 
 
         # datacard = LatestPaths.ws_combined_split_top
@@ -241,7 +242,8 @@ def main( args ):
             datacard = LatestPaths.ws_combined_split_betterTop_couplingDependentBR
 
         if LUMISTUDY:
-            datacard = LatestPaths.ws_combined_split_top_lumiScalableWS
+            # datacard = LatestPaths.ws_combined_split_top_lumiScalableWS
+            datacard = LatestPaths.ws_combined_split_betterTop_lumiScale
         if args.hgg:
             datacard = LatestPaths.ws_onlyhgg_split_top
         if args.hzz:
@@ -427,11 +429,16 @@ def main( args ):
         ASIMOV = True
 
         if ASIMOV:
-            combined_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
+            # combined_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov ) )
             combined_lum8_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_top_combined_profiled_asimov_lum8 ) )
+            combined_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_betterTop_combined_asimov ) )
+            # combined_lum8_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_betterTop_combined_asimov_lum8 ) )
         else:
             print 'ERROR: Only implemented for Asimov now'
             sys.exit()
+
+
+        containers = []
 
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
@@ -441,6 +448,7 @@ def main( args ):
             )
         combined.color = 1
         combined.name = 'regularLumi'
+        containers.append(combined)
 
         combined_lum8 = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_lum8_rootfiles,
@@ -450,26 +458,27 @@ def main( args ):
             )
         combined_lum8.color = 2
         combined_lum8.name = 'highLumi'
+        containers.append(combined_lum8)
 
-
-        containers = [
-            combined,
-            combined_lum8
-            ]
 
         for container in containers: container.title = titles.get( container.name, container.name )
 
         TheoryCommands.BasicMixedContourPlot(
             containers,
-            xMin = -0.2,
-            xMax = 2.0,
-            yMin = -0.08,
-            yMax = 0.135,
+            # xMin = -0.2,
+            # xMax = 2.0,
+            # yMin = -0.08,
+            # yMax = 0.135,
+            xMin = 0.6,
+            xMax = 1.3,
+            yMin = -0.04,
+            yMax = 0.03,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_LumiStudy',
             x_SM      = 1.,
             y_SM      = 0.,
+            plotIndividualH2s = True,
             )
 
 

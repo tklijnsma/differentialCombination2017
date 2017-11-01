@@ -94,6 +94,7 @@ ws_combined_split_top_couplingDependentBR = 'workspaces_Sep27/combinedCard_Aug21
 ws_combined_split_betterTop                        = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties.root'
 # ws_combined_split_betterTop_couplingDependentBR    = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
 ws_combined_split_betterTop_couplingDependentBR    = 'workspaces_Sep29/combinedCard_Aug21_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
+ws_combined_split_betterTop_lumiScale              = 'workspaces_Oct26/combinedCard_Aug21_CouplingModel_Top_lumiScale.root'
 
 ws_combined_split_betterYukawa                     = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
 # ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Sep28/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
@@ -102,9 +103,13 @@ ws_combined_split_betterYukawa_couplingDependentBR = 'workspaces_Oct02/combinedC
 
 
 # New wss after su
-ws_combined_yukawa                                 = 'workspaces_Oct18/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_combined_yukawa                                 = 'workspaces_Oct18/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
 ws_combined_yukawa_couplingDependentBR             = 'workspaces_Oct19/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
 ws_combined_yukawa_couplingDependentBR_withBRunc   = 'workspaces_Oct23/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR_withBRUnc.root'
+
+ws_combined_yukawa                                 = 'workspaces_Oct26/combinedCard_Aug21_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_hgg_yukawa                                      = 'workspaces_Oct26/Datacard_13TeV_differential_PtGghPlusHx_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_hzz_yukawa                                      = 'workspaces_Oct26/hzz4l_all_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
 
 
 # ======================================
@@ -213,10 +218,11 @@ scan_top_combined_profiled_asimov_lum8 = 'Scan_Top_Sep20_asimov_2'
 scan_top_combined_profiled_asimov_couplingDependentBR = 'Scan_Top_Sep27_asimov'
 
 
-scan_betterTop_combined_asimov                        = 'Scan_Top_Sep28_asimov'
-# scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep28_asimov_0'
-scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep29_asimov'
 
+scan_betterTop_combined_asimov                        = 'Scan_Top_Sep28_asimov_0'
+# scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep28_asimov'
+scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep29_asimov'
+scan_betterTop_combined_asimov_lum8                   = 'Scan_Top_Oct26_asimov'
 
 # scan_betterYukawa_combined_asimov                     = 'Scan_yukawa_Sep28_asimov'
 # # scan_betterYukawa_combined_asimov_couplingDependentBR = 'Scan_yukawa_Sep28_asimov_0'
@@ -227,13 +233,20 @@ scan_betterTop_combined_asimov_couplingDependentBR    = 'Scan_Top_Sep29_asimov'
 scan_yukawa_combined_asimov                                 = 'Scan_yukawa_Sep28_asimov' # Only the last bin is different w.r.t. 'Scan_yukawa_Sep18_asimov'
 
 # !!: Wrong implementation of kappac
-scan_yukawa_combined_asimov_couplingDependentBR             = 'Scan_yukawa_Oct10_asimov_1'
-scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV = 'Scan_yukawa_Oct10_asimov_0'
+# scan_yukawa_combined_asimov_couplingDependentBR             = 'Scan_yukawa_Oct10_asimov_1'
+# scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV = 'Scan_yukawa_Oct10_asimov_0'
 
 # New kappac implementation
 scan_yukawa_combined_asimov_couplingDependentBR             = 'Scan_yukawa_Oct18_asimov'
 scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV = 'Scan_yukawa_Oct19_asimov'
 scan_yukawa_combined_asimov_couplingDependentBR_withBRunc   = 'Scan_yukawa_Oct23_asimov'
+
+
+# With the better quark-induced parametrization
+scan_yukawa_combined = 'Scan_yukawa_Oct26'
+scan_yukawa_hzz      = 'Scan_yukawa_Oct26_0'
+scan_yukawa_hgg      = 'Scan_yukawa_Oct26_1'
+
 
 
 def main():

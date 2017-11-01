@@ -565,7 +565,7 @@ def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
     TH2.SetContour( 1, array( 'd', [threshold] ) )
 
     if verbose:
-        print 'Trying to get contours from \'{0}\''.format( TH2.GetName() )
+        print 'Trying to get contours from \'{0}\''.format( TH2.GetName() ) + ( ' ({0})'.format( TH2_original.name ) if hasattr( TH2_original, 'name' ) else '' )
 
     TH2.Draw( 'CONT Z LIST' )
     ROOT.gPad.Update()
@@ -584,6 +584,17 @@ def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
             TgClone = Tg.Clone()
             ROOT.SetOwnership( TgClone, False )
             Tgs.append( TgClone )
+
+    if verbose:
+        for Tg in Tgs:
+            N = Tg.GetN()
+            xList = [ Tg.GetX()[iPoint] for iPoint in xrange(N) ]
+            yList = [ Tg.GetY()[iPoint] for iPoint in xrange(N) ]
+            xMin = min( xList )
+            xMax = max( xList )
+            yMin = min( yList )
+            yMax = max( yList )
+            print '    xMin = {0:+9.4f}, xMax = {1:+9.4f}, yMin = {2:+9.4f}, yMax = {3:+9.4f}'.format( xMin, xMax, yMin, yMax )
 
 
     del TH2
@@ -920,6 +931,7 @@ def BasicMixedContourPlot(
     # Calculate contours
 
     for container in containers:
+        print 'Getting contours for {0}'.format( container.name )
         container.contours_1sigma = GetContoursFromTH2( container.H2, 2.30 )
         container.contours_2sigma = GetContoursFromTH2( container.H2, 6.18 )
 
