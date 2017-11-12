@@ -21,6 +21,7 @@ import topCommands
 import onetimeplotsCommands
 # import highLumiStudyCommands
 import extrastudyCommands
+import rapidityCommands
 
 import sys
 sys.path.append('src')
@@ -52,6 +53,9 @@ def main():
     parser.add_argument( '--fastscan',                        action='store_true' )
     parser.add_argument( '--notFastscan',                     action='store_true' )
 
+    parser.add_argument( '--asimov',                          action='store_true' )
+    parser.add_argument( '--notAsimov',                       action='store_true' )
+
     combineCommands.AppendParserOptions(parser)
     njetsCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
@@ -60,6 +64,7 @@ def main():
     # highLumiStudyCommands.AppendParserOptions(parser)
     onetimeplotsCommands.AppendParserOptions(parser)
     extrastudyCommands.AppendParserOptions(parser)
+    rapidityCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -69,6 +74,9 @@ def main():
     parser.add_argument( '--hgg',   action='store_true' )
 
     args = parser.parse_args()
+
+    if args.hgg and args.hzz:
+        Commands.ThrowError( 'Both --hzz and --hgg were specified; these are exclusive options' )
 
     print args
     print ''
@@ -102,8 +110,12 @@ def main():
     if args.njetsCommands:
         njetsCommands.main(args)
 
+    if args.rapidityCommands:
+        rapidityCommands.main(args)
+
     if args.extrastudyCommands:
         extrastudyCommands.main(args)
+
 
     ########################################
     # Result and Test Plotting

@@ -73,7 +73,7 @@ def GetPlotBase(
 
     return base
 
-CPlotDir = 'plots_CorrelationMatrices_{0}'.format(datestr)
+CPlotDir = 'correlationMatrices_{0}'.format(datestr)
 def SetPlotDir( newdir ):
     global CPlotDir
     CPlotDir = newdir

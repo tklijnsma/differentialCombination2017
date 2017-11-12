@@ -36,10 +36,10 @@ class GeneralDifferentialModel( MultiSignalModel ):
 
     def BinIsHzz( self, bin ):
         # This is not robust coding AT ALL
-        if bin.startswith('ch2'):
+        if bin.startswith('hzz'):
             if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
             return True
-        elif bin.startswith('ch1'):
+        elif bin.startswith('hgg'):
             if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
             return False
         else:

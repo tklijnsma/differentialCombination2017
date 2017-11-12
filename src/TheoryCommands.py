@@ -1042,7 +1042,90 @@ def BasicMixedContourPlot(
             for Tg in container.contours_2sigma: Tg.Draw('CSAME')
             container.bestfitPoint.Draw('PSAME')
 
+            c.Update()
+
             SaveC( plotname + '_' + container.name )
+
+
+#____________________________________________________________________
+def PlotMultipleScans(
+        containers,
+        xMin      = None,
+        xMax      = None,
+        yMin      = None,
+        yMax      = None,
+        xTitle    = 'x',
+        yTitle    = 'y',
+        plotname  = 'unnamedscans',
+        draw1sigmaline = True,
+        ):
+
+    if xMin is None: xMin = min([ min(container.x) for container in containers ])
+    if xMax is None: xMax = max([ max(container.x) for container in containers ])
+    if yMin is None: yMin = min([ min(container.y) for container in containers ])
+    if yMax is None: yMax = max([ max(container.y) for container in containers ])
+
+
+    # ======================================
+    # Make plot
+
+    c.cd()
+    c.Clear()
+    SetCMargins()
+
+
+    base = GetPlotBase(
+        xMin = xMin,
+        xMax = xMax,
+        yMin = yMin,
+        yMax = yMax,
+        xTitle = xTitle,
+        yTitle = yTitle,
+        )
+    base.Draw('P')
+
+    base.GetXaxis().SetTitleSize(0.06)
+    base.GetXaxis().SetLabelSize(0.05)
+    base.GetYaxis().SetTitleSize(0.06)
+    base.GetYaxis().SetLabelSize(0.05)
+
+
+    leg = ROOT.TLegend(
+        c.GetLeftMargin() + 0.01,
+        c.GetBottomMargin() + 0.02,
+        1 - c.GetRightMargin() - 0.01,
+        c.GetBottomMargin() + 0.09
+        )
+    leg.SetNColumns(3)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+
+    colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
+    for container in containers:
+
+        if not hasattr( container, 'Tg' ):
+
+            container.Tg = ROOT.TGraph(
+                len(container.x), array( 'f', container.x ), array( 'f', container.y )
+                )
+
+            if not hasattr( container, 'color' ):
+                container.color = next(colorCycle)
+
+            container.Tg.SetLineColor(container.color)
+            container.Tg.SetMarkerColor(container.color)
+            container.Tg.SetLineWidth(2)
+            container.Tg.SetMarkerSize(0.9)
+            container.Tg.SetMarkerStyle(5)
+
+            container.Tg.Draw('PCSAME')
+
+    if draw1sigmaline:
+        line1sigma = ROOT.TLine( xMin, 0.5, xMax, 0.5 )
+        line1sigma.SetLineColor(14)
+        line1sigma.Draw()
+
+    SaveC( plotname )
 
 
 

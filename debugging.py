@@ -54,6 +54,13 @@ def main():
     parser.add_argument( '--BRdependency',                            action='store_true' )
     parser.add_argument( '--BRdependency_Yukawa',                         action='store_true' )
 
+    parser.add_argument( '--debugging_Nov08_hzz',                            action='store_true' )
+    parser.add_argument( '--debugging_Nov08_TopWS',                            action='store_true' )
+
+    parser.add_argument( '--jscaletest_RenameHggProcesses_alsoSystematics',      action='store_true' )
+    parser.add_argument( '--jscaletest_t2ws',      action='store_true' )
+    parser.add_argument( '--jscaletest_bestfit',      action='store_true' )
+
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
 
@@ -77,6 +84,156 @@ def main():
     ########################################
 
     Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
+
+
+
+
+    #____________________________________________________________________
+    if args.jscaletest_RenameHggProcesses_alsoSystematics:
+
+        # LatestPaths.card_hgg_smH_NJ_unprocessed
+        # LatestPaths.card_hzz_smH_NJ
+
+        MergeHGGWDatacards.RenameProcesses_Hgg_nJets(
+            LatestPaths.card_hgg_smH_NJ_unprocessed,
+            outTag = '_debugging_Nov10',
+            globalReplace = [
+                ( 'CMS_hgg_JER', 'CMS_scale_j' )
+                ]
+            )
+
+        hgg_debugging_out = 'suppliedInput/fromVittorio/differential_Njets2p5NNLOPS_Nov10/Datacard_13TeV_differential_Njets2p5NNLOPS_debugging_Nov10.txt'
+
+        Commands.BasicCombineCards(
+            'suppliedInput/combinedCard_smH_debugging_Nov10.txt',
+            'hgg=' + hgg_debugging_out,
+            'hzz=' + LatestPaths.card_hzz_smH_NJ
+            )
+
+
+    #____________________________________________________________________
+    if args.jscaletest_t2ws:
+
+        card = 'suppliedInput/combinedCard_smH_debugging_Nov10.txt'
+        ws   = card.replace( '.txt', '.root' )
+
+        Commands.BasicT2WS(
+            card,
+            smartMaps = [
+                ( r'.*/smH_NJ_([\d\_GE]+)', r'r_smH_NJ_\1[1.0,-1.0,4.0]' )
+                ],
+            )
+
+    #____________________________________________________________________
+    if args.jscaletest_bestfit:
+
+        ws = abspath( 'workspaces_Nov10/combinedCard_smH_debugging_Nov10.root' )
+
+        cmd = [
+            'combine',
+            ws,
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            # '--algo=grid',
+            '--floatOtherPOIs=1',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            # '--fastScan',
+            # '-P kappab',
+            # '-P kappac',
+            # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
+            # '--saveSpecifiedFunc {0}'.format(','.join(
+            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            '--squareDistPoiStep',
+            '-M MultiDimFit',
+            '-m 125.00',
+            # '--setPhysicsModelParameterRanges kappab=-20.0,20.0:kappac=-50.0,50.0',
+            # '--setPhysicsModelParameterRanges kappab=0.5,1.0:kappac=1.0,2.0',
+            # '--points 12800',
+            # '--firstPoint 0',
+            # '--lastPoint 799',
+            '-n debugging_Nov10_jscaletest',
+            # '-v 3',
+            ]
+
+        Commands.BasicGenericCombineCommand(
+            cmd,
+            onBatch = False,
+            )
+
+
+    #____________________________________________________________________
+    if args.debugging_Nov08_TopWS:
+
+        base = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v2_NNLOPS/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/'
+
+        # ws = base + 'workspaces_Nov08/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root'
+        # ws = base + 'workspaces_Nov08/combinedCard_Nov03_CouplingModel_Top_noTheoryUncertainties.root'
+
+        ws = base + 'workspaces_Nov08/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root'
+
+        cmd = [
+            'combine',
+            ws,
+            '-n _debugging_Nov08_TopWS',
+            '-M MultiDimFit',
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            # '--algo=grid',
+            '--floatOtherPOIs=1',
+            '-m 125.00',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            # '--points=5 ',
+            # '-t -1',
+            '-P ct -P cg',
+            '--squareDistPoiStep',
+            '--setPhysicsModelParameters ct=1.0,cg=0.0',
+            # '--setPhysicsModelParameterRanges ct=-1.0,2.0:cg=-0.1,0.2',
+            '--saveSpecifiedFunc r_ggH_PTH_0_15,r_ggH_PTH_15_30,r_ggH_PTH_30_45,r_ggH_PTH_45_85,r_ggH_PTH_85_125,r_ggH_PTH_125_200,r_ggH_PTH_200_350,r_ggH_PTH_GT350'
+            + ( ',theoryUncertainty_0,theoryUncertainty_1,theoryUncertainty_2,theoryUncertainty_3,theoryUncertainty_4,theoryUncertainty_5,theoryUncertainty_6,theoryUncertainty_7'
+                if False else '' ),
+            ]
+
+        Commands.BasicGenericCombineCommand(
+            cmd,
+            onBatch = False,
+            )
+
+    #____________________________________________________________________
+    if args.debugging_Nov08_hzz:
+
+        base = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v2_NNLOPS/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/'
+
+        # ws = base + 'workspaces_Nov08/hzz4l_comb_13TeV_xs.root'
+        ws = base + 'workspaces_Nov08/hzz4l_comb_13TeV_xs_processesShifted.root'
+
+        cmd = [
+            'combine',
+            ws,
+            '-n _debugging_Nov08_hzz',
+            '-M MultiDimFit',
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            '--algo=grid',
+            '--floatOtherPOIs=1',
+            '-P "r_smH_PTH_0_15"',
+            '--setPhysicsModelParameterRanges r_smH_PTH_0_15=0.700,2.000 ',
+            '--setPhysicsModelParameters r_smH_PTH_0_15=1.0,r_smH_PTH_85_200=1.0,r_smH_PTH_15_30=1.0,r_smH_PTH_30_85=1.0,r_smH_PTH_GT200=1.0',
+            '-m 125.00',
+            '--squareDistPoi',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '--points=10',
+            # 
+            # '--freezeNuisances r_smH_PTH_GT200',
+            ]
+
+
+        Commands.BasicGenericCombineCommand(
+            cmd,
+            onBatch = False,
+            )
 
 
     if args.BRdependency_Yukawa:

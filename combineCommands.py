@@ -13,7 +13,7 @@ from os.path import *
 from glob import glob
 from copy import deepcopy
 
-from LatestPaths import *
+import LatestPaths
 
 sys.path.append('src')
 import Commands
@@ -44,6 +44,15 @@ def AppendParserOptions( parser ):
             setattr( namespace, self.dest, True )
             # super(FooAction, self).__call__( parser, namespace, values, option_string=None )
             # setattr( namespace, self.dest, values )
+
+
+    parser.add_argument( '--RenameHggProcesses_Aug21',      action=CustomAction )
+    parser.add_argument( '--RenumberHzzProcesses_Aug21',    action=CustomAction )
+    parser.add_argument( '--CombineCards_Aug21',            action=CustomAction )
+
+    parser.add_argument( '--RenameHggProcesses_smHcard',    action=CustomAction )
+    parser.add_argument( '--RenumberHzzProcesses_smHcard',  action=CustomAction )
+    parser.add_argument( '--CombineCards_smHcard',          action=CustomAction )
 
     parser.add_argument( '--renamehgg',                       action=CustomAction )
     parser.add_argument( '--mergehgg',                        action=CustomAction )
@@ -78,10 +87,6 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--scan_hzz_unsplit',              action=CustomAction )
     parser.add_argument( '--scan_combined_split_xHfixed',   action=CustomAction )
 
-    parser.add_argument( '--RenameHggProcesses_Aug21',      action=CustomAction )
-    parser.add_argument( '--RenumberHzzProcesses_Aug21',    action=CustomAction )
-    parser.add_argument( '--CombineCards_Aug21',            action=CustomAction )
-
     parser.add_argument( '--plot_ptSpectra',                action=CustomAction )
 
 
@@ -102,30 +107,49 @@ def main( args ):
 
 
     #____________________________________________________________________
+    # Renaming and combining of split cards
+
     if args.RenameHggProcesses_Aug21:
         MergeHGGWDatacards.RenameProcesses_Aug21(
-            card_onlyhgg_split_both_unrenamed,
+            LatestPaths.card_hgg_ggHxH_PTH_unprocessed,
             )
-
 
     if args.RenumberHzzProcesses_Aug21:
         MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
-            card_onlyhzz_split_unrenamed,
+            LatestPaths.card_hzz_ggHxH_PTH_unprocessed,
             )
-
 
     if args.CombineCards_Aug21:
         Commands.BasicCombineCards(
-            'suppliedInput/combinedCard_{0}.txt'.format(datestr),
-            card_onlyhgg_split_both_renamed,
-            card_onlyhzz_split_renamed
+            'suppliedInput/combinedCard_ggHxH_{0}.txt'.format(datestr),
+            'hgg=' + LatestPaths.card_hgg_ggHxH_PTH,
+            'hzz=' + LatestPaths.card_hzz_ggHxH_PTH
             )
 
+    #____________________________________________________________________
+    # Renaming and combining of unsplit cards
+
+    if args.RenameHggProcesses_smHcard:
+        MergeHGGWDatacards.RenameProcesses_Aug21(
+            LatestPaths.card_hgg_smH_PTH_unprocessed,
+            )
+
+    if args.RenumberHzzProcesses_smHcard:
+        MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+            LatestPaths.card_hzz_smH_PTH_unprocessed,
+            )
+
+    if args.CombineCards_smHcard:
+        Commands.BasicCombineCards(
+            'suppliedInput/combinedCard_smH_{0}.txt'.format(datestr),
+            'hgg=' + LatestPaths.card_hgg_smH_PTH,
+            'hzz=' + LatestPaths.card_hzz_smH_PTH
+            )
 
     #____________________________________________________________________
     if args.t2ws_combined_unsplit:
         Commands.BasicT2WS(
-            card_combined_unsplit,
+            LatestPaths.card_combined_smH_PTH,
             smartMaps = [
                 ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
                 ],
@@ -133,7 +157,7 @@ def main( args ):
 
     if args.t2ws_hgg_unsplit:
         Commands.BasicT2WS(
-            card_onlyhgg_unsplit_renamed,
+            LatestPaths.card_hgg_smH_PTH,
             smartMaps = [
                 ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
                 ],
@@ -141,19 +165,16 @@ def main( args ):
 
     if args.t2ws_hzz_unsplit:
         Commands.BasicT2WS(
-            card_onlyhzz_unsplit_OAsignal,
-            # smartMaps = [
-            #     ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
-            #     ],
+            LatestPaths.card_hzz_smH_PTH,
             manualMaps = [
                 '--PO \'map=.*/smH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
                 '--PO \'map=.*/smH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_30_45:r_smH_PTH_30_85[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTH_45_85:r_smH_PTH_30_85[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTH_85_125:r_smH_PTH_85_200[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTH_125_200:r_smH_PTH_85_200[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTH_200_350:r_smH_PTH_GT200[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTH_GT350:r_smH_PTH_GT200[1.0,-1.0,4.0]\'',
+                '--PO \'map=.*/smH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/smH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/smH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/smH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/smH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/smH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
                 ],
             )
 
@@ -166,7 +187,7 @@ def main( args ):
         if not FIXXH:
 
             Commands.BasicT2WS(
-                card_combined_split,
+                LatestPaths.card_combined_ggHxH_PTH,
                 smartMaps = [
                     ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
                     ],
@@ -174,13 +195,12 @@ def main( args ):
 
         else:
 
-            datacard = card_combined_split
             Commands.BasicT2WS(
-                datacard,
+                LatestPaths.card_combined_ggHxH_PTH,
                 smartMaps = [
                     ( r'.*/ggH_PTH_([\d\_GT]+)', r'r_ggH_PTH_\1[1.0,-1.0,4.0]' )
                     ],
-                outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
+                outputWS = basename(LatestPaths.card_combined_ggHxH_PTH).replace( '.txt', '_xHfixed.root' )
                 )
 
 
@@ -188,7 +208,7 @@ def main( args ):
 
         # Specific for HZZ
         Commands.BasicT2WS(
-            card_onlyhgg_split_both_renamed,
+            LatestPaths.card_hgg_ggHxH_PTH,
             smartMaps = [
                 ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
                 ],
@@ -199,8 +219,7 @@ def main( args ):
 
         # Specific for HZZ
         Commands.BasicT2WS(
-            # 'suppliedInput/hzz_ggH_xH_split_Jun26/hzz4l_all_13TeV_xs.txt',
-            card_onlyhzz_split_renamed,
+            LatestPaths.card_hzz_ggHxH_PTH,
             manualMaps=[
                 '--PO \'map=.*/ggH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
                 '--PO \'map=.*/xH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
@@ -269,18 +288,19 @@ def main( args ):
     #____________________________________________________________________
     if args.corrMat_combined_unsplit:
 
-        # ws = ws_combined_unsplit
-        # ws = ws_combined_split
-        ws = ws_combined_split_xHfixed
-
-        Commands.SetTempJobDir( 'corrMat_{0}'.format(datestr) )
+        # ws = LatestPaths.ws_combined_smH
+        ws = LatestPaths.ws_combined_ggH_xHfixed
 
         wsTag = basename(ws).replace('/','').replace('.root','')
+
+        Commands.SetTempJobDir( 'corrMat_{0}_{1}'.format( datestr, wsTag ) )
         postfitFilename = join( Commands.TEMPJOBDIR, 'higgsCombine_POSTFIT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
         corrmatFilename = join( Commands.TEMPJOBDIR, 'higgsCombine_CORRMAT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
 
-        if args.redoPostfit:
+        if not isfile( postfitFilename ):
+            args.redoPostfit = True
 
+        if args.redoPostfit:
             # First regular best fit
             Commands.BasicBestfit(
                 ws,
@@ -321,33 +341,33 @@ def main( args ):
 
     if args.scan_combined_unsplit:
         Commands.BasicCombineTool(
-            ws_combined_unsplit,
+            LatestPaths.ws_combined_smH,
             POIpattern    = '*',
             nPoints       = 39,
             nPointsPerJob = 3,
-            jobDirectory  = 'Scan_{0}'.format(datestr),
+            jobDirectory  = 'Scan_PTH_{0}'.format(datestr),
             queue         = 'short.q',
             asimov        = ASIMOV,
             )
 
     if args.scan_hgg_unsplit:
         Commands.BasicCombineTool(
-            ws_onlyhgg_unsplit,
+            LatestPaths.ws_hgg_smH,
             POIpattern    = '*',
             nPoints       = 39,
             nPointsPerJob = 3,
-            jobDirectory  = 'Scan_{0}'.format(datestr),
+            jobDirectory  = 'Scan_PTH_{0}_hgg'.format(datestr),
             queue         = 'short.q',
             asimov        = ASIMOV,
             )
         
     if args.scan_hzz_unsplit:
         Commands.BasicCombineTool(
-            ws_onlyhzz_unsplit,
+            LatestPaths.ws_hzz_smH,
             POIpattern    = '*',
             nPoints       = 39,
-            nPointsPerJob = 13,
-            jobDirectory  = 'Scan_{0}'.format(datestr),
+            nPointsPerJob = 39,
+            jobDirectory  = 'Scan_PTH_{0}_hzz'.format(datestr),
             queue         = 'short.q',
             asimov        = ASIMOV,
             POIRange      = [ 0.0, 3.0 ]
@@ -355,11 +375,11 @@ def main( args ):
 
     if args.scan_combined_split_xHfixed:
         Commands.BasicCombineTool(
-            ws_combined_split_xHfixed,
+            LatestPaths.ws_combined_ggH_xHfixed,
             POIpattern    = '*',
             nPoints       = 39,
             nPointsPerJob = 3,
-            jobDirectory  = 'Scan_{0}'.format(datestr),
+            jobDirectory  = 'Scan_PTH_{0}_xHfixed'.format(datestr),
             queue         = 'short.q',
             asimov        = ASIMOV,
             )
@@ -390,39 +410,40 @@ def main( args ):
         hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
         hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
 
+        # ws_hgg_smH
+        # ws_hzz_smH
+        # ws_combined_smH
+
 
         # ======================================
         # Start drawing
 
-        hggPOIs = Commands.ListPOIs( ws_onlyhgg_unsplit )
+        hggPOIs = Commands.ListPOIs( LatestPaths.ws_hgg_smH )
         hggscans = PhysicsCommands.GetScanResults(
             hggPOIs,
-            # scan_ptcombination_hgg_profiled_asimov,
-            scan_ptcombination_hgg_profiled,
-            pattern = 'Datacard_13TeV_differential_pT'
+            LatestPaths.scan_hgg_PTH,
+            pattern = ''
             )
         PhysicsCommands.BasicDrawScanResults( hggPOIs, hggscans, name='hgg' )
         PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
 
 
-        hzzPOIs = Commands.ListPOIs( ws_onlyhzz_unsplit )
+        hzzPOIs = Commands.ListPOIs( LatestPaths.ws_hzz_smH )
         hzzscans = PhysicsCommands.GetScanResults(
             hzzPOIs,
-            # scan_ptcombination_hzz_profiled_asimov,
-            scan_ptcombination_hzz_profiled,
-            pattern = 'usingDavidsCommand_OAshifted'
+            LatestPaths.scan_hzz_PTH,
+            pattern = ''
             )
         PhysicsCommands.BasicDrawScanResults( hzzPOIs, hzzscans, name='hzz' )
         PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
 
 
-        combinationPOIs = Commands.ListPOIs( ws_combined_unsplit )
+        combinationPOIs = Commands.ListPOIs( LatestPaths.ws_combined_smH )
         combinationscans = PhysicsCommands.GetScanResults(
-            [ p.replace('smH','ggH') for p in combinationPOIs ],
-            # scan_ptcombination_combined_profiled_asimov,
-            # scan_ptcombination_combined_profiled,
-            scan_ptcombination_combined_profiled_xHfixed,
-            pattern = 'combinedCard'
+            # [ p.replace('smH','ggH') for p in combinationPOIs ],
+            combinationPOIs,
+            LatestPaths.scan_combined_PTH,
+            pattern = ''
             )
         PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
         PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
@@ -441,18 +462,18 @@ def main( args ):
                 # # ( 'SetFillStyle', 3544 ),
                 # ( 'SetFillStyle', 3345 ),
                 ),
-            # ( 'hgg', hggPOIs, hggscans,
-            #     ( 'SetLineColor', 2 ),
-            #     ( 'SetMarkerStyle', 5 ),
-            #     ( 'SetFillColorAlpha', 2, 0.2 ),
-            #     ),
-            # ( 'hzz', hzzPOIs, hzzscans,
-            #     ( 'SetLineColor', 4 ),
-            #     ( 'SetMarkerStyle', 8 ),
-            #     ( 'SetFillColorAlpha', 4, 0.2 ),
-            #     ),
-            # hzz_SMXS         = hzz_crosssections,
-            # hgg_SMXS         = hgg_crosssections,
+            ( 'hgg', hggPOIs, hggscans,
+                ( 'SetLineColor', 2 ),
+                ( 'SetMarkerStyle', 5 ),
+                ( 'SetFillColorAlpha', 2, 0.2 ),
+                ),
+            ( 'hzz', hzzPOIs, hzzscans,
+                ( 'SetLineColor', 4 ),
+                ( 'SetMarkerStyle', 8 ),
+                ( 'SetFillColorAlpha', 4, 0.2 ),
+                ),
+            hzz_SMXS         = hzz_crosssections,
+            hgg_SMXS         = hgg_crosssections,
             combination_SMXS = hgg_crosssections,
             )
 
@@ -470,16 +491,16 @@ def main( args ):
                 # # ( 'SetFillStyle', 3544 ),
                 # ( 'SetFillStyle', 3345 ),
                 ),
-            # ( 'hgg', hggPOIs, hggscans,
-            #     ( 'SetLineColor', 2 ),
-            #     ( 'SetMarkerStyle', 5 ),
-            #     ( 'SetFillColorAlpha', 2, 0.2 ),
-            #     ),
-            # ( 'hzz', hzzPOIs, hzzscans,
-            #     ( 'SetLineColor', 4 ),
-            #     ( 'SetMarkerStyle', 8 ),
-            #     ( 'SetFillColorAlpha', 4, 0.2 ),
-            #     ),
+            ( 'hgg', hggPOIs, hggscans,
+                ( 'SetLineColor', 2 ),
+                ( 'SetMarkerStyle', 5 ),
+                ( 'SetFillColorAlpha', 2, 0.2 ),
+                ),
+            ( 'hzz', hzzPOIs, hzzscans,
+                ( 'SetLineColor', 4 ),
+                ( 'SetMarkerStyle', 8 ),
+                ( 'SetFillColorAlpha', 4, 0.2 ),
+                ),
             printTable=True,
             bottomRatioPlot = True,
             )

@@ -673,7 +673,7 @@ def ListProcesses( datacardFile ):
 
 
 
-def executeCommand( cmd, captureOutput=False ):
+def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
 
     if not isinstance( cmd, basestring ):
         cmdStr = '\n    '.join( cmd )
@@ -682,7 +682,7 @@ def executeCommand( cmd, captureOutput=False ):
         cmdStr = cmd
         cmdExec = cmd
 
-    if TESTMODE:
+    if TESTMODE and not ignoreTestmode:
         print '\nTESTMODE: ' + cmdStr + '\n'
     else:
         if not captureOutput:
@@ -852,6 +852,8 @@ def BasicCombineTool(
             os.makedirs( jobDirectory )
         print 'Moving to directory {0}'.format( jobDirectory )
         os.chdir( jobDirectory )
+    else:
+        print '\nTESTMODE: Would now create {0}'.format(jobDirectory)
 
 
     for POI in doPOIs:
@@ -1056,7 +1058,7 @@ class AnalysisError(Exception):
 
 def ThrowError(
     errstr = '',
-    throwException = False
+    throwException = True
     ):
 
     if throwException:

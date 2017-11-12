@@ -64,12 +64,18 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--CorrelationMatrices_Yukawa',                          action=CustomAction )
     parser.add_argument( '--couplingT2WS_Yukawa',                                 action=CustomAction )
     parser.add_argument( '--couplingBestfit_Yukawa',                              action=CustomAction )
+
+    # Plotting
+    parser.add_argument( '--OneKappaScanPlot_Yukawa',                             action=CustomAction )
     parser.add_argument( '--coupling2Dplot_Yukawa',                               action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa',                          action=CustomAction )
     parser.add_argument( '--couplingContourPlotAsimov_Yukawa',                    action=CustomAction )
     parser.add_argument( '--checkWSParametrization_Yukawa',                       action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_TheoryCrossCheck',         action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_TheoryUncertainties',      action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_BRdependencyComparison',   action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_highLumiStudy',            action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_ProfiledTotalXS',          action=CustomAction )
 
 
 ########################################
@@ -78,11 +84,10 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
-    # expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
-    # # expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
-    # print 'Hardcoded binBoundaries for Yukawa:'
-    # print expBinBoundaries
-    # print ''
+    expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
+    print 'Hardcoded binBoundaries for Yukawa:'
+    print expBinBoundaries
+    print ''
 
     TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
 
@@ -100,24 +105,17 @@ def main( args ):
             mainCrossSection = 'matched',
             )
 
-    if args.mergeGluonInducedWithQuarkInduced:
-        # TheoryFileInterface.MergeGluonAndQuarkInduced(
-        #     gI_theoryFileDir = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
-        #     qI_theoryFileDir = LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInduced,
-        #     verbose = True
-        #     )
-
-        TheoryFileInterface.SumGluonAndQuarkFiles(
-            gI_theoryFileDir = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
-            qI_theoryFileDir = LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInducedScaled,
-            verbose = True
-            )
-
-
     if args.createDerivedTheoryFiles_YukawaQuarkInducedScaled:
         TheoryFileInterface.ScaleQuarkInduced(
-            LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInduced,
+            LatestPaths.derivedTheoryFiles_YukawaQuarkInduced,
             verbose = True,
+            )
+
+    if args.mergeGluonInducedWithQuarkInduced:
+        TheoryFileInterface.SumGluonAndQuarkFiles(
+            gI_theoryFileDir = LatestPaths.derivedTheoryFiles_YukawaGluonInduced,
+            qI_theoryFileDir = LatestPaths.derivedTheoryFiles_YukawaQuarkInducedScaled,
+            verbose = True
             )
 
 
@@ -127,8 +125,7 @@ def main( args ):
     if args.CorrelationMatrices_Yukawa:
 
         variationFiles = TheoryFileInterface.FileFinder(
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
-            # directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
+            directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             kappab = 1, kappac = 1
             )
 
@@ -146,7 +143,7 @@ def main( args ):
 
         variations_expbinning = deepcopy(variations)
         for variation in variations_expbinning:
-            TheoryCommands.RebinDerivedTheoryContainer( variation, [ 0., 15., 30., 45., 85., 125. ] )
+            TheoryCommands.RebinDerivedTheoryContainer( variation, expBinBoundaries )
 
         CorrelationMatrices.GetCorrelationMatrix(
             variations_expbinning,
@@ -162,17 +159,17 @@ def main( args ):
         # ======================================
         # Flags
 
-        INCLUDE_THEORY_UNCERTAINTIES = True
-        # INCLUDE_THEORY_UNCERTAINTIES = False
+        INCLUDE_THEORY_UNCERTAINTIES      = True
+        # INCLUDE_THEORY_UNCERTAINTIES      = False
 
         # UNCORRELATED_THEORY_UNCERTAINTIES = True
         UNCORRELATED_THEORY_UNCERTAINTIES = False
 
-        # MAKELUMISCALABLE = True
-        MAKELUMISCALABLE = False
+        # MAKELUMISCALABLE                  = True
+        MAKELUMISCALABLE                  = False
 
-        # INCLUDE_BR_COUPLING_DEPENDENCY = True
-        INCLUDE_BR_COUPLING_DEPENDENCY = False
+        INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
         # PROFILE_TOTAL_XS                  = True
         PROFILE_TOTAL_XS                  = False
@@ -182,17 +179,25 @@ def main( args ):
 
 
         # ======================================
-        # 
+        # Specify needed input
 
-        datacard = LatestPaths.card_combined_split
+        datacard = LatestPaths.card_combined_ggHxH_PTH
         if args.hgg:
-            datacard = LatestPaths.card_onlyhgg_split_both_renamed
+            datacard = LatestPaths.card_hgg_ggHxH_PTH
         if args.hzz:
-            datacard = LatestPaths.card_onlyhzz_split_renamed
+            datacard = LatestPaths.card_hzz_ggHxH_PTH
+
+        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_YukawaSummed )
+
+        if INCLUDE_THEORY_UNCERTAINTIES:
+            correlationMatrix   = LatestPaths.correlationMatrix_Yukawa
+            theoryUncertainties = LatestPaths.theoryUncertainties_Yukawa
+            if UNCORRELATED_THEORY_UNCERTAINTIES:
+                correlationMatrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated
 
 
-        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFilesDirectory_YukawaSummed )
-        # TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced )
+        # ======================================
+        # Run t2ws
 
         extraOptions = [
             '--PO verbose=2',
@@ -207,7 +212,7 @@ def main( args ):
             extraOptions.append( '--PO isOnlyHgg=True' )
 
         extraOptions.append(
-            '--PO binBoundaries=0,15,30,45,85,125'
+            '--PO binBoundaries={0}'.format( ','.join([ str(b) for b in expBinBoundaries ]) )
             )
 
         extraOptions.append(
@@ -228,20 +233,20 @@ def main( args ):
                             )
                         )
 
+        # Sample only a few needed theories
+        import random
+        random.seed(1002)
+        extraOptions.extend( random.sample( possibleTheories, 6 ) )
+
 
         suffix = 'Yukawa'
-        if UNCORRELATED_THEORY_UNCERTAINTIES:
-            extraOptions.append(
-                '--PO correlationMatrix={0}'.format( LatestPaths.correlationMatrix_Yukawa_uncorrelated ) )
-            extraOptions.append(
-                '--PO theoryUncertainties={0}'.format( LatestPaths.theoryUncertainties_Yukawa ) )
-            suffix += '_withUncorrelatedTheoryUncertainties'
-        elif INCLUDE_THEORY_UNCERTAINTIES:
-            extraOptions.append(
-                '--PO correlationMatrix={0}'.format( LatestPaths.correlationMatrix_Yukawa ) )
-            extraOptions.append(
-                '--PO theoryUncertainties={0}'.format( LatestPaths.theoryUncertainties_Yukawa ) )
-            suffix += '_withTheoryUncertainties'
+
+        if INCLUDE_THEORY_UNCERTAINTIES:
+            extraOptions.append( '--PO correlationMatrix={0}'.format( correlationMatrix ) )
+            extraOptions.append( '--PO theoryUncertainties={0}'.format( theoryUncertainties ) )
+            suffix += '_withTheoryUncertainties' if not UNCORRELATED_THEORY_UNCERTAINTIES else '_withUncorrelatedTheoryUncertainties'
+        else:
+            suffix += '_noTheoryUncertainties'
 
         if MAKELUMISCALABLE:
             extraOptions.append( '--PO lumiScale=True' )
@@ -250,20 +255,14 @@ def main( args ):
         if INCLUDE_BR_COUPLING_DEPENDENCY:
             extraOptions.append( '--PO FitBR=True' )
             suffix += '_couplingDependentBR'
-
             if DO_BR_UNCERTAINTIES:
                 extraOptions.append( '--PO DoBRUncertainties=True' )
                 suffix += '_withBRUnc'
-
 
         if PROFILE_TOTAL_XS:
             extraOptions.append( '--PO ProfileTotalXS=True' )
             suffix += '_profiledTotalXS'
 
-
-        import random
-        random.seed(1002)
-        extraOptions.extend( random.sample( possibleTheories, 6 ) )
 
         Commands.BasicT2WSwithModel(
             datacard,
@@ -272,6 +271,9 @@ def main( args ):
             extraOptions = extraOptions,
             )
 
+
+    # ======================================
+    # Scan
 
     if args.couplingBestfit_Yukawa:
 
@@ -282,22 +284,25 @@ def main( args ):
         if args.notFastscan: doFastscan = False
         if args.fastscan:    doFastscan = True
 
+        ASIMOV = False
+        if args.notAsimov: ASIMOV = False
+        if args.asimov:    ASIMOV = True
+
 
         # ======================================
         # Flags
 
-        # ASIMOV = True
-        ASIMOV = False
-        
         # LUMISTUDY = True
         LUMISTUDY = False
 
-        SPLIT = True
+        # UNCORRELATED_THEORY_UNCERTAINTIES = True
         UNCORRELATED_THEORY_UNCERTAINTIES = False
+
+        # NO_THEORY_UNCERTAINTIES           = True
         NO_THEORY_UNCERTAINTIES           = False
 
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        INCLUDE_BR_COUPLING_DEPENDENCY    = False
+        INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
         # PROFILE_TOTAL_XS                  = True
         PROFILE_TOTAL_XS                  = False
@@ -308,76 +313,79 @@ def main( args ):
         # DO_BR_UNCERTAINTIES               = True
         DO_BR_UNCERTAINTIES               = False
 
-
-        DO_ONLY_ONE_KAPPA                 = True
-        # DO_ONLY_ONE_KAPPA                 = False
+        # DO_ONLY_ONE_KAPPA                 = True
+        DO_ONLY_ONE_KAPPA                 = False
 
         # theKappa = 'kappab'
         theKappa = 'kappac'
-
         theOtherKappa = { 'kappab' : 'kappac', 'kappac' : 'kappab' }[theKappa]
 
 
+        print
+        print '(!) {0} asimov'.format( 'DOING' if ASIMOV else 'NOT DOING' )
+        print '(!) {0} fastscan'.format( 'DOING' if doFastscan else 'NOT DOING' )
+        print 'UNCORRELATED_THEORY_UNCERTAINTIES = ', UNCORRELATED_THEORY_UNCERTAINTIES
+        print 'NO_THEORY_UNCERTAINTIES           = ', NO_THEORY_UNCERTAINTIES
+        print 'INCLUDE_BR_COUPLING_DEPENDENCY    = ', INCLUDE_BR_COUPLING_DEPENDENCY
+        print 'PROFILE_TOTAL_XS                  = ', PROFILE_TOTAL_XS
+        print 'FIX_KAPPAV                        = ', FIX_KAPPAV
+        print 'DO_BR_UNCERTAINTIES               = ', DO_BR_UNCERTAINTIES
+        print 'DO_ONLY_ONE_KAPPA                 = ', DO_ONLY_ONE_KAPPA
+        if DO_ONLY_ONE_KAPPA:
+            print 'Chosen kappa                      = {0}'.format(theKappa )
+            print 'Other kappa                       = {0}'.format(theOtherKappa )
+
+
         # ======================================
-        # 
+        # Set correct input
 
-        if SPLIT:
-            # combinedDatacard = LatestPaths.ws_combined_split_yukawa
-            # combinedDatacard = LatestPaths.ws_combined_split_betterYukawa
-            # hggDatacard      = LatestPaths.ws_onlyhgg_split_yukawa
-            # hzzDatacard      = LatestPaths.ws_onlyhzz_split_yukawa
+        # if INCLUDE_BR_COUPLING_DEPENDENCY:
+        #     # combinedDatacard = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
+        #     combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR
 
-            combinedDatacard   = LatestPaths.ws_combined_yukawa
-            hggDatacard        = LatestPaths.ws_hgg_yukawa
-            hzzDatacard        = LatestPaths.ws_hzz_yukawa
+        #     if DO_BR_UNCERTAINTIES:
+        #         combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR_withBRunc
 
-            if LUMISTUDY:
-                combinedDatacard = LatestPaths.ws_combined_split_lumiScalableWS
-            if UNCORRELATED_THEORY_UNCERTAINTIES:
-                combinedDatacard = LatestPaths.ws_combined_split_top_uncorrelated
-            if NO_THEORY_UNCERTAINTIES:
-                combinedDatacard = LatestPaths.ws_combined_split_top_notheoryunc
-
-            if INCLUDE_BR_COUPLING_DEPENDENCY:
-                # combinedDatacard = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
-                combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR
-
-                if DO_BR_UNCERTAINTIES:
-                    combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR_withBRunc
-
-        else:
-            combinedDatacard = LatestPaths.ws_combined_unsplit_lumiScalableWS
-            hggDatacard      = LatestPaths.ws_onlyhgg_unsplit_yukawa
-            hzzDatacard      = LatestPaths.ws_onlyhzz_unsplit_yukawa
-
-
-        datacard = combinedDatacard
+        datacard = LatestPaths.ws_combined_Yukawa
         if args.hgg:
-            datacard = hggDatacard
+            datacard = LatestPaths.ws_hgg_Yukawa
         if args.hzz:
-            datacard = hzzDatacard
+            datacard = LatestPaths.ws_hzz_Yukawa
 
-        kappab_ranges = [ -20., 20. ]
-        kappac_ranges = [ -50., 50. ]
+        if ( LUMISTUDY or UNCORRELATED_THEORY_UNCERTAINTIES or NO_THEORY_UNCERTAINTIES or PROFILE_TOTAL_XS ) and ( args.hzz or args.hgg ):
+            print '[fixme] These studies not implemented for hgg or hzz'
+            sys.exit()
+        if LUMISTUDY:
+            datacard = LatestPaths.ws_combined_Yukawa_lumiScalable
+        if UNCORRELATED_THEORY_UNCERTAINTIES:
+            datacard = LatestPaths.ws_combined_Yukawa_withUncorrelatedTheoryUncertainties
+        if NO_THEORY_UNCERTAINTIES:
+            datacard = LatestPaths.ws_combined_Yukawa_noTheoryUncertainties
+        if PROFILE_TOTAL_XS:
+            datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR
 
-        jobDirectory = 'Scan_yukawa_{0}'.format( datestr )
-        if ASIMOV: jobDirectory += '_asimov'
-        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
 
+        # ======================================
+        # Set some job specifics (ranges, number of points)
+
+        jobDirectory = 'Scan_Yukawa_{0}'.format( datestr )
+        if args.hgg: jobDirectory += '_hgg'
+        if args.hzz: jobDirectory += '_hzz'
+
+        kappab_ranges = [ -15., 15. ]
+        kappac_ranges = [ -35., 35. ]
 
         if doFastscan:
+            jobDirectory += '_fastscan'
             nPoints = 6400
             nPointsPerJob = 800
             queue = 'short.q'
         else:
-            # nPoints = 6400
-            # nPointsPerJob = 8
-            nPoints = 4900
-            nPointsPerJob = 14
+            nPoints = 6400
+            nPointsPerJob = 20
             queue = 'all.q'
-            if UNCORRELATED_THEORY_UNCERTAINTIES or NO_THEORY_UNCERTAINTIES or LUMISTUDY:
-                nPoints = 3200
-                nPointsPerJob = 8
             if args.hzz:
                 nPointsPerJob = 320
                 queue = 'short.q'
@@ -387,6 +395,9 @@ def main( args ):
             nPointsPerJob = 3
             queue         = 'short.q'
 
+
+        # ======================================
+        # Construct the fit command and process flags
 
         extraOptions = [
             '-P kappab -P kappac' if not DO_ONLY_ONE_KAPPA else '-P {0}'.format(theKappa),
@@ -409,8 +420,24 @@ def main( args ):
                 extraOptions.append( '--freezeNuisances kappa_V' )
 
         if DO_ONLY_ONE_KAPPA:
+            jobDirectory += '_oneKappa_{0}'.format(theKappa)
             extraOptions.append( '--floatNuisances {0}'.format(theOtherKappa) )
+        if LUMISTUDY:
+            jobDirectory += '_lumiStudy'
+        if PROFILE_TOTAL_XS:
+            jobDirectory += '_profiledTotalXS'
+        if UNCORRELATED_THEORY_UNCERTAINTIES:
+            jobDirectory += '_uncorrelatedTheoryUncertainties'
+        if NO_THEORY_UNCERTAINTIES:
+            jobDirectory += '_noTheoryUncertainties'
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            jobDirectory += '_couplingDependentBR'
+            if FIX_KAPPAV:
+                jobDirectory += '_fixedKappaV'
+        if ASIMOV:
+            jobDirectory += '_asimov'
 
+        # Compile list of variables to save
         variablesToSave = []
         variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
         variablesToSave.extend( [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ] )
@@ -419,10 +446,12 @@ def main( args ):
             variablesToSave.extend( Commands.ListSet( datacard, 'hzz_yieldParameters' ) )
             variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
         if PROFILE_TOTAL_XS:
-            variablesToSave.extend([ 'r_totalXS', 'totalXS', 'totalXS_SM' ])
-
+            variablesToSave.extend([ 'r_totalXS', 'totalXSmodifier', 'totalXS_SM', 'totalXS' ])
         extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
 
+
+        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+        if Commands.IsTestMode(): print '\nWould now create new directory: {0}'.format( basename(jobDirectory) )
 
         Commands.MultiDimCombineTool(
             datacard,
@@ -442,67 +471,59 @@ def main( args ):
     # 
     ################################################################################
     ################################################################################
-    #        2 D  P L O T S
+    #        P L O T S
     ################################################################################
     ################################################################################
     # 
     # 
 
-    if args.coupling2Dplot_Yukawa or args.couplingContourPlot_Yukawa:
 
-        ASIMOV = False
-        SPLIT  = True
+    #____________________________________________________________________
+    if args.OneKappaScanPlot_Yukawa:
 
-        if SPLIT:
+        scans = [
+            ( 'kappac', LatestPaths.scan_combined_Yukawa_oneKappa_kappac ),
+            ( 'kappac', LatestPaths.scan_combined_Yukawa_oneKappa_kappac_asimov ),
+            ( 'kappab', LatestPaths.scan_combined_Yukawa_oneKappa_kappab ),
+            ( 'kappab', LatestPaths.scan_combined_Yukawa_oneKappa_kappab_asimov ),
+            ]
 
-            combinedDatacard = LatestPaths.ws_combined_split_yukawa
-            hggDatacard      = LatestPaths.ws_onlyhgg_split_yukawa
-            hzzDatacard      = LatestPaths.ws_onlyhzz_split_yukawa
+        for kappa, scanDir in scans:
 
-            if not ASIMOV:
-                combinedScanFiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled ) )
-                hggScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg_split_profiled ) )
-                hzzScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz_split_profiled ) )
-            else:
-                combinedScanFiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_asimov ) )
-                hggScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg_split_profiled_asimov ) )
-                hzzScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz_split_profiled_asimov ) )
-        else:
+            container = Container()
+            container.kappa = kappa
+            container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), kappa )
 
-            combinedDatacard = LatestPaths.ws_combined_unsplit_yukawa
-            hggDatacard      = LatestPaths.ws_onlyhgg_unsplit_yukawa
-            hzzDatacard      = LatestPaths.ws_onlyhzz_unsplit_yukawa
+            TheoryCommands.PlotMultipleScans(
+                [ container ],
+                xTitle   = kappa,
+                yTitle   = '#Delta NLL',
+                yMax     = 10.,
+                plotname = 'oneKappaScan_{0}_{1}'.format( kappa, basename(scanDir).replace('/','') ),
+                draw1sigmaline = True
+                )
 
-            if not ASIMOV:
-                combinedScanFiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_profiled ) )
-                hggScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_profiled ) )
-                hzzScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_profiled ) )
-            else:
-                combinedScanFiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_profiled_asimov ) )
-                hggScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg_profiled_asimov ) )
-                hzzScanFiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz_profiled_asimov ) )
-
-
+    #____________________________________________________________________
     if args.coupling2Dplot_Yukawa:
 
-        datacard  = combinedDatacard
-        rootfiles = combinedScanFiles
-        if args.hgg:
-            datacard  = hggDatacard
-            rootfiles = hggScanFiles
-        if args.hzz:
-            datacard  = hzzDatacard
-            rootfiles = hzzScanFiles
+        # datacard  = combinedDatacard
+        # rootfiles = combinedScanFiles
+        # if args.hgg:
+        #     datacard  = hggDatacard
+        #     rootfiles = hggScanFiles
+        # if args.hzz:
+        #     datacard  = hzzDatacard
+        #     rootfiles = hzzScanFiles
+
+        rootfiles = glob( LatestPaths.scan_combined_Yukawa + '/*.root' )
 
         res = TheoryCommands.PlotCouplingScan2D(
-            # datacard,
             rootfiles,
             xCoupling = 'kappac',
             yCoupling = 'kappab',
             xMin = -35., xMax = 35.,
             yMin = -13., yMax = 13.,
             verbose = True
-            # multiplyBinContents = 10.,
             )
 
         print '\nBest fit:'
@@ -510,14 +531,126 @@ def main( args ):
         print res.yCoupling, '=', res.yBestfit
 
 
+
     #____________________________________________________________________
-    if args.couplingContourPlot_Yukawa_BRdependencyComparison:
+    if args.couplingContourPlot_Yukawa_ProfiledTotalXS:
 
         xCoupling = 'kappac'
         yCoupling = 'kappab'
         titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
 
-        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov ) )
+        containers = []
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name  = 'regular'
+        combined.title = 'Regular'
+        containers.append(combined)
+
+        profiledTotalXS_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_profiledTotalXS_asimov ) )
+        profiledTotalXS = TheoryCommands.GetTH2FromListOfRootFiles(
+            profiledTotalXS_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        profiledTotalXS.color = 4
+        profiledTotalXS.name = 'profiledTotalXS'
+        profiledTotalXS.title = '#sigma_{tot} profiled'
+        containers.append(profiledTotalXS)
+
+        TheoryCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_profiledTotalXS',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_TheoryCrossCheck:
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        containers = []
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name  = 'regular'
+        combined.title = 'Regular'
+        containers.append(combined)
+
+        noTheoryUnc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_noTheoryUncertainties_asimov ) )
+        noTheoryUnc = TheoryCommands.GetTH2FromListOfRootFiles(
+            noTheoryUnc_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        noTheoryUnc.color = 4
+        noTheoryUnc.name = 'noTheoryUnc'
+        noTheoryUnc.title = 'No unc.'
+        containers.append(noTheoryUnc)
+
+        uncTheoryUnc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_uncorrelatedTheoryUncertainties_asimov ) )
+        uncTheoryUnc = TheoryCommands.GetTH2FromListOfRootFiles(
+            uncTheoryUnc_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        uncTheoryUnc.color = 2
+        uncTheoryUnc.name = 'uncTheoryUnc'
+        uncTheoryUnc.title = 'Uncorr. unc.'
+        containers.append(uncTheoryUnc)
+
+        TheoryCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -15.,
+            yMax = 15.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_theoryCrossCheck',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_BRdependencyComparison:
+
+        containers = []
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov) )
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
             xCoupling,
@@ -527,8 +660,9 @@ def main( args ):
         combined.color = 1
         combined.name = 'regularBR'
         combined.title = 'BR constant'
+        containers.append( combined )
 
-        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR ) )
+        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_asimov ) )
         scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
             scalingBR_rootfiles,
             xCoupling,
@@ -538,8 +672,9 @@ def main( args ):
         scalingBR.color = 2
         scalingBR.name = 'scalingBR'
         scalingBR.title = 'BR(#kappa_{t}, #kappa_{V})'
+        containers.append( scalingBR )
 
-        scalingBRfixedKappaV_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR_fixedKappaV ) )
+        scalingBRfixedKappaV_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_fixedKappaV_asimov ) )
         scalingBRfixedKappaV = TheoryCommands.GetTH2FromListOfRootFiles(
             scalingBRfixedKappaV_rootfiles,
             xCoupling,
@@ -549,27 +684,22 @@ def main( args ):
         scalingBRfixedKappaV.color = 4
         scalingBRfixedKappaV.name = 'scalingBRfixedKappaV'
         scalingBRfixedKappaV.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
+        containers.append( scalingBRfixedKappaV )
 
-
-        scalingBR_withBRunc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR_withBRunc ) )
-        scalingBR_withBRunc = TheoryCommands.GetTH2FromListOfRootFiles(
-            scalingBR_withBRunc_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        scalingBR_withBRunc.color = 8
-        scalingBR_withBRunc.name = 'scalingBR_withBRunc'
-        scalingBR_withBRunc.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
+        # scalingBR_withBRunc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR_withBRunc ) )
+        # scalingBR_withBRunc = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     scalingBR_withBRunc_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # scalingBR_withBRunc.color = 8
+        # scalingBR_withBRunc.name = 'scalingBR_withBRunc'
+        # scalingBR_withBRunc.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
 
 
         TheoryCommands.BasicMixedContourPlot(
-            [
-                combined,
-                scalingBR,
-                scalingBRfixedKappaV,
-                scalingBR_withBRunc,
-                ],
+            containers,
             xMin = -35.,
             xMax = 35.,
             yMin = -13.,
@@ -585,21 +715,18 @@ def main( args ):
 
     if args.couplingContourPlot_Yukawa:
 
+        ASIMOV = True
+        # ASIMOV = False
+        if ASIMOV: print 'Warning: plotting ASIMOV scans'
+
         xCoupling = 'kappac'
         yCoupling = 'kappab'
         titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
 
         TH2FsToPlot = []
 
-        # combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_asimov ) )
-        # hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg_split_profiled_asimov ) )
-        # hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz_split_profiled_asimov ) )
-        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled ) )
-        hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg_split_profiled ) )
-        hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz_split_profiled ) )
-
-
-        # combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined ) )
+        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa ))
+        if ASIMOV: combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov))
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
             xCoupling,
@@ -611,7 +738,8 @@ def main( args ):
         combined.title = 'Combination'
         TH2FsToPlot.append(combined)
 
-        # hgg_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hgg ) )
+        hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa ))
+        if ASIMOV: hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa_asimov))
         hgg = TheoryCommands.GetTH2FromListOfRootFiles(
             hgg_rootfiles,
             xCoupling,
@@ -623,7 +751,8 @@ def main( args ):
         hgg.title = 'H #rightarrow #gamma#gamma'
         TH2FsToPlot.append(hgg)
 
-        # hzz_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_hzz ) )
+        hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa ))
+        if ASIMOV: hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa_asimov))
         hzz = TheoryCommands.GetTH2FromListOfRootFiles(
             hzz_rootfiles,
             xCoupling,
@@ -644,146 +773,60 @@ def main( args ):
             yMax = 13.,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
-            plotname  = 'contours_perDecayChannel',
+            plotname  = 'contours_perDecayChannel' + ( '_asimov' if ASIMOV else '' ),
             x_SM      = 1.,
             y_SM      = 1.,
             plotIndividualH2s = True,
             )
 
 
-
-
-    if False and args.couplingContourPlot_Yukawa:
+    if args.couplingContourPlot_Yukawa_highLumiStudy:
 
         xCoupling = 'kappac'
         yCoupling = 'kappab'
-        titles = {
-            'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}',
-            'hgg' : 'H #rightarrow #gamma#gamma',
-            'hzz' : 'H #rightarrow 4l',
-            'combined' : 'Combination',
-            }
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
 
-        hgg = TheoryCommands.GetTH2FromListOfRootFiles(
-            hggScanFiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        hgg.color = 2
-        hgg.name = 'hgg'
+        containers = []
 
-        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
-            hzzScanFiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        hzz.color = 4
-        hzz.name = 'hzz'
-
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
-            combinedScanFiles,
+            combined_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
             )
         combined.color = 1
-        combined.name = 'combined'
+        combined.name  = 'regular'
+        combined.title = '35.9 fb^{-1}'
+        containers.append(combined)
 
-        containers = [
-            hzz,
-            hgg,
-            combined,
-            ]
-
-        for container in containers:
-            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
-            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
-
-
-        c.cd()
-        c.Clear()
-        SetCMargins()
-
-        xMin = -35.
-        xMax = 35.
-        yMin = -13.
-        yMax = 13.
-
-        base = GetPlotBase(
-            xMin = xMin,
-            xMax = xMax,
-            yMin = yMin,
-            yMax = yMax,
-            xTitle = titles.get( xCoupling, xCoupling ),
-            yTitle = titles.get( yCoupling, yCoupling ),
+        highLumi_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_lumiStudy_asimov ) )
+        highLumi = TheoryCommands.GetTH2FromListOfRootFiles(
+            highLumi_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
             )
-        base.Draw('P')
-
-        base.GetXaxis().SetTitleSize(0.06)
-        base.GetXaxis().SetLabelSize(0.05)
-        base.GetYaxis().SetTitleSize(0.06)
-        base.GetYaxis().SetLabelSize(0.05)
+        highLumi.color = 4
+        highLumi.name = 'highLumi'
+        highLumi.title = '300 fb^{-1}'
+        containers.append(highLumi)
 
 
-        # leg = ROOT.TLegend(
-        #     1 - c.GetRightMargin() - 0.22,
-        #     c.GetBottomMargin() + 0.02,
-        #     1 - c.GetRightMargin(),
-        #     c.GetBottomMargin() + 0.21
-        #     )
-
-        leg = ROOT.TLegend(
-            c.GetLeftMargin() + 0.01,
-            c.GetBottomMargin() + 0.02,
-            1 - c.GetRightMargin() - 0.01,
-            c.GetBottomMargin() + 0.09
+        TheoryCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_highLumiStudy',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
             )
-        leg.SetNColumns(3)
-        leg.SetBorderSize(0)
-        leg.SetFillStyle(0)
 
-        for container in containers:
-
-            for Tg in container.contours_1sigma:
-                TheoryCommands.SetExtremaOfContour(Tg)
-                if abs( Tg.xMax - Tg.xMin ) < 0.1*(xMax-xMin) or abs( Tg.yMax - Tg.yMin ) < 0.1*(yMax-yMin):
-                    continue
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(1)
-                Tg.Draw('LSAME')
-                Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
-                leg.AddEntry( Tg.GetName(), titles.get( container.name, container.name ), 'l' )
-
-            for Tg in container.contours_2sigma:
-                TheoryCommands.SetExtremaOfContour(Tg)
-                if abs( Tg.xMax - Tg.xMin ) < 0.1*(xMax-xMin) or abs( Tg.yMax - Tg.yMin ) < 0.1*(yMax-yMin):
-                    continue
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(2)
-                Tg.Draw('LSAME')
-
-            Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
-            ROOT.SetOwnership( Tpoint, False )
-            Tpoint.SetMarkerSize(2)
-            Tpoint.SetMarkerStyle(34)
-            Tpoint.SetMarkerColor( container.color )
-            Tpoint.Draw('PSAME')
-            Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
-
-        TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [1.0] ) )
-        ROOT.SetOwnership( TpointSM, False )
-        TpointSM.SetMarkerSize(2)
-        TpointSM.SetMarkerStyle(21)
-        TpointSM.SetMarkerColor( 12 )
-        TpointSM.Draw('PSAME')
-
-        leg.Draw()
-
-        SaveC( 'contours' )
 
 
 
@@ -955,12 +998,12 @@ def main( args ):
         # # wsToCheck =  LatestPaths.ws_combined_unsplit_yukawa
         # wsToCheck =  LatestPaths.ws_combined_unsplit_yukawa_onlyGluonInduced
 
-        # # theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed
-        # theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced
+        # # theoryDir = LatestPaths.derivedTheoryFiles_YukawaSummed
+        # theoryDir = LatestPaths.derivedTheoryFiles_YukawaGluonInduced
 
         # wsToCheck = LatestPaths.ws_onlyhzz_split_yukawa
         wsToCheck = LatestPaths.ws_combined_yukawa
-        theoryDir = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed
+        theoryDir = LatestPaths.derivedTheoryFiles_YukawaSummed
         
 
         wsParametrization = WSParametrization( wsToCheck )

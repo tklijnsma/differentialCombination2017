@@ -43,6 +43,7 @@ class CouplingModel( PhysicsModel ):
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
         self.covarianceMatrixPassed    = False
+        self.skipOverflowBinTheoryUncertainty = False
 
         self.manualExpBinBoundaries = []
         self.skipBins = []
@@ -176,6 +177,9 @@ class CouplingModel( PhysicsModel ):
             elif optionName == 'covarianceMatrix':
                 self.covarianceMatrix = self.readCorrelationMatrixFile( optionValue )
                 self.covarianceMatrixPassed = True
+
+            elif optionName == 'skipOverflowBinTheoryUncertainty':
+                self.skipOverflowBinTheoryUncertainty = eval(optionValue)
 
             else:
                 print 'Unknown option \'{0}\'; skipping'.format(optionName)
@@ -559,7 +563,7 @@ class CouplingModel( PhysicsModel ):
             self.MakeWidthExpressions()
     
         if self.ProfileTotalXS:
-            self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,2.0]' )
+            self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,3.0]' )
             self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS_SM, totalXS )' )
 
 
@@ -673,9 +677,11 @@ class CouplingModel( PhysicsModel ):
 
                 if self.verbose > 1:
                     print '\n    Adding contribution of theory bin {0} to SM cross section in exp bin {1}'.format( iParametrization, expBinStr )
-                    print '      self.SMXS[iParametrization] = ', self.SMXS[iParametrization]
-                    print '      binWidth                    = ', binWidth
-                    print '      contribution                = ', self.SMXS[iParametrization] * binWidth
+                    print '    contribution = {2:+8.3f} ( self.SMXS[iParametrization] = {0:+8.3f} * binWidth = {1:+8.3f} )'.format(
+                        self.SMXS[iParametrization] ,
+                        binWidth ,
+                        self.SMXS[iParametrization] * binWidth ,
+                        )
 
             if self.verbose:
                 print '\nTotal cross section in {1} is {0}'.format( SMXSInsideExperimentalBin, expBinStr )
@@ -708,10 +714,9 @@ class CouplingModel( PhysicsModel ):
 
                     if self.verbose > 1:
                         print '\n  Weight for component {0}, parametrization {1}'.format( iComponent, iParametrization )
-                        print '    binWidth (theoryBin)    = ', binWidth
-                        print '    SMXS/GeV (theoryBin)    = ', self.SMXS[iParametrization]
-                        print '    SMXS (expBin, not /GeV) = ', SMXSInsideExperimentalBin
-                        print '    ( binWidth * SMXS/GeV ) / SMXS_expBin = ', weight
+                        print '    weight = {0:+8.3f} ( ( binWidth[{1:+8.3f}] * SMXS/GeV[{2:+8.3f}] ) / SMXS_expBin[{3:+8.3f}] )'.format(
+                            weight, binWidth, self.SMXS[iParametrization], weight
+                            )
 
                 componentWeights.append( parametrizationWeights )
 
@@ -734,10 +739,12 @@ class CouplingModel( PhysicsModel ):
                     averageComponent += weight * parametrizations[iParametrization][iComponent]
 
                     if self.verbose > 1:
-                        print '    Parametrization {0}'.format(iParametrization)
-                        print '      weight          = ', weight
-                        print '      parameter value = ', parametrizations[iParametrization][iComponent]
-                        print '      product         = ', weight * parametrizations[iParametrization][iComponent]
+                        print '    Parametrization {0:3}: product = {1:+8.3f} ( weight[{2:+8.3f}] * parameterValue[{3:+8.3f}]'.format(
+                            iParametrization, 
+                            weight * parametrizations[iParametrization][iComponent],
+                            weight,
+                            parametrizations[iParametrization][iComponent]
+                            )
 
                 if self.verbose > 1:
                     print '  average Component {0} = {1}'.format( iComponent, averageComponent )
@@ -917,7 +924,7 @@ class CouplingModel( PhysicsModel ):
                 ]
 
             for name in allVarsToPrint:
-                print ''
+                # print ''
                 self.modelBuilder.out.function(name).Print()
 
             print '\n'
@@ -990,6 +997,25 @@ class CouplingModel( PhysicsModel ):
             raise CouplingModelError()
 
 
+        # ======================================
+        # Align input matrix with the chosen binning for the yield parameters
+
+        # Avoid dimension mismatch: The theory covariance matrix may have more bins then specified for the fit
+        # This is a problem because the covariance matrix has to be normalized by the SM cross section,
+        # which is not calculated for every bin if the theory covariance matrix has more bins then specified for the fit
+        self.nTheoryUncertainties = min( self.nTheoryUncertainties, len(self.SMXSInsideExperimentalBins) )
+
+        # In some cases the overflow bin has a huge (~400%) uncertainty; causes fit instabilities, needs to be skipped
+        if self.skipOverflowBinTheoryUncertainty:
+            self.nTheoryUncertainties -= 1
+            print '\n[WARNING]: Not registering the nuisance parameter related to the last theory bin (self.skipOverflowBinTheoryUncertainty==True)\n'
+
+        self.covarianceMatrix = [ line[:self.nTheoryUncertainties] for line in self.covarianceMatrix[:self.nTheoryUncertainties] ]
+
+
+        # ======================================
+        # Run ICA and write nuisances to output workspace
+
         if doDecorrelation:
 
             print '  Using the following covariance matrix:'
@@ -1002,18 +1028,22 @@ class CouplingModel( PhysicsModel ):
 
             print '  Divided by SM cross section:'
             decorrelatedMatrixNormalized = deepcopy( decorrelatedMatrix )
-            for i in xrange( min( self.nTheoryUncertainties, len(self.SMXSInsideExperimentalBins) ) ):
-                for j in xrange( min( self.nTheoryUncertainties, len(self.SMXSInsideExperimentalBins) ) ):
+            for i in xrange( self.nTheoryUncertainties ):
+                for j in xrange( self.nTheoryUncertainties ):
                     decorrelatedMatrixNormalized[i][j] = 1 + decorrelatedMatrix[i][j] / self.SMXSInsideExperimentalBins[i]
                     # # Skip some uncertainties if the effect is too small
                     # if abs(decorrelatedMatrixNormalized[i][j] - 1) < 0.0005:
                     #     decorrelatedMatrixNormalized[i][j] = 0.
             printMatrix( decorrelatedMatrixNormalized )
 
-            # for nuis in self.DC.systs:
-            #     print nuis[0], nuis[1], nuis[2], nuis[3]
+
+            sortedSignals = deepcopy(self.signals)
+            sortedSignals.sort( key = lambda signal: float( re.search( r'_[GTLE]*([pm\d]+)', signal ).group(1).replace('p','.').replace('m','-') ))
 
             for iTheoryUncertainty in xrange(self.nTheoryUncertainties):
+
+                # if self.verbose:
+                #     print 'Doing theoryUncertainty_{0}'.format( iTheoryUncertainty )
 
                 errDict = {}
                 for binName in self.DC.bins:
@@ -1022,14 +1052,17 @@ class CouplingModel( PhysicsModel ):
 
                         errDict[binName][processName] = 0.
 
-                        for skipBin in self.skipBins:
-                            if skipBin in processName:
-                                continue
+                        # for skipBin in self.skipBins:
+                        #     if skipBin in processName:
+                        #         continue
 
                         if processName in self.signals:
                             iProcess = self.signals.index(processName)
                             if iProcess < self.nTheoryUncertainties:
                                 errDict[binName][processName] = decorrelatedMatrixNormalized[iTheoryUncertainty][iProcess]
+                                # if self.verbose:
+                                #     print '  Registering errDict[binName=\'{0}\'][processName=\'{1}\'] = '.format( binName, processName )
+                                #     print '    {0:+9.4f}'.format( decorrelatedMatrixNormalized[iTheoryUncertainty][iProcess] )
                         
                         
                 systematicName = 'theoryUncertainty_{0}'.format(
@@ -1514,11 +1547,11 @@ class CouplingModel( PhysicsModel ):
         if self.isOnlyHZZ:
             return False
         
-        # This is not robust coding AT ALL
-        if bin.startswith('ch1'):
+        # This is not very robust coding
+        if bin.startswith('hgg_'):
             # if self.verbose: print '    Bin \'{0}\' is classified as a hgg bin!'.format( bin )
             return True
-        elif bin.startswith('ch2'):
+        elif bin.startswith('hzz_'):
             # if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
             return False
         else:

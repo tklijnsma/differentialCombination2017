@@ -85,7 +85,7 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
-    TheoryCommands.SetPlotDir( 'plots_{0}_extraStudy'.format(datestr) )
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
 
 
     #____________________________________________________________________
@@ -97,7 +97,7 @@ def main( args ):
             ]
 
         Commands.BasicT2WSwithModel(
-            LatestPaths.card_combined_unsplit,
+            LatestPaths.card_combined_smH_PTH,
             'FitBRModel.py',
             # suffix       = '',
             extraOptions = extraOptions,
@@ -147,17 +147,17 @@ def main( args ):
 
     if args.FitBR_scan:
 
-        doFastscan = True
-        if args.notFastscan: doFastscan = False
+        doFastscan = False
+        if args.fastscan: doFastscan = True
 
         # ASIMOV = True
         ASIMOV = False
         
-        datacard = LatestPaths.ws_FitBR_combined_unsplit
+        datacard = LatestPaths.ws_ratio_of_BRs
 
         ratio_BR_hgg_hzz_ranges = [ 0.03, 0.16 ]
 
-        jobDirectory = 'Scan_BR_{0}'.format( datestr )
+        jobDirectory = 'Scan_ratioOfBRs_{0}'.format( datestr )
         if ASIMOV: jobDirectory += '_asimov'
         jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
 
@@ -179,7 +179,7 @@ def main( args ):
             jobDirectory  = jobDirectory,
             fastscan      = doFastscan,
             asimov        = ASIMOV,
-            jobPriority   = -5,
+            jobPriority   = 0,
             extraOptions  = [
                 # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
                 '-P ratio_BR_hgg_hzz',
@@ -197,7 +197,7 @@ def main( args ):
 
     if args.FitBR_plot:
 
-        scanRootFiles = glob( 'Scan_BR_Sep25/*.root' )
+        scanRootFiles = glob( LatestPaths.scan_ratioOfBRs + '/*.root' )
 
         scanContainer = OutputInterface.OutputContainer()
 
@@ -219,6 +219,8 @@ def main( args ):
                 scanContainer.x.append( x )
                 scanContainer.y.append( y )
 
+        print '[info] Multiplying by 2: deltaNLL --> chi^2'
+        scanContainer.y = [ 2.*y for y in scanContainer.y ]
 
         scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
         scanContainer.Tg.SetMarkerStyle(8)
@@ -233,8 +235,10 @@ def main( args ):
 
         yMinAbs = min( scanContainer.y )
         yMaxAbs = max( scanContainer.y )
-        yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
-        yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
+        # yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
+        yMin = 0.0
+        # yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
+        yMax = 5.0
 
         xMin = min( scanContainer.x )
         xMax = max( scanContainer.x )
@@ -245,7 +249,8 @@ def main( args ):
             yMin = yMin,
             yMax = yMax,
             xTitle = 'BR_{H #rightarrow #gamma#gamma} / BR_{H #rightarrow ZZ}',
-            yTitle = '#Delta NLL',
+            # yTitle = '#Delta NLL',
+            yTitle = '#chi^{2}',
             )
         base.Draw('P')
 
@@ -300,21 +305,17 @@ def main( args ):
             ]
 
         Commands.BasicT2WSwithModel(
-            LatestPaths.card_combined_unsplit,
+            LatestPaths.card_combined_smH_PTH,
             pathToModel = 'FitBRModel.py',
             modelName   = 'fitTotalXSModel',
             suffix       = 'fitTotalXS',
-            extraOptions = extraOptions,
-            # smartMaps    = [
-            #     ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
-            #     ],
+            extraOptions = extraOptions
             )
 
     #____________________________________________________________________
     if args.TotalXS_bestfit:
 
-        print 'Note: Move workspace to LatestPaths.py'
-        ws = abspath( 'workspaces_Oct05/combinedCard_Jul26_FitBRModel_fitTotalXS.root' )
+        ws = LatestPaths.ws_totalXS
 
         cmd = [
             'combine',
@@ -353,16 +354,14 @@ def main( args ):
     #____________________________________________________________________
     if args.TotalXS_scan:
 
-        print 'Note: Move workspace to LatestPaths.py'
-        ws = abspath( 'workspaces_Oct05/combinedCard_Jul26_FitBRModel_fitTotalXS.root' )
+        ws = LatestPaths.ws_totalXS
 
-        doFastscan = True
-        if args.notFastscan: doFastscan = False
+        doFastscan = False
+        if args.fastscan: doFastscan = True
 
         # ASIMOV = True
         ASIMOV = False
         
-        datacard = ws
 
         totalXS_ranges = [ 0., 2. ]
 
@@ -381,15 +380,15 @@ def main( args ):
             queue = 'short.q'
 
         Commands.MultiDimCombineTool(
-            datacard,
+            ws,
             nPoints       = nPoints,
             nPointsPerJob = nPointsPerJob,
             queue         = queue,
-            notOnBatch    = True,
+            notOnBatch    = False,
             jobDirectory  = jobDirectory,
             fastscan      = doFastscan,
             asimov        = ASIMOV,
-            jobPriority   = -5,
+            jobPriority   = 0,
             extraOptions  = [
                 # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
                 '-P r',
@@ -409,7 +408,7 @@ def main( args ):
 
     if args.TotalXS_plot:
 
-        scanRootFiles = glob( 'Scan_TotalXS_Oct05_0/*.root' )
+        scanRootFiles = glob( LatestPaths.scan_combined_totalXS + '/*.root' )
 
         scanContainer = OutputInterface.OutputContainer()
 
@@ -431,6 +430,8 @@ def main( args ):
                 scanContainer.x.append( x )
                 scanContainer.y.append( y )
 
+        print '[info] Multiplying by 2: deltaNLL --> chi^2'
+        scanContainer.y = [ 2.*y for y in scanContainer.y ]
 
         scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
         scanContainer.Tg.SetMarkerStyle(8)
@@ -445,8 +446,10 @@ def main( args ):
 
         yMinAbs = min( scanContainer.y )
         yMaxAbs = max( scanContainer.y )
-        yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
-        yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
+        # yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
+        yMin = 0.0
+        # yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
+        yMax = 5.0
 
         xMin = min( scanContainer.x )
         xMax = max( scanContainer.x )
@@ -456,8 +459,9 @@ def main( args ):
             xMax = xMax,
             yMin = yMin,
             yMax = yMax,
-            xTitle = '#sigma',
-            yTitle = '#Delta NLL',
+            xTitle = '#sigma/#sigma_{SM}',
+            # yTitle = '#Delta NLL',
+            yTitle = '#chi^{2}',
             )
         base.Draw('P')
 
@@ -497,6 +501,11 @@ def main( args ):
         bestfitLine.SetLineColor(2)
         bestfitLine.Draw()
 
+        smLine = ROOT.TLine( 1.0, yMin, 1.0, yMax )
+        smLine.SetLineWidth(2)
+        smLine.SetLineColor(4)
+        smLine.Draw()
+
 
         SaveC( 'totalXSscan' )
 
@@ -513,11 +522,14 @@ def main( args ):
         # File to get the correlation matrix from
         # corrMatFile = 'corrMat_Oct17/higgsCombine_CORRMAT_combinedCard_Jul26.MultiDimFit.mH125.root'
         # corrMatFile = 'corrMat_Oct17/higgsCombine_CORRMAT_combinedCard_Aug21.MultiDimFit.mH125.root'
-        corrMatFile = 'corrMat_Oct19/higgsCombine_CORRMAT_combinedCard_Aug21_xHfixed.MultiDimFit.mH125.root'
+        # corrMatFile = 'corrMat_Oct19/higgsCombine_CORRMAT_combinedCard_Aug21_xHfixed.MultiDimFit.mH125.root'
+        corrMatFile = 'corrMat_Nov08_combinedCard_Nov03_xHfixed/higgsCombine_CORRMAT_combinedCard_Nov03_xHfixed.MultiDimFit.mH125.root'
 
         # Scan to get the uncertainties from
         # scanDir = LatestPaths.scan_ptcombination_combined_profiled
-        scanDir = LatestPaths.scan_ptcombination_combined_profiled_xHfixed
+        # scanDir = LatestPaths.scan_ptcombination_combined_profiled_xHfixed
+        scanDir = LatestPaths.scan_combined_PTH_xHfixed
+
 
         expBinning = [ 0., 15., 30., 45., 85., 125. ]
         yieldParameterNames = []
@@ -544,13 +556,12 @@ def main( args ):
         # ======================================
         # Load parametrization from derived theory files
 
-        SM = derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+        SM = TheoryFileInterface.FileFinder(
             kappab=1, kappac=1, muR=1, muF=1, Q=1,
             expectOneFile=True,
             directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
             loadImmediately=True
             )
-
         derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
             directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
@@ -560,7 +571,7 @@ def main( args ):
         parametrization.SetSM(SM)
         parametrization.Parametrize( derivedTheoryFileContainers )
 
-        theoryBinBoundaries = derivedTheoryFileContainers[0].binBoundaries
+        theoryBinBoundaries = SM.binBoundaries
 
 
         # ======================================
@@ -569,7 +580,7 @@ def main( args ):
         combinationscans = PhysicsCommands.GetScanResults(
             yieldParameterNames,
             scanDir,
-            pattern = 'combinedCard'
+            # pattern = 'combinedCard'
             )
         TgCombination = PhysicsCommands.GetTGraphForSpectrum( yieldParameterNames, combinationscans, name='Combination' )
 

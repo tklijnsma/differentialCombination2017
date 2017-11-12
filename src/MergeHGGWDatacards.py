@@ -52,10 +52,11 @@ def main():
 # njets combination
 ########################################
 
-def RenameProcesses_Hgg_nJets(
+def RenameProcesses_Hgg_differentials(
         indatacard,
         globalReplace = None,
-        writeToFile = True
+        writeToFile = True,
+        outTag = '_renamedProcesses'
         ):
 
     with open( indatacard, 'r' ) as indatacardFp:
@@ -86,6 +87,72 @@ def RenameProcesses_Hgg_nJets(
             outdatacardTxt
             )
 
+
+
+    # Slightly updated conventions for the NNLOPS datacards (from Nov 10)
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genNjets2p5_3p5_100p0(\W)',
+            r'\1smH_NJ_GE4\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genNjets2p5_([m\d]+)p5_(\d+)p5(\W)',
+            r'\1smH_NJ_\3\4',
+            outdatacardTxt
+            )
+
+
+    # Rapidity renaming Nov12
+
+    # Has to be done mosty manually... David used "0p30", Vittorio used "0p3"
+
+    # smH_YH_0p0_0p15 
+    # smH_YH_0p15_0p30
+    # smH_YH_0p30_0p60
+    # smH_YH_0p60_0p90
+    # smH_YH_0p90_1p20
+    # smH_YH_1p20_2p50
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genAbsRapidity_0p0_0p15(\W)',
+            r'\1smH_YH_0p0_0p15\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genAbsRapidity_0p15_0p3(\W)',
+            r'\1smH_YH_0p15_0p30\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genAbsRapidity_0p3_0p6(\W)',
+            r'\1smH_YH_0p30_0p60\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genAbsRapidity_0p6_0p9(\W)',
+            r'\1smH_YH_0p60_0p90\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genAbsRapidity_0p9_3p0(\W)',
+            r'\1smH_YH_0p90_2p50\2',
+            outdatacardTxt
+            )
+
+
     # ======================================
     # Process simple global replacements
 
@@ -98,10 +165,17 @@ def RenameProcesses_Hgg_nJets(
     # Write to file / return
 
     if writeToFile:
-        outdatacard = indatacard.replace( '.txt', '_renamedProcesses.txt'.format(datestr) )
-        with open( outdatacard, 'w' ) as outdatacardFp:
-            outdatacardFp.write( outdatacardTxt )
-        print '[info] Wrote output to ' + outdatacard
+
+        outdatacard = indatacard.replace( '.txt', '{0}.txt'.format(outTag) )
+
+        if Commands.IsTestMode():
+            print '\nContents of the new datacard:\n\n'
+            print outdatacardTxt
+            print '\n\nWould now open \'{0}\' to dump these contents'.format( outdatacard )
+        else:
+            with open( outdatacard, 'w' ) as outdatacardFp:
+                outdatacardFp.write( outdatacardTxt )
+            print '[info] Wrote output to ' + outdatacard
 
     return outdatacardTxt
 
@@ -118,7 +192,8 @@ def RenameProcesses_Aug21(
     indatacard,
     renameOutsideAcceptance = True,
     globalReplace = None,
-    writeToFile = True
+    writeToFile = True,
+    outTag = '_renamedProcesses'
     ):
 
     with open( indatacard, 'r' ) as indatacardFp:
@@ -131,6 +206,7 @@ def RenameProcesses_Aug21(
     outdatacardTxt = indatacardTxt
 
     # Replace multiple times to cover neighboring matches
+
 
     for i in xrange(3):
         outdatacardTxt = re.sub(
@@ -175,6 +251,30 @@ def RenameProcesses_Aug21(
             outdatacardTxt
             )
 
+    # ----------------
+    # For SMH card
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genPt_350p0_10000p0(\W)',
+            r'\1smH_PTH_GT350\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genPt_(\d+)p0_(\d+)p0(\W)',
+            r'\1smH_PTH_\2_\3\4',
+            outdatacardTxt
+            )
+
+    if renameOutsideAcceptance:
+        outdatacardTxt = re.sub(
+            r'(\W)OutsideAcceptance(\W)',
+            r'\1OutsideAcceptance\2',
+            outdatacardTxt
+            )
+
 
     # ======================================
     # Process simple global replacements
@@ -188,10 +288,16 @@ def RenameProcesses_Aug21(
     # Write to file / return
 
     if writeToFile:
-        outdatacard = indatacard.replace( '.txt', '_renamedProcesses.txt'.format(datestr) )
-        with open( outdatacard, 'w' ) as outdatacardFp:
-            outdatacardFp.write( outdatacardTxt )
-        print '[info] Wrote output to ' + outdatacard
+        outdatacard = indatacard.replace( '.txt', '{0}.txt'.format(outTag) )
+
+        if Commands.IsTestMode():
+            print '\nContents of the new datacard:\n\n'
+            print outdatacardTxt
+            print '\n\nWould now open \'{0}\' to dump these contents'.format( outdatacard )
+        else:
+            with open( outdatacard, 'w' ) as outdatacardFp:
+                outdatacardFp.write( outdatacardTxt )
+            print '[info] Wrote output to ' + outdatacard
 
     return outdatacardTxt
 
@@ -209,8 +315,10 @@ def sorter( process ):
         ret -= 10000
     elif process.startswith( 'xH' ):
         ret -= 20000
+    elif process.startswith( 'smH' ):
+        ret -= 30000
 
-    if process.startswith( 'ggH' ) or process.startswith( 'xH' ):
+    if process.startswith( 'ggH' ) or process.startswith( 'xH' ) or process.startswith( 'smH' ):
         components = process.split('_')
         if len(components) >= 3:
             leftBound = int( components[2].replace('GT','') )
@@ -248,7 +356,7 @@ def RenumberProcessesHZZ_Aug21(
     signals = []
     bkgs    = []
     for process in list(set(names)):
-        if process.startswith('ggH') or process.startswith('xH'):
+        if process.startswith('ggH') or process.startswith('xH') or process.startswith('smH'):
             signals.append(process)
         else:
             bkgs.append(process)
@@ -265,7 +373,7 @@ def RenumberProcessesHZZ_Aug21(
 
     newNumberLine = '{0:39}'.format('process')
     for name in names:
-        newNumberLine += '{0:<17}'.format( numberDict[name] )
+        newNumberLine += '{0:<25}'.format( numberDict[name] )
     lines[iNumberLine] = newNumberLine + '\n'
 
 

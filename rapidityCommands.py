@@ -33,23 +33,23 @@ datestr = strftime( '%b%d' )
 
 def AppendParserOptions( parser ):
 
-    parser.add_argument( '--njetsCommands', default=False )
+    parser.add_argument( '--rapidityCommands', default=False )
     class CustomAction(argparse.Action):
         def __init__(self, option_strings, dest, **kwargs):
             # Only 1 argument allowed (this is basically the "store_true" action)
             super(CustomAction, self).__init__(option_strings, dest, nargs=0, **kwargs)
         def __call__(self, parser, namespace, values, option_string=None):
             # Make sure the parser knows a combineCommand was entered
-            setattr( namespace, 'njetsCommands', True )
+            setattr( namespace, 'rapidityCommands', True )
             setattr( namespace, self.dest, True )
             # super(FooAction, self).__call__( parser, namespace, values, option_string=None )
             # setattr( namespace, self.dest, values )
 
-    parser.add_argument( '--rename_hgg_njets',                       action=CustomAction )
-    parser.add_argument( '--njets_combineCards',                     action=CustomAction )
-    parser.add_argument( '--njets_t2ws_unsplit',                     action=CustomAction )
-    parser.add_argument( '--njets_bestfit_unsplit',                  action=CustomAction )
-    parser.add_argument( '--plot_nJetsSpectra',                  action=CustomAction )
+    parser.add_argument( '--rename_hgg_rapidity',                action=CustomAction )
+    parser.add_argument( '--rapidity_combineCards',              action=CustomAction )
+    parser.add_argument( '--rapidity_t2ws_unsplit',              action=CustomAction )
+    parser.add_argument( '--rapidity_bestfit_unsplit',           action=CustomAction )
+    parser.add_argument( '--plot_rapiditySpectra',                  action=CustomAction )
 
 
 ########################################
@@ -62,39 +62,30 @@ def main( args ):
 
 
     #____________________________________________________________________
-    if args.rename_hgg_njets:
-
-        # MergeHGGWDatacards.RenameProcesses_Hgg_nJets(
-        #     LatestPaths.card_njets_hgg_unsplit_unrenamed,
-        #     )
-
-        MergeHGGWDatacards.RenameProcesses_Hgg_nJets(
-            LatestPaths.card_hgg_smH_NJ_unprocessed,
-            # outTag = '_debugging_Nov10',
-            globalReplace = [
-                ( 'CMS_hgg_JEC', 'CMS_scale_j' )
-                ]
+    if args.rename_hgg_rapidity:
+        MergeHGGWDatacards.RenameProcesses_Hgg_differentials(
+            LatestPaths.card_hgg_smH_YH_unprocessed,
             )
 
     #____________________________________________________________________
-    if args.njets_combineCards:
+    if args.rapidity_combineCards:
 
         Commands.BasicCombineCards(
-            'suppliedInput/combinedCard_NJ_smH_{0}.txt'.format(datestr),
-            'hgg=' + LatestPaths.card_hgg_smH_NJ,
-            'hzz=' + LatestPaths.card_hzz_smH_NJ
+            'suppliedInput/combinedCard_YH_smH_{0}.txt'.format(datestr),
+            'hgg=' + LatestPaths.card_hgg_smH_YH,
+            'hzz=' + LatestPaths.card_hzz_smH_YH
             )
 
             
 
     #____________________________________________________________________
-    if args.njets_t2ws_unsplit:
+    if args.rapidity_t2ws_unsplit:
 
-        datacard = LatestPaths.card_combined_smH_NJ
+        datacard = LatestPaths.card_combined_smH_YH
         if args.hgg:
-            datacard = LatestPaths.card_hgg_smH_NJ
+            datacard = LatestPaths.card_hgg_smH_YH
         if args.hzz:
-            datacard = LatestPaths.card_hzz_smH_NJ
+            datacard = LatestPaths.card_hzz_smH_YH
 
         if args.hzz:
             Commands.BasicT2WS(
@@ -116,7 +107,7 @@ def main( args ):
                 )
 
     #____________________________________________________________________
-    if args.njets_bestfit_unsplit:
+    if args.rapidity_bestfit_unsplit:
 
         ASIMOV = False
 
@@ -143,7 +134,7 @@ def main( args ):
 
 
     #____________________________________________________________________
-    if args.plot_nJetsSpectra:
+    if args.plot_rapiditySpectra:
 
         # ======================================
         # Specify SMXS
@@ -254,7 +245,6 @@ def main( args ):
             )
 
 
-
         PhysicsCommands.BasicCombineSpectra(
             ( 'combination', combinationPOIs, combinationscans,
                 ( 'AsBlocks', False ),
@@ -281,40 +271,6 @@ def main( args ):
             printTable=True,
             bottomRatioPlot = True,
             )
-
-
-        # hggPOIs = Commands.ListPOIs( ws_onlyhgg_unsplit )
-        # hggscans = PhysicsCommands.GetScanResults(
-        #     hggPOIs,
-        #     # scan_ptcombination_hgg_profiled_asimov,
-        #     scan_ptcombination_hgg_profiled,
-        #     pattern = 'Datacard_13TeV_differential_pT'
-        #     )
-        # PhysicsCommands.BasicDrawScanResults( hggPOIs, hggscans, name='hgg' )
-        # PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
-
-
-        # hzzPOIs = Commands.ListPOIs( ws_onlyhzz_unsplit )
-        # hzzscans = PhysicsCommands.GetScanResults(
-        #     hzzPOIs,
-        #     # scan_ptcombination_hzz_profiled_asimov,
-        #     scan_ptcombination_hzz_profiled,
-        #     pattern = 'usingDavidsCommand_OAshifted'
-        #     )
-        # PhysicsCommands.BasicDrawScanResults( hzzPOIs, hzzscans, name='hzz' )
-        # PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
-
-
-        # combinationPOIs = Commands.ListPOIs( ws_combined_unsplit )
-        # combinationscans = PhysicsCommands.GetScanResults(
-        #     combinationPOIs,
-        #     # scan_ptcombination_combined_profiled_asimov,
-        #     scan_ptcombination_combined_profiled,
-        #     pattern = 'combinedCard'
-        #     )
-        # PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
-        # PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
-
 
 
 
