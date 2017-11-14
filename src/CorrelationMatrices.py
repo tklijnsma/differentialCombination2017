@@ -89,7 +89,7 @@ def SaveC( outname, subdir=None, asPDF=True, asPNG=False, asROOT=False ):
 
     if asPDF: c.SaveAs( outname + '.pdf' )
     if asPNG: c.SaveAs( outname + '.png' )
-    if asROOT: c.SaveAs( outname + '.proot' )
+    if asROOT or TheoryCommands.SAVEROOT: c.SaveAs( outname + '.root' )
 
 
 ########################################
@@ -349,14 +349,16 @@ def GetCorrelationMatrix(
 
         T.GetZaxis().SetRangeUser(-1.0,1.0)
 
+
+        toString = lambda number: str(int(number)) if number.is_integer() else '{0:.1f}'.format(number)
         for iPoint in xrange(nPoints):
             if nPoints < 20 or iPoint % int(0.1*nPoints) == 0:
                 if not hasattr( variations[0], 'binBoundaries' ):
-                    binLabel = '{0:.1f}'.format(variations[0].binCenters[iPoint])
+                    binLabel = toString(variations[0].binCenters[iPoint])
                 else:
-                    binLabel = '{0:.1f} - {1:.1f}'.format(
-                        variations[0].binBoundaries[iPoint],
-                        variations[0].binBoundaries[iPoint+1]
+                    binLabel = '{0} - {1}'.format(
+                        toString(variations[0].binBoundaries[iPoint] ),
+                        toString(variations[0].binBoundaries[iPoint+1] )
                         )
                 T.GetXaxis().SetBinLabel( iPoint+1, binLabel )
                 T.GetYaxis().SetBinLabel( iPoint+1, binLabel )
@@ -403,6 +405,8 @@ def GetCorrelationMatrix(
 
         SaveC( outname, asPNG=True )
 
+    # Return the found correlation matrix
+    return corrMatrix
 
 
 

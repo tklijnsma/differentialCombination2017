@@ -173,8 +173,8 @@ def main( args ):
         def DrawScan(
                 ws,
                 scandir,
-                pattern,
                 name,
+                pattern = '',
                 ):
 
             POIs = Commands.ListPOIs( ws )
@@ -188,26 +188,25 @@ def main( args ):
 
             return POIs, scans
 
-
         combinationPOIs, combinationscans = DrawScan(
-            ws      = LatestPaths.ws_njets_combined_unsplit,
-            scandir = 'Scan_nJets_Sep19',
-            pattern = 'combinedCard',
+            ws      = LatestPaths.ws_combined_smH_NJ,
+            scandir = LatestPaths.scan_combined_NJ,
             name    = 'combination',
+            # pattern = 'combinedCard',
             )
 
         hggPOIs, hggscans = DrawScan(
-            ws      = LatestPaths.ws_njets_hgg_unsplit,
-            scandir = 'Scan_nJets_Sep19_0',
-            pattern = 'Datacard_13TeV_differential_Njets',
+            ws      = LatestPaths.ws_hgg_smH_NJ,
+            scandir = LatestPaths.scan_hgg_NJ,
             name    = 'hgg',
+            # pattern = 'Datacard_13TeV_differential_Njets',
             )
 
         hzzPOIs, hzzscans = DrawScan(
-            ws      = LatestPaths.ws_njets_hzz_unsplit,
-            scandir = 'Scan_nJets_Sep19_2',
-            pattern = 'hzz4l_comb',
+            ws      = LatestPaths.ws_hzz_smH_NJ,
+            scandir = LatestPaths.scan_hzz_NJ,
             name    = 'hzz',
+            # pattern = 'hzz4l_comb',
             )
 
         fineBinning = [ 0, 1, 2, 3, 4, 5 ]
@@ -251,6 +250,7 @@ def main( args ):
             hgg_SMXS         = xs_fineBinning,
             combination_SMXS = xs_fineBinning,
             # legendLeft       = True
+            asROOT           = True
             )
 
 
@@ -280,6 +280,7 @@ def main( args ):
                 ),
             printTable=True,
             bottomRatioPlot = True,
+            asROOT          = True
             )
 
 

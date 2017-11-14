@@ -76,6 +76,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingContourPlot_Yukawa_BRdependencyComparison',   action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_highLumiStudy',            action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_ProfiledTotalXS',          action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_atfchi2',                  action=CustomAction )
 
 
 ########################################
@@ -532,6 +533,73 @@ def main( args ):
 
 
 
+    if args.couplingContourPlot_Yukawa:
+
+        # ASIMOV = True
+        ASIMOV = False
+        if ASIMOV: print 'Warning: plotting ASIMOV scans'
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        TH2FsToPlot = []
+
+        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa ))
+        if ASIMOV: combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov))
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'combined'
+        combined.title = 'Combination'
+        TH2FsToPlot.append(combined)
+
+        hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa ))
+        if ASIMOV: hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa_asimov))
+        hgg = TheoryCommands.GetTH2FromListOfRootFiles(
+            hgg_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        hgg.color = 2
+        hgg.name = 'hgg'
+        hgg.title = 'H #rightarrow #gamma#gamma'
+        TH2FsToPlot.append(hgg)
+
+        hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa ))
+        if ASIMOV: hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa_asimov))
+        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
+            hzz_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        hzz.color = 4
+        hzz.name = 'hzz'
+        hzz.title = 'H #rightarrow ZZ'
+        TH2FsToPlot.append(hzz)
+
+
+        TheoryCommands.BasicMixedContourPlot(
+            TH2FsToPlot,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_perDecayChannel' + ( '_asimov' if ASIMOV else '' ),
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+
     #____________________________________________________________________
     if args.couplingContourPlot_Yukawa_ProfiledTotalXS:
 
@@ -712,74 +780,7 @@ def main( args ):
             plotIndividualH2s = True,
             )
 
-
-    if args.couplingContourPlot_Yukawa:
-
-        ASIMOV = True
-        # ASIMOV = False
-        if ASIMOV: print 'Warning: plotting ASIMOV scans'
-
-        xCoupling = 'kappac'
-        yCoupling = 'kappab'
-        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
-
-        TH2FsToPlot = []
-
-        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa ))
-        if ASIMOV: combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov))
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
-            combined_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        combined.color = 1
-        combined.name = 'combined'
-        combined.title = 'Combination'
-        TH2FsToPlot.append(combined)
-
-        hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa ))
-        if ASIMOV: hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa_asimov))
-        hgg = TheoryCommands.GetTH2FromListOfRootFiles(
-            hgg_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        hgg.color = 2
-        hgg.name = 'hgg'
-        hgg.title = 'H #rightarrow #gamma#gamma'
-        TH2FsToPlot.append(hgg)
-
-        hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa ))
-        if ASIMOV: hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa_asimov))
-        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
-            hzz_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        hzz.color = 4
-        hzz.name = 'hzz'
-        hzz.title = 'H #rightarrow ZZ'
-        TH2FsToPlot.append(hzz)
-
-
-        TheoryCommands.BasicMixedContourPlot(
-            TH2FsToPlot,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
-            yMax = 13.,
-            xTitle    = titles.get( xCoupling, xCoupling ),
-            yTitle    = titles.get( yCoupling, yCoupling ),
-            plotname  = 'contours_perDecayChannel' + ( '_asimov' if ASIMOV else '' ),
-            x_SM      = 1.,
-            y_SM      = 1.,
-            plotIndividualH2s = True,
-            )
-
-
+    #____________________________________________________________________
     if args.couplingContourPlot_Yukawa_highLumiStudy:
 
         xCoupling = 'kappac'
@@ -828,165 +829,72 @@ def main( args ):
             )
 
 
-
-
-    if args.couplingContourPlotAsimov_Yukawa:
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_atfchi2:
 
         xCoupling = 'kappac'
         yCoupling = 'kappab'
-        titles = {
-            'kappac'       : '#kappa_{c}', 'kappab' : '#kappa_{b}',
-            'hgg'          : 'H #rightarrow #gamma#gamma',
-            'hzz'          : 'H #rightarrow 4l',
-            'combined'     : 'Combination',
-            'asimov_lum1'  : 'Expected at 35.9 fb^{-1}',
-            'asimov_lum10' : 'Expected at 359.0 fb^{-1}',
-            'asimov_lum8'  : 'Expected at 300.0 fb^{-1}',
-            }
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
 
-        # asimov_lum10 = TheoryCommands.GetTH2FromListOfRootFiles(
-        #     glob( '{0}/*.root'.format(LatestPaths.scan_combined_profiled_asimov_lum10) ),
-        #     xCoupling,
-        #     yCoupling,
-        #     verbose   = False,
-        #     xMin = -20., xMax = 20.,
-        #     yMin = -8., yMax = 8.,
-        #     )
-        # asimov_lum10.color = 2
-        # asimov_lum10.name = 'asimov_lum10'
+        containers = []
 
-
-        asimov_lum8 = TheoryCommands.GetTH2FromListOfRootFiles(
-            glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_asimov_lum8 ) ),
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
-            xMin = -20., xMax = 20.,
-            yMin = -8., yMax = 8.,
             )
-        asimov_lum8.color = 2
-        asimov_lum8.name = 'asimov_lum8'
+        combined.color = 1
+        combined.name  = 'regular'
+        combined.title = 'Full likelihood'
+        containers.append(combined)
 
 
-        asimov_lum1 = TheoryCommands.GetTH2FromListOfRootFiles(
-            glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_asimov ) ),
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            xMin = -30., xMax = 30.,
-            yMin = -15., yMax = 15.,
+        # Get relevant info from a canvas that has the histogram and the bestfit point
+        atfchi2_rootFp = ROOT.TFile.Open( 'plots_Nov14_Yukawa/AfterTheFactChi2Fit.root' )
+        canvas = atfchi2_rootFp.Get('ctc')
+
+        # Get TH2F
+        atfchi2_H = canvas.GetPrimitive('H2')
+        ROOT.SetOwnership( atfchi2_H, False )
+
+        # Get values of x and y for bestfit
+        bestfitpoint_Tg = canvas.GetPrimitive('bestfitpoint')
+        x_Double = ROOT.Double(0)
+        y_Double = ROOT.Double(0)
+        bestfitpoint_Tg.GetPoint( 0, x_Double, y_Double )
+        xBestfit = float(x_Double)
+        yBestfit = float(y_Double)
+
+        atfchi2_rootFp.Close()
+
+        # Construct container
+        atfchi2 = Container()
+        atfchi2.H2       = atfchi2_H
+        atfchi2.xBestfit = xBestfit
+        atfchi2.yBestfit = yBestfit
+        atfchi2.color    = 2
+        atfchi2.name     = 'atfchi2'
+        atfchi2.title    = 'Simple #chi^{2} fit'
+        containers.append( atfchi2 )
+
+
+        TheoryCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_atfchi2',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
             )
-        asimov_lum1.color = 1
-        asimov_lum1.name = 'asimov_lum1'
 
-
-        # asimov_lum10_from1 = deepcopy( asimov_lum1 )
-        # asimov_lum10_from1.color = 4
-        # asimov_lum10_from1.name = 'Multiplied'
-        # asimov_lum10_from1.H2.SetName( TheoryCommands.GetUniqueRootName() )
-        # for iX in xrange( asimov_lum10_from1.H2.GetNbinsX() ):
-        #     for iY in xrange( asimov_lum10_from1.H2.GetNbinsY() ):
-        #         asimov_lum10_from1.H2.SetBinContent(
-        #             iX+1, iY+1,
-        #             asimov_lum10_from1.H2.GetBinContent( iX+1, iY+1 ) * 10.
-        #             )
-
-
-        containers = [
-            asimov_lum1,
-            asimov_lum8,
-            # asimov_lum10,
-            # asimov_lum10_from1,
-            ]
-
-
-        for container in containers:
-            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
-            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
-
-        c.cd()
-        c.Clear()
-        SetCMargins()
-
-        xMin = -27.
-        xMax = 27.
-        yMin = -10.
-        yMax = 10.
-
-        base = GetPlotBase(
-            xMin = xMin,
-            xMax = xMax,
-            yMin = yMin,
-            yMax = yMax,
-            xTitle = titles.get( xCoupling, xCoupling ),
-            yTitle = titles.get( yCoupling, yCoupling ),
-            )
-        base.Draw('P')
-
-        base.GetXaxis().SetTitleSize(0.06)
-        base.GetXaxis().SetLabelSize(0.05)
-        base.GetYaxis().SetTitleSize(0.06)
-        base.GetYaxis().SetLabelSize(0.05)
-
-
-        # leg = ROOT.TLegend(
-        #     1 - c.GetRightMargin() - 0.22,
-        #     c.GetBottomMargin() + 0.02,
-        #     1 - c.GetRightMargin(),
-        #     c.GetBottomMargin() + 0.21
-        #     )
-
-        leg = ROOT.TLegend(
-            c.GetLeftMargin() + 0.01,
-            c.GetBottomMargin() + 0.02,
-            1 - c.GetRightMargin() - 0.01,
-            c.GetBottomMargin() + 0.09
-            )
-        leg.SetNColumns( len(containers) )
-        leg.SetBorderSize(0)
-        leg.SetFillStyle(0)
-
-        for container in containers:
-
-            print 'Drawing contours'
-            print container
-
-            for Tg in container.contours_1sigma:
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(1)
-                Tg.Draw('LSAME')
-                if Tg == container.contours_1sigma[0]:
-                    Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
-                    leg.AddEntry( Tg.GetName(), titles.get( container.name, container.name ), 'l' )
-
-            for Tg in container.contours_2sigma:
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(2)
-                Tg.Draw('LSAME')
-
-            # Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
-            # ROOT.SetOwnership( Tpoint, False )
-            # Tpoint.SetMarkerSize(2)
-            # Tpoint.SetMarkerStyle(34)
-            # Tpoint.SetMarkerColor( container.color )
-            # Tpoint.Draw('PSAME')
-            # Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
-
-        TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [1.0] ) )
-        ROOT.SetOwnership( TpointSM, False )
-        TpointSM.SetMarkerSize(2)
-        TpointSM.SetMarkerStyle(21)
-        TpointSM.SetMarkerColor( 1 )
-        TpointSM.Draw('PSAME')
-
-        leg.Draw()
-
-        SaveC( 'contoursAsimov' )
-
-
-
+    #____________________________________________________________________
     if args.checkWSParametrization_Yukawa:
 
         plotCombination = False
@@ -1198,166 +1106,6 @@ def main( args ):
 
         outname = '{0}_parametrizationCheck'.format( basename(wsToCheck) )
         SaveC( outname )
-
-
-
-
-
-    if args.couplingContourPlot_Yukawa_TheoryUncertainties:
-
-        xCoupling = 'kappac'
-        yCoupling = 'kappab'
-        titles = {
-            'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}',
-            'hgg' : 'H #rightarrow #gamma#gamma',
-            'hzz' : 'H #rightarrow 4l',
-            'combined' : 'Combination',
-            }
-
-        # combinedDatacard               = LatestPaths.ws_combined_unsplit_yukawa
-        # combinedDatacard_uncorrelated  = LatestPaths.ws_combined_split_top_uncorrelated
-        # combinedDatacard_notheoryunc   = LatestPaths.ws_combined_split_top_notheoryunc
-
-        ASIMOV = True
-        # ASIMOV = False
-       
-        if ASIMOV:
-            combinedScanFiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_asimov ) )
-            combinedScanFiles_uncorrelated = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_uncorrelated_asimov ) )
-            combinedScanFiles_notheoryunc  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_notheoryunc_asimov ) )
-        else:
-            combinedScanFiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_profiled ) )
-            combinedScanFiles_uncorrelated = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_uncorrelated ) )
-            combinedScanFiles_notheoryunc  = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_split_profiled_notheoryunc ) )
-
-
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
-            combinedScanFiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        combined.color = 1
-        combined.name = 'Regular'
-
-        combined_uncorrelated = TheoryCommands.GetTH2FromListOfRootFiles(
-            combinedScanFiles_uncorrelated,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        combined_uncorrelated.color = 2
-        combined_uncorrelated.name = 'Uncorrelated'
-
-        combined_notheoryunc = TheoryCommands.GetTH2FromListOfRootFiles(
-            combinedScanFiles_notheoryunc,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        combined_notheoryunc.color = 4
-        combined_notheoryunc.name = 'No_unc'
-
-
-        containers = [
-            combined,
-            combined_uncorrelated,
-            combined_notheoryunc
-            ]
-
-        for container in containers:
-            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
-            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
-
-
-        c.cd()
-        c.Clear()
-        SetCMargins()
-
-        xMin = -25.
-        xMax = 25.
-        yMin = -10.
-        yMax = 10.
-
-        base = GetPlotBase(
-            xMin = xMin,
-            xMax = xMax,
-            yMin = yMin,
-            yMax = yMax,
-            xTitle = titles.get( xCoupling, xCoupling ),
-            yTitle = titles.get( yCoupling, yCoupling ),
-            )
-        base.Draw('P')
-
-        base.GetXaxis().SetTitleSize(0.06)
-        base.GetXaxis().SetLabelSize(0.05)
-        base.GetYaxis().SetTitleSize(0.06)
-        base.GetYaxis().SetLabelSize(0.05)
-
-
-        # leg = ROOT.TLegend(
-        #     1 - c.GetRightMargin() - 0.22,
-        #     c.GetBottomMargin() + 0.02,
-        #     1 - c.GetRightMargin(),
-        #     c.GetBottomMargin() + 0.21
-        #     )
-
-        leg = ROOT.TLegend(
-            c.GetLeftMargin() + 0.01,
-            c.GetBottomMargin() + 0.02,
-            1 - c.GetRightMargin() - 0.01,
-            c.GetBottomMargin() + 0.09
-            )
-        leg.SetNColumns(3)
-        leg.SetBorderSize(0)
-        leg.SetFillStyle(0)
-
-        for container in containers:
-
-            addToLegend = True
-            for Tg in container.contours_1sigma:
-                TheoryCommands.SetExtremaOfContour(Tg)
-                if abs( Tg.xMax - Tg.xMin ) < 0.1*(xMax-xMin) or abs( Tg.yMax - Tg.yMin ) < 0.1*(yMax-yMin):
-                    continue
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(1)
-                Tg.Draw('LSAME')
-                Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
-                if addToLegend:
-                    leg.AddEntry( Tg.GetName(), titles.get( container.name, container.name ), 'l' )
-                    addToLegend = False
-
-            for Tg in container.contours_2sigma:
-                TheoryCommands.SetExtremaOfContour(Tg)
-                if abs( Tg.xMax - Tg.xMin ) < 0.1*(xMax-xMin) or abs( Tg.yMax - Tg.yMin ) < 0.1*(yMax-yMin):
-                    continue
-                Tg.SetLineWidth(2)
-                Tg.SetLineColor( container.color )
-                Tg.SetLineStyle(2)
-                Tg.Draw('LSAME')
-
-            Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
-            ROOT.SetOwnership( Tpoint, False )
-            Tpoint.SetMarkerSize(2)
-            Tpoint.SetMarkerStyle(34)
-            Tpoint.SetMarkerColor( container.color )
-            Tpoint.Draw('PSAME')
-            Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
-
-        TpointSM = ROOT.TGraph( 1, array( 'd', [1.0] ), array( 'd', [1.0] ) )
-        ROOT.SetOwnership( TpointSM, False )
-        TpointSM.SetMarkerSize(2)
-        TpointSM.SetMarkerStyle(21)
-        TpointSM.SetMarkerColor( 12 )
-        TpointSM.Draw('PSAME')
-
-        leg.Draw()
-
-        SaveC( 'contours_theoryUncs' )
-
-
-
 
 
 

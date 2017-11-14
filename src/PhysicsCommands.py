@@ -56,7 +56,7 @@ def SaveC( outname, PNG=False, asROOT=False ):
     c.SaveAs( outname + '.pdf' )
     if PNG:
         c.SaveAs( outname + '.png' )
-    if asROOT:
+    if asROOT or TheoryCommands.SAVEROOT:
         c.SaveAs( outname + '.root' )
 
 
@@ -486,9 +486,9 @@ def BasicDrawSpectrum(
 
 
 def BasicCombineSpectra(
-    *args,
-    **kwargs
-    ):
+        *args,
+        **kwargs
+        ):
 
     names       = []
     POIs        = []
@@ -761,7 +761,7 @@ def BasicCombineSpectra(
     if 'theoryCurves' in kwargs: outname += '_withTheoryCurves_{0}'.format( TheoryCommands.GetShortTheoryName([Tg.name for Tg in theoryTgs]) )
     outname += kwargs.get( 'filenameSuffix', '' )
     if IsBottomRatioPlot: outname += 'bottomRatioPlot'
-    SaveC( outname, asROOT=True )
+    SaveC( outname, asROOT = kwargs.get( 'asROOT', False ) )
 
     if not isRatioPlot: c.SetLogy(False)
 

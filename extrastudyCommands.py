@@ -559,12 +559,12 @@ def main( args ):
         SM = TheoryFileInterface.FileFinder(
             kappab=1, kappac=1, muR=1, muF=1, Q=1,
             expectOneFile=True,
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
+            directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             loadImmediately=True
             )
         derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
+            directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             loadImmediately=True
             )
         parametrization = Parametrization()
@@ -683,7 +683,7 @@ def main( args ):
 
         for i_kappab, kappabVal in enumerate(kappabPoints):
             for i_kappac, kappacVal in enumerate(kappacPoints):
-                H2.SetBinContent( i_kappac, i_kappab, 2. * (chi2_function( (kappacVal, kappabVal) ) - chi2_bestfit) )
+                H2.SetBinContent( i_kappac, i_kappab, chi2_function( (kappacVal, kappabVal) ) - chi2_bestfit )
 
 
         print ''
@@ -729,8 +729,9 @@ def main( args ):
         bestfitpoint.SetMarkerSize(1.1)
         bestfitpoint.SetMarkerColor(13)
         bestfitpoint.Draw('PSAME')
+        bestfitpoint.SetName('bestfitpoint')
 
-        SaveC( 'AfterTheFactChi2Fit' )
+        SaveC( 'AfterTheFactChi2Fit', asROOT = True )
 
         # rootFp.Close()
 
@@ -1276,13 +1277,21 @@ def main( args ):
     if args.CorrelationMatrixScaleDependence_Yukawa:
 
         CorrelationMatrices.SetPlotDir( 'plots_CorrelationMatrixCrosscheck_{0}'.format(datestr) )
+        TheoryCommands.SetPlotDir( 'plots_CorrelationMatrixCrosscheck_{0}'.format(datestr) )
+
+        expCorrMatrices = []
+        theoryCorrMatrices = []
 
         kappabs = [ -2, -1, 0, 1, 2 ]
         kappacs = [ -10, -5, 0, 1, 5, 10 ]
+        # kappabs = [ -1, 0, 1 ]
+        # kappacs = [ -5, 1, 5 ]
+
         for kappab, kappac in itertools.product( kappabs, kappacs ):
+            print 'Processing kappab = {0}, kappac = {1}'.format( kappab, kappac )
 
             variationFiles = TheoryFileInterface.FileFinder(
-                directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced,
+                directory = LatestPaths.derivedTheoryFiles_YukawaGluonInduced,
                 # directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
                 kappab = kappab, kappac = kappac
                 )
@@ -1291,26 +1300,205 @@ def main( args ):
                 TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
                     for variationFile in variationFiles ]
 
-            CorrelationMatrices.GetCorrelationMatrix(
+            theoryCorrMatrices.append( CorrelationMatrices.GetCorrelationMatrix(
                 variations,
                 makeScatterPlots          = False,
                 makeCorrelationMatrixPlot = True,
                 outname                   = 'corrMat_theory_kappab_{0}_kappac_{1}'.format( kappab, kappac ),
                 verbose                   = True,
-                )
+                ))
 
             variations_expbinning = deepcopy(variations)
             for variation in variations_expbinning:
                 TheoryCommands.RebinDerivedTheoryContainer( variation, [ 0., 15., 30., 45., 85., 125. ] )
 
-            CorrelationMatrices.GetCorrelationMatrix(
+            expCorrMatrices.append( CorrelationMatrices.GetCorrelationMatrix(
                 variations_expbinning,
                 makeScatterPlots          = False,
                 makeCorrelationMatrixPlot = True,
                 outname                   = 'corrMat_exp_kappab_{0}_kappac_{1}'.format( kappab, kappac ),
                 verbose                   = True,
+                ))
+
+
+        # ======================================
+        # Min-max study
+
+        print '\nCreating min-max matrix'
+
+        toString = lambda number: str(int(number)) if number.is_integer() else '{0:.1f}'.format(number)
+        def getBinLabels( variation ):
+            binLabels = []
+            for iBin in xrange(len(variation.binCenters)):
+                if not hasattr( variation, 'binBoundaries' ):
+                    binLabel = toString(variation.binCenters[iBin])
+                else:
+                    binLabel = '{0} - {1}'.format(
+                        toString(variation.binBoundaries[iBin] ),
+                        toString(variation.binBoundaries[iBin+1] )
+                        )
+                binLabels.append(binLabel)
+            return binLabels
+
+        expBinLabels    = getBinLabels( variations_expbinning[0] )
+        theoryBinLabels = getBinLabels( variations[0] )
+
+
+        for name, corrMatrices, binLabels in [
+                ( 'exp', expCorrMatrices, expBinLabels ),
+                ( 'theory', theoryCorrMatrices, theoryBinLabels )
+                ]:
+
+            nBins = len(corrMatrices[0])
+
+            # Construct minimum and maximum corrMatrix
+            minCorrMatrix = [ [ 999.  for j in xrange(nBins) ] for i in xrange(nBins) ]
+            maxCorrMatrix = [ [ -999. for j in xrange(nBins) ] for i in xrange(nBins) ]
+            degreeOfAsymmetryMatrix = [ [ 0. for j in xrange(nBins) ] for i in xrange(nBins) ]
+            for iRow in xrange(nBins):
+                for iCol in xrange(nBins):
+                    minVal = 999.
+                    maxVal = -999.
+                    for corrMatrix in corrMatrices:
+                        if corrMatrix[iRow][iCol] < minVal:
+                            minVal = corrMatrix[iRow][iCol]
+                        if corrMatrix[iRow][iCol] > maxVal:
+                            maxVal = corrMatrix[iRow][iCol]
+                    minCorrMatrix[iRow][iCol] = minVal
+                    maxCorrMatrix[iRow][iCol] = maxVal
+                    degreeOfAsymmetryMatrix[iRow][iCol] = maxVal - minVal
+
+
+            # Make a plot
+
+            c.Clear()
+            SetCMargins(
+                LeftMargin   = 0.18,
+                RightMargin  = 0.12,
+                TopMargin    = 0.06,
+                BottomMargin = 0.16,
                 )
 
+            T = ROOT.TH2D(
+                'corrMat', '#scale[0.85]{Min and max corr. for p_{T} bins}',
+                nBins, 0., nBins,
+                nBins, 0., nBins
+                )
+            ROOT.SetOwnership( T, False )
+
+            for iRow in xrange(nBins):
+                for iCol in xrange(nBins):
+                    T.SetBinContent( iCol+1, iRow+1, degreeOfAsymmetryMatrix[iRow][iCol] )
+
+            # Bin titles
+            for iBin in xrange(nBins):
+                if nBins < 20 or iBin % int(0.1*nBins) == 0:
+                    T.GetXaxis().SetBinLabel( iBin+1, binLabels[iBin] )
+                    T.GetYaxis().SetBinLabel( iBin+1, binLabels[iBin] )
+
+            # Set color range
+
+            # # With negative (to orange)
+            # n_stops = 3
+            # stops  = [ 0.0, 0.5, 1.0 ]
+            # reds   = [ 0.0, 1.0, 1.0 ]
+            # blues  = [ 1.0, 1.0, 0.0 ]
+            # greens = [ 0.0, 1.0, 0.4 ]
+            # zMin   = -1.2
+            # zMax   = 1.2
+
+            # With only positive
+            n_stops = 2
+            stops  = [ 0.0, 1.0 ]
+            reds   = [ 1.0, 255./255. ]
+            greens = [ 1.0, 191./255. ]
+            blues  = [ 1.0, 128./255. ]
+            zMin   = 0.
+            zMax   = 1.05 * max([ max(row) for row in degreeOfAsymmetryMatrix ])
+
+
+            ROOT.TColor.CreateGradientColorTable(
+                n_stops,
+                array('d', stops ),
+                array('d', reds ),
+                array('d', greens ),
+                array('d', blues ),
+                255 )
+            T.GetZaxis().SetRangeUser( zMin, zMax )
+
+            T.GetXaxis().SetTitle( 'p_{T}' )
+            # T.GetXaxis().SetTitleOffset( 1.7 )
+            T.GetXaxis().SetTitleOffset( 1.2 )
+            T.GetXaxis().SetTitleSize(0.05)
+
+            T.GetYaxis().SetTitle( 'p_{T}' )
+            # T.GetYaxis().SetTitleOffset( 2.45 )
+            T.GetYaxis().SetTitleOffset( 1.85 )
+            T.GetYaxis().SetTitleSize(0.05)
+
+            T.GetXaxis().SetLabelSize(0.045)
+            T.GetYaxis().SetLabelSize(0.045)
+
+            T.Draw('COLZ')
+
+            c.cd()
+            c.Update()
+
+
+            # Draw in the min and max numbers
+
+            labelMin = ROOT.TLatex()
+            labelMin.SetTextSize(0.035)
+            labelMin.SetTextColor(4)
+            labelMin.SetTextAlign(23)
+
+            labelMax = ROOT.TLatex()
+            labelMax.SetTextSize(0.035)
+            labelMax.SetTextColor(2)
+            labelMax.SetTextAlign(21)
+
+            xMin = T.GetXaxis().GetBinLowEdge(1)
+            xMax = T.GetXaxis().GetBinUpEdge(nBins)
+            yMin = T.GetYaxis().GetBinLowEdge(1)
+            yMax = T.GetYaxis().GetBinUpEdge(nBins)
+            dy = yMax - yMin
+
+            significance = 2
+            formatter = lambda number: '{0:+.{significance}f}'.format(
+                number, significance=significance )
+
+            if nBins >= 20:
+                labelMin.SetTextSize(0.008)
+                labelMax.SetTextSize(0.008)
+                dy *= 0.0
+                significance = 1
+                formatter = lambda number: '{0:+.{significance}f}'.format(
+                    number, significance=significance ).replace('+0','+').replace('-0','-').replace('1.0','1')
+
+
+            for iRow in xrange(nBins):
+                for iCol in xrange(nBins):
+
+                    if (
+                        nBins < 20
+                        or ( iRow % int(0.1*nBins) == 0 and iCol % int(0.1*nBins) == 0 )
+                        or ( degreeOfAsymmetryMatrix[iRow][iCol] > 0.5 )
+                        ):
+
+                        x = T.GetXaxis().GetBinCenter(iCol+1)
+                        y = T.GetYaxis().GetBinCenter(iRow+1)
+
+                        labelMin.DrawLatex(
+                            x, y - 0.01*dy,
+                            formatter( minCorrMatrix[iRow][iCol] )
+                            )
+
+                        labelMax.DrawLatex(
+                            x, y + 0.01*dy,
+                            formatter( maxCorrMatrix[iRow][iCol] )
+                            )
+
+            SaveC( '_minmax_corrMat_{0}'.format(name), asPNG=True, asROOT=True )
 
 
 

@@ -136,6 +136,11 @@ scan_combined_PTH = 'Scan_PTH_Nov07'
 scan_hgg_PTH      = 'Scan_PTH_Nov07_hgg'
 scan_hzz_PTH      = 'Scan_PTH_Nov08_hzz'
 
+scan_combined_NJ  = 'Scan_nJets_Nov12'
+scan_hgg_NJ       = 'Scan_nJets_Nov12_0'
+scan_hzz_NJ       = 'Scan_nJets_Nov12_1'
+
+
 # ======================================
 # Extra studies
 

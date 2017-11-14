@@ -28,7 +28,7 @@ sys.path.append('src')
 import Commands
 # import PhysicsCommands
 # import OneOfCommands
-# import TheoryCommands
+import TheoryCommands
 # import CorrelationMatrices
 # import MergeHGGWDatacards
 # import TheoryFileInterface
@@ -73,6 +73,8 @@ def main():
     parser.add_argument( '--hzz',   action='store_true' )
     parser.add_argument( '--hgg',   action='store_true' )
 
+    parser.add_argument( '--saveroot',   action='store_true' )
+
     args = parser.parse_args()
 
     if args.hgg and args.hzz:
@@ -82,6 +84,9 @@ def main():
     print ''
 
     if args.test: Commands.TestMode()
+
+    if args.saveroot:
+        TheoryCommands.SaveAsRoot()
 
 
     ########################################

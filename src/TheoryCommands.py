@@ -46,6 +46,10 @@ PLOTDIR = 'plots_{0}'.format(datestr)
 def SetPlotDir( newdir ):
     global PLOTDIR
     PLOTDIR = newdir
+SAVEROOT = False
+def SaveAsRoot( newvalue=True ):
+    global SAVEROOT
+    SAVEROOT = newvalue
 def SaveC( outname, asPNG=False, asROOT=False ):
     global PLOTDIR
     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
@@ -59,8 +63,7 @@ def SaveC( outname, asPNG=False, asROOT=False ):
     c.SaveAs( outname + '.pdf' )
     if asPNG:
         c.SaveAs( outname + '.png' )
-
-    if asROOT:
+    if asROOT or SAVEROOT:
         c.SaveAs( outname + '.root' )
 
 
@@ -967,7 +970,7 @@ def BasicMixedContourPlot(
         1 - c.GetRightMargin() - 0.01,
         c.GetBottomMargin() + 0.09
         )
-    leg.SetNColumns(3)
+    leg.SetNColumns( min( 3, len(containers) ) )
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
