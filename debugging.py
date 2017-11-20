@@ -61,6 +61,8 @@ def main():
     parser.add_argument( '--jscaletest_t2ws',      action='store_true' )
     parser.add_argument( '--jscaletest_bestfit',      action='store_true' )
 
+    parser.add_argument( '--kappaVMaxOne_Top',      action='store_true' )
+
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
 
@@ -86,6 +88,35 @@ def main():
     Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
 
 
+    #____________________________________________________________________
+    if args.kappaVMaxOne_Top:
+
+        base = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v2_NNLOPS/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/'
+        ws = base + 'workspaces_Nov10/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
+
+        cmd = [
+            'combine',
+            ws,
+            '-n debugging_{0}_kappaVMaxOne_Top'.format(datestr),
+            '-M MultiDimFit',
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            '--floatOtherPOIs=1',
+            '-m 125.00',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '--squareDistPoiStep',
+            '-P ct -P cg',
+            '--setPhysicsModelParameters ct=1.0,cg=0.0,kappa_V=0.99',
+            '--setPhysicsModelParameterRanges ct=-1.0,2.0:cg=-0.1,0.2:kappa_V=-100.0,1.0',
+            '--floatNuisances kappa_V',
+            '--saveSpecifiedFunc r_ggH_PTH_0_15,r_ggH_PTH_15_30,r_ggH_PTH_30_45,r_ggH_PTH_45_85,r_ggH_PTH_85_125,r_ggH_PTH_125_200,r_ggH_PTH_200_350,r_ggH_PTH_GT350,theoryUncertainty_0,theoryUncertainty_1,theoryUncertainty_2,theoryUncertainty_3,theoryUncertainty_4,theoryUncertainty_5,theoryUncertainty_6,r_hgg_ggH_PTH_0_15,r_hgg_ggH_PTH_15_30,r_hgg_ggH_PTH_30_45,r_hgg_ggH_PTH_45_85,r_hgg_ggH_PTH_85_125,r_hgg_ggH_PTH_125_200,r_hgg_ggH_PTH_200_350,r_hgg_ggH_PTH_GT350,r_hgg_ggH_PTH_0_15,r_hgg_ggH_PTH_15_30,r_hgg_ggH_PTH_30_45,r_hgg_ggH_PTH_45_85,r_hgg_ggH_PTH_85_125,r_hgg_ggH_PTH_125_200,r_hgg_ggH_PTH_200_350,r_hgg_ggH_PTH_GT350,ct,kappa_b,kappa_c,kappa_V,kappa_tau,kappa_mu,hggBRmodifier,hzzBRmodifier,xH_modifier,Scaling_hgg,Scaling_hzg,Scaling_hgluglu',
+            ]
+
+        Commands.BasicGenericCombineCommand(
+            cmd,
+            onBatch = False,
+            )
 
 
     #____________________________________________________________________

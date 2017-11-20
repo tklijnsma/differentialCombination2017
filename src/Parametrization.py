@@ -281,7 +281,11 @@ class Parametrization():
 
 
     def Evaluate( self, **kwargs ):
+
+        self.verbose = kwargs.get( 'verbose', False )
         for key, value in kwargs.iteritems():
+            if self.verbose:
+                print '[in Parametrization] Setting {0} to {1}'.format( key, value )
             setattr( self, key, value )
 
 
@@ -333,6 +337,7 @@ class Parametrization():
     def EvaluateForBinning( self, theory_binning, exp_binning, returnRatios=True, **kwargs ):
         theory_xs = self.Evaluate(**kwargs)
         integral = TheoryCommands.GetIntegral( theory_binning, theory_xs )
+
         exp_xs = []
         for left, right in zip( exp_binning[:-1], exp_binning[1:] ):
             exp_xs.append( integral( left, right ) / ( right - left ) )

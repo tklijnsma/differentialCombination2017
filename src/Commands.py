@@ -367,15 +367,18 @@ def BasicBestfit(
 
     if setPOIs:
 
-        datacardFp = ROOT.TFile.Open( datacard )
-        w = datacardFp.Get('w')
-        POIlist = ROOT.RooArgList( w.set('POI') )
+        if IsTestMode():
+            parNames = [ 'POIs', 'in', 'the', 'POI', 'set' ]
+        else:
+            datacardFp = ROOT.TFile.Open( datacard )
+            w = datacardFp.Get('w')
+            POIlist = ROOT.RooArgList( w.set('POI') )
 
-        parNames = []
-        for i in xrange( POIlist.getSize() ):
-            parName = POIlist[i].GetName()
-            if parName.startswith('r_'):
-                parNames.append( parName + '=1.0' )
+            parNames = []
+            for i in xrange( POIlist.getSize() ):
+                parName = POIlist[i].GetName()
+                if parName.startswith('r_'):
+                    parNames.append( parName + '=1.0' )
 
         cmd.append( '--setPhysicsModelParameters ' + ','.join(parNames) )
 
@@ -433,7 +436,10 @@ def BasicBestfit(
         moveBack = False
 
         jobdir = GetTempJobDir()
-        if basename(jobdir).replace('/','') != 'tmp':
+
+        if IsTestMode():
+            print 'Would now create or enter {0}'.format(jobdir)
+        elif basename(jobdir).replace('/','') != 'tmp':
             if not isdir(jobdir): os.makedirs(jobdir)
             backDir = os.getcwd()
             os.chdir(jobdir)
@@ -728,14 +734,17 @@ def MultiDimCombineTool(
     scanName = 'SCAN_{0}_{1}_{2}'.format( ''.join(ListPOIs(datacard,nofilter=True)), datestr, scanName )
 
     currentdir = os.getcwd()
+
+    if not jobDirectory:
+        jobDirectory = TEMPJOBDIR
     if not TESTMODE:
-        if not jobDirectory:
-            jobDirectory = TEMPJOBDIR
         if not isdir( jobDirectory ):
             print 'Creating directory {0}'.format( jobDirectory )
             os.makedirs( jobDirectory )
         print 'Moving to directory {0}'.format( jobDirectory )
         os.chdir( jobDirectory )
+    else:
+        print '\nTESTMODE: Would now create {0}'.format(jobDirectory)
 
 
     cmd = [

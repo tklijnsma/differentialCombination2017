@@ -35,11 +35,18 @@ def SetCMargins(
     RightMargin  = 0.03,
     BottomMargin = 0.15,
     TopMargin    = 0.03,
+    for2Dhist    = False
     ):
-    c.SetLeftMargin( LeftMargin )
-    c.SetRightMargin( RightMargin )
-    c.SetBottomMargin( BottomMargin )
-    c.SetTopMargin( TopMargin )
+    if for2Dhist:
+        c.SetLeftMargin(   0.12 )
+        c.SetRightMargin(  0.10 )
+        c.SetBottomMargin( 0.12 )
+        c.SetTopMargin(    0.09 )
+    else:
+        c.SetLeftMargin( LeftMargin )
+        c.SetRightMargin( RightMargin )
+        c.SetBottomMargin( BottomMargin )
+        c.SetTopMargin( TopMargin )
 
 
 PLOTDIR = 'plots_{0}'.format(datestr)
@@ -436,6 +443,21 @@ def GetShortTheoryName( names ):
         uniqueCombinations.add( presentKeyStrings )
     return '_'.join( list(uniqueCombinations) )
 
+
+#____________________________________________________________________
+def GetXYfromTGraph( Tg ):
+    N = Tg.GetN()
+    xs = []
+    ys = []
+    x_Double = ROOT.Double(0)
+    y_Double = ROOT.Double(0)
+
+    for i in xrange(N):
+        Tg.GetPoint( i, x_Double, y_Double )
+        xs.append( float(x_Double) )
+        ys.append( float(y_Double) )
+
+    return xs, ys
 
 
 ########################################
@@ -896,242 +918,6 @@ def PlotCouplingScan2D(
 
     return res
     
-
-#____________________________________________________________________
-def BasicMixedContourPlot(
-        containers,
-        xMin      = 0.,
-        xMax      = 1.,
-        yMin      = 0.,
-        yMax      = 1.,
-        xTitle    = 'x',
-        yTitle    = 'y',
-        plotname  = 'contours',
-        x_SM      = 1.,
-        y_SM      = 1.,
-        plotIndividualH2s = False,
-        ):
-
-
-    # ======================================
-    # Check whether the passed containers fulfill requirements
-
-    for container in containers:
-        attrs = container.ListAttributes()
-
-        for expectedAttr in [ 'H2', 'name' ]:
-            if not expectedAttr in attrs:
-                Commands.ThrowError(
-                    'Container misses mandatory attribute \'{0}\' (defined attributes: {1})'.format( expectedAttr, ', '.join(attrs) ),
-                    throwException = True
-                    )
-
-        if not hasattr( container, 'color' ):
-            container.color = 1
-
-
-    # ======================================
-    # Calculate contours
-
-    for container in containers:
-        print 'Getting contours for {0}'.format( container.name )
-        container.contours_1sigma = GetContoursFromTH2( container.H2, 2.30 )
-        container.contours_2sigma = GetContoursFromTH2( container.H2, 6.18 )
-
-
-
-    # ======================================
-    # Make plot
-
-    c.cd()
-    c.Clear()
-    SetCMargins()
-
-
-    base = GetPlotBase(
-        xMin = xMin,
-        xMax = xMax,
-        yMin = yMin,
-        yMax = yMax,
-        xTitle = xTitle,
-        yTitle = yTitle,
-        )
-    base.Draw('P')
-
-    base.GetXaxis().SetTitleSize(0.06)
-    base.GetXaxis().SetLabelSize(0.05)
-    base.GetYaxis().SetTitleSize(0.06)
-    base.GetYaxis().SetLabelSize(0.05)
-
-
-    leg = ROOT.TLegend(
-        c.GetLeftMargin() + 0.01,
-        c.GetBottomMargin() + 0.02,
-        1 - c.GetRightMargin() - 0.01,
-        c.GetBottomMargin() + 0.09
-        )
-    leg.SetNColumns( min( 3, len(containers) ) )
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
-
-
-    for container in containers:
-
-        for Tg in container.contours_1sigma:
-            Tg.SetLineWidth(2)
-            Tg.SetLineColor( container.color )
-            Tg.SetLineStyle(1)
-            Tg.Draw('CSAME')
-            if Tg == container.contours_1sigma[0]:
-                Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
-                leg.AddEntry(
-                    Tg.GetName(),
-                    container.name if not hasattr( container, 'title' ) else container.title,
-                    'l' )
-
-        for Tg in container.contours_2sigma:
-            Tg.SetLineWidth(2)
-            Tg.SetLineColor( container.color )
-            Tg.SetLineStyle(2)
-            Tg.Draw('CSAME')
-
-        Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
-        ROOT.SetOwnership( Tpoint, False )
-        Tpoint.SetMarkerSize(2)
-        Tpoint.SetMarkerStyle(34)
-        Tpoint.SetMarkerColor( container.color )
-        Tpoint.Draw('PSAME')
-        Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
-        container.bestfitPoint = Tpoint
-
-    TpointSM = ROOT.TGraph( 1, array( 'd', [x_SM] ), array( 'd', [y_SM] ) )
-    ROOT.SetOwnership( TpointSM, False )
-    TpointSM.SetMarkerSize(2)
-    TpointSM.SetMarkerStyle(21)
-    TpointSM.SetMarkerColor( 12 )
-    TpointSM.Draw('PSAME')
-
-    leg.Draw()
-
-    SaveC( plotname )
-
-
-    if plotIndividualH2s:
-
-        for container in containers:
-
-            c.Clear()
-            SetCMargins(
-                LeftMargin   = 0.12,
-                RightMargin  = 0.10,
-                BottomMargin = 0.12,
-                TopMargin    = 0.09,
-                )
-
-            container.H2.Draw('COLZ')
-
-            container.H2.GetXaxis().SetRangeUser( xMin, xMax )
-            container.H2.GetYaxis().SetRangeUser( yMin, yMax )
-            container.H2.SetMaximum( 7. )
-
-            container.H2.GetXaxis().SetTitle( xTitle )
-            container.H2.GetYaxis().SetTitle( yTitle )
-            container.H2.GetXaxis().SetTitleSize(0.06)
-            container.H2.GetXaxis().SetLabelSize(0.05)
-            container.H2.GetYaxis().SetTitleSize(0.06)
-            container.H2.GetYaxis().SetLabelSize(0.05)
-
-            for Tg in container.contours_1sigma: Tg.Draw('CSAME')
-            for Tg in container.contours_2sigma: Tg.Draw('CSAME')
-            container.bestfitPoint.Draw('PSAME')
-
-            c.Update()
-
-            SaveC( plotname + '_' + container.name )
-
-
-#____________________________________________________________________
-def PlotMultipleScans(
-        containers,
-        xMin      = None,
-        xMax      = None,
-        yMin      = None,
-        yMax      = None,
-        xTitle    = 'x',
-        yTitle    = 'y',
-        plotname  = 'unnamedscans',
-        draw1sigmaline = True,
-        ):
-
-    if xMin is None: xMin = min([ min(container.x) for container in containers ])
-    if xMax is None: xMax = max([ max(container.x) for container in containers ])
-    if yMin is None: yMin = min([ min(container.y) for container in containers ])
-    if yMax is None: yMax = max([ max(container.y) for container in containers ])
-
-
-    # ======================================
-    # Make plot
-
-    c.cd()
-    c.Clear()
-    SetCMargins()
-
-
-    base = GetPlotBase(
-        xMin = xMin,
-        xMax = xMax,
-        yMin = yMin,
-        yMax = yMax,
-        xTitle = xTitle,
-        yTitle = yTitle,
-        )
-    base.Draw('P')
-
-    base.GetXaxis().SetTitleSize(0.06)
-    base.GetXaxis().SetLabelSize(0.05)
-    base.GetYaxis().SetTitleSize(0.06)
-    base.GetYaxis().SetLabelSize(0.05)
-
-
-    leg = ROOT.TLegend(
-        c.GetLeftMargin() + 0.01,
-        c.GetBottomMargin() + 0.02,
-        1 - c.GetRightMargin() - 0.01,
-        c.GetBottomMargin() + 0.09
-        )
-    leg.SetNColumns(3)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
-
-    colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
-    for container in containers:
-
-        if not hasattr( container, 'Tg' ):
-
-            container.Tg = ROOT.TGraph(
-                len(container.x), array( 'f', container.x ), array( 'f', container.y )
-                )
-
-            if not hasattr( container, 'color' ):
-                container.color = next(colorCycle)
-
-            container.Tg.SetLineColor(container.color)
-            container.Tg.SetMarkerColor(container.color)
-            container.Tg.SetLineWidth(2)
-            container.Tg.SetMarkerSize(0.9)
-            container.Tg.SetMarkerStyle(5)
-
-            container.Tg.Draw('PCSAME')
-
-    if draw1sigmaline:
-        line1sigma = ROOT.TLine( xMin, 0.5, xMax, 0.5 )
-        line1sigma.SetLineColor(14)
-        line1sigma.Draw()
-
-    SaveC( plotname )
-
-
-
 
 ########################################
 # Execute this if called directly

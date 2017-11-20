@@ -817,131 +817,6 @@ def MergeLowHighPtFilesFromHqT(
     return HqTvariations
 
 
-
-def ConvertTGraphToLinesAndBoxes(
-        Tg,
-        drawImmediately=False,
-        legendObject=None,
-        verbose=False,
-        noBoxes=False,
-        xMaxExternal=None,
-        yMinExternal=None,
-        ):
-
-    yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
-    xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
-
-    if not xBand or not yBand:
-        Commands.ThrowError( 'Make sure all errors are filled' )
-
-    nPoints = Tg.GetN()
-
-    if verbose: print '[debug] Converting \'{0}\' to lines and boxes ({1} points)'.format( Tg.GetName(), nPoints )
-
-    lineStyle = Tg.GetLineStyle()
-    lineWidth = Tg.GetLineWidth()
-    lineColor = Tg.GetLineColor()
-
-    fillStyle = Tg.GetFillStyle()
-    fillColor = Tg.GetFillColor()
-
-    lines = []
-    boxes = []
-
-    x_Double = ROOT.Double(0)
-    y_Double = ROOT.Double(0)
-    for iPoint in xrange( nPoints ):
-        Tg.GetPoint( iPoint, x_Double, y_Double )
-        x = float(x_Double)
-        y = float(y_Double)
-
-        xMin = abs(Tg.GetErrorXlow(iPoint))
-        xMax = abs(Tg.GetErrorXhigh(iPoint))
-        yMin = abs(Tg.GetErrorYlow(iPoint))
-        yMax = abs(Tg.GetErrorYhigh(iPoint))
-
-        if verbose:
-            print '[debug] Point {0:<3}:'.format( iPoint )
-            print '        x = {0:+8.3f}, xMin = {1:+8.3f}, xMax = {2:+8.3f}'.format( x, xMin, xMax )
-            print '        y = {0:+8.3f}, yMin = {1:+8.3f}, yMax = {2:+8.3f}'.format( y, yMin, yMax )
-
-        if xMaxExternal != None:
-            if x-xMin > xMaxExternal:
-                if verbose:
-                    print 'x-xMin {0} > xMaxExternal {1}; Continuing'.format( x-xMin, xMaxExternal )
-                continue
-            elif x+xMax > xMaxExternal:
-                if verbose:
-                    print 'x+xMax {0} > xMaxExternal {1}; Limiting xMax'.format( x+xMax, xMaxExternal )
-                xMax = xMaxExternal-x
-
-        # if yMinExternal != None:
-        #     if x-xMin > yMinExternal:
-        #         if verbose:
-        #             print 'x-xMin {0} > yMinExternal {1}; Continuing'.format( x-xMin, yMinExternal )
-        #         continue
-        #     elif x+yMin > yMinExternal:
-        #         if verbose:
-        #             print 'x+yMin {0} > yMinExternal {1}; Limiting yMin'.format( x+yMin, yMinExternal )
-        #         yMin = yMinExternal-x
-
-        line = ROOT.TLine( x-xMin, y, x+xMax, y )
-        ROOT.SetOwnership( line, False )
-        line.SetLineStyle( lineStyle )
-        line.SetLineWidth( lineWidth )
-        line.SetLineColor( lineColor )
-        lines.append(line)
-
-        box  = ROOT.TBox( x-xMin, y-yMin, x+xMax, y+yMax )
-        ROOT.SetOwnership( box, False )
-        box.SetLineWidth(0)
-        if not fillStyle == 0: box.SetFillStyle( fillStyle )
-        box.SetFillColor( fillColor )
-        boxes.append(box)
-
-        if drawImmediately:
-
-            if yMinExternal is None:
-                if not noBoxes: box.Draw()
-                line.Draw()
-            else:
-                if y < yMinExternal:
-                    if y+yMax > yMinExternal and not noBoxes:
-                        box.SetY1( yMinExternal )
-                        box.Draw()
-                elif y-yMin < yMinExternal:
-                    if not noBoxes:
-                        box.SetY1( yMinExternal )
-                        box.Draw()
-                    line.Draw()
-                else:
-                    if not noBoxes: box.Draw()
-                    line.Draw()
-
-
-    # Create a dummy for the legend
-    legendDummy = ROOT.TGraph( 1, array( 'd', [-999.]), array( 'd', [-999.]) )
-    ROOT.SetOwnership( legendDummy, False )
-    legendDummy.SetLineColor( lineColor )
-    legendDummy.SetLineWidth( Tg.GetLineWidth() )
-    legendDummy.SetFillColor( fillColor )
-    if not fillStyle == 0: legendDummy.SetFillStyle( fillStyle )
-    legendDummy.SetMarkerStyle(8)
-    legendDummy.SetMarkerColor( lineColor )
-    legendDummy.SetMarkerSize(0)
-    legendDummy.SetName( Tg.GetName() + '_dummy' )
-
-    if drawImmediately:
-        legendDummy.Draw('PSAME')
-
-        if legendObject:
-            legendObject.AddEntry(
-                legendDummy.GetName(), Tg.GetName(),
-                'lf' if not noBoxes else 'l'
-                )
-
-
-
 def ConvertTGraphToHistogram(
         Tg,
         drawImmediately=False,
@@ -1022,6 +897,151 @@ def ConvertTGraphToHistogram(
 
 
 
+def ConvertTGraphToLinesAndBoxes(
+        Tg,
+        drawImmediately=False,
+        legendObject=None,
+        verbose=False,
+        noBoxes=False,
+        xMaxExternal=None,
+        yMinExternal=None,
+        yMaxExternal=None,
+        ):
+
+    yBand = ( Tg.GetErrorYhigh(0) != -1 and Tg.GetErrorYlow(0) != -1 )
+    xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
+
+    if not xBand or not yBand:
+        Commands.ThrowError( 'Make sure all errors are filled' )
+
+    nPoints = Tg.GetN()
+
+    if verbose: print '[debug] Converting \'{0}\' to lines and boxes ({1} points)'.format( Tg.GetName(), nPoints )
+
+    lineStyle = Tg.GetLineStyle()
+    lineWidth = Tg.GetLineWidth()
+    lineColor = Tg.GetLineColor()
+
+    fillStyle = Tg.GetFillStyle()
+    fillColor = Tg.GetFillColor()
+
+    lines = []
+    boxes = []
+
+    x_Double = ROOT.Double(0)
+    y_Double = ROOT.Double(0)
+    for iPoint in xrange( nPoints ):
+        Tg.GetPoint( iPoint, x_Double, y_Double )
+        x = float(x_Double)
+        y = float(y_Double)
+
+        xMin = abs(Tg.GetErrorXlow(iPoint))
+        xMax = abs(Tg.GetErrorXhigh(iPoint))
+        yMin = abs(Tg.GetErrorYlow(iPoint))
+        yMax = abs(Tg.GetErrorYhigh(iPoint))
+
+        if verbose:
+            print '[debug] Point {0:<3}:'.format( iPoint )
+            print '        x = {0:+8.3f}, xMin = {1:+8.3f}, xMax = {2:+8.3f}'.format( x, xMin, xMax )
+            print '        y = {0:+8.3f}, yMin = {1:+8.3f}, yMax = {2:+8.3f}'.format( y, yMin, yMax )
+
+        if xMaxExternal != None:
+            if x-xMin > xMaxExternal:
+                if verbose:
+                    print 'x-xMin {0} > xMaxExternal {1}; Continuing'.format( x-xMin, xMaxExternal )
+                continue
+            elif x+xMax > xMaxExternal:
+                if verbose:
+                    print 'x+xMax {0} > xMaxExternal {1}; Limiting xMax'.format( x+xMax, xMaxExternal )
+                xMax = xMaxExternal-x
+
+        # if yMinExternal != None:
+        #     if x-xMin > yMinExternal:
+        #         if verbose:
+        #             print 'x-xMin {0} > yMinExternal {1}; Continuing'.format( x-xMin, yMinExternal )
+        #         continue
+        #     elif x+yMin > yMinExternal:
+        #         if verbose:
+        #             print 'x+yMin {0} > yMinExternal {1}; Limiting yMin'.format( x+yMin, yMinExternal )
+        #         yMin = yMinExternal-x
+
+        line = ROOT.TLine( x-xMin, y, x+xMax, y )
+        ROOT.SetOwnership( line, False )
+        line.SetLineStyle( lineStyle )
+        line.SetLineWidth( lineWidth )
+        line.SetLineColor( lineColor )
+        lines.append(line)
+
+        box  = ROOT.TBox( x-xMin, y-yMin, x+xMax, y+yMax )
+        ROOT.SetOwnership( box, False )
+        box.SetLineWidth(0)
+        if not fillStyle == 0: box.SetFillStyle( fillStyle )
+        box.SetFillColor( fillColor )
+        boxes.append(box)
+
+        if drawImmediately:
+            yLine = y
+            yBoxLow  = y - yMin
+            yBoxHigh = y + yMax
+
+            print ''
+            print 'Nominal line y = {0}'.format( yLine )
+            print 'Nominal box y: low = {0}, high = {1}'.format( yBoxLow, yBoxHigh )
+            print 'yMinExternal = ', yMinExternal
+            print 'yMaxExternal = ', yMaxExternal
+
+            drawLine = True
+            drawBox  = True
+
+            if noBoxes:
+                drawBox = False
+
+            if not yMinExternal is None:
+                if yLine < yMinExternal:
+                    drawLine = False
+                if yBoxHigh < yMinExternal:
+                    drawBox = False
+                elif yBoxLow < yMinExternal and not noBoxes:
+                    box.SetY1( yMinExternal )
+
+            if not yMaxExternal is None:
+                if yLine > yMaxExternal:
+                    drawLine = False
+                if yBoxLow > yMaxExternal:
+                    drawBox = False
+                elif yBoxHigh > yMaxExternal and not noBoxes:
+                    box.SetY2( yMaxExternal )
+
+
+            if drawBox:  box.Draw()
+            if drawLine: line.Draw()
+
+
+            print 'drawLine = ', drawLine
+            print 'drawBox  = ', drawBox
+
+
+
+    # Create a dummy for the legend
+    legendDummy = ROOT.TGraph( 1, array( 'd', [-999.]), array( 'd', [-999.]) )
+    ROOT.SetOwnership( legendDummy, False )
+    legendDummy.SetLineColor( lineColor )
+    legendDummy.SetLineWidth( Tg.GetLineWidth() )
+    legendDummy.SetFillColor( fillColor )
+    if not fillStyle == 0: legendDummy.SetFillStyle( fillStyle )
+    legendDummy.SetMarkerStyle(8)
+    legendDummy.SetMarkerColor( lineColor )
+    legendDummy.SetMarkerSize(0)
+    legendDummy.SetName( Tg.GetName() + '_dummy' )
+
+    if drawImmediately:
+        legendDummy.Draw('PSAME')
+
+        if legendObject:
+            legendObject.AddEntry(
+                legendDummy.GetName(), Tg.GetName() if not hasattr( Tg, 'title' ) else Tg.title,
+                'lf' if not noBoxes else 'l'
+                )
 
 
 

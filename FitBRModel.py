@@ -75,6 +75,106 @@ class FitTotalXSModel( GeneralDifferentialModel ):
 
 
 
+
+class FitGlobalBRModel( GeneralDifferentialModel ):
+
+    def __init__(self):
+        GeneralDifferentialModel.__init__(self)
+
+
+    def doParametersOfInterest(self):
+        GeneralDifferentialModel.doParametersOfInterest( self )
+        # self.chapter( 'Starting model.doParametersOfInterest()' )
+
+        self.modelBuilder.doVar( 'hgg_BRmodifier[1.0,-2.0,4.0]' )
+        # self.modelBuilder.doVar( 'hzz_BRmodifier[1.0,-2.0,4.0]' )
+
+
+        # Load spline for HZZ BR (function of MH)
+        self.SMH = SMHiggsBuilder(self.modelBuilder)
+        datadir = os.environ['CMSSW_BASE'] + '/src/HiggsAnalysis/CombinedLimit/data/lhc-hxswg'
+        self.SMH.textToSpline( 'BR_hzz', os.path.join( datadir, 'sm/br/BR4.txt' ), ycol=11 );
+        spline_SMBR_hzz = self.modelBuilder.out.function('BR_hzz')
+
+        # Seems to work:
+        # self.modelBuilder.out.var('MH').setVal(125.09)
+        # spline_SMBR_hzz.Print()
+
+        # Load spling for Hgg BR
+        spline_SMBR_hgg = self.modelBuilder.out.function('fbr_13TeV')
+
+        #  --> Can't do this, has to be a spline
+        # # HZZ BR from YR4 excel sheet at mH = 125.09
+        # BR_hzz = 0.02641
+        # self.modelBuilder.doVar( 'hzz_SMBR[{0}]'.format(BR_hzz) )
+        # self.modelBuilder.out.var('hzz_SMBR').setConstant()
+
+        # BR_hgg @ 125.09 GeV = 2.270E-03 = 0.00227
+        # So BR_hgg/BR_hzz = 0.086
+        # --> Varying ratio between 0.0 and 0.5 should suffice
+
+        self.modelBuilder.doVar( 'ratio_BR_hgg_hzz[0.086,0.0,0.5]' )
+
+
+        # ======================================
+        # Create 'hzz_BRmodifier', as a function of 'hgg_BRmodifier' and 'ratio_BR_hgg_hzz'
+
+        hzz_modifier_expr = 'expr::{name}("{formula}",{commaSeparatedParameters})'.format(
+            name                     = 'hzz_BRmodifier',
+            formula                  = '@0*(@1/@2)/@3',
+            commaSeparatedParameters = ','.join([
+                'hgg_BRmodifier',
+                spline_SMBR_hgg.GetName(),
+                spline_SMBR_hzz.GetName(),
+                'ratio_BR_hgg_hzz'
+                ])
+            )
+        print 'Processing expr:'
+        print '    ',hzz_modifier_expr
+        self.modelBuilder.factory_( hzz_modifier_expr )
+
+
+        # for poiname in self.pois:
+        #     if not poiname.startswith( 'r_' ): continue
+
+        #     for channel in [ 'hzz', 'hgg' ]:
+        #         newexpr = 'expr::{name}("{formula}",{commaSeparatedParameters})'.format(
+        #             name                     = poiname.replace( 'r_', 'r_{0}_'.format(channel) ),
+        #             formula                  = '@0*@1',
+        #             commaSeparatedParameters = '{channel}_BRmodifier,{poiname}'.format( channel=channel, poiname=poiname )
+        #             )
+        #         print 'Processing expr:'
+        #         print '    ',newexpr
+        #         self.modelBuilder.factory_( newexpr )
+
+
+        POIset = self.modelBuilder.out.set('POI')
+        POIset.add( self.modelBuilder.out.var('hgg_BRmodifier') )
+        POIset.add( self.modelBuilder.out.var('ratio_BR_hgg_hzz') )
+        # POIset.add( self.modelBuilder.out.var('hzz_BRmodifier') )
+
+
+        self.chapter( 'Starting model.getYieldScale()' )
+
+
+    def getYieldScale( self, bin, process ):
+
+        if process in self.DC.signals and not 'OutsideAcceptance' in bin:
+            if self.BinIsHzz( bin ):
+                poi = 'hzz_BRmodifier'
+            else:
+                poi = 'hgg_BRmodifier'
+        else:
+            poi = 1.0
+
+
+        string = "%s/%s" % (bin,process)
+        print "Will scale ", string, " by ", poi
+        if poi in ["1","0"]: return int(poi)
+        return poi;
+
+
+
 class FitBRModel( GeneralDifferentialModel ):
 
     def __init__(self):
@@ -177,3 +277,4 @@ class FitBRModel( GeneralDifferentialModel ):
 
 fitBRModel=FitBRModel()
 fitTotalXSModel=FitTotalXSModel()
+fitGlobalBRModel=FitGlobalBRModel()

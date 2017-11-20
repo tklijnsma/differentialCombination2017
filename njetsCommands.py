@@ -7,7 +7,7 @@ Thomas Klijnsma
 # Imports
 ########################################
 
-import os, itertools, operator, re, argparse, sys, random
+import os, itertools, operator, re, argparse, sys, random, numpy
 from math import isnan, isinf
 from os.path import *
 from glob import glob
@@ -188,6 +188,8 @@ def main( args ):
 
             return POIs, scans
 
+
+
         combinationPOIs, combinationscans = DrawScan(
             ws      = LatestPaths.ws_combined_smH_NJ,
             scandir = LatestPaths.scan_combined_NJ,
@@ -214,6 +216,13 @@ def main( args ):
 
         fineBinWidths = [ fineBinning[i+1]-fineBinning[i] for i in xrange(len(fineBinning)-1) ]
         hzzBinWidths  = [ hzzBinning[i+1]-hzzBinning[i]   for i in xrange(len(hzzBinning)-1) ]
+
+
+        # normFile = 'suppliedInput/fromVittorio/normalizations_Nov20/spectrumNNLOPS_Njets2p5.npz'
+        # norm = numpy.load(normFile)
+        # print norm['spectrum']
+        # sys.exit()
+
 
         percentage_fineBinning = [ 0.620010, 0.260148, 0.082666, 0.023464, 0.013713 ]
         percentage_hzzBinning  = [ 0.620010, 0.260148, 0.082666, 0.023464 + 0.013713 ]
@@ -278,7 +287,7 @@ def main( args ):
                 ( 'SetMarkerStyle', 8 ),
                 ( 'SetFillColorAlpha', 4, 0.2 ),
                 ),
-            printTable=True,
+            printTable      = True,
             bottomRatioPlot = True,
             asROOT          = True
             )

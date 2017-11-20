@@ -88,7 +88,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--scan_combined_split_xHfixed',   action=CustomAction )
 
     parser.add_argument( '--plot_ptSpectra',                action=CustomAction )
-
+    parser.add_argument( '--plot_ptSpectra_ggHxH',          action=CustomAction )
 
     parser.add_argument( '--redoPostfit',                   action=CustomAction )
     parser.add_argument( '--corrMat_combined_unsplit',      action=CustomAction )
@@ -289,7 +289,8 @@ def main( args ):
     if args.corrMat_combined_unsplit:
 
         # ws = LatestPaths.ws_combined_smH
-        ws = LatestPaths.ws_combined_ggH_xHfixed
+        # ws = LatestPaths.ws_combined_ggH_xHfixed
+        ws = LatestPaths.ws_combined_smH_NJ
 
         wsTag = basename(ws).replace('/','').replace('.root','')
 
@@ -315,7 +316,10 @@ def main( args ):
                     ]
                 )
 
-        pdfIndicesToFreeze = Commands.ListOfPDFIndicesToFreeze( postfitFilename, verbose=False )
+        if Commands.IsTestMode():
+            pdfIndicesToFreeze = [ 'some', 'pdfs' ]
+        else:
+            pdfIndicesToFreeze = Commands.ListOfPDFIndicesToFreeze( postfitFilename, verbose=False )
 
         Commands.BasicBestfit(
             postfitFilename,
@@ -334,10 +338,39 @@ def main( args ):
             )
 
 
+    # #____________________________________________________________________
+    # if args.plotCorrelationMatrix:
+
+    #     PTH  = True
+    #     # PTH  = False
+
+    #     # NJ   = True
+    #     NJ   = False
+
+
+    #     # ======================================
+    #     # 
+
+    #     if PTH:
+    #         corrMatFile = LatestPaths.correlationMatrix_PTH
+    #         ws          = ''
+    #     elif NJ:
+    #         corrMatFile = LatestPaths.correlationMatrix_NJ
+
+
+    #     corrMatFp = ROOT.TFile.Open( corrMatFile )
+    #     fit = corrMatFp.Get('fit')
+
+
+
+
+
+
     #____________________________________________________________________
 
     # ASIMOV = True
     ASIMOV = False
+    if args.asimov: ASIMOV = True
 
     if args.scan_combined_unsplit:
         Commands.BasicCombineTool(
@@ -379,7 +412,7 @@ def main( args ):
             POIpattern    = '*',
             nPoints       = 39,
             nPointsPerJob = 3,
-            jobDirectory  = 'Scan_PTH_{0}_xHfixed'.format(datestr),
+            jobDirectory  = 'Scan_PTH_{0}_xHfixed'.format(datestr) + ( '_asimov' if ASIMOV else '' ),
             queue         = 'short.q',
             asimov        = ASIMOV,
             )
@@ -506,6 +539,163 @@ def main( args ):
             )
 
 
+        CompareWithOld = True
+        if CompareWithOld:
+
+            print '\nComparing combination with old scan'
+
+            oldCombinationPath    = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v1_Nov01/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/'
+            oldCombinationScandir = oldCombinationPath + 'Scan_May15'
+            oldCombinationWS      = oldCombinationPath + 'workspaces_Aug13/combinedCard_Jul26.root'
+
+            oldCombinationPOIs = Commands.ListPOIs( oldCombinationWS )
+            oldCombinationScans = PhysicsCommands.GetScanResults(
+                oldCombinationPOIs,
+                oldCombinationScandir,
+                pattern = 'combinedCard'
+                )
+            PhysicsCommands.BasicDrawScanResults( oldCombinationPOIs, oldCombinationScans, name='oldCombination' )
+            PhysicsCommands.BasicDrawSpectrum( oldCombinationPOIs, oldCombinationScans, name='oldCombination' )
+
+
+            PhysicsCommands.BasicCombineSpectra(
+                ( 'combination', combinationPOIs, combinationscans,
+                    ( 'AsBlocks', False ),
+                    ( 'SetLineColor', 1 ),
+                    ( 'SetMarkerStyle', 8 ),
+                    ),
+                ( 'oldCombination', oldCombinationPOIs, oldCombinationScans,
+                    ( 'AsBlocks', False ),
+                    ( 'SetLineColor', 8 ),
+                    ( 'SetMarkerColor', 8 ),
+                    ( 'SetMarkerStyle', 8 ),
+                    ),
+                printTable     = True,
+                bottomRatioPlot = True,
+                )
+
+
+
+    if args.plot_ptSpectra_ggHxH:
+
+        # ======================================
+        # Specify SMXS
+
+        binBoundaries_hgg = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
+        binBoundaries_hzz = [ 0., 15., 30., 85., 200., 1000. ]
+
+        binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
+        binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
+
+        YR4_totalXS = 55.70628722 # pb
+
+        shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
+        shape_hzz = [
+            0.208025,
+            0.234770,
+            0.165146 + 0.218345,
+            0.087552 + 0.059154,
+            0.022612 + 0.004398,
+            ]
+        hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
+        hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
+
+        # ws_hgg_smH
+        # ws_hzz_smH
+        # ws_combined_smH
+
+
+        # ======================================
+        # Start drawing
+
+        # hggPOIs = Commands.ListPOIs( LatestPaths.ws_hgg_smH )
+        # hggscans = PhysicsCommands.GetScanResults(
+        #     hggPOIs,
+        #     LatestPaths.scan_hgg_PTH,
+        #     pattern = ''
+        #     )
+        # PhysicsCommands.BasicDrawScanResults( hggPOIs, hggscans, name='hgg' )
+        # PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
+
+
+        # hzzPOIs = Commands.ListPOIs( LatestPaths.ws_hzz_smH )
+        # hzzscans = PhysicsCommands.GetScanResults(
+        #     hzzPOIs,
+        #     LatestPaths.scan_hzz_PTH,
+        #     pattern = ''
+        #     )
+        # PhysicsCommands.BasicDrawScanResults( hzzPOIs, hzzscans, name='hzz' )
+        # PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
+
+
+        ASIMOV = False
+        if args.asimov: ASIMOV = True
+
+        combinationPOIs = Commands.ListPOIs( LatestPaths.ws_combined_ggH_xHfixed )
+        combinationscans = PhysicsCommands.GetScanResults(
+            combinationPOIs,
+            LatestPaths.scan_combined_PTH_xHfixed if not ASIMOV else LatestPaths.scan_combined_PTH_xHfixed_asimov,
+            pattern = ''
+            )
+        PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
+        PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
+
+
+        PhysicsCommands.BasicCombineSpectra(
+            ( 'combination' + ( '_asimov' if ASIMOV else '' ), combinationPOIs, combinationscans,
+                ( 'AsBlocks', False ),
+                ( 'SetLineColor', 1 ),
+                ( 'SetMarkerStyle', 8 ),
+                # # Block settings
+                # ( 'SetLineColor', 1 ),
+                # ( 'SetMarkerStyle', 2 ),
+                # # ( 'SetFillColorAlpha', 1, 0.2 ),
+                # ( 'SetFillColor', 13 ),
+                # # ( 'SetFillStyle', 3544 ),
+                # ( 'SetFillStyle', 3345 ),
+                ),
+            # ( 'hgg', hggPOIs, hggscans,
+            #     ( 'SetLineColor', 2 ),
+            #     ( 'SetMarkerStyle', 5 ),
+            #     ( 'SetFillColorAlpha', 2, 0.2 ),
+            #     ),
+            # ( 'hzz', hzzPOIs, hzzscans,
+            #     ( 'SetLineColor', 4 ),
+            #     ( 'SetMarkerStyle', 8 ),
+            #     ( 'SetFillColorAlpha', 4, 0.2 ),
+            #     ),
+            # hzz_SMXS         = hzz_crosssections,
+            # hgg_SMXS         = hgg_crosssections,
+            combination_SMXS = hgg_crosssections,
+            )
+
+
+        PhysicsCommands.BasicCombineSpectra(
+            ( 'combination' + ( '_asimov' if ASIMOV else '' ), combinationPOIs, combinationscans,
+                ( 'AsBlocks', False ),
+                ( 'SetLineColor', 1 ),
+                ( 'SetMarkerStyle', 8 ),
+                # # Block settings
+                # ( 'SetLineColor', 1 ),
+                # ( 'SetMarkerStyle', 2 ),
+                # # ( 'SetFillColorAlpha', 1, 0.2 ),
+                # ( 'SetFillColor', 13 ),
+                # # ( 'SetFillStyle', 3544 ),
+                # ( 'SetFillStyle', 3345 ),
+                ),
+            # ( 'hgg', hggPOIs, hggscans,
+            #     ( 'SetLineColor', 2 ),
+            #     ( 'SetMarkerStyle', 5 ),
+            #     ( 'SetFillColorAlpha', 2, 0.2 ),
+            #     ),
+            # ( 'hzz', hzzPOIs, hzzscans,
+            #     ( 'SetLineColor', 4 ),
+            #     ( 'SetMarkerStyle', 8 ),
+            #     ( 'SetFillColorAlpha', 4, 0.2 ),
+            #     ),
+            printTable=True,
+            bottomRatioPlot = True,
+            )
 
 
     ########################################

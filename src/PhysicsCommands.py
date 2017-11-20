@@ -246,7 +246,7 @@ def BasicDrawScanResults(
         elif '_GT' in POI:
             return knownPOIs['r_smH_PTH_GT350'] 
         else:
-            return 1
+            return colorCycle.next()
 
 
 
@@ -533,31 +533,39 @@ def BasicCombineSpectra(
     if kwargs.get( 'printTable', False ):
         for Tg in Tgs:
 
-            line1 = '{0:<15s}'.format( Tg.name )
+            print 'Binning, mus, err_symm, err_down, err_up for {0}'.format(Tg.name)
+
+            # line1 = '{0:<15s}'.format( Tg.name )
+            line1 = []
             for iBin in xrange(len(Tg.binBoundaries)-2):
-                line1 += '{0:<9s}'.format( '{0}-{1}'.format( int(Tg.binBoundaries[iBin]), int(Tg.binBoundaries[iBin+1]) ) )
-            line1 += '>{0:<8d}'.format( int(Tg.binBoundaries[-2]) )
-            print line1
+                line1.append( '{0:<9s}'.format( '{0}-{1}'.format( int(Tg.binBoundaries[iBin]), int(Tg.binBoundaries[iBin+1]) ) ) )
+            line1.append( '>{0:<8d}'.format( int(Tg.binBoundaries[-2]) ) )
+            print ' , '.join( line1 )
 
-            line2 = '{0:<15s}'.format( Tg.name )
+            # line3 = '{0:<15s}'.format( Tg.name )
+            line3 = []
             for iBin in xrange(len(Tg.binBoundaries)-1):
-                line2 += '{0:<9.2f}'.format( Tg.POIErrsSymm[iBin] )
-            print line2
+                line3.append( '{0:<+9.2f}'.format( Tg.POICenters[iBin] ) )
+            print ' , '.join( line3 )
 
-            line2a = '{0:<15s}'.format( 'err down' )
+            # line2 = '{0:<15s}'.format( Tg.name )
+            line2 = []
             for iBin in xrange(len(Tg.binBoundaries)-1):
-                line2a += '{0:<9.2f}'.format( Tg.POIErrsLeft[iBin] )
-            print line2a
+                line2.append( '{0:<+9.2f}'.format( Tg.POIErrsSymm[iBin] ) )
+            print ' , '.join( line2 )
 
-            line2b = '{0:<15s}'.format( 'err up' )
+            # line2a = '{0:<15s}'.format( 'err down' )
+            line2a = []
             for iBin in xrange(len(Tg.binBoundaries)-1):
-                line2b += '{0:<9.2f}'.format( Tg.POIErrsRight[iBin] )
-            print line2b
+                line2a.append( '{0:<+9.2f}'.format( Tg.POIErrsLeft[iBin] ) )
+            print ' , '.join( line2a )
 
-            line3 = '{0:<15s}'.format( Tg.name )
+            # line2b = '{0:<15s}'.format( 'err up' )
+            line2b = []
             for iBin in xrange(len(Tg.binBoundaries)-1):
-                line3 += '{0:<+9.2f}'.format( Tg.POICenters[iBin] )
-            print line3
+                line2b.append( '{0:<+9.2f}'.format( Tg.POIErrsRight[iBin] ) )
+            print ' , '.join( line2b )
+
 
 
 
@@ -580,7 +588,8 @@ def BasicCombineSpectra(
         'combination' : 'Combination',
         'hgg'         : 'H #rightarrow #gamma#gamma',
         'hzz'         : 'H #rightarrow ZZ',
-        'PTH'         : 'p_{T}^{H} [GeV]',
+        # 'PTH'         : 'p_{T}^{H} [GeV]',
+        'PTH'         : 'p_{T}^{H}',
         'NJ'          : 'N_{jets}'
         }
 
@@ -663,6 +672,7 @@ def BasicCombineSpectra(
                 noBoxes=False,
                 xMaxExternal=xMax,
                 yMinExternal=yMin,
+                yMaxExternal=yMax,
                 )
 
             # # This is already transparent!
@@ -763,7 +773,8 @@ def BasicCombineSpectra(
     if IsBottomRatioPlot: outname += 'bottomRatioPlot'
     SaveC( outname, asROOT = kwargs.get( 'asROOT', False ) )
 
-    if not isRatioPlot: c.SetLogy(False)
+    c.SetLogy(False)
+    c.Clear()
 
 
 def ConvertToLinesAndBoxes(

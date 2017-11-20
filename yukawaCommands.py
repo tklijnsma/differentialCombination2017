@@ -18,6 +18,7 @@ import TheoryCommands
 import CorrelationMatrices
 import MergeHGGWDatacards
 import TheoryFileInterface
+import PlotCommands
 from Container import Container
 from Parametrization import Parametrization, WSParametrization
 
@@ -66,17 +67,21 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingBestfit_Yukawa',                              action=CustomAction )
 
     # Plotting
+    parser.add_argument( '--plot_onedimRatioOfBRs_Yukawa',                        action=CustomAction )
+    parser.add_argument( '--plot_onedimTotalXS_Yukawa',                           action=CustomAction )
     parser.add_argument( '--OneKappaScanPlot_Yukawa',                             action=CustomAction )
-    parser.add_argument( '--coupling2Dplot_Yukawa',                               action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa',                          action=CustomAction )
-    parser.add_argument( '--couplingContourPlotAsimov_Yukawa',                    action=CustomAction )
-    parser.add_argument( '--checkWSParametrization_Yukawa',                       action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_TheoryCrossCheck',         action=CustomAction )
-    parser.add_argument( '--couplingContourPlot_Yukawa_TheoryUncertainties',      action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_BRdependencyComparison',   action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_highLumiStudy',            action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_ProfiledTotalXS',          action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_atfchi2',                  action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_RatioOfBRs',               action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_onlyNormalization',        action=CustomAction )
+
+    parser.add_argument( '--coupling2Dplot_Yukawa',                               action=CustomAction )
+    parser.add_argument( '--checkWSParametrization_Yukawa',                       action=CustomAction )
+    parser.add_argument( '--combinationAndContour_Yukawa',                       action=CustomAction )
 
 
 ########################################
@@ -169,14 +174,20 @@ def main( args ):
         # MAKELUMISCALABLE                  = True
         MAKELUMISCALABLE                  = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
-        # PROFILE_TOTAL_XS                  = True
-        PROFILE_TOTAL_XS                  = False
+        PROFILE_TOTAL_XS                  = True
+        # PROFILE_TOTAL_XS                  = False
+
+        FIT_ONLY_NORMALIZATION            = True
+        # FIT_ONLY_NORMALIZATION            = False
 
         # DO_BR_UNCERTAINTIES               = True
         DO_BR_UNCERTAINTIES               = False
+
+        # FIT_RATIO_OF_BRS                  = True
+        FIT_RATIO_OF_BRS                  = False
 
 
         # ======================================
@@ -264,6 +275,13 @@ def main( args ):
             extraOptions.append( '--PO ProfileTotalXS=True' )
             suffix += '_profiledTotalXS'
 
+        if FIT_RATIO_OF_BRS:
+            extraOptions.append( '--PO FitRatioOfBRs=True' )
+            suffix += '_ratioOfBRs'
+
+        if FIT_ONLY_NORMALIZATION:
+            extraOptions.append( '--PO FitOnlyNormalization=True' )
+            suffix += '_fitOnlyNormalization'
 
         Commands.BasicT2WSwithModel(
             datacard,
@@ -293,6 +311,9 @@ def main( args ):
         # ======================================
         # Flags
 
+        SQUARE_DIST_POI_STEP              = True
+        # SQUARE_DIST_POI_STEP              = False
+
         # LUMISTUDY = True
         LUMISTUDY = False
 
@@ -302,17 +323,35 @@ def main( args ):
         # NO_THEORY_UNCERTAINTIES           = True
         NO_THEORY_UNCERTAINTIES           = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
-        # PROFILE_TOTAL_XS                  = True
-        PROFILE_TOTAL_XS                  = False
+        PROFILE_TOTAL_XS                  = True
+        # PROFILE_TOTAL_XS                  = False
+
+        # ONEDIM_SCAN_TOTALXS               = True
+        ONEDIM_SCAN_TOTALXS               = False
+
+        FIT_ONLY_NORMALIZATION            = True
+        # FIT_ONLY_NORMALIZATION            = False
+
+
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
         # FIX_KAPPAV                        = True
         FIX_KAPPAV                        = False
 
+        # MAX_KAPPAV_ONE                    = True
+        MAX_KAPPAV_ONE                    = False
+
+
         # DO_BR_UNCERTAINTIES               = True
         DO_BR_UNCERTAINTIES               = False
+
+        # FIT_RATIO_OF_BRS                  = True
+        FIT_RATIO_OF_BRS                  = False
+
+        # ONEDIM_SCAN_RATIO_OF_BRS          = True
+        ONEDIM_SCAN_RATIO_OF_BRS          = False
 
         # DO_ONLY_ONE_KAPPA                 = True
         DO_ONLY_ONE_KAPPA                 = False
@@ -327,25 +366,34 @@ def main( args ):
         print '(!) {0} fastscan'.format( 'DOING' if doFastscan else 'NOT DOING' )
         print 'UNCORRELATED_THEORY_UNCERTAINTIES = ', UNCORRELATED_THEORY_UNCERTAINTIES
         print 'NO_THEORY_UNCERTAINTIES           = ', NO_THEORY_UNCERTAINTIES
-        print 'INCLUDE_BR_COUPLING_DEPENDENCY    = ', INCLUDE_BR_COUPLING_DEPENDENCY
+        print
         print 'PROFILE_TOTAL_XS                  = ', PROFILE_TOTAL_XS
+        print 'ONEDIM_SCAN_TOTALXS               = ', ONEDIM_SCAN_TOTALXS
+        print 'FIT_ONLY_NORMALIZATION            = ', FIT_ONLY_NORMALIZATION
+        print
+        print 'INCLUDE_BR_COUPLING_DEPENDENCY    = ', INCLUDE_BR_COUPLING_DEPENDENCY
         print 'FIX_KAPPAV                        = ', FIX_KAPPAV
+        print 'MAX_KAPPAV_ONE                    = ', MAX_KAPPAV_ONE
         print 'DO_BR_UNCERTAINTIES               = ', DO_BR_UNCERTAINTIES
+        print
+        print 'FIT_RATIO_OF_BRS                  = ', FIT_RATIO_OF_BRS
+        print 'ONEDIM_SCAN_RATIO_OF_BRS          = ', ONEDIM_SCAN_RATIO_OF_BRS
+        print
         print 'DO_ONLY_ONE_KAPPA                 = ', DO_ONLY_ONE_KAPPA
         if DO_ONLY_ONE_KAPPA:
-            print 'Chosen kappa                      = {0}'.format(theKappa )
-            print 'Other kappa                       = {0}'.format(theOtherKappa )
+            print '  Chosen kappa                      = {0}'.format(theKappa )
+            print '  Other kappa                       = {0}'.format(theOtherKappa )
+
+        if not INCLUDE_BR_COUPLING_DEPENDENCY and FIX_KAPPAV:
+            Commands.ThrowError( 'INCLUDE_BR_COUPLING_DEPENDENCY == False and FIX_KAPPAV == True is not allowed' )
+        if FIX_KAPPAV and MAX_KAPPAV_ONE:
+            Commands.ThrowError( 'FIX_KAPPAV == True and MAX_KAPPAV_ONE == True is not allowed' )
+        if not FIT_RATIO_OF_BRS and ONEDIM_SCAN_RATIO_OF_BRS:
+            Commands.ThrowError( 'FIT_RATIO_OF_BRS == False and ONEDIM_SCAN_RATIO_OF_BRS == True is not allowed' )
 
 
         # ======================================
         # Set correct input
-
-        # if INCLUDE_BR_COUPLING_DEPENDENCY:
-        #     # combinedDatacard = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
-        #     combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR
-
-        #     if DO_BR_UNCERTAINTIES:
-        #         combinedDatacard = LatestPaths.ws_combined_yukawa_couplingDependentBR_withBRunc
 
         datacard = LatestPaths.ws_combined_Yukawa
         if args.hgg:
@@ -366,7 +414,10 @@ def main( args ):
             datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS
         if INCLUDE_BR_COUPLING_DEPENDENCY:
             datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR
-
+        if FIT_RATIO_OF_BRS:
+            datacard = LatestPaths.ws_combined_ratioOfBRs
+        if FIT_ONLY_NORMALIZATION:
+            datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization
 
         # ======================================
         # Set some job specifics (ranges, number of points)
@@ -377,6 +428,7 @@ def main( args ):
 
         kappab_ranges = [ -15., 15. ]
         kappac_ranges = [ -35., 35. ]
+
 
         if doFastscan:
             jobDirectory += '_fastscan'
@@ -391,54 +443,117 @@ def main( args ):
                 nPointsPerJob = 320
                 queue = 'short.q'
 
+
+        # print '\n' + 'WARNING ' * 7
+        # print 'TEMPORARY SETTINGS  - REMOVE THESE'
+        # kappab_ranges = [ -8., 8. ]
+        # kappac_ranges = [ -20., 20. ]
+        # nPoints = 60*60
+        # SQUARE_DIST_POI_STEP = False
+
+
         if DO_ONLY_ONE_KAPPA:
             nPoints       = 39
             nPointsPerJob = 3
+            queue         = 'short.q'
+
+        if ONEDIM_SCAN_RATIO_OF_BRS or ONEDIM_SCAN_TOTALXS:
+            nPoints       = 50
+            nPointsPerJob = 5
             queue         = 'short.q'
 
 
         # ======================================
         # Construct the fit command and process flags
 
-        extraOptions = [
-            '-P kappab -P kappac' if not DO_ONLY_ONE_KAPPA else '-P {0}'.format(theKappa),
-            '--squareDistPoiStep',
-            # 
-            ( '--setPhysicsModelParameters kappab=1.0,kappac=1.0'
-                + ( ',lumiScale=8.356546' if LUMISTUDY else '' )
-                + ( ',kappa_V=1.0' if INCLUDE_BR_COUPLING_DEPENDENCY else '' )
-                ),
-            # 
-            ( '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format( kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] )
-                + ( ':kappa_V=-100.0,100.0' if ( INCLUDE_BR_COUPLING_DEPENDENCY and not FIX_KAPPAV ) else '' )
-                ),
+        # --------------------
+        # Setting POIs
+
+        POIs = [ 'kappab', 'kappac' ]
+        if DO_ONLY_ONE_KAPPA:
+            POIs = [ theKappa ]
+        if ONEDIM_SCAN_RATIO_OF_BRS:
+            POIs = [ 'ratio_BR_hgg_hzz' ]
+        if ONEDIM_SCAN_TOTALXS:
+            POIs = [ 'r_totalXS' ]
+        # if FIT_ONLY_NORMALIZATION:
+        #     POIs = [ 'globalTotalXSmodifier' ]
+            
+
+        # --------------------
+        # Setting physicsModelParameters
+
+        physicsModelParameters = [ 'kappab=1.0', 'kappac=1.0' ]
+        if LUMISTUDY:
+            physicsModelParameters.append( 'lumiScale=8.356546' )
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            physicsModelParameters.append( 'kappa_V=0.99' )
+        if PROFILE_TOTAL_XS:
+            physicsModelParameters.append( 'r_totalXS=1.0' )
+
+
+        # --------------------
+        # Setting physicsModelParameterRanges
+
+        physicsModelParameterRanges = [
+            'kappab={0},{1}'.format( kappab_ranges[0], kappab_ranges[1] ),
+            'kappac={0},{1}'.format( kappac_ranges[0], kappac_ranges[1] )
             ]
+        if INCLUDE_BR_COUPLING_DEPENDENCY and not FIX_KAPPAV:
+            if MAX_KAPPAV_ONE:
+                physicsModelParameterRanges.append( 'kappa_V=-100.0,1.0' )
+            else:
+                physicsModelParameterRanges.append( 'kappa_V=-100.0,100.0' )
+
+        if ONEDIM_SCAN_RATIO_OF_BRS:
+            # Actually overwrite list contents
+            physicsModelParameterRanges = [ 'ratio_BR_hgg_hzz=0.0,0.25' ]
+
+        if ONEDIM_SCAN_TOTALXS:
+            # Actually overwrite list contents
+            physicsModelParameterRanges = [ 'r_totalXS=0.0,2.0' ]
+
+        # if FIT_ONLY_NORMALIZATION:
+        #     physicsModelParameterRanges = [ 'globalTotalXSmodifier=0.0,2.0' ]
+
+
+        # --------------------
+        # Specify floating and frozen nuisances
+
+        floatNuisances  = []
+        freezeNuisances = []
 
         if INCLUDE_BR_COUPLING_DEPENDENCY:
-            if not FIX_KAPPAV:
-                extraOptions.append( '--floatNuisances kappa_V' )
+            if FIX_KAPPAV:
+                freezeNuisances.append( 'kappa_V' )
             else:
-                extraOptions.append( '--freezeNuisances kappa_V' )
+                floatNuisances.append( 'kappa_V' )
 
         if DO_ONLY_ONE_KAPPA:
-            jobDirectory += '_oneKappa_{0}'.format(theKappa)
-            extraOptions.append( '--floatNuisances {0}'.format(theOtherKappa) )
-        if LUMISTUDY:
-            jobDirectory += '_lumiStudy'
-        if PROFILE_TOTAL_XS:
-            jobDirectory += '_profiledTotalXS'
-        if UNCORRELATED_THEORY_UNCERTAINTIES:
-            jobDirectory += '_uncorrelatedTheoryUncertainties'
-        if NO_THEORY_UNCERTAINTIES:
-            jobDirectory += '_noTheoryUncertainties'
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            jobDirectory += '_couplingDependentBR'
-            if FIX_KAPPAV:
-                jobDirectory += '_fixedKappaV'
-        if ASIMOV:
-            jobDirectory += '_asimov'
+            floatNuisances.append( theOtherKappa )
 
+
+        # --------------------
+        # Construct extraOptions
+
+        extraOptions = [
+            '-P ' + ' -P '.join(POIs),
+            '--setPhysicsModelParameters '      + ','.join(physicsModelParameters),
+            '--setPhysicsModelParameterRanges ' + ':'.join(physicsModelParameterRanges),
+            ]
+
+        if SQUARE_DIST_POI_STEP:
+            extraOptions.append( '--squareDistPoiStep' )
+
+        if len(floatNuisances) > 0:
+            extraOptions.append( '--floatNuisances ' + ','.join(floatNuisances) )
+        if len(freezeNuisances) > 0:
+            extraOptions.append( '--freezeNuisances ' + ','.join(freezeNuisances) )
+
+        
+        # --------------------
         # Compile list of variables to save
+
         variablesToSave = []
         variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
         variablesToSave.extend( [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ] )
@@ -448,8 +563,41 @@ def main( args ):
             variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
         if PROFILE_TOTAL_XS:
             variablesToSave.extend([ 'r_totalXS', 'totalXSmodifier', 'totalXS_SM', 'totalXS' ])
+        if FIT_RATIO_OF_BRS:
+            variablesToSave.extend([ 'hgg_ratioBRmodifier', 'hzz_ratioBRmodifier', 'ratio_BR_hgg_hzz' ])
         extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
 
+
+        # ======================================
+        # Appropriately name scan, create jobDirectoy and submit command
+
+        if DO_ONLY_ONE_KAPPA:
+            jobDirectory += '_oneKappa_{0}'.format(theKappa)
+        if LUMISTUDY:
+            jobDirectory += '_lumiStudy'
+        if PROFILE_TOTAL_XS:
+            jobDirectory += '_profiledTotalXS'
+            if ONEDIM_SCAN_TOTALXS:
+                jobDirectory += '_onedimTotalXSScan'
+            if FIT_ONLY_NORMALIZATION:
+                jobDirectory += '_fitOnlyNormalization'
+        if UNCORRELATED_THEORY_UNCERTAINTIES:
+            jobDirectory += '_uncorrelatedTheoryUncertainties'
+        if NO_THEORY_UNCERTAINTIES:
+            jobDirectory += '_noTheoryUncertainties'
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            jobDirectory += '_couplingDependentBR'
+            if FIX_KAPPAV:
+                jobDirectory += '_fixedKappaV'
+            elif MAX_KAPPAV_ONE:
+                jobDirectory += '_kappaVMaxOne'
+        if FIT_RATIO_OF_BRS:
+            jobDirectory += '_ratioOfBRs'
+            if ONEDIM_SCAN_RATIO_OF_BRS:
+                jobDirectory += '_onedimRatioScan'  
+
+        if ASIMOV:
+            jobDirectory += '_asimov'
 
         jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
         if Commands.IsTestMode(): print '\nWould now create new directory: {0}'.format( basename(jobDirectory) )
@@ -495,14 +643,106 @@ def main( args ):
             container.kappa = kappa
             container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), kappa )
 
-            TheoryCommands.PlotMultipleScans(
+            PlotCommands.PlotMultipleScans(
                 [ container ],
                 xTitle   = kappa,
-                yTitle   = '#Delta NLL',
-                yMax     = 10.,
+                yTitle   = '2#Delta NLL',
+                yMax     = 5.,
                 plotname = 'oneKappaScan_{0}_{1}'.format( kappa, basename(scanDir).replace('/','') ),
-                draw1sigmaline = True
+                draw1sigmaline = True,
+                translateToChi2 = True,
+                printUncertainties = True,
                 )
+
+
+
+    #____________________________________________________________________
+    if args.plot_onedimRatioOfBRs_Yukawa:
+
+        scans = [
+            LatestPaths.scan_combined_Yukawa_ratioOfBRs_onedimRatioScan,
+            LatestPaths.scan_combined_Yukawa_ratioOfBRs_onedimRatioScan_asimov
+            ]
+
+        for scanDir in scans:
+
+            container = Container()
+            container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), 'ratio_BR_hgg_hzz' )
+            container.color = 1
+
+            xBestfit      = container.x[ container.y.index(min(container.y)) ]
+            lineAtBestfit = Container()
+            lineAtBestfit.line = ROOT.TLine( xBestfit, -999, xBestfit, 999 )
+            lineAtBestfit.line.SetLineWidth(2)
+            lineAtBestfit.line.SetLineColor(2)
+
+            xSM           = LatestPaths.SM_ratio_of_BRs
+            lineAtSM      = Container()
+            lineAtSM.line = ROOT.TLine( xSM, -999, xSM, 999 )
+            lineAtSM.line.SetLineWidth(2)
+            lineAtSM.line.SetLineColor(9)
+
+            PlotCommands.PlotMultipleScans(
+                [ container, lineAtSM, lineAtBestfit ],
+                xTitle   = 'BR_{H#rightarrow #gamma#gamma} / BR_{H#rightarrow ZZ}',
+                yTitle   = '2#DeltaNLL',
+                xMin     = 0.0525,
+                xMax     = 0.1425,
+                yMax     = 5.,
+                plotname = 'onedimRatioOfBRs_{0}'.format( basename(scanDir).replace('/','') ),
+                draw1sigmaline = True,
+                translateToChi2 = True
+                )
+
+
+    #____________________________________________________________________
+    if args.plot_onedimTotalXS_Yukawa:
+
+        scans = [
+            LatestPaths.scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan,
+            LatestPaths.scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan_asimov
+            ]
+
+        for scanDir in scans:
+
+            container = Container()
+            container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), 'r_totalXS' )
+            container.color = 1
+
+            xBestfit      = container.x[ container.y.index(min(container.y)) ]
+            lineAtBestfit = Container()
+            lineAtBestfit.line = ROOT.TLine( xBestfit, -999, xBestfit, 999 )
+            lineAtBestfit.line.SetLineWidth(2)
+            lineAtBestfit.line.SetLineColor(2)
+
+            unc = PhysicsCommands.FindMinimaAndErrors( container.x, container.y, returnContainer=True )
+            uncLines = []
+            for x in [ unc.leftBound, unc.rightBound ]:
+                uncLine = Container()
+                uncLine.line = ROOT.TLine( x, 0., x, 1.0 )
+                uncLine.line.SetLineWidth(1)
+                uncLine.line.SetLineColor(2)
+                uncLines.append(uncLine)
+
+            xSM           = 1.0
+            lineAtSM      = Container()
+            lineAtSM.line = ROOT.TLine( xSM, -999, xSM, 999 )
+            lineAtSM.line.SetLineWidth(2)
+            lineAtSM.line.SetLineColor(9)
+
+            PlotCommands.PlotMultipleScans(
+                [ container, lineAtSM, lineAtBestfit ] + uncLines,
+                xTitle   = '#mu_{#sigma_{tot}}',
+                yTitle   = '2#DeltaNLL',
+                xMin     = 0.6,
+                xMax     = 1.4,
+                yMax     = 5.,
+                plotname = 'onedimTotalXS_{0}'.format( basename(scanDir).replace('/','') ),
+                draw1sigmaline = True,
+                translateToChi2 = True,
+                printUncertainties = True
+                )
+
 
     #____________________________________________________________________
     if args.coupling2Dplot_Yukawa:
@@ -535,8 +775,10 @@ def main( args ):
 
     if args.couplingContourPlot_Yukawa:
 
-        # ASIMOV = True
         ASIMOV = False
+        if args.asimov: ASIMOV = True
+
+
         if ASIMOV: print 'Warning: plotting ASIMOV scans'
 
         xCoupling = 'kappac'
@@ -585,7 +827,7 @@ def main( args ):
         TH2FsToPlot.append(hzz)
 
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             TH2FsToPlot,
             xMin = -35.,
             xMax = 35.,
@@ -594,6 +836,54 @@ def main( args ):
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_perDecayChannel' + ( '_asimov' if ASIMOV else '' ),
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_RatioOfBRs:
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        containers = []
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name  = 'regular'
+        combined.title = 'SM BR'
+        containers.append(combined)
+
+        ratioOfBRs_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_ratioOfBRs_asimov ) )
+        ratioOfBRs = TheoryCommands.GetTH2FromListOfRootFiles(
+            ratioOfBRs_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        ratioOfBRs.color = 4
+        ratioOfBRs.name  = 'ratioOfBRs'
+        ratioOfBRs.title = 'floating BR_{H#gamma#gamma}/BR_{HZZ}'
+        containers.append(ratioOfBRs)
+
+        PlotCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_ratioOfBRs',
             x_SM      = 1.,
             y_SM      = 1.,
             plotIndividualH2s = True,
@@ -633,7 +923,7 @@ def main( args ):
         profiledTotalXS.title = '#sigma_{tot} profiled'
         containers.append(profiledTotalXS)
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             xMin = -35.,
             xMax = 35.,
@@ -693,12 +983,12 @@ def main( args ):
         uncTheoryUnc.title = 'Uncorr. unc.'
         containers.append(uncTheoryUnc)
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -15.,
-            yMax = 15.,
+            xMin = -25.,
+            xMax = 25.,
+            yMin = -9.,
+            yMax = 9.,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_theoryCrossCheck',
@@ -754,23 +1044,25 @@ def main( args ):
         scalingBRfixedKappaV.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
         containers.append( scalingBRfixedKappaV )
 
-        # scalingBR_withBRunc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_yukawa_combined_asimov_couplingDependentBR_withBRunc ) )
-        # scalingBR_withBRunc = TheoryCommands.GetTH2FromListOfRootFiles(
-        #     scalingBR_withBRunc_rootfiles,
-        #     xCoupling,
-        #     yCoupling,
-        #     verbose   = False,
-        #     )
-        # scalingBR_withBRunc.color = 8
-        # scalingBR_withBRunc.name = 'scalingBR_withBRunc'
-        # scalingBR_withBRunc.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
+
+        scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_kappaVMaxOne_asimov ) )
+        scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
+            scalingBRkappaVMaxOne_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBRkappaVMaxOne.color = 8
+        scalingBRkappaVMaxOne.name = 'scalingBRkappaVMaxOne'
+        scalingBRkappaVMaxOne.title = 'BR(#kappa_{t}, #kappa_{V}#leq1)'
+        containers.append( scalingBRkappaVMaxOne )
 
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
+            xMin = -25.,
+            xMax = 25.,
+            yMin = -9.,
             yMax = 13.,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
@@ -814,7 +1106,46 @@ def main( args ):
         containers.append(highLumi)
 
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -25.,
+            xMax = 25.,
+            yMin = -9.,
+            yMax = 9.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_highLumiStudy',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_onlyNormalization:
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        containers = []
+
+        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles( combined_rootfiles, xCoupling, yCoupling, verbose   = False, )
+        combined.color = 1
+        combined.name  = 'combined'
+        combined.title = 'Nominal'
+        containers.append(combined)
+
+        onlyNormalization_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_fitOnlyNormalization_asimov ) )
+        onlyNormalization = TheoryCommands.GetTH2FromListOfRootFiles( onlyNormalization_rootfiles, xCoupling, yCoupling, verbose   = False, )
+        onlyNormalization.color = 2
+        onlyNormalization.name  = 'onlyNormalization'
+        onlyNormalization.title = 'Only normalization'
+        containers.append(onlyNormalization)
+
+        PlotCommands.BasicMixedContourPlot(
             containers,
             xMin = -35.,
             xMax = 35.,
@@ -822,7 +1153,7 @@ def main( args ):
             yMax = 13.,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
-            plotname  = 'contours_highLumiStudy',
+            plotname  = 'contours_onlyNormalization',
             x_SM      = 1.,
             y_SM      = 1.,
             plotIndividualH2s = True,
@@ -880,7 +1211,7 @@ def main( args ):
         containers.append( atfchi2 )
 
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             xMin = -35.,
             xMax = 35.,
@@ -897,7 +1228,8 @@ def main( args ):
     #____________________________________________________________________
     if args.checkWSParametrization_Yukawa:
 
-        plotCombination = False
+        # plotCombination = False
+        plotCombination = True
 
         # DrawExperimentalBinLines = False
         DrawExperimentalBinLines = True
@@ -910,7 +1242,7 @@ def main( args ):
         # theoryDir = LatestPaths.derivedTheoryFiles_YukawaGluonInduced
 
         # wsToCheck = LatestPaths.ws_onlyhzz_split_yukawa
-        wsToCheck = LatestPaths.ws_combined_yukawa
+        wsToCheck = LatestPaths.ws_combined_Yukawa
         theoryDir = LatestPaths.derivedTheoryFiles_YukawaSummed
         
 
@@ -1106,6 +1438,31 @@ def main( args ):
 
         outname = '{0}_parametrizationCheck'.format( basename(wsToCheck) )
         SaveC( outname )
+
+
+    #____________________________________________________________________
+    if args.combinationAndContour_Yukawa:
+
+        container = Container()
+
+        container.expBinBoundaries    = expBinBoundaries
+        container.ws_combination      = LatestPaths.ws_combined_smH
+        container.scanDir_combination = LatestPaths.scan_combined_PTH
+        container.ws_coupling         = LatestPaths.ws_combined_Yukawa
+        container.scanDir_coupling    = LatestPaths.scan_combined_Yukawa
+
+        container.xCoupling           = 'kappac'
+        container.yCoupling           = 'kappab'
+        container.xCouplingTitle      = '#kappa_{c}'
+        container.yCouplingTitle      = '#kappa_{b}'
+
+        container.plotTitle           = 'comparison_Yukawa'
+
+        container.MaximaOfContour     = True
+        container.BestFit             = True
+
+        PlotCommands.PlotParametrizationsOnCombination( container )
+
 
 
 

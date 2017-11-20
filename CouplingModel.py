@@ -33,12 +33,14 @@ class CouplingModel( PhysicsModel ):
         self.isOnlyHgg = False
         self.isOnlyHZZ = False
 
-        self.includeLinearTerms = False
-        self.splitggH           = False
-        self.MakeLumiScalable   = False
-        self.FitBR              = False
-        self.ProfileTotalXS     = False
-        self.DoBRUncertainties  = False
+        self.includeLinearTerms   = False
+        self.splitggH             = False
+        self.MakeLumiScalable     = False
+        self.FitBR                = False
+        self.ProfileTotalXS       = False
+        self.FitOnlyNormalization = False
+        self.FitRatioOfBRs        = False
+        self.DoBRUncertainties    = False
 
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
@@ -52,10 +54,6 @@ class CouplingModel( PhysicsModel ):
 
         self.SM_HIGG_DECAYS = [ "hww", "hzz", "hgg", "htt", "hbb", 'hzg', 'hmm', 'hcc', 'hgluglu' ]
         self.SM_HIGG_DECAYS.append( 'hss' )
-
-
-
-
 
 
     ################################################################################
@@ -80,6 +78,12 @@ class CouplingModel( PhysicsModel ):
 
             elif optionName == 'ProfileTotalXS':
                 self.ProfileTotalXS = eval(optionValue)
+
+            elif optionName == 'FitOnlyNormalization':
+                self.FitOnlyNormalization = eval(optionValue)
+
+            elif optionName == 'FitRatioOfBRs':
+                self.FitRatioOfBRs = eval(optionValue)
 
             elif optionName == 'splitggH':
                 self.splitggH = eval(optionValue)
@@ -186,6 +190,10 @@ class CouplingModel( PhysicsModel ):
                 continue
 
 
+        if self.FitBR and self.FitRatioOfBRs:
+            raise CouplingModelError( 'Options FitBR and FitRatioOfBRs are exclusive!' )
+
+
     #____________________________________________________________________
     def doParametersOfInterest(self):
         self.chapter( 'Starting model.doParametersOfInterest()' )
@@ -196,7 +204,14 @@ class CouplingModel( PhysicsModel ):
 
         self.makeParametrizationsFromTheory()
 
-        self.MakeTotalXSExpression()
+        if self.FitBR:
+            self.MakeWidthExpressions()
+    
+        if self.ProfileTotalXS:
+            self.MakeTotalXSExpressions()
+
+        if self.FitRatioOfBRs:
+            self.MakeRatioOfBRsExpressions()
 
         self.defineYieldParameters()
 
@@ -224,10 +239,15 @@ class CouplingModel( PhysicsModel ):
         elif 'OutsideAcceptance' in process:
             yieldParameter = 'hgg_OutsideAcceptance_modifier' if self.BinIsHgg(bin) else 'hzz_OutsideAcceptance_modifier'
 
+            if self.FitOnlyNormalization:
+                yieldParameter = 'globalTotalXSmodifier'
+
         else:
             if self.splitggH and 'xH' in process:
                 yieldParameter = 'hgg_xH_modifier' if self.BinIsHgg(bin) else 'hzz_xH_modifier'
 
+            elif self.FitOnlyNormalization:
+                yieldParameter = 'globalTotalXSmodifier'
 
             elif ( self.splitggH and 'ggH' in process ) or ( 'smH' in process ):
                 # If it's a ggH process
@@ -559,13 +579,6 @@ class CouplingModel( PhysicsModel ):
             self.modelBuilder.doVar( 'lumiScale[1.0]' )
             self.modelBuilder.out.var('lumiScale').setConstant()
 
-        if self.FitBR:
-            self.MakeWidthExpressions()
-    
-        if self.ProfileTotalXS:
-            self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,3.0]' )
-            self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS_SM, totalXS )' )
-
 
         # ======================================
         # Start of loop over experimental bins
@@ -715,7 +728,7 @@ class CouplingModel( PhysicsModel ):
                     if self.verbose > 1:
                         print '\n  Weight for component {0}, parametrization {1}'.format( iComponent, iParametrization )
                         print '    weight = {0:+8.3f} ( ( binWidth[{1:+8.3f}] * SMXS/GeV[{2:+8.3f}] ) / SMXS_expBin[{3:+8.3f}] )'.format(
-                            weight, binWidth, self.SMXS[iParametrization], weight
+                            weight, binWidth, self.SMXS[iParametrization], SMXSInsideExperimentalBin
                             )
 
                 componentWeights.append( parametrizationWeights )
@@ -843,6 +856,10 @@ class CouplingModel( PhysicsModel ):
                 hgg_modifiers.append( 'totalXSmodifier' )
                 hzz_modifiers.append( 'totalXSmodifier' )
 
+            if self.FitRatioOfBRs:
+                hgg_modifiers.append( 'hgg_ratioBRmodifier' )
+                hzz_modifiers.append( 'hzz_ratioBRmodifier' )
+
             self.modelBuilder.factory_( 'prod::r_hgg_{0}({1})'.format( expBinStr, ','.join(hgg_modifiers) ) )
             self.modelBuilder.factory_( 'prod::r_hzz_{0}({1})'.format( expBinStr, ','.join(hzz_modifiers) ) )
 
@@ -909,6 +926,10 @@ class CouplingModel( PhysicsModel ):
             ]))
 
         self.SMXSInsideExperimentalBins = SMXSInsideExperimentalBins
+
+        if self.FitRatioOfBRs:
+            self.modelBuilder.out.set('POI').add( self.modelBuilder.out.var('hgg_ratioBRmodifier') )
+            self.modelBuilder.out.set('POI').add( self.modelBuilder.out.var('ratio_BR_hgg_hzz') )
 
 
         if self.verbose:
@@ -1082,7 +1103,51 @@ class CouplingModel( PhysicsModel ):
     # Helper functions
     ################################################################################
 
-    def MakeTotalXSExpression( self ):
+    #____________________________________________________________________
+    def MakeRatioOfBRsExpressions( self ):
+        self.chapter( 'Starting model.MakeRatioOfBRsExpressions()' )
+
+        # Define the two floating pars
+        self.modelBuilder.doVar( 'hgg_ratioBRmodifier[1.0,-2.0,4.0]' )
+        self.modelBuilder.doVar( 'ratio_BR_hgg_hzz[0.086,0.0,0.5]' )
+
+        # Load spline for HZZ BR (function of MH)
+        self.SMH = SMHiggsBuilder(self.modelBuilder)
+        datadir = os.environ['CMSSW_BASE'] + '/src/HiggsAnalysis/CombinedLimit/data/lhc-hxswg'
+        self.SMH.textToSpline( 'BR_hzz', os.path.join( datadir, 'sm/br/BR4.txt' ), ycol=11 );
+        spline_SMBR_hzz = self.modelBuilder.out.function('BR_hzz')
+
+        # Seems to work:
+        # self.modelBuilder.out.var('MH').setVal(125.09)
+        # spline_SMBR_hzz.Print()
+
+        # Load spling for Hgg BR
+        spline_SMBR_hgg = self.modelBuilder.out.function('fbr_13TeV')
+
+
+        # ======================================
+        # Create 'hzz_BRmodifier', as a function of 'hgg_BRmodifier' and 'ratio_BR_hgg_hzz'
+
+        hzz_modifier_expr = 'expr::{name}("{formula}",{commaSeparatedParameters})'.format(
+            name                     = 'hzz_ratioBRmodifier',
+            formula                  = '@0*(@1/@2)/@3',
+            commaSeparatedParameters = ','.join([
+                'hgg_ratioBRmodifier',
+                spline_SMBR_hgg.GetName(),
+                spline_SMBR_hzz.GetName(),
+                'ratio_BR_hgg_hzz'
+                ])
+            )
+        print 'Processing expr:'
+        print '    ',hzz_modifier_expr
+        self.modelBuilder.factory_( hzz_modifier_expr )
+
+
+    #____________________________________________________________________
+    def MakeTotalXSExpressions( self ):
+        self.chapter( 'Starting model.MakeTotalXSExpressions()' )
+
+        self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,3.0]' )
 
         thingsToSum = []
 
@@ -1104,8 +1169,28 @@ class CouplingModel( PhysicsModel ):
                 )
             )
 
-        self.modelBuilder.doVar( 'totalXS_SM[55.70628722]' )
+        # Get the SM xs by evaluating the parametrization at SM
+
+        # Make sure couplings are at SM
+        for coupling in self.couplings:
+            self.modelBuilder.out.var(coupling).setVal( self.SMDict['couplings'][coupling] )
+
+        # self.modelBuilder.doVar( 'totalXS_SM[55.70628722]' )
+        # Set SM spectrum integral to the SM xs
+        self.modelBuilder.doVar( 'totalXS_SM[{0}]'.format(
+            self.modelBuilder.out.function('totalXS').getVal()
+            ))
         self.modelBuilder.out.var('totalXS_SM').setConstant(True)
+
+
+        self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS_SM, totalXS )' )
+
+
+        if self.FitOnlyNormalization:
+            # Make also modifier if only fitting normalization
+            self.modelBuilder.out.var('r_totalXS').setVal(1.0)
+            self.modelBuilder.out.var('r_totalXS').setConstant(True)
+            self.modelBuilder.factory_( 'expr::globalTotalXSmodifier( "@0/@1", totalXS, totalXS_SM )' )
 
 
     #____________________________________________________________________
@@ -1152,6 +1237,7 @@ class CouplingModel( PhysicsModel ):
 
     #____________________________________________________________________
     def MakeWidthExpressions( self ):
+        self.chapter( 'Starting model.MakeWidthExpressions()' )
 
         # ======================================
         # Prepare some variables in expressions in WS
