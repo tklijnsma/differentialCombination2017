@@ -22,6 +22,7 @@ import onetimeplotsCommands
 # import highLumiStudyCommands
 import extrastudyCommands
 import rapidityCommands
+import scanCommands
 
 import sys
 sys.path.append('src')
@@ -48,6 +49,9 @@ def main():
 
     import argparse
     parser = argparse.ArgumentParser()
+
+    parser.add_argument( '--bkg',                             action='store_true' )
+
     parser.add_argument( '--test',                            action='store_true' )
 
     parser.add_argument( '--fastscan',                        action='store_true' )
@@ -65,6 +69,7 @@ def main():
     onetimeplotsCommands.AppendParserOptions(parser)
     extrastudyCommands.AppendParserOptions(parser)
     rapidityCommands.AppendParserOptions(parser)
+    scanCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
@@ -83,10 +88,22 @@ def main():
     print args
     print ''
 
+
+    if args.bkg:
+        pass
+
     if args.test: Commands.TestMode()
 
     if args.saveroot:
         TheoryCommands.SaveAsRoot()
+
+
+    ########################################
+    # Encompassing module for submitting scans from yukawa and top
+    ########################################
+
+    if args.scanCommands:
+        scanCommands.main(args)
 
 
     ########################################

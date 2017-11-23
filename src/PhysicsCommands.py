@@ -239,6 +239,8 @@ def BasicDrawScanResults(
             'r_smH_NJ_2'        : colorCycle.next(),
             'r_smH_NJ_3'        : colorCycle.next(),
             'r_smH_NJ_GE4'      : colorCycle.next(),
+            # 
+            'r_smH_PTH_GT200'   : 29,
             }
 
         if POI in knownPOIs:
@@ -598,7 +600,8 @@ def BasicCombineSpectra(
     if not isRatioPlot:
         c.SetLogy()
         yMax = yMax * 2.
-        yMin = max( yMin, 0.01 )
+        yMinExternal = kwargs.get( 'yMin', 0.01 )
+        yMin = max( yMin, yMinExternal )
         # xMax = 600.
 
     if IsBottomRatioPlot:

@@ -1,0 +1,17 @@
+#!/bin/bash
+COMMANDLINE="$*"
+mkdir -p bkglogs
+TIMESTAMP=`date '+%Y-%m-%d-%H%M%S'`
+
+name="bkglogs/bkg_${TIMESTAMP}"
+if [[ -e $name.log ]] ; then
+    i=0
+    while [[ -e $name-$i.log ]] ; do
+        let i++
+    done
+    name=$name-$i
+fi
+
+LOGFILE="$name.log"
+# nohup $COMMANDLINE </dev/null >command.log 2>&1 &
+nohup $COMMANDLINE --bkg </dev/null >$LOGFILE 2>&1 &

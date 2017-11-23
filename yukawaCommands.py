@@ -21,6 +21,7 @@ import TheoryFileInterface
 import PlotCommands
 from Container import Container
 from Parametrization import Parametrization, WSParametrization
+import CombineToolWrapper
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -616,6 +617,8 @@ def main( args ):
             )
 
 
+
+
     # 
     # 
     ################################################################################
@@ -756,7 +759,9 @@ def main( args ):
         #     datacard  = hzzDatacard
         #     rootfiles = hzzScanFiles
 
-        rootfiles = glob( LatestPaths.scan_combined_Yukawa + '/*.root' )
+        # rootfiles = glob( LatestPaths.scan_combined_Yukawa + '/*.root' )
+        # rootfiles = glob( 'testscan_Nov22' + '/*.root' )
+        rootfiles = glob( 'Scan_Yukawa_Nov23_0' + '/*.root' )
 
         res = TheoryCommands.PlotCouplingScan2D(
             rootfiles,
@@ -1020,17 +1025,17 @@ def main( args ):
         combined.title = 'BR constant'
         containers.append( combined )
 
-        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_asimov ) )
-        scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
-            scalingBR_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        scalingBR.color = 2
-        scalingBR.name = 'scalingBR'
-        scalingBR.title = 'BR(#kappa_{t}, #kappa_{V})'
-        containers.append( scalingBR )
+        # scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_asimov ) )
+        # scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     scalingBR_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # scalingBR.color = 2
+        # scalingBR.name = 'scalingBR'
+        # scalingBR.title = 'BR(#kappa_{t}, #kappa_{V})'
+        # containers.append( scalingBR )
 
         scalingBRfixedKappaV_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_fixedKappaV_asimov ) )
         scalingBRfixedKappaV = TheoryCommands.GetTH2FromListOfRootFiles(
@@ -1041,21 +1046,21 @@ def main( args ):
             )
         scalingBRfixedKappaV.color = 4
         scalingBRfixedKappaV.name = 'scalingBRfixedKappaV'
-        scalingBRfixedKappaV.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
+        scalingBRfixedKappaV.title = 'BR(#kappa_{b}, #kappa_{c})' # + ' (#kappa_{V} fixed)'
         containers.append( scalingBRfixedKappaV )
 
 
-        scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_kappaVMaxOne_asimov ) )
-        scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
-            scalingBRkappaVMaxOne_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        scalingBRkappaVMaxOne.color = 8
-        scalingBRkappaVMaxOne.name = 'scalingBRkappaVMaxOne'
-        scalingBRkappaVMaxOne.title = 'BR(#kappa_{t}, #kappa_{V}#leq1)'
-        containers.append( scalingBRkappaVMaxOne )
+        # scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_kappaVMaxOne_asimov ) )
+        # scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     scalingBRkappaVMaxOne_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # scalingBRkappaVMaxOne.color = 8
+        # scalingBRkappaVMaxOne.name = 'scalingBRkappaVMaxOne'
+        # scalingBRkappaVMaxOne.title = 'BR(#kappa_{t}, #kappa_{V}#leq1)'
+        # containers.append( scalingBRkappaVMaxOne )
 
 
         PlotCommands.BasicMixedContourPlot(
@@ -1213,10 +1218,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
-            yMax = 13.,
+            xMin = -25.,
+            xMax = 25.,
+            yMin = -9.,
+            yMax = 9.,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_atfchi2',

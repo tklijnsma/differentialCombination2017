@@ -984,11 +984,11 @@ def ConvertTGraphToLinesAndBoxes(
             yBoxLow  = y - yMin
             yBoxHigh = y + yMax
 
-            print ''
-            print 'Nominal line y = {0}'.format( yLine )
-            print 'Nominal box y: low = {0}, high = {1}'.format( yBoxLow, yBoxHigh )
-            print 'yMinExternal = ', yMinExternal
-            print 'yMaxExternal = ', yMaxExternal
+            # print ''
+            # print 'Nominal line y = {0}'.format( yLine )
+            # print 'Nominal box y: low = {0}, high = {1}'.format( yBoxLow, yBoxHigh )
+            # print 'yMinExternal = ', yMinExternal
+            # print 'yMaxExternal = ', yMaxExternal
 
             drawLine = True
             drawBox  = True
@@ -1017,8 +1017,8 @@ def ConvertTGraphToLinesAndBoxes(
             if drawLine: line.Draw()
 
 
-            print 'drawLine = ', drawLine
-            print 'drawBox  = ', drawBox
+            # print 'drawLine = ', drawLine
+            # print 'drawBox  = ', drawBox
 
 
 

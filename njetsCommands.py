@@ -259,7 +259,8 @@ def main( args ):
             hgg_SMXS         = xs_fineBinning,
             combination_SMXS = xs_fineBinning,
             # legendLeft       = True
-            asROOT           = True
+            asROOT           = True,
+            yMin             = 0.01
             )
 
 

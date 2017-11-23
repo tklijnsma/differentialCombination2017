@@ -923,14 +923,44 @@ def main( args ):
         # Scan for some points
 
         points = [
+
             #  ( kappac, kappab )
-            ( 1.0,    1.0 ),
-            ( 10.,    1.0 ),
-            ( -5.,    2.0 ),
-            ( 0.,     200. ),
-            ( 505.0,  505.0 ),
-            ( -495.0, 505. ),
-            ( 0.,     100000. )
+            # ( 1.0,    1.0 ),
+            # ( 10.,    1.0 ),
+            # ( -5.,    2.0 ),
+            # ( 0.,     200. ),
+            # ( 505.0,  505.0 ),
+            # ( -495.0, 505. ),
+            # ( 0.,     100000. )
+
+            # ( 0., 0. ),
+            # ( 1., 1. ),
+            # ( 2., 2. ),
+            # ( 4., 4. ),
+            # ( 10., 10. ),
+            # ( 100., 100. ),
+            # ( 1000., 1000. ),
+            # ( 10000., 10000. ),
+
+            ( 10., 0. ),
+            ( 10., 1./10. ),
+            ( 10., 1./3. ),
+            ( 10., 1./5. ),
+            ( 10., 1. ),
+            ( 10., 3. ),
+            ( 10., 5. ),
+            ( 10., 10. ),
+
+            ( 10., -1./10. ),
+            ( 10., -1./3. ),
+            ( 10., -1./5. ),
+            ( 10., -1. ),
+            ( 10., -3. ),
+            ( 10., -5. ),
+            ( 10., -10. ),
+
+            ( -10., 0. ),            
+
             ]
 
 
@@ -1081,8 +1111,8 @@ def main( args ):
         corrMatFile = 'corrMat_Nov08_combinedCard_Nov03_xHfixed/higgsCombine_CORRMAT_combinedCard_Nov03_xHfixed.MultiDimFit.mH125.root'
 
 
-        NORMALIZE_BY_SMXS = True
-        # NORMALIZE_BY_SMXS = False
+        # NORMALIZE_BY_SMXS = True
+        NORMALIZE_BY_SMXS = False
 
 
 
@@ -1306,10 +1336,16 @@ def main( args ):
             kappabMin = -23.
             kappabMax = 23.
         else:
-            kappacMin = -1000.
-            kappacMax = 1000.
-            kappabMin = -1000.
-            kappabMax = 1000.
+            # kappacMin = -1000.
+            # kappacMax = 1000.
+            # kappabMin = -1000.
+            # kappabMax = 1000.
+
+            kappacMin = -100000.
+            kappacMax = 100000.
+            kappabMin = -100000.
+            kappabMax = 100000.
+
 
 
         kappacNPoints       = 200

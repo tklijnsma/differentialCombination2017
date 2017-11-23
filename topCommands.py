@@ -65,6 +65,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--checkWSParametrization_Top',                    action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_lumiStudy',             action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_BRdependencyComparison',  action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Top_BRdependencyComparison_bigRange',  action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_ProfiledTotalXS',       action=CustomAction )
 
     parser.add_argument( '--couplingContourPlot_Top_onlyNormalization',     action=CustomAction )
@@ -635,7 +636,10 @@ def main( args ):
     #____________________________________________________________________
     if args.coupling2Dplot_Top:
 
-        rootfiles = glob( LatestPaths.scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov + '/*.root' )
+        # rootfiles = glob( LatestPaths.scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov + '/*.root' )
+
+        # rootfiles = glob( 'Scan_Top_Nov23_hzz_0' + '/*.root' )
+        rootfiles = glob( 'Scan_Top_Nov23_hzz_asimov_2' + '/*.root' )
 
         res = TheoryCommands.PlotCouplingScan2D(
             rootfiles,
@@ -673,6 +677,9 @@ def main( args ):
         ASIMOV = False
         if args.asimov: ASIMOV = True
 
+        # EXTENDED_RANGE = True
+        EXTENDED_RANGE = False
+
         if not ASIMOV:
             combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_Top) )
             hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_Top) )
@@ -681,6 +688,14 @@ def main( args ):
             combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_Top_asimov) )
             hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_Top_asimov) )
             hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_Top_asimov) )
+
+
+        if EXTENDED_RANGE:
+            combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_Top_extendedRange_asimov) )
+            hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_Top_extendedRange_asimov) )
+            hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_Top_extendedRange_asimov) )
+
+
 
         hgg = TheoryCommands.GetTH2FromListOfRootFiles(
             hgg_rootfiles,
@@ -716,7 +731,7 @@ def main( args ):
             ]
         for container in containers: container.title = titles.get( container.name, container.name )
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             # xMin = -0.2,
             # xMax = 2.0,
@@ -726,7 +741,7 @@ def main( args ):
             yMin = -0.1,  yMax = 0.2,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
-            plotname  = 'contours_Top' + ( '_asimov' if ASIMOV else '' ),
+            plotname  = 'contours_Top' + ( '_asimov' if ASIMOV else '' ) + ( '_extendedRange' if ASIMOV else '' ),
             x_SM      = 1.,
             y_SM      = 0.,
             plotIndividualH2s = True,
@@ -757,7 +772,7 @@ def main( args ):
         skippedLastBin.title = 'Last bin not fitted'
         containers.append(skippedLastBin)
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             # xMin = -0.2,
             # xMax = 2.0,
@@ -799,7 +814,7 @@ def main( args ):
         combined.title = 'Combination'
         containers.append(combined)
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             xMin = -2.0,
             xMax = 6.5,
@@ -842,7 +857,7 @@ def main( args ):
         onlyNormalization.title = 'Only normalization'
         containers.append(onlyNormalization)
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             xMin = ctMin,
             xMax = ctMax,
@@ -911,14 +926,14 @@ def main( args ):
         containers.append(combined)
 
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             # xMin = -0.2,
             # xMax = 2.0,
             # yMin = -0.08,
             # yMax = 0.135,
             xMin = -1.0,  xMax = 2.0,
-            yMin = -8.0,  yMax = 10.0,
+            yMin = -10.0,  yMax = 15.0,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_TopCtCb' + ( '_asimov' if ASIMOV else '' ),
@@ -932,6 +947,11 @@ def main( args ):
     if args.couplingContourPlot_Top_lumiStudy:
 
         containers = []
+
+        ctMin = -1.0
+        ctMax = 2.0
+        cgMin = -0.1
+        cgMax = 0.2
 
         combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_asimov ) )
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
@@ -959,16 +979,16 @@ def main( args ):
         containers.append(combined_lum8)
 
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             # xMin = -0.2,
             # xMax = 2.0,
             # yMin = -0.08,
             # yMax = 0.135,
-            xMin = 0.6,
-            xMax = 1.3,
-            yMin = -0.04,
-            yMax = 0.03,
+            xMin = ctMin,
+            xMax = ctMax,
+            yMin = cgMin,
+            yMax = cgMax,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_LumiStudy',
@@ -1006,7 +1026,7 @@ def main( args ):
         profiledTotalXS.title = '#sigma profiled'
         containers.append(profiledTotalXS)
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             xMin = -0.2,
             xMax = 2.0,
@@ -1042,17 +1062,17 @@ def main( args ):
         combined.title = 'BR constant'
         containers.append( combined )
 
-        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_asimov ) )
-        scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
-            scalingBR_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        scalingBR.color = 2
-        scalingBR.name = 'scalingBR'
-        scalingBR.title = 'BR(#kappa_{t}, #kappa_{V})'
-        containers.append( scalingBR )
+        # scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_asimov ) )
+        # scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     scalingBR_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # scalingBR.color = 2
+        # scalingBR.name = 'scalingBR'
+        # scalingBR.title = 'BR(#kappa_{t}, #kappa_{V})'
+        # containers.append( scalingBR )
 
         scalingBRfixedKappaV_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_fixedKappaV_asimov ) )
         scalingBRfixedKappaV = TheoryCommands.GetTH2FromListOfRootFiles(
@@ -1066,20 +1086,20 @@ def main( args ):
         scalingBRfixedKappaV.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
         containers.append( scalingBRfixedKappaV )
 
-        scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov ) )
-        scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
-            scalingBRkappaVMaxOne_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        scalingBRkappaVMaxOne.color = 8
-        scalingBRkappaVMaxOne.name = 'scalingBRkappaVMaxOne'
-        scalingBRkappaVMaxOne.title = 'BR(#kappa_{t}, #kappa_{V}#leq1)'
-        containers.append( scalingBRkappaVMaxOne )
+        # scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov ) )
+        # scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     scalingBRkappaVMaxOne_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # scalingBRkappaVMaxOne.color = 8
+        # scalingBRkappaVMaxOne.name = 'scalingBRkappaVMaxOne'
+        # scalingBRkappaVMaxOne.title = 'BR(#kappa_{t}, #kappa_{V}#leq1)'
+        # containers.append( scalingBRkappaVMaxOne )
 
 
-        TheoryCommands.BasicMixedContourPlot(
+        PlotCommands.BasicMixedContourPlot(
             containers,
             xMin = -0.2,
             xMax = 2.0,
@@ -1088,6 +1108,55 @@ def main( args ):
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_BRcouplingDependency',
+            x_SM      = 1.,
+            y_SM      = 0.,
+            plotIndividualH2s = True,
+            )
+
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top_BRdependencyComparison_bigRange:
+
+        containers = []
+
+        xCoupling = 'ct'
+        yCoupling = 'cg'
+        titles = { 'ct': '#kappa_{t}', 'cg' : '#kappa_{g}' }
+
+        # combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_asimov) )
+        # combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     combined_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # combined.color = 1
+        # combined.name = 'regularBR'
+        # combined.title = 'BR constant'
+        # containers.append( combined )
+
+        scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_bigRange_asimov ) )
+        scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
+            scalingBR_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBR.color = 1
+        scalingBR.name = 'scalingBR'
+        scalingBR.title = 'BR(#kappa_{t}, #kappa_{V})'
+        containers.append( scalingBR )
+
+        PlotCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -0.5,
+            xMax = 3.0,
+            yMin = -0.25,
+            yMax = 0.45,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_BRcouplingDependency_bigRange',
             x_SM      = 1.,
             y_SM      = 0.,
             plotIndividualH2s = True,
@@ -1368,12 +1437,13 @@ def main( args ):
 
         suffix = ''
 
-        # container.ws_coupling         = LatestPaths.ws_combined_Top
+        container.ws_coupling         = LatestPaths.ws_combined_Top
         # container.scanDir_coupling    = LatestPaths.scan_combined_Top
+        container.scanDir_coupling    = LatestPaths.scan_combined_Top_bigRange2
 
-        container.ws_coupling         = LatestPaths.ws_combined_Top_skippedLastBin
-        container.scanDir_coupling    = LatestPaths.scan_combined_Top_skippedLastBin        
-        suffix += '_skippedLastBin'
+        # container.ws_coupling         = LatestPaths.ws_combined_Top_skippedLastBin
+        # container.scanDir_coupling    = LatestPaths.scan_combined_Top_skippedLastBin        
+        # suffix += '_skippedLastBin'
 
         container.xCoupling           = 'ct'
         container.yCoupling           = 'cg'
@@ -1383,19 +1453,26 @@ def main( args ):
         container.plotTitle           = 'comparison_Top' + suffix
 
         # container.MaximaOfContour     = True
-        container.StraightLineToSM     = True
-        container.BestFit             = True
+        # container.StraightLineToSM      = True
+        container.BestFit               = True
+        container.OnlyYMaximaOfContour  = True
 
         container.xSM                 = 1.0
         container.ySM                 = 0.0
 
         container.ManualPoints = [
             ( lambda xBestfit, xSM: xSM, lambda yBestfit, ySM: ySM ),
+            ( lambda xBestfit, xSM: xBestfit + 1.0*(xBestfit-xSM) -0.05 , lambda yBestfit, ySM: yBestfit  + 1.0*(yBestfit-ySM) ),
+            ( lambda xBestfit, xSM: xBestfit + 2.0*(xBestfit-xSM) -0.10 , lambda yBestfit, ySM: yBestfit  + 2.0*(yBestfit-ySM) ),
+            # 
             # ( lambda xBestfit, xSM: xSM + 0.5*(xBestfit-xSM) , lambda yBestfit, ySM: ySM ),
             # ( lambda xBestfit, xSM: xSM + 0.5*(xBestfit-xSM) , lambda yBestfit, ySM: ySM  + 0.01 ),
-            ( lambda xBestfit, xSM: xBestfit + 0.5 , lambda yBestfit, ySM: yBestfit ),
-            ( lambda xBestfit, xSM: xBestfit - 0.5 , lambda yBestfit, ySM: yBestfit )
+            # ( lambda xBestfit, xSM: xBestfit + 0.5 , lambda yBestfit, ySM: yBestfit ),
+            # ( lambda xBestfit, xSM: xBestfit - 0.5 , lambda yBestfit, ySM: yBestfit )
             ]
+
+
+        container.MarkerSize = 3.0
 
         PlotCommands.PlotParametrizationsOnCombination( container )
 

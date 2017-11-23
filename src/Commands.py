@@ -689,10 +689,10 @@ def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
         cmdExec = cmd
 
     if TESTMODE and not ignoreTestmode:
-        print '\nTESTMODE: ' + cmdStr + '\n'
+        print '\n[TESTMODE] ' + cmdStr + '\n'
     else:
         if not captureOutput:
-            print '\nEXECUTING: ' + cmdStr + '\n'
+            print '\n[EXECUTING] ' + cmdStr + '\n'
             os.system( cmdExec )
         else:
             output = subprocess.check_output(
@@ -702,9 +702,6 @@ def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
             return output
 
 
-
-
-
 def executeCommandOnBatch( cmd ):
     print 'Not yet implemented'
     return
@@ -712,6 +709,24 @@ def executeCommandOnBatch( cmd ):
     # if not isdir(TEMPJOBDIR): os.makedirs(TEMPJOBDIR)
 
 
+def copyfile( src, dst, verbose=True ):
+    # src = abspath(src)
+    # dst = abspath(dst)
+    if IsTestMode():
+        print '\n[TESTMODE] Would now copy\n  {0}\n  to\n  {1}'.format( src, dst )
+    else:
+        if verbose: print '\n[EXECUTING] Copying\n  {0}\n  to\n  {1}'.format( src, dst )
+        shutil.copyfile( src, dst )
+
+
+def movefile( src, dst, verbose=True ):
+    # src = relpath( src, '.' )
+    # dst = relpath( dst, '.' )
+    if IsTestMode():
+        print '\n[TESTMODE] Would now move\n  {0}\n  to\n  {1}'.format( src, dst )
+    else:
+        if verbose: print '\n[EXECUTING] Moving\n  {0}\n  to\n  {1}'.format( src, dst )
+        os.rename( src, dst )
 
 
 def MultiDimCombineTool(
@@ -1083,6 +1098,19 @@ def ThrowError(
 
         print 'ERROR in {0}:{1} {2}:\n    {3}'.format( modulefilename, linenumber, funcname, errstr )
 
+
+def Warning(
+        warningStr,
+        ):
+
+    stack = traceback.extract_stack(None, 2)[0]
+    linenumber = stack[1]
+    funcname = stack[2]
+
+    cwd = abspath( os.getcwd() )
+    modulefilename = relpath( stack[0], cwd )
+
+    print '\n[WARNING {0}:{1} L{2}] '.format(modulefilename, funcname, linenumber) + warningStr
 
 
 

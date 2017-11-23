@@ -63,6 +63,8 @@ def main():
 
     parser.add_argument( '--kappaVMaxOne_Top',      action='store_true' )
 
+    parser.add_argument( '--testingDoPoints',      action='store_true' )
+
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
 
@@ -87,6 +89,35 @@ def main():
 
     Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
 
+    #____________________________________________________________________
+    if args.testingDoPoints:
+
+        base = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v2_NNLOPS/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/'
+        ws   = base + 'postfitWSs_Nov22/POSTFIT_hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+
+        cmd = [
+            'combine',
+            ws,
+            '-n _debugging_Nov22_doPoints',
+            '--algo=grid',
+            '--points=64',
+            '-P kappab -P kappac',
+            '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
+            '--setPhysicsModelParameterRanges kappab=-15.0,15.0:kappac=-35.0,35.0',
+            '-M MultiDimFit',
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            '-m 125.0',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '--floatOtherPOIs=1',
+            '--doPoints 8,14,20,21,45'
+            ]
+
+        Commands.BasicGenericCombineCommand(
+            cmd,
+            onBatch = False,
+            )
 
     #____________________________________________________________________
     if args.kappaVMaxOne_Top:

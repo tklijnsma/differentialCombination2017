@@ -508,6 +508,7 @@ def main( args ):
             hzz_SMXS         = hzz_crosssections,
             hgg_SMXS         = hgg_crosssections,
             combination_SMXS = hgg_crosssections,
+            yMin             = 0.00001
             )
 
 

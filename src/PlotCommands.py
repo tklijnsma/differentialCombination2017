@@ -63,9 +63,19 @@ def PlotParametrizationsOnCombination(
     yCouplingTitle      = container.yCouplingTitle
     plotTitle           = container.plotTitle
 
-    DO_MAXIMA_OF_CONTOUR = False
+
+    DO_X_MAXIMA = False
+    if hasattr( container, 'OnlyXMaximaOfContour' ) and container.OnlyXMaximaOfContour:
+        DO_X_MAXIMA = True
+
+    DO_Y_MAXIMA = False
+    if hasattr( container, 'OnlyYMaximaOfContour' ) and container.OnlyYMaximaOfContour:
+        DO_Y_MAXIMA = True
+
     if hasattr( container, 'MaximaOfContour' ) and container.MaximaOfContour:
-        DO_MAXIMA_OF_CONTOUR = True
+        DO_X_MAXIMA = True
+        DO_Y_MAXIMA = True
+
 
     DO_BESTFIT = False
     if hasattr( container, 'BestFit' ) and container.BestFit:
@@ -196,8 +206,12 @@ def PlotParametrizationsOnCombination(
         candidatecontours.sort( key = lambda Tg: Tg.minDist )
         candidatecontours = candidatecontours[:2]
 
-    # Pick the contour with the highest ratio (more likely to be the 'outer shell')
-    candidatecontours.sort( key = lambda Tg: Tg.distRatio, reverse=True )
+    # # Pick the contour with the highest ratio (more likely to be the 'outer shell')
+    # candidatecontours.sort( key = lambda Tg: Tg.distRatio, reverse=True )
+
+    # Actually, pick the 'inner' shell, outer shell is too likely to be a misfit
+    candidatecontours.sort( key = lambda Tg: Tg.distRatio )    
+
     contour = candidatecontours[0]
 
     # ======================================
@@ -208,10 +222,14 @@ def PlotParametrizationsOnCombination(
     if DO_BESTFIT:
         points.append( ( xBestfit, yBestfit ) )
 
-    if DO_MAXIMA_OF_CONTOUR:
+    if DO_X_MAXIMA:
         points.extend([
             ( contour.xMin, contour.y[ contour.x.index(contour.xMin) ] ),
             ( contour.xMax, contour.y[ contour.x.index(contour.xMax) ] ),
+            ])
+
+    if DO_Y_MAXIMA:
+        points.extend([
             ( contour.x[ contour.y.index(contour.yMin) ], contour.yMin ),
             ( contour.x[ contour.y.index(contour.yMax) ], contour.yMax ),
             ])
@@ -325,7 +343,7 @@ def PlotParametrizationsOnCombination(
 
         point.SetMarkerStyle(33)
         point.SetMarkerColor(color)
-        point.SetMarkerSize(4.5)
+        point.SetMarkerSize( 4.5 if not hasattr( container, 'MarkerSize' ) else container.MarkerSize )
         point.Draw('SAMEP')
 
         point2 = ROOT.TGraph( point )

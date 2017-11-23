@@ -179,6 +179,10 @@ scan_hgg_Yukawa_asimov                                      = 'Scan_Yukawa_Nov03
 scan_hzz_Yukawa_asimov                                      = 'Scan_Yukawa_Nov03_hzz_asimov'
 
 scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
+scan_combined_Yukawa_fitOnlyNormalization                   = 'Scan_Yukawa_Nov20_profiledTotalXS_fitOnlyNormalization'
+# scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov20_profiledTotalXS_fitOnlyNormalization_asimov'
+
+
 scan_combined_Yukawa_lumiStudy_asimov                       = 'Scan_Yukawa_Nov06_lumiStudy_asimov'
 scan_combined_Yukawa_noTheoryUncertainties_asimov           = 'Scan_Yukawa_Nov06_noTheoryUncertainties_asimov'
 scan_combined_Yukawa_uncorrelatedTheoryUncertainties_asimov = 'Scan_Yukawa_Nov06_uncorrelatedTheoryUncertainties_asimov'
@@ -213,12 +217,16 @@ scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan_asimov = 'Scan_Yukawa_Nov
 # scan_hzz_Top_asimov      = 'Scan_Top_Nov07_hzz_asimov'
 # scan_hgg_Top_asimov      = 'Scan_Top_Nov07_hgg_asimov'
 
-scan_combined_Top                                        = 'Scan_Top_Nov08'
-scan_hgg_Top                                             = 'Scan_Top_Nov08_hgg'
-scan_hzz_Top                                             = 'Scan_Top_Nov08_hzz'
-scan_combined_Top_asimov                                 = 'Scan_Top_Nov08_asimov'
-scan_hgg_Top_asimov                                      = 'Scan_Top_Nov08_hgg_asimov'
-scan_hzz_Top_asimov                                      = 'Scan_Top_Nov08_hzz_asimov'
+scan_combined_Top                                         = 'Scan_Top_Nov08'
+scan_hgg_Top                                              = 'Scan_Top_Nov08_hgg'
+scan_hzz_Top                                              = 'Scan_Top_Nov08_hzz'
+scan_combined_Top_asimov                                  = 'Scan_Top_Nov08_asimov'
+scan_hgg_Top_asimov                                       = 'Scan_Top_Nov08_hgg_asimov'
+scan_hzz_Top_asimov                                       = 'Scan_Top_Nov08_hzz_asimov'
+
+scan_combined_Top_extendedRange_asimov                    = 'Scan_Top_Nov20_asimov'
+scan_hgg_Top_extendedRange_asimov                         = 'Scan_Top_Nov20_hzz_asimov'
+scan_hzz_Top_extendedRange_asimov                         = 'Scan_Top_Nov20_hgg_asimov'
 
 scan_combined_Top_fitOnlyNormalization                    = 'Scan_Top_Nov17_profiledTotalXS_fitOnlyNormalization'
 scan_combined_Top_fitOnlyNormalization_asimov             = 'Scan_Top_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
@@ -232,6 +240,8 @@ scan_combined_Top_couplingDependentBR_asimov              = 'Scan_Top_Nov10_coup
 scan_combined_Top_couplingDependentBR_fixedKappaV_asimov  = 'Scan_Top_Nov10_couplingDependentBR_fixedKappaV_asimov'
 # scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov = 'Scan_Top_Nov16_couplingDependentBR_kappaVMaxOne_asimov'
 scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov = 'Scan_Top_Nov17_couplingDependentBR_kappaVMaxOne_asimov'
+
+scan_combined_Top_couplingDependentBR_bigRange_asimov     = 'Scan_Top_Nov19_couplingDependentBR_asimov'
 
 scan_combined_TopCtCb                                    = 'Scan_TopCtCb_Nov15'
 scan_hgg_TopCtCb                                         = 'Scan_TopCtCb_Nov15_hgg'
