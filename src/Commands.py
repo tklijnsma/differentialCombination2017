@@ -7,7 +7,7 @@ Thomas Klijnsma
 # Imports
 ########################################
 
-import os, tempfile, shutil, re, subprocess, sys, traceback
+import os, tempfile, shutil, re, subprocess, sys, traceback, itertools
 from os.path import *
 from glob import glob
 
@@ -1038,6 +1038,12 @@ def ConvertTChainToArray(
     return res
 
 
+#____________________________________________________________________
+def newColorCycle():
+    return itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
+
+
+#____________________________________________________________________
 def InterpretPOI( POI ):
 
     # Assume it starts with 'r_'

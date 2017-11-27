@@ -656,7 +656,9 @@ def GetTH2FromListOfRootFiles(
         verbose   = False,
         xMin = None, xMax = None, yMin = None, yMax = None,
         multiplyByTwo = True,
-        zVariable = 'deltaNLL'
+        zVariable = 'deltaNLL',
+        # defaultHValue = None,
+        defaultHValue = 999.,
         ):
 
     # Read values from specified rootfiles
@@ -716,6 +718,11 @@ def GetTH2FromListOfRootFiles(
         yNBins, array( 'd', yBinBoundaries ),
         )
     ROOT.SetOwnership( H2, False )
+
+    if not defaultHValue is None:
+        for iX in xrange(xNBins):
+            for iY in xrange(yNBins):
+                H2.SetBinContent( iX+1, iY+1, defaultHValue )
 
 
     for iPoint in xrange(nPoints):
@@ -877,12 +884,6 @@ def PlotCouplingScan2D(
     c.Update()
 
 
-    Tpoint = ROOT.TGraph( 1, array( 'd', [res.xBestfit] ), array( 'd', [res.yBestfit] ) )
-    Tpoint.SetMarkerSize(2)
-    Tpoint.SetMarkerStyle(34)
-    Tpoint.Draw('P')
-    Tpoint.SetName('BestfitPoint')
-
     if SM is None:
         xSM = 1.0
         ySM = 1.0
@@ -894,6 +895,15 @@ def PlotCouplingScan2D(
     Tpoint_SM.SetMarkerStyle(21)
     Tpoint_SM.Draw('P')
     Tpoint_SM.SetName('SMPoint')
+
+    Tpoint = ROOT.TGraph( 1, array( 'd', [res.xBestfit] ), array( 'd', [res.yBestfit] ) )
+    ROOT.SetOwnership( Tpoint, False )
+    Tpoint.SetMarkerColor(1)
+    Tpoint.SetMarkerSize(2)
+    Tpoint.SetMarkerStyle(34)
+    Tpoint.Draw('P')
+    Tpoint.SetName('BestfitPoint')
+
 
     if drawContours:
         leg = ROOT.TLegend(

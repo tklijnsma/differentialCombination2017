@@ -12,6 +12,7 @@ from math import isnan, isinf
 from os.path import *
 from glob import glob
 from copy import deepcopy
+from array import array
 
 import combineCommands
 import plotCommands
@@ -26,11 +27,14 @@ import MergeHGGWDatacards
 import TheoryFileInterface
 from Container import Container
 from Parametrization import Parametrization, WSParametrization
+import PlotCommands
 
 import LatestPaths
 
 from time import strftime
 datestr = strftime( '%b%d' )
+
+import ROOT
 
 
 ########################################
@@ -65,6 +69,9 @@ def main():
 
     parser.add_argument( '--testingDoPoints',      action='store_true' )
 
+    parser.add_argument( '--testing2PanelCanvas',      action='store_true' )
+
+
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
 
@@ -88,6 +95,27 @@ def main():
     ########################################
 
     Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
+
+
+    #____________________________________________________________________
+    if args.testing2PanelCanvas:
+
+        TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+
+        Tg_top = ROOT.TGraph( 2, array( 'f', [ 0.1, 0.9 ] ), array( 'f', [ 0.1, 0.9 ] ) )
+        ROOT.SetOwnership( Tg_top, False )
+
+        Tg_bottom = ROOT.TGraph( 2, array( 'f', [ 0.1, 0.9 ] ), array( 'f', [ 0.1, 0.9 ] ) )
+        ROOT.SetOwnership( Tg_bottom, False )
+
+        PlotCommands.PlotWithBottomPanel(
+            'twopaneltest',
+            [ ( Tg_top, 'AL' ) ],
+            [ ( Tg_bottom, 'AL' ) ],
+            xTitle = 'x',
+            yTitleTop = 'y_{top}',
+            yTitleBottom = 'y_{bottom}',
+            )
 
     #____________________________________________________________________
     if args.testingDoPoints:

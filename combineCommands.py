@@ -12,6 +12,7 @@ from math import isnan, isinf
 from os.path import *
 from glob import glob
 from copy import deepcopy
+from array import array
 
 import LatestPaths
 
@@ -22,9 +23,18 @@ import OneOfCommands
 import TheoryCommands
 import CorrelationMatrices
 import MergeHGGWDatacards
+import PlotCommands
+from Container import Container
 
 from time import strftime
 datestr = strftime( '%b%d' )
+
+import ROOT
+from TheoryCommands import c
+from TheoryCommands import SaveC
+from TheoryCommands import GetPlotBase
+from TheoryCommands import SetCMargins
+from TheoryCommands import GetUniqueRootName
 
 
 ########################################
@@ -89,6 +99,7 @@ def AppendParserOptions( parser ):
 
     parser.add_argument( '--plot_ptSpectra',                action=CustomAction )
     parser.add_argument( '--plot_ptSpectra_ggHxH',          action=CustomAction )
+    parser.add_argument( '--plot_ptSpectra_new',            action=CustomAction )
 
     parser.add_argument( '--redoPostfit',                   action=CustomAction )
     parser.add_argument( '--corrMat_combined_unsplit',      action=CustomAction )
@@ -419,7 +430,7 @@ def main( args ):
 
 
 
-    if args.plot_ptSpectra:
+    if args.plot_ptSpectra or args.plot_ptSpectra_new:
 
         # ======================================
         # Specify SMXS
@@ -458,7 +469,7 @@ def main( args ):
             pattern = ''
             )
         PhysicsCommands.BasicDrawScanResults( hggPOIs, hggscans, name='hgg' )
-        PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
+        # PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
 
 
         hzzPOIs = Commands.ListPOIs( LatestPaths.ws_hzz_smH )
@@ -468,7 +479,7 @@ def main( args ):
             pattern = ''
             )
         PhysicsCommands.BasicDrawScanResults( hzzPOIs, hzzscans, name='hzz' )
-        PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
+        # PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
 
 
         combinationPOIs = Commands.ListPOIs( LatestPaths.ws_combined_smH )
@@ -479,7 +490,50 @@ def main( args ):
             pattern = ''
             )
         PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
-        PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
+        # PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
+
+
+
+    #____________________________________________________________________
+    if args.plot_ptSpectra_new:
+
+        containers = []
+
+        hgg               = Container()
+        hgg.name          = 'hgg'
+        hgg.title         = 'H#rightarrow#gamma#gamma'
+        hgg.color         = 2
+        hgg.POIs          = hggPOIs
+        hgg.Scans         = hggscans
+        hgg.SMcrosssections = hgg_crosssections
+        containers.append(hgg)
+
+        hzz               = Container()
+        hzz.name          = 'hzz'
+        hzz.title         = 'H#rightarrowZZ'
+        hzz.color         = 4
+        hzz.POIs          = hzzPOIs
+        hzz.Scans         = hzzscans
+        hzz.SMcrosssections = hzz_crosssections
+        containers.append(hzz)
+
+        combination               = Container()
+        combination.name          = 'combination'
+        combination.title         = 'Combination'
+        combination.POIs          = combinationPOIs
+        combination.Scans         = combinationscans
+        combination.SMcrosssections = hgg_crosssections
+        containers.append(combination)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'ptSpectrum_twoPanel',
+            containers,
+            )
+
+
+    #____________________________________________________________________
+    # Old style plots (2 separate PDFs for top and bottom plot)
+    if args.plot_ptSpectra:
 
 
         PhysicsCommands.BasicCombineSpectra(

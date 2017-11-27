@@ -97,11 +97,26 @@ def main( args ):
         RECREATE_FASTSCAN = True
         # RECREATE_FASTSCAN = False
 
+        # usePostfitWS = abspath( 'Scan_Top_Nov26_asimov/postfit_and_fastscan/POSTFIT_combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root' )
+        # useFastscan  = abspath( 'Scan_Top_Nov26_asimov/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
+
+        RUN_QUICKLY = True
+        # RUN_QUICKLY = False
+
+
+        # ======================================
+        # 
+
         baseContainer = Container()
         baseContainer.onBatch       = True
         baseContainer.nPointsPerJob = 20
         baseContainer.queue         = 'all.q'
         baseContainer.APPLY_FASTSCAN_FILTER = True
+
+        if RUN_QUICKLY:
+            Commands.Warning( 'Running with quick settings' )
+            baseContainer.nPointsPerJob = 5
+            baseContainer.queue         = 'short.q'
 
         if args.asimov:
             baseContainer.asimov = True
@@ -124,11 +139,11 @@ def main( args ):
 
         elif args.top:
             baseContainer.deltaNLLCutOff = 30.
-            baseContainer.nPoints = 140**2
+            baseContainer.nPoints = 200**2
             # ct_ranges = [ -1., 2. ]
             # cg_ranges = [ -0.1, 0.2 ]
-            ct_ranges = [ -4.5, 8.5 ]
-            cg_ranges = [ -0.65, 0.5 ]
+            ct_ranges = [ -8.5, 8.5 ]
+            cg_ranges = [ -0.65, 0.65 ]
             baseContainer.POIs = [ 'ct', 'cg' ]
             baseContainer.PhysicsModelParameters = [ 'ct=1.0', 'cg=0.0' ]
             baseContainer.PhysicsModelParameterRanges = [
@@ -139,6 +154,14 @@ def main( args ):
 
         # Load settings into a scan baseContainer
         scan = CombineToolWrapper.CombineScan(baseContainer)
+
+        if not RECREATE_POSTFIT:
+            Commands.Warning( 'Using existing postfitWS {0}'.format(usePostfitWS) )
+            scan.postfitWS = usePostfitWS
+
+        if not RECREATE_FASTSCAN:
+            Commands.Warning( 'Using existing fastscan {0}'.format(useFastscan) )
+            scan.fastscanRootFile = useFastscan
 
 
         # ======================================

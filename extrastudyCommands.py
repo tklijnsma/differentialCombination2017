@@ -1538,8 +1538,8 @@ def main( args ):
 
         PLOT_SCALING = False
 
-        # LOGSCALE = True
-        LOGSCALE = False
+        LOGSCALE = True
+        # LOGSCALE = False
 
 
         # ======================================
@@ -1547,7 +1547,8 @@ def main( args ):
 
         # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR_profiledTotalXS
         # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
-        ws = LatestPaths.ws_combined_yukawa_couplingDependentBR
+        # ws = LatestPaths.ws_combined_yukawa_couplingDependentBR
+        ws = LatestPaths.ws_combined_Yukawa_couplingDependentBR
 
         rootFp = ROOT.TFile.Open( ws )
         w = rootFp.Get('w')

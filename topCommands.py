@@ -116,7 +116,7 @@ def main( args ):
 
         variationFiles = TheoryFileInterface.FileFinder(
             directory = LatestPaths.derivedTheoryFiles_Top,
-            ct = 1.0, cg = 1.0, cb = 1.0
+            ct = 1.0, cg = 0.0, cb = 1.0
             )
 
         variations = [
@@ -164,8 +164,8 @@ def main( args ):
         FIT_ONLY_NORMALIZATION         = False
 
 
-        EXCLUDE_LAST_BIN               = True
-        # EXCLUDE_LAST_BIN               = False
+        # EXCLUDE_LAST_BIN               = True
+        EXCLUDE_LAST_BIN               = False
 
 
         # ======================================
@@ -203,7 +203,7 @@ def main( args ):
 
         extraOptions.append(
             '--PO SM=[ct=1,cg=0,file={0}]'.format(
-                TheoryFileInterface.FileFinder( ct=1, cg=1, cb=1, muR=1, muF=1, Q=1, expectOneFile=True )
+                TheoryFileInterface.FileFinder( ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True )
                 )
             )
         
@@ -227,7 +227,7 @@ def main( args ):
             extraOptions.extend([
                 '--PO correlationMatrix={0}'.format(  LatestPaths.correlationMatrix_Top ),
                 '--PO theoryUncertainties={0}'.format(  LatestPaths.theoryUncertainties_Top ),
-                '--PO skipOverflowBinTheoryUncertainty=True'
+                # '--PO skipOverflowBinTheoryUncertainty=True' # No longer necessary after fix SM file fix
                 ])
             suffix += '_withTheoryUncertainties'
         else:
@@ -639,7 +639,8 @@ def main( args ):
         # rootfiles = glob( LatestPaths.scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov + '/*.root' )
 
         # rootfiles = glob( 'Scan_Top_Nov23_hzz_0' + '/*.root' )
-        rootfiles = glob( 'Scan_Top_Nov23_hzz_asimov_2' + '/*.root' )
+        # rootfiles = glob( 'Scan_Top_Nov23_hzz_asimov_2' + '/*.root' )
+        rootfiles = glob( 'Scan_Top_Nov27_asimov_1' + '/*.root' )
 
         res = TheoryCommands.PlotCouplingScan2D(
             rootfiles,
@@ -702,6 +703,7 @@ def main( args ):
             xCoupling,
             yCoupling,
             verbose   = False,
+            defaultHValue = 999.,
             )
         hgg.color = 2
         hgg.name = 'hgg'
@@ -711,6 +713,7 @@ def main( args ):
             xCoupling,
             yCoupling,
             verbose   = False,
+            defaultHValue = 999.,
             )
         hzz.color = 4
         hzz.name = 'hzz'
@@ -727,9 +730,13 @@ def main( args ):
         containers = [
             hgg,
             hzz,
-            combined
+            # combined
             ]
         for container in containers: container.title = titles.get( container.name, container.name )
+
+
+        ct_ranges = [ -8.5, 8.5 ]
+        cg_ranges = [ -0.65, 0.65 ]
 
         PlotCommands.BasicMixedContourPlot(
             containers,
@@ -737,14 +744,20 @@ def main( args ):
             # xMax = 2.0,
             # yMin = -0.08,
             # yMax = 0.135,
-            xMin = -1.0,  xMax = 2.0,
-            yMin = -0.1,  yMax = 0.2,
+            # 
+            # xMin = -1.0,  xMax = 2.0,
+            # yMin = -0.1,  yMax = 0.2,
+            # 
+            xMin = ct_ranges[0],  xMax = ct_ranges[1],
+            yMin = cg_ranges[0],  yMax = cg_ranges[1],
+            # 
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
-            plotname  = 'contours_Top' + ( '_asimov' if ASIMOV else '' ) + ( '_extendedRange' if ASIMOV else '' ),
+            plotname  = 'contours_Top' + ( '_asimov' if ASIMOV else '' ) + ( '_extendedRange' if EXTENDED_RANGE else '' ),
             x_SM      = 1.,
             y_SM      = 0.,
             plotIndividualH2s = True,
+            filterContours = False,
             )
 
 

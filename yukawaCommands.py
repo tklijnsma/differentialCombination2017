@@ -759,9 +759,9 @@ def main( args ):
         #     datacard  = hzzDatacard
         #     rootfiles = hzzScanFiles
 
-        # rootfiles = glob( LatestPaths.scan_combined_Yukawa + '/*.root' )
-        # rootfiles = glob( 'testscan_Nov22' + '/*.root' )
-        rootfiles = glob( 'Scan_Yukawa_Nov23_0' + '/*.root' )
+        rootfiles = glob( LatestPaths.scan_combined_Yukawa + '/*.root' )
+        # # rootfiles = glob( 'testscan_Nov22' + '/*.root' )
+        # rootfiles = glob( 'Scan_Yukawa_Nov23_0' + '/*.root' )
 
         res = TheoryCommands.PlotCouplingScan2D(
             rootfiles,
@@ -913,7 +913,7 @@ def main( args ):
             )
         combined.color = 1
         combined.name  = 'regular'
-        combined.title = 'Regular'
+        combined.title = 'Nominal'
         containers.append(combined)
 
         profiledTotalXS_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_profiledTotalXS_asimov ) )
@@ -961,7 +961,7 @@ def main( args ):
             )
         combined.color = 1
         combined.name  = 'regular'
-        combined.title = 'Regular'
+        combined.title = 'Nominal'
         containers.append(combined)
 
         noTheoryUnc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_noTheoryUncertainties_asimov ) )
@@ -1174,16 +1174,17 @@ def main( args ):
 
         containers = []
 
-        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        # combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_noTheoryUncertainties_asimov ) )
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
             )
-        combined.color = 1
+        combined.color = 4
         combined.name  = 'regular'
-        combined.title = 'Full likelihood'
+        combined.title = 'Full likelihood (no theor. unc.)'
         containers.append(combined)
 
 

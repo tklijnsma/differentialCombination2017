@@ -26,6 +26,7 @@ import TheoryFileInterface
 from Container import Container
 from Parametrization import Parametrization, WSParametrization
 import MuShapeDrawer
+import PlotCommands
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -57,7 +58,7 @@ def AppendParserOptions( parser ):
             # super(FooAction, self).__call__( parser, namespace, values, option_string=None )
             # setattr( namespace, self.dest, values )
 
-    parser.add_argument( '--derivedTheoryFilePlots_Top',              action=CustomAction )
+    parser.add_argument( '--derivedTheoryFilePlots',                  action=CustomAction )
     parser.add_argument( '--FittingMuIllustration',                   action=CustomAction )
     parser.add_argument( '--DrawAllFits',                             action=CustomAction )
 
@@ -264,10 +265,14 @@ def main( args ):
 
 
     #____________________________________________________________________
-    if args.derivedTheoryFilePlots_Top:
+    if args.derivedTheoryFilePlots:
 
         DO_PARAMETRIZATION = True
         # DO_PARAMETRIZATION = False
+
+        PLOT_CROSSSECTIONS = True
+        # PLOT_CROSSSECTIONS = False
+
 
         # ======================================
         # Input
@@ -275,99 +280,363 @@ def main( args ):
         readList = lambda theoryFiles: [ TheoryFileInterface.ReadDerivedTheoryFile( theoryFile ) for theoryFile in theoryFiles ]
 
 
-        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFilesDirectory_Top )
+        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
 
         theoryFiles_ct_cg = TheoryFileInterface.FileFinder(
             ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
             )
         containers_ct_cg = readList( theoryFiles_ct_cg )
+        SM_ct_cg = TheoryFileInterface.ReadDerivedTheoryFile( TheoryFileInterface.FileFinder( ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True ) )
 
 
         theoryFiles_ct_cb = TheoryFileInterface.FileFinder(
             ct='*', cb='*', muR=1, muF=1, Q=1, filter='cg'
             )
         containers_ct_cb = readList( theoryFiles_ct_cb )
+        SM_ct_cb = SM_ct_cg # Same SM
 
 
         theoryFiles_kappab_kappac = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed
+            directory = LatestPaths.derivedTheoryFiles_YukawaSummed
             )
         containers_kappab_kappac = readList( theoryFiles_kappab_kappac )
+        SM_kappab_kappac = [ container for container in containers_kappab_kappac if container.kappab == 1. and container.kappac == 1. ][0]
 
 
         theoryFiles_kappab_kappac_Gluon = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced
+            directory = LatestPaths.derivedTheoryFiles_YukawaGluonInduced
             )
         containers_kappab_kappac_Gluon = readList( theoryFiles_kappab_kappac_Gluon )
+        SM_kappab_kappac_Gluon = [ container for container in containers_kappab_kappac_Gluon if container.kappab == 1. and container.kappac == 1. ][0]
 
 
         theoryFiles_kappab_kappac_Quark = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', filter='muR',
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInduced
+            directory = LatestPaths.derivedTheoryFiles_YukawaQuarkInduced
             )
         containers_kappab_kappac_Quark = readList( theoryFiles_kappab_kappac_Quark )
+        SM_kappab_kappac_Quark = [ container for container in containers_kappab_kappac_Quark if container.kappab == 1. and container.kappac == 1. ][0]
 
 
         theoryFiles_kappab_kappac_QuarkScaled = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
-            directory = LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInducedScaled
+            directory = LatestPaths.derivedTheoryFiles_YukawaQuarkInducedScaled
             )
         containers_kappab_kappac_QuarkScaled = readList( theoryFiles_kappab_kappac_QuarkScaled )
+        SM_kappab_kappac_QuarkScaled = [ container for container in containers_kappab_kappac_QuarkScaled if container.kappab == 1. and container.kappac == 1. ][0]
 
 
         def kappaSorter( container ):
-            return ( container.kappac, container.kappab )
-        containers_kappab_kappac.sort( key=kappaSorter )
+            if hasattr( container, 'kappab' ) and hasattr( container, 'kappac' ):
+                return ( container.kappab, container.kappac )
+            elif hasattr( container, 'ct' ) and hasattr( container, 'cg' ):
+                return ( container.ct, container.cg )
+            elif hasattr( container, 'ct' ) and hasattr( container, 'cb' ):
+                return ( container.ct, container.cb )
+            else:
+                Commands.ThrowError( 'Can\'t sort; not a known set of couplings found' )
 
+        containers_kappab_kappac.sort( key=kappaSorter )
+        containers_kappab_kappac_Gluon.sort( key=kappaSorter )
+        containers_kappab_kappac_Quark.sort( key=kappaSorter )
+        containers_kappab_kappac_QuarkScaled.sort( key=kappaSorter )
+        containers_ct_cg.sort( key=kappaSorter )
+        containers_ct_cb.sort( key=kappaSorter )
 
 
         ct_cg = Container()
         ct_cg.name = 'kappat_kappag'
         ct_cg.couplings = [ 'ct', 'cg' ]
         ct_cg.containers = containers_ct_cg
-        ct_cg.ws = LatestPaths.ws_combined_split_top
+        # ct_cg.ws = LatestPaths.ws_combined_split_top
+        ct_cg.ws = LatestPaths.ws_combined_Top
+        ct_cg.SM = SM_ct_cg
 
         ct_cb = Container()
         ct_cb.name = 'kappat_kappab'
         ct_cb.couplings = [ 'ct', 'cb' ]
         ct_cb.containers = containers_ct_cb
+        ct_cb.ws = LatestPaths.ws_combined_TopCtCb
+        ct_cb.SM = SM_ct_cb
 
         kappab_kappac_Gluon = Container()
         kappab_kappac_Gluon.name = 'kappab_kappac_Gluon'
         kappab_kappac_Gluon.couplings = [ 'kappab', 'kappac' ]
         kappab_kappac_Gluon.containers = containers_kappab_kappac_Gluon
+        kappab_kappac_Gluon.parametrizeByFitting = True
+        kappab_kappac_Gluon.SM = SM_kappab_kappac_Gluon
 
         kappab_kappac_Quark = Container()
         kappab_kappac_Quark.name = 'kappab_kappac_Quark'
         kappab_kappac_Quark.couplings = [ 'kappab', 'kappac' ]
         kappab_kappac_Quark.containers = containers_kappab_kappac_Quark
         kappab_kappac_Quark.parametrizeByFitting = True
+        kappab_kappac_Quark.SM = SM_kappab_kappac_Quark
 
         kappab_kappac_QuarkScaled = Container()
         kappab_kappac_QuarkScaled.name = 'kappab_kappac_QuarkScaled'
         kappab_kappac_QuarkScaled.couplings = [ 'kappab', 'kappac' ]
         kappab_kappac_QuarkScaled.containers = containers_kappab_kappac_QuarkScaled
+        kappab_kappac_QuarkScaled.SM = SM_kappab_kappac_QuarkScaled
+        kappab_kappac_QuarkScaled.DrawFileContentsAsLine = True
 
 
         couplingVariationContainers = [
             # ct_cg,
             # ct_cb,
             # kappab_kappac_Gluon,
-            kappab_kappac_Quark,
+            # kappab_kappac_Quark,
             # kappab_kappac_QuarkScaled,
             ]
 
-        n_theoryFiles_kappab_kappac = len( theoryFiles_kappab_kappac )
-        for iChunk, chunk in enumerate( chunks( containers_kappab_kappac, n_theoryFiles_kappab_kappac/4+1 ) ):
-            couplingVariationContainer = Container()
-            couplingVariationContainer.name = 'kappab_kappac_{0}'.format(iChunk)
-            couplingVariationContainer.couplings = [ 'kappab', 'kappac' ]
-            couplingVariationContainer.containers = list(chunk)
-            couplingVariationContainer.ws = LatestPaths.ws_combined_split_yukawa
-            # couplingVariationContainers.append( couplingVariationContainer )
+        # n_theoryFiles_kappab_kappac = len( theoryFiles_kappab_kappac )
+        # for iChunk, chunk in enumerate( chunks( containers_kappab_kappac, n_theoryFiles_kappab_kappac/4+1 ) ):
+        #     couplingVariationContainer = Container()
+        #     couplingVariationContainer.name = 'kappab_kappac_{0}'.format(iChunk)
+        #     couplingVariationContainer.couplings = [ 'kappab', 'kappac' ]
+        #     couplingVariationContainer.containers = list(chunk)
+        #     # couplingVariationContainer.ws = LatestPaths.ws_combined_split_yukawa
+        #     couplingVariationContainer.ws = LatestPaths.ws_combined_Yukawa
+        #     # couplingVariationContainers.append( couplingVariationContainer )
+        #     couplingVariationContainer.SM = SM_kappab_kappac
 
+        for iVal, kappabVal in enumerate([ -2.0, -1.0, 0.0, 1.0, 2.0 ]):
+            couplingVariationContainer = Container()
+            couplingVariationContainer.name = 'kappab_kappac_{0}'.format(iVal)
+            couplingVariationContainer.couplings = [ 'kappab', 'kappac' ]
+            couplingVariationContainer.containers = [ container for container in containers_kappab_kappac if container.kappab == kappabVal ]
+            couplingVariationContainer.ws = LatestPaths.ws_combined_Yukawa
+            couplingVariationContainer.SM = SM_kappab_kappac
+            couplingVariationContainers.append( couplingVariationContainer )
+
+
+
+    if args.derivedTheoryFilePlots:
+
+        DO_PARAMETRIZATION = True
+
+        TOP_PANEL_LOGSCALE = True
+
+
+        def SetParametrizedTgs( couplingVariationContainer ):
+
+            if DO_PARAMETRIZATION and hasattr( couplingVariationContainer, 'ws' ):
+                wsParametrization = WSParametrization( couplingVariationContainer.ws, verbose=True )
+
+                for container in couplingVariationContainer.containers:
+                    # for coupling in couplingVariationContainer.couplings:
+                    #     print 'Setting \'{0}\' to \'{1}\''.format( coupling, float(getattr( container, coupling )) )
+                    #     setattr( wsParametrization, coupling, getattr( container, coupling ) )
+                    kwargs = { coupling : float(getattr( container, coupling )) for coupling in couplingVariationContainer.couplings }
+                    kwargs['returnWhat'] = 'theory'
+
+                    outputContainer = wsParametrization.GetOutputContainer( **kwargs )
+                    container.Tg_parametrization_ratio = outputContainer.Tg
+
+                    outputContainer.crosssection = [ SMxs * ratio for SMxs, ratio in zip( couplingVariationContainer.SM.crosssection, outputContainer.mus ) ]
+                    container.Tg_parametrization_crosssection = outputContainer.GetTGraph( yAttr='crosssection' )
+
+                couplingVariationContainer.isParametrized = True
+
+
+            elif DO_PARAMETRIZATION and hasattr( couplingVariationContainer, 'parametrizeByFitting' ):
+                parametrization = Parametrization()
+                parametrization.ParametrizeByFitting( couplingVariationContainer.containers, fitWithScipy=True )
+
+                for container in couplingVariationContainer.containers:
+                    # kwargs = { coupling : float(getattr( container, coupling )) for coupling in couplingVariationContainer.couplings }
+                    for coupling in couplingVariationContainer.couplings:
+                        setattr( parametrization, coupling, float(getattr( container, coupling )) )
+                    parametrizationResult = parametrization.GetOutputContainer()
+                    parametrizationResult.ratios = [ xs / SMxs if not SMxs == 0. else 0. for xs, SMxs in zip( parametrizationResult.binValues, couplingVariationContainer.SM.crosssection ) ]
+
+                    container.Tg_parametrization_crosssection = parametrizationResult.GetTGraph( yAttr = 'crosssection' )
+                    container.Tg_parametrization_ratio = parametrizationResult.GetTGraph( yAttr = 'ratios' )
+
+                couplingVariationContainer.isParametrized = True
+
+            else:
+                couplingVariationContainer.isParametrized = False
+
+        def CouplingTitle( coupling ):
+            if re.match( r'c\w', coupling ):
+                particle = coupling.replace('c','')
+            elif re.match( r'kappa\w', coupling ):
+                particle = coupling.replace('kappa','')
+            return '#kappa_{{{0}}}'.format( particle )
+
+
+        newColorCycle = lambda : itertools.cycle( range(2,10) + range(27,50) )
+
+
+
+        # ======================================
+        # Loop
+
+        for DO_PARAMETRIZATION in [ False, True ]:
+            for couplingVariationContainer in couplingVariationContainers:
+                SetParametrizedTgs( couplingVariationContainer )
+                containers = couplingVariationContainer.containers
+
+                c.Clear()
+
+
+                # ======================================
+                # Gather panel objects
+
+                topPanelObjects = []
+                bottomPanelObjects = []
+
+
+                # -----------------------
+                # Make base for top panel
+
+                yMinAbs = min( [ min(container.crosssection) for container in containers ] )
+                yMaxAbs = max( [ max(container.crosssection) for container in containers ] )
+                yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
+                yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
+
+                if TOP_PANEL_LOGSCALE:
+                    yMin = max( 0.9*yMinAbs, 0.0001 )
+                    yMax = 20*yMaxAbs
+
+                xMin = 0.
+                xMax = max( containers[0].binBoundaries )
+
+                baseTop = GetPlotBase(
+                    xMin = xMin,
+                    xMax = xMax,
+                    yMin = yMin,
+                    yMax = yMax,
+                    # xTitle = 'p_{T}^{H}',
+                    xTitle = '',
+                    yTitle = '#sigma_{ggH} (pb/GeV)',
+                    )
+                topPanelObjects.append( ( baseTop, 'P' ) )
+                baseTop.SetTitleOffset(1.0)
+
+
+                leg = PlotCommands.TLegendMultiPanel(
+                    lambda c: c.GetLeftMargin() + 0.01,
+                    lambda c: 1 - c.GetTopMargin() - 0.23,
+                    lambda c: 1 - c.GetRightMargin() - 0.01,
+                    lambda c: 1 - c.GetTopMargin()
+                    )
+
+                leg.SetNColumns(2)
+                if len(containers) > 10:
+                    leg.SetNColumns(3)
+                if len(containers) > 20:
+                    leg.SetNColumns(4)
+                leg.SetBorderSize(0)
+                leg.SetFillStyle(0)
+
+
+                # -----------------------
+                # Make base for bottom panel
+
+                yMinAbs = min( [ min(container.ratios) for container in containers ] )
+                yMaxAbs = max( [ max(container.ratios) for container in containers ] )
+                yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
+                yMax = yMaxAbs + 0.1*(yMaxAbs-yMinAbs)
+
+                xMin = 0.
+                xMax = max( containers[0].binBoundaries )
+
+                baseBottom = GetPlotBase(
+                    xMin = xMin,
+                    xMax = xMax,
+                    yMin = yMin,
+                    yMax = yMax,
+                    xTitle = 'p_{T}^{H}',
+                    yTitle = 'ratio',
+                    )
+                bottomPanelObjects.append( ( baseBottom, 'P' ) )
+                baseBottom.SetTitleOffset(1.0)
+
+                lineAtOne = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
+                lineAtOne.SetLineColor(14)
+                bottomPanelObjects.append( ( lineAtOne, '' ) )
+
+
+                # -----------------------
+                # Fill in objects
+
+                colorCycle = newColorCycle()
+                for container in containers:
+                    color = next(colorCycle)
+                    container.color = color
+                    
+                    variationName  = []
+                    variationTitle = []
+                    for coupling in [ 'ct', 'cg', 'cb', 'kappab', 'kappac' ]:
+                        if hasattr( container, coupling ):
+                            variationName.append( '{0}_{1}'.format( coupling, Commands.ConvertFloatToStr( getattr( container, coupling ) ) ))
+                            variationTitle.append( '{0} = {1}'.format( CouplingTitle(coupling), getattr( container, coupling ) ))
+                    variationName  = '_'.join(variationName)
+                    variationTitle = ', '.join(variationTitle)
+
+                    Tg_xs = TheoryFileInterface.ReadDerivedTheoryContainerToTGraph(
+                        container,
+                        name = variationName,
+                        yAttr = 'crosssection'
+                        )
+                    Tg_xs.SetLineColor(color)
+                    Tg_xs.SetLineWidth(2)
+                    Tg_xs.SetMarkerColor(color)
+                    Tg_xs.SetMarkerStyle(8)
+                    Tg_xs.SetMarkerSize(0.9)
+
+                    Tg_ratio = TheoryFileInterface.ReadDerivedTheoryContainerToTGraph(
+                        container,
+                        name = variationName + '_ratios',
+                        yAttr = 'ratios'
+                        )
+                    Tg_ratio.SetLineColor(color)
+                    Tg_ratio.SetLineWidth(2)
+                    Tg_ratio.SetMarkerColor(color)
+                    Tg_ratio.SetMarkerStyle(8)
+                    Tg_ratio.SetMarkerSize(0.9)
+
+
+                    if hasattr( couplingVariationContainer, 'DrawFileContentsAsLine' ) and couplingVariationContainer.DrawFileContentsAsLine:
+                        leg.AddEntry( Tg_xs.GetName(), variationTitle, 'l' )
+                        topPanelObjects.append( ( Tg_xs, 'LX' ) )
+                        bottomPanelObjects.append( ( Tg_ratio, 'LX' ) )
+                    else:
+                        topPanelObjects.append( ( Tg_xs, 'PX' ) )
+                        bottomPanelObjects.append( ( Tg_ratio, 'PX' ) )
+                        leg.AddEntry( Tg_xs.GetName(), variationTitle, 'p' )
+
+                    if couplingVariationContainer.isParametrized:
+                        container.Tg_parametrization_crosssection.SetLineColor(color)
+                        container.Tg_parametrization_crosssection.SetLineWidth(2)
+                        container.Tg_parametrization_ratio.SetLineColor(color)
+                        container.Tg_parametrization_ratio.SetLineWidth(2)
+                        topPanelObjects.append( ( container.Tg_parametrization_crosssection, 'LX' ) )
+                        bottomPanelObjects.append( ( container.Tg_parametrization_ratio, 'LX' ) )
+
+
+                topPanelObjects.append( ( leg, '' ) )
+
+                PlotCommands.PlotWithBottomPanel(
+                    couplingVariationContainer.name + '_twoPanel' + ( '_parametrized' if DO_PARAMETRIZATION else '' ),
+                    topPanelObjects,
+                    bottomPanelObjects,
+                    xTitle       = 'p_{T}^{H}',
+                    yTitleTop    = '#sigma_{ggH} (pb/GeV)',
+                    yTitleBottom = 'ratio w.r.t. SM',
+                    SetTopPanelLogScale = TOP_PANEL_LOGSCALE,
+                    topPadLeftMargin = 0.14,
+                    bottomPadLeftMargin = 0.14,
+                    )
+
+
+
+    if False and args.derivedTheoryFilePlots:
+        # This is the old style, only doing xs or ratio at one go
 
         # ======================================
         # Loop
@@ -390,31 +659,30 @@ def main( args ):
                     #     setattr( wsParametrization, coupling, getattr( container, coupling ) )
                     kwargs = { coupling : float(getattr( container, coupling )) for coupling in couplingVariationContainer.couplings }
                     kwargs['returnWhat'] = 'theory'
-                    container.Tg_parametrization = wsParametrization.GetOutputContainer( **kwargs ).Tg
+
+                    outputContainer = wsParametrization.GetOutputContainer( **kwargs )
+                    container.Tg_parametrization = outputContainer.Tg
+
+                    if PLOT_CROSSSECTIONS:
+                        outputContainer.crosssection = [ SMxs * ratio for SMxs, ratio in zip( couplingVariationContainer.SM.crosssection, outputContainer.mus ) ]
+                        container.Tg_parametrization = outputContainer.GetTGraph( yAttr='crosssection' )
 
                 isParametrized = True
 
-            if DO_PARAMETRIZATION and hasattr( couplingVariationContainer, 'parametrizeByFitting' ):
 
-                for container in containers:
-                    couplingVals = [ float(getattr( container, coupling )) for coupling in couplingVariationContainer.couplings ]
-                    if all( [ val == 1.0 for val in couplingVals ] ):
-                        SM = container
-                        break
-                else:
-                    Commands.ThrowError( 'Could not find standard model' )
-                    sys.exit()
+            elif DO_PARAMETRIZATION and hasattr( couplingVariationContainer, 'parametrizeByFitting' ):
 
                 parametrization = Parametrization()
-                parametrization.ParametrizeByFitting( containers )
+                parametrization.ParametrizeByFitting( containers, fitWithScipy=True )
 
                 for container in containers:
                     # kwargs = { coupling : float(getattr( container, coupling )) for coupling in couplingVariationContainer.couplings }
                     for coupling in couplingVariationContainer.couplings:
                         setattr( parametrization, coupling, float(getattr( container, coupling )) )
                     parametrizationResult = parametrization.GetOutputContainer()
-                    parametrizationResult.ratios = [ xs / SMxs if not SMxs == 0. else 0. for xs, SMxs in zip( parametrizationResult.binValues, SM.crosssection ) ]
-                    container.Tg_parametrization = parametrizationResult.GetTGraph( yAttr='ratios' )
+                    parametrizationResult.ratios = [ xs / SMxs if not SMxs == 0. else 0. for xs, SMxs in zip( parametrizationResult.binValues, couplingVariationContainer.SM.crosssection ) ]
+                    # container.Tg_parametrization = parametrizationResult.GetTGraph( yAttr='ratios' )
+                    container.Tg_parametrization = parametrizationResult.GetTGraph( yAttr = 'crosssection' if PLOT_CROSSSECTIONS else 'ratios' )
 
                 isParametrized = True
 
@@ -422,8 +690,8 @@ def main( args ):
             c.Clear()
             SetCMargins()
 
-            yMinAbs = min( [ min(container.ratios) for container in containers ] )
-            yMaxAbs = max( [ max(container.ratios) for container in containers ] )
+            yMinAbs = min( [ min( container.crosssection if PLOT_CROSSSECTIONS else container.ratios ) for container in containers ] )
+            yMaxAbs = max( [ max( container.crosssection if PLOT_CROSSSECTIONS else container.ratios ) for container in containers ] )
             yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
             yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
 
@@ -436,7 +704,7 @@ def main( args ):
                 yMin = yMin,
                 yMax = yMax,
                 xTitle = 'p_{T}^{H}',
-                yTitle = 'Ratio w.r.t. ggH^{SM}',
+                yTitle = '#sigma_{ggH} (pb/GeV)' if PLOT_CROSSSECTIONS else 'Ratio w.r.t. ggH^{SM}',
                 )
             base.Draw('P')
 
@@ -485,19 +753,29 @@ def main( args ):
 
                 Tg = TheoryFileInterface.ReadDerivedTheoryContainerToTGraph(
                     container,
-                    name = variationName
+                    name = variationName,
+                    yAttr = 'crosssection' if PLOT_CROSSSECTIONS else 'ratios'
                     )
+                Tg.SetLineColor(color)
+                Tg.SetLineWidth(2)
                 Tg.SetMarkerColor(color)
                 Tg.SetMarkerStyle(8)
                 Tg.SetMarkerSize(0.9)
-                Tg.Draw('PX')
+                
+                if hasattr( couplingVariationContainer, 'DrawFileContentsAsLine' ) and couplingVariationContainer.DrawFileContentsAsLine:
+                    Tg.Draw('LX')
+                    leg.AddEntry( Tg.GetName(), variationTitle, 'l' )
+                else:
+                    Tg.Draw('PX')
+                    leg.AddEntry( Tg.GetName(), variationTitle, 'p' )
+
 
                 if isParametrized:
                     container.Tg_parametrization.SetLineColor(color)
                     container.Tg_parametrization.SetLineWidth(2)
                     container.Tg_parametrization.Draw('LX')
 
-                leg.AddEntry( Tg.GetName(), variationTitle, 'p' )
+                
 
             leg.Draw()
 

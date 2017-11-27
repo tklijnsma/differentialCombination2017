@@ -22,6 +22,8 @@ import OneOfCommands
 import TheoryCommands
 import CorrelationMatrices
 import MergeHGGWDatacards
+import PlotCommands
+from Container import Container
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -49,7 +51,8 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--njets_combineCards',                     action=CustomAction )
     parser.add_argument( '--njets_t2ws_unsplit',                     action=CustomAction )
     parser.add_argument( '--njets_bestfit_unsplit',                  action=CustomAction )
-    parser.add_argument( '--plot_nJetsSpectra',                  action=CustomAction )
+    parser.add_argument( '--plot_nJetsSpectra',                      action=CustomAction )
+    parser.add_argument( '--plot_nJetsSpectra_new',                  action=CustomAction )
 
 
 ########################################
@@ -143,7 +146,7 @@ def main( args ):
 
 
     #____________________________________________________________________
-    if args.plot_nJetsSpectra:
+    if args.plot_nJetsSpectra or args.plot_nJetsSpectra_new:
 
         # ======================================
         # Specify SMXS
@@ -231,6 +234,48 @@ def main( args ):
         xs_hzzBinning  = [ xs * LatestPaths.YR4_totalXS / binWidth for xs, binWidth in zip( percentage_hzzBinning, hzzBinWidths ) ]
 
 
+    if args.plot_nJetsSpectra_new:
+
+        containers = []
+
+        hgg               = Container()
+        hgg.name          = 'hgg'
+        hgg.title         = 'H#rightarrow#gamma#gamma'
+        hgg.color         = 2
+        hgg.POIs          = hggPOIs
+        hgg.Scans         = hggscans
+        hgg.SMcrosssections = xs_fineBinning
+        containers.append(hgg)
+
+        hzz               = Container()
+        hzz.name          = 'hzz'
+        hzz.title         = 'H#rightarrowZZ'
+        hzz.color         = 4
+        hzz.POIs          = hzzPOIs
+        hzz.Scans         = hzzscans
+        hzz.SMcrosssections = xs_hzzBinning
+        containers.append(hzz)
+
+        combination               = Container()
+        combination.name          = 'combination'
+        combination.title         = 'Combination'
+        combination.POIs          = combinationPOIs
+        combination.Scans         = combinationscans
+        combination.SMcrosssections = xs_fineBinning
+        containers.append(combination)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'nJetsSpectrum_twoPanel',
+            containers,
+            xTitle = 'N_{jets}',
+            yMinLimit = 0.07,
+            yMaxExternalTop = 500
+            )
+
+
+
+    if args.plot_nJetsSpectra:
+
         # For big mu plot, comment out xs's
         PhysicsCommands.BasicCombineSpectra(
             ( 'combination', combinationPOIs, combinationscans,
@@ -263,8 +308,6 @@ def main( args ):
             yMin             = 0.01
             )
 
-
-
         PhysicsCommands.BasicCombineSpectra(
             ( 'combination', combinationPOIs, combinationscans,
                 ( 'AsBlocks', False ),
@@ -292,41 +335,6 @@ def main( args ):
             bottomRatioPlot = True,
             asROOT          = True
             )
-
-
-        # hggPOIs = Commands.ListPOIs( ws_onlyhgg_unsplit )
-        # hggscans = PhysicsCommands.GetScanResults(
-        #     hggPOIs,
-        #     # scan_ptcombination_hgg_profiled_asimov,
-        #     scan_ptcombination_hgg_profiled,
-        #     pattern = 'Datacard_13TeV_differential_pT'
-        #     )
-        # PhysicsCommands.BasicDrawScanResults( hggPOIs, hggscans, name='hgg' )
-        # PhysicsCommands.BasicDrawSpectrum( hggPOIs, hggscans, name='hgg' )
-
-
-        # hzzPOIs = Commands.ListPOIs( ws_onlyhzz_unsplit )
-        # hzzscans = PhysicsCommands.GetScanResults(
-        #     hzzPOIs,
-        #     # scan_ptcombination_hzz_profiled_asimov,
-        #     scan_ptcombination_hzz_profiled,
-        #     pattern = 'usingDavidsCommand_OAshifted'
-        #     )
-        # PhysicsCommands.BasicDrawScanResults( hzzPOIs, hzzscans, name='hzz' )
-        # PhysicsCommands.BasicDrawSpectrum( hzzPOIs, hzzscans, name='hzz' )
-
-
-        # combinationPOIs = Commands.ListPOIs( ws_combined_unsplit )
-        # combinationscans = PhysicsCommands.GetScanResults(
-        #     combinationPOIs,
-        #     # scan_ptcombination_combined_profiled_asimov,
-        #     scan_ptcombination_combined_profiled,
-        #     pattern = 'combinedCard'
-        #     )
-        # PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
-        # PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
-
-
 
 
 ########################################

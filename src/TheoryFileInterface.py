@@ -849,44 +849,44 @@ def CreateDerivedTheoryFiles_YukawaGluonInduced(
 ########################################
 
 AgnieszkasFilenameDecoder = {
-    'ratio_ctup_new'          : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1 },
-    'ratio_ctdown_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9 },
-    'ratio_cgup_new'          : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.008 },
-    'ratio_cgdown_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : -0.008 },
-    'ratio_cbup_new'          : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 4.0 },
-    'ratio_cbdown_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : -2.0 },
-    'ratio_cg003ct12_new'     : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -2.98 ,  'cg' : -0.03 },
-    'ratio_cg003ct13sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -0.85 ,  'cg' : -0.03 },
-    'ratio_cg003ct14sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : 3.31 ,   'cg' : -0.03 },
-    'ratio_cg004ct12sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -4.89 ,  'cg' : -0.04 },
-    'ratio_cg004ct13sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -3.34 ,  'cg' : -0.04 },
-    'ratio_cg004ct15sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : 1.88 ,   'cg' : -0.04 },
-    'ratio_cg005ct14sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : -3.67 ,  'cg' : -0.05 },
-    'ratio_cg005ct15sw_new'   : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : -1.79 ,  'cg' : -0.05 },
-    'ratio_ctcb05_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cb' : -7.46 },
-    'ratio_ctcb08_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.8, 'cb' : -3.67 },
-    'ratio_ctcb09_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9, 'cb' : -1.79 },
-    'ratio_ctcb11_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1, 'cb' : 3.79 },
-    'ratio_ctcb12_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : 4.67 },
-    'ratio_ctcg01_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.1, 'cg' : 0.075 },
-    'ratio_ctcg05_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cg' : 0.042 },
-    'ratio_ctcg15_new'        : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cg' : -0.042 },
-    'ratio_ctcg2_new'         : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 2.0, 'cg' : -0.083 },
-    # 'SM_NLO'                  : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    # 'SMmin_NLO'               : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    # 'SMmax_NLO'               : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'SM_NNLO'                 : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    # 'SMmin_NNLO'              : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    # 'SMmax_NNLO'              : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mR1mF1.top'         : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mR1mF1Q2.top'       : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 2.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mR1mF1Qh.top'       : { 'muR' : 1.0, 'muF' : 1.0, 'Q' : 0.5, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mR1mF2.top'         : { 'muR' : 1.0, 'muF' : 2.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mR1mFh.top'         : { 'muR' : 1.0, 'muF' : 0.5, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mR2mF1.top'         : { 'muR' : 2.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mR2mF2.top'         : { 'muR' : 2.0, 'muF' : 2.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mRhmF1.top'         : { 'muR' : 0.5, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
-    'HRes_mRhmFh.top'         : { 'muR' : 0.5, 'muF' : 0.5, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 1.0 },
+    'ratio_ctup_new'          : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1 },
+    'ratio_ctdown_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9 },
+    'ratio_cgup_new'          : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.008 },
+    'ratio_cgdown_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : -0.008 },
+    'ratio_cbup_new'          : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 4.0 },
+    'ratio_cbdown_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : -2.0 },
+    'ratio_cg003ct12_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -2.98 ,  'cg' : -0.03 },
+    'ratio_cg003ct13sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -0.85 ,  'cg' : -0.03 },
+    'ratio_cg003ct14sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : 3.31 ,   'cg' : -0.03 },
+    'ratio_cg004ct12sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -4.89 ,  'cg' : -0.04 },
+    'ratio_cg004ct13sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -3.34 ,  'cg' : -0.04 },
+    'ratio_cg004ct15sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : 1.88 ,   'cg' : -0.04 },
+    'ratio_cg005ct14sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : -3.67 ,  'cg' : -0.05 },
+    'ratio_cg005ct15sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : -1.79 ,  'cg' : -0.05 },
+    'ratio_ctcb05_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cb' : -7.46 },
+    'ratio_ctcb08_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.8, 'cb' : -3.67 },
+    'ratio_ctcb09_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9, 'cb' : -1.79 },
+    'ratio_ctcb11_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1, 'cb' : 3.79 },
+    'ratio_ctcb12_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : 4.67 },
+    'ratio_ctcg01_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.1, 'cg' : 0.075 },
+    'ratio_ctcg05_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cg' : 0.042 },
+    'ratio_ctcg15_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cg' : -0.042 },
+    'ratio_ctcg2_new'         : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 2.0, 'cg' : -0.083 },
+    # 'SM_NLO'                  : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    # 'SMmin_NLO'               : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    # 'SMmax_NLO'               : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'SM_NNLO'                 : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    # 'SMmin_NNLO'              : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    # 'SMmax_NNLO'              : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mR1mF1.top'         : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mR1mF1Q2.top'       : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 2.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mR1mF1Qh.top'       : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 0.5, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mR1mF2.top'         : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 2.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mR1mFh.top'         : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 0.5, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mR2mF1.top'         : { 'firstColumnIsRatio' : False, 'muR' : 2.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mR2mF2.top'         : { 'firstColumnIsRatio' : False, 'muR' : 2.0, 'muF' : 2.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mRhmF1.top'         : { 'firstColumnIsRatio' : False, 'muR' : 0.5, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'HRes_mRhmFh.top'         : { 'firstColumnIsRatio' : False, 'muR' : 0.5, 'muF' : 0.5, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
     }
 
 
@@ -946,6 +946,8 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
 
     if isSMFile:
 
+        print '\nFound SM file', theoryFile
+
         pts  = []
         xss  = []
 
@@ -971,7 +973,12 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
 
         if SM is None:
             Commands.ThrowError( 'SM should be specified when reading a non-SM file' )
-            sys.exit()
+        elif theoryFile == SM.file:
+            print 'This file was found to be the SM file; simply return SM values'
+            return SM.pts, SM.crosssection, [ 1.0 for xs in SM.crosssection ]
+        else:
+            print '\nReading', theoryFile
+
 
         pts    = []
         ratios = []
@@ -980,11 +987,19 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
         for line in lines:
 
             components = line.split()
-            pt         = float(components[0])
-            ratio      = float(components[1])
 
-            SMxs = SM.crosssection[ SM.pts.index(pt) ]
-            xs   = SMxs * ratio
+            if AgnieszkasFilenameDecoder[ basename(theoryFile).replace('/','') ]['firstColumnIsRatio']:
+                print '    Assuming the first column is a RATIO'
+                pt         = float(components[0])
+                ratio      = float(components[1])
+                SMxs = SM.crosssection[ SM.pts.index(pt) ]
+                xs   = SMxs * ratio
+            else:
+                print '    Assuming the first column is a CROSS SECTION - ALSO DIVIDING BY 2.27!!'
+                pt         = float(components[0])
+                xs         = float(components[1]) / 2.27
+                SMxs  = SM.crosssection[ SM.pts.index(pt) ]
+                ratio = xs / SMxs
 
             if verbose:
                 print '    pt = {0:<8.3f} |  xs = {1:<10.6f} |  SMxs = {2:<10.6f} |  ratio = {3:<10.6f}'.format(
@@ -1040,10 +1055,12 @@ def CreateDerivedTheoryFiles_Top(
     SM.binCenters    = deepcopy( newBinCenters )
     SM.binBoundaries = deepcopy( binBoundaries )
     SM.crosssection  = deepcopy( crosssection )
-    SM.ratios = [ 1.0 for xs in SM.crosssection ]
+    SM.ratios        = [ 1.0 for xs in SM.crosssection ]
 
     for key, value in AgnieszkasFilenameDecoder[basename(SM.file).replace('/','')].iteritems():
         setattr( SM, key, value )
+
+    # DumpContainerToFile_Top( SM, prefix='PureSM', outdir=outdir )
 
 
     # ======================================

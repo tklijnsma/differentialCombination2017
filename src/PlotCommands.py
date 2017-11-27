@@ -47,6 +47,431 @@ datestr = strftime( '%b%d' )
 ########################################
 
 
+class TLegendMultiPanel(object):
+    """docstring for TLegendMultiPanel"""
+    def __init__(
+            self,
+            x1, y1, x2, y2
+            ):
+        self._x1 = x1
+        self._y1 = y1
+        self._x2 = x2
+        self._y2 = y2
+        self._entries = []
+
+        self._SetNColumns = None
+        self._SetBorderSize = None
+        self._SetFillStyle = None
+
+    def AddEntry( self, *args ):
+        self._entries.append( args )
+
+    def SetNColumns( self, val ):
+        self._SetNColumns = val
+    def SetBorderSize( self, val ):
+        self._SetBorderSize = val
+    def SetFillStyle( self, val ):
+        self._SetFillStyle = val
+
+    def Draw( self, drawStr = '' ):
+
+        if callable(self._x1): self._x1 = self._x1( ROOT.gPad )
+        if callable(self._y1): self._y1 = self._y1( ROOT.gPad )
+        if callable(self._x2): self._x2 = self._x2( ROOT.gPad )
+        if callable(self._y2): self._y2 = self._y2( ROOT.gPad )
+
+        leg = ROOT.TLegend( self._x1, self._y1, self._x2, self._y2 )
+        ROOT.SetOwnership( leg, False )
+
+        for args in self._entries:
+            leg.AddEntry( *args )
+
+        if not( self._SetNColumns is None ):
+            leg.SetNColumns(   self._SetNColumns )
+        if not( self._SetBorderSize is None ):
+            leg.SetBorderSize( self._SetBorderSize )
+        if not( self._SetFillStyle is None ):
+            leg.SetFillStyle(  self._SetFillStyle )
+
+        leg.Draw( drawStr )
+
+
+
+#____________________________________________________________________
+def PlotWithBottomPanel(
+        plotName,
+        topPanelObjects,
+        bottomPanelObjects,
+        centralPadObjects = None,
+        xTitle        = '',
+        yTitleTop     = '',
+        yTitleBottom  = '',
+        padSplitPoint = 0.33,
+        helpLines     = False,
+        # 
+        topPadBottomMargin = 0.02,
+        topPadTopMargin    = 0.10,
+        topPadLeftMargin   = 0.12,
+        topPadRightMargin  = 0.02,
+        # 
+        bottomPadTopMargin    = 0.00,
+        bottomPadBottomMargin = 0.30,
+        bottomPadLeftMargin   = 0.12,
+        bottomPadRightMargin  = 0.02,
+        # 
+        SetTopPanelLogScale = False
+        ):
+
+    c.Clear()
+    # c.SetRightMargin( 0.03 )
+    # c.SetLeftMargin(  0.12 )
+
+    _width = c.GetWindowWidth()
+    _height = c.GetWindowHeight()
+    c.SetCanvasSize( 800, 900 )
+
+
+    topPad_bottom    = padSplitPoint
+    bottomPad_top    = padSplitPoint
+
+    heightRatio = float( 1.0 - topPad_bottom ) / float( bottomPad_top )
+
+
+    topPad = ROOT.TPad(
+        GetUniqueRootName(), '',
+        # c.GetLeftMargin(), topPad_bottom, 1-c.GetRightMargin(), topPad_top
+        0.0, topPad_bottom, 1.0, 1.0
+        )
+    topPad.SetBottomMargin( topPadBottomMargin) # Distance to the bottom panel
+    topPad.SetTopMargin(    topPadTopMargin)     # Space for labels
+    topPad.SetLeftMargin(   topPadLeftMargin)
+    topPad.SetRightMargin(  topPadRightMargin)
+    topPad.Draw()
+
+    bottomPad = ROOT.TPad(
+        GetUniqueRootName(), '',
+        # c.GetLeftMargin(), bottomPad_bottom, 1-c.GetRightMargin(), bottomPad_top
+        0.0, 0.0, 1.0, bottomPad_top
+        )
+    bottomPad.SetTopMargin(    bottomPadTopMargin)    # Distance to the bottom panel
+    bottomPad.SetBottomMargin( bottomPadBottomMargin) # Space for labels
+    bottomPad.SetLeftMargin(   bottomPadLeftMargin)
+    bottomPad.SetRightMargin(  bottomPadRightMargin)
+    bottomPad.Draw()
+
+
+    # ======================================
+    # Help lines
+
+    if helpLines:
+        for pad in [ topPad, bottomPad ]:
+            pad.cd()
+            for x1, y1, x2, y2 in [
+                    ( 0.0, 0.0, 1.0, 0.0 ),
+                    ( 1.0, 0.0, 1.0, 1.0 ),
+                    ( 0.0, 0.0, 0.0, 1.0 ),
+                    ( 0.0, 1.0, 1.0, 1.0 ),
+                    ]:
+                line = ROOT.TLine( x1, y1, x2, y2 )
+                ROOT.SetOwnership( line, False )
+                line.Draw()
+
+        c.cd()
+        line = ROOT.TLine( 0.0, bottomPad_top, 1.0, topPad_bottom )
+        ROOT.SetOwnership( line, False )
+        line.Draw()
+
+
+    # ======================================
+    # Draw objects
+
+    topPad.cd()
+    if SetTopPanelLogScale: topPad.SetLogy()
+
+    # print '\nPrinting ROOT.gPad stats'
+
+    # print ROOT.gPad.GetX1()
+    # print ROOT.gPad.GetY1()
+    # print ROOT.gPad.GetX2()
+    # print ROOT.gPad.GetY2()
+
+    # print ROOT.gPad.GetXlowNDC()
+    # print ROOT.gPad.GetYlowNDC()
+    # print ROOT.gPad.GetXHNDC()
+    # print ROOT.gPad.GetYHNDC()
+
+
+    for obj, drawStr in topPanelObjects:
+        obj.Draw(drawStr)
+
+    bottomPad.cd()
+    for obj, drawStr in bottomPanelObjects:
+        obj.Draw(drawStr)
+
+
+
+    topPad.cd()
+    axisHolderTop = topPanelObjects[0][0]
+    axisHolderTop.GetXaxis().SetLabelOffset(999.)
+    axisHolderTop.GetYaxis().SetTitle(yTitleTop)
+
+
+    bottomPad.cd()
+    axisHolderBottom = bottomPanelObjects[0][0]
+
+    axisHolderBottom.GetXaxis().SetLabelSize( axisHolderTop.GetXaxis().GetLabelSize() * heightRatio )
+    axisHolderBottom.GetYaxis().SetLabelSize( axisHolderTop.GetYaxis().GetLabelSize() * heightRatio )
+
+    axisHolderBottom.GetXaxis().SetTickLength( axisHolderTop.GetXaxis().GetTickLength() * heightRatio )
+    # axisHolderBottom.GetYaxis().SetTickLength( axisHolderTop.GetYaxis().GetTickLength() * heightRatio )
+
+    axisHolderBottom.GetYaxis().SetTitle(yTitleBottom)
+    axisHolderBottom.GetXaxis().SetTitle(xTitle)
+    axisHolderBottom.GetXaxis().SetTitleSize( axisHolderTop.GetXaxis().GetTitleSize() * heightRatio )
+    axisHolderBottom.GetYaxis().SetTitleSize( axisHolderTop.GetYaxis().GetTitleSize() * heightRatio )
+    axisHolderBottom.GetYaxis().SetTitleOffset( 1./heightRatio)
+
+    SaveC(plotName)
+    c.SetCanvasSize( _width, _height )
+
+
+#____________________________________________________________________
+def PlotSpectraOnTwoPanel(
+        plotname,
+        containers,
+        xTitle       = 'p_{T}^{H}',
+        yMinLimit = 0.001,
+        yMaxExternalTop = None,
+        ):
+
+    TOP_PANEL_LOGSCALE = True
+
+    topPanelObjects    = []
+    bottomPanelObjects = []
+
+    # ---------------------
+    # Determine extrema of plot
+
+    for container in containers:
+        container.binBoundaries = PhysicsCommands.FigureOutBinning( container.POIs )
+        
+        # Determine uncertainties from scan
+        container.uncs = []
+        for POI, scan in zip( container.POIs, container.Scans ):
+            POIvals, deltaNLLs = PhysicsCommands.FilterScan( scan )
+            unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
+            container.uncs.append(unc)
+
+        container.xMin = container.binBoundaries[0]
+        container.xMax = container.binBoundaries[-2] + ( container.binBoundaries[-2] - container.binBoundaries[-3] )
+        container.yMinRatio = min([ unc.leftBound for unc in container.uncs ])
+        container.yMaxRatio = max([ unc.rightBound for unc in container.uncs ])
+        container.yMinCrosssection = min([ unc.leftBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) ])
+        container.yMaxCrosssection = max([ unc.rightBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) ])
+
+    xMin = min([ container.xMin for container in containers ])
+    xMax = max([ container.xMax for container in containers ])
+
+    for container in containers:
+        if container.binBoundaries[-1] < xMax: container.binBoundaries[-1] = xMax
+        container.nBins         = len(container.binBoundaries)-1
+        container.binCenters    = [ 0.5*(left+right) for left, right in zip( container.binBoundaries[:-1], container.binBoundaries[1:] ) ]
+        container.binWidths     = [ right-left for left, right in zip( container.binBoundaries[:-1], container.binBoundaries[1:] ) ]
+        container.halfBinWidths = [ 0.5*(right-left) for left, right in zip( container.binBoundaries[:-1], container.binBoundaries[1:] ) ]
+
+
+    # Bottom plot base
+
+    yMinAbsBottom = min([ container.yMinRatio for container in containers ])
+    yMaxAbsBottom = max([ container.yMaxRatio for container in containers ])
+    yMinBottom = yMinAbsBottom - 0.1*(yMaxAbsBottom-yMinAbsBottom)
+    yMaxBottom = yMaxAbsBottom + 0.1*(yMaxAbsBottom-yMinAbsBottom)
+
+    baseBottom = GetPlotBase(
+        xMin = xMin,
+        xMax = xMax,
+        yMin = yMinBottom,
+        yMax = yMaxBottom,
+        )
+    bottomPanelObjects.append( ( baseBottom, 'P' ) )
+
+    lineAtOne = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
+    lineAtOne.SetLineColor(14)
+    bottomPanelObjects.append( ( lineAtOne, '' ) )
+
+
+    # Top plot base
+
+    yMinAbsTop = min([ container.yMinCrosssection for container in containers ])
+    yMaxAbsTop = max([ container.yMaxCrosssection for container in containers ])
+
+    if TOP_PANEL_LOGSCALE:
+        yMinAbsTop = yMinAbsTop
+        yMinTop = max( yMinLimit, 0.5*yMinAbsTop )
+        yMaxTop = 2.*yMaxAbsTop
+    else:
+        yMinTop = yMinAbsTop - 0.1*(yMaxAbsTop-yMinAbsTop)
+        yMaxTop = yMaxAbsTop + 0.1*(yMaxAbsTop-yMinAbsTop)
+
+    if yMaxExternalTop: 
+        yMaxTop = yMaxExternalTop
+
+    baseTop = GetPlotBase(
+        xMin = xMin,
+        xMax = xMax,
+        yMin = yMinTop,
+        yMax = yMaxTop,
+        )
+    topPanelObjects.append( ( baseTop, 'P' ) )
+
+
+    # ======================================
+    # Load results into plot
+
+    leg = TLegendMultiPanel(
+        lambda c: c.GetLeftMargin() + 0.01,
+        lambda c: 1 - c.GetTopMargin() - 0.19,
+        lambda c: 1 - c.GetRightMargin() - 0.01,
+        lambda c: 1 - c.GetTopMargin()
+        )
+    leg.SetNColumns( min( len(containers), 3 ) )
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+
+    colorCycle = Commands.newColorCycle()
+    fillStyleCycle = itertools.cycle([ 3245, 3254 ])
+
+    for container in containers:
+        if not hasattr( container, 'color' ): container.color = next(colorCycle)
+        container.fillStyle = fillStyleCycle.next()
+
+        # ---------------------
+        # Construct objects for bottom panel
+
+        if not container.name == 'combination':
+
+            Hratio = ROOT.TH1F(
+                GetUniqueRootName(), '',
+                len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
+                )
+            ROOT.SetOwnership( Hratio, False )
+            Hratio.SetLineColor(container.color)
+            Hratio.SetLineWidth(2)
+            for iBin in xrange(container.nBins):
+                Hratio.SetBinContent( iBin+1, container.uncs[iBin].min )
+            bottomPanelObjects.append( ( Hratio, 'HISTSAME' ) )
+
+            Hcrosssection = ROOT.TH1F(
+                GetUniqueRootName(), '',
+                len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
+                )
+            ROOT.SetOwnership( Hcrosssection, False )
+            Hcrosssection.SetLineColor(container.color)
+            Hcrosssection.SetLineWidth(2)
+            for iBin in xrange(container.nBins):
+                Hcrosssection.SetBinContent( iBin+1, container.uncs[iBin].min * container.SMcrosssections[iBin] )
+            topPanelObjects.append( ( Hcrosssection, 'HISTSAME' ) )
+
+
+            # ---------------------
+            # Construct separate TGraphAsymmErrors for the uncertainties
+
+            Tgratio = ROOT.TGraphAsymmErrors(
+                container.nBins,
+                array( 'f', container.binCenters ),
+                array( 'f', [ container.uncs[i].min for i in xrange(container.nBins) ] ),
+                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
+                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
+                array( 'f', [ container.uncs[i].leftError for i in xrange(container.nBins) ] ),
+                array( 'f', [ container.uncs[i].rightError for i in xrange(container.nBins) ] ),
+                )
+            ROOT.SetOwnership( Tgratio, False )
+            Tgratio.SetName( GetUniqueRootName() )
+            Tgratio.SetFillStyle(container.fillStyle)
+            Tgratio.SetFillColor(container.color)
+            Tgratio.SetMarkerStyle(1)
+            Tgratio.SetMarkerSize(0)
+            Tgratio.SetMarkerColor(container.color)
+            bottomPanelObjects.append( ( Tgratio, 'E2PSAME' ) )
+
+            Tgcrosssection = ROOT.TGraphAsymmErrors(
+                container.nBins,
+                array( 'f', container.binCenters ),
+                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].min for i in xrange(container.nBins) ] ),
+                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
+                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
+                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].leftError for i in xrange(container.nBins) ] ),
+                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].rightError for i in xrange(container.nBins) ] ),
+                )
+            ROOT.SetOwnership( Tgcrosssection, False )
+            Tgcrosssection.SetName( GetUniqueRootName() )
+            Tgcrosssection.SetFillStyle(container.fillStyle)
+            Tgcrosssection.SetFillColor(container.color)
+            Tgcrosssection.SetMarkerStyle(1)
+            Tgcrosssection.SetMarkerSize(0)
+            Tgcrosssection.SetMarkerColor(container.color)
+            Tgcrosssection.SetLineColor(container.color)
+            Tgcrosssection.SetLineWidth(2)
+            topPanelObjects.append( ( Tgcrosssection, 'E2PSAME' ) )
+
+            leg.AddEntry( Tgcrosssection.GetName(), container.title, 'LF' )
+
+
+        else:
+
+
+            Tgratio = ROOT.TGraphAsymmErrors(
+                container.nBins,
+                array( 'f', container.binCenters ),
+                array( 'f', [ container.uncs[i].min for i in xrange(container.nBins) ] ),
+                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
+                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
+                array( 'f', [ container.uncs[i].leftError for i in xrange(container.nBins) ] ),
+                array( 'f', [ container.uncs[i].rightError for i in xrange(container.nBins) ] ),
+                )
+            ROOT.SetOwnership( Tgratio, False )
+            Tgratio.SetName( GetUniqueRootName() )
+            Tgratio.SetMarkerStyle(8)
+            Tgratio.SetMarkerSize(1.2)
+            # Tgratio.SetLineWidth(2)
+            bottomPanelObjects.append( ( Tgratio, 'PSAME' ) )
+
+            Tgcrosssection = ROOT.TGraphAsymmErrors(
+                container.nBins,
+                array( 'f', container.binCenters ),
+                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].min for i in xrange(container.nBins) ] ),
+                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
+                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
+                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].leftError for i in xrange(container.nBins) ] ),
+                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].rightError for i in xrange(container.nBins) ] ),
+                )
+            ROOT.SetOwnership( Tgcrosssection, False )
+            Tgcrosssection.SetName( GetUniqueRootName() )
+            Tgcrosssection.SetMarkerStyle(8)
+            Tgcrosssection.SetMarkerSize(1.2)
+            # Tgcrosssection.SetLineWidth(2)
+            topPanelObjects.append( ( Tgcrosssection, 'PSAME' ) )
+
+            leg.AddEntry( Tgcrosssection.GetName(), container.title, 'PE' )
+
+
+    topPanelObjects.append( ( leg, '' ) )
+
+    ROOT.gStyle.SetEndErrorSize(3)
+    PlotWithBottomPanel(
+        plotname,
+        topPanelObjects,
+        bottomPanelObjects,
+        xTitle = xTitle,
+        yTitleTop    = '#Delta#sigma (pb/GeV)',
+        yTitleBottom = 'ratio w.r.t. SM',
+        SetTopPanelLogScale = TOP_PANEL_LOGSCALE,
+        topPadLeftMargin = 0.14,
+        bottomPadLeftMargin = 0.14,
+        )
+    ROOT.gStyle.SetEndErrorSize(1)
+
+
 #____________________________________________________________________
 def PlotParametrizationsOnCombination(
         container,
@@ -660,6 +1085,13 @@ def BasicMixedContourPlot(
     leg.SetFillStyle(0)
 
 
+    TpointSM = ROOT.TGraph( 1, array( 'd', [x_SM] ), array( 'd', [y_SM] ) )
+    ROOT.SetOwnership( TpointSM, False )
+    TpointSM.SetMarkerSize(2)
+    TpointSM.SetMarkerStyle(21)
+    TpointSM.SetMarkerColor( 12 )
+    TpointSM.Draw('PSAME')
+
     for container in containers:
 
         for Tg in container.contours_1sigma:
@@ -689,13 +1121,6 @@ def BasicMixedContourPlot(
         Tpoint.Draw('PSAME')
         Tpoint.SetName( '{0}_bestfitpoint'.format( container.name ) )
         container.bestfitPoint = Tpoint
-
-    TpointSM = ROOT.TGraph( 1, array( 'd', [x_SM] ), array( 'd', [y_SM] ) )
-    ROOT.SetOwnership( TpointSM, False )
-    TpointSM.SetMarkerSize(2)
-    TpointSM.SetMarkerStyle(21)
-    TpointSM.SetMarkerColor( 12 )
-    TpointSM.Draw('PSAME')
 
     leg.Draw()
 

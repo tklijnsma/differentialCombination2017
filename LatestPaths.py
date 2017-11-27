@@ -59,7 +59,10 @@ derivedTheoryFiles_YukawaQuarkInduced       = 'derivedTheoryFiles_Nov03_YukawaQu
 derivedTheoryFiles_YukawaGluonInduced       = 'derivedTheoryFiles_Nov03_YukawaGluonInduced'
 derivedTheoryFiles_YukawaQuarkInducedScaled = 'derivedTheoryFiles_Nov03_YukawaQuarkInducedScaled'
 derivedTheoryFiles_YukawaSummed             = 'derivedTheoryFiles_Nov03_YukawaSummed'
-derivedTheoryFiles_Top                      = 'derivedTheoryFiles_Nov06_Top'
+
+# Problem with SM file
+# derivedTheoryFiles_Top                      = 'derivedTheoryFiles_Nov06_Top'
+derivedTheoryFiles_Top                      = 'derivedTheoryFiles_Nov24_Top'
 
 
 ########################################
@@ -70,8 +73,12 @@ correlationMatrix_Yukawa              = 'correlationMatrices_Nov03/corrMat_exp.t
 theoryUncertainties_Yukawa            = 'correlationMatrices_Nov03/errors_for_corrMat_exp.txt'
 correlationMatrix_Yukawa_Uncorrelated = 'correlationMatrices_Nov03/corrMat_exp_UNCORRELATED.txt'
 
-correlationMatrix_Top                 = 'correlationMatrices_Nov06_Top/corrMat_exp.txt'
-theoryUncertainties_Top               = 'correlationMatrices_Nov06_Top/errors_for_corrMat_exp.txt'
+# Problem with SM file
+# correlationMatrix_Top                 = 'correlationMatrices_Nov06_Top/corrMat_exp.txt'
+# theoryUncertainties_Top               = 'correlationMatrices_Nov06_Top/errors_for_corrMat_exp.txt'
+correlationMatrix_Top                 = 'correlationMatrices_Nov24_Top/corrMat_exp.txt'
+theoryUncertainties_Top               = 'correlationMatrices_Nov24_Top/errors_for_corrMat_exp.txt'
+
 
 # Correlation matrices for differential observables
 correlationMatrix_PTH                 = 'corrMat_Nov15_combinedCard_smH_Nov07/higgsCombine_CORRMAT_combinedCard_smH_Nov07.MultiDimFit.mH125.root'
@@ -126,10 +133,15 @@ ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov20/comb
 # ws_hgg_Top         = 'workspaces_Nov06/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
 # ws_hzz_Top         = 'workspaces_Nov06/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
 
-# Last theory uncertainty skipped:
-ws_hgg_Top         = 'workspaces_Nov08/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
-ws_combined_Top    = 'workspaces_Nov08/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root'
-ws_hzz_Top         = 'workspaces_Nov08/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
+# Last theory uncertainty skipped:  # Had problem with SM file
+# ws_hgg_Top         = 'workspaces_Nov08/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
+# ws_combined_Top    = 'workspaces_Nov08/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root'
+# ws_hzz_Top         = 'workspaces_Nov08/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
+
+# Problem with SM file resolved, last theory bin still skipped
+ws_combined_Top    = 'workspaces_Nov24/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root'
+ws_hgg_Top         = 'workspaces_Nov24/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
+ws_hzz_Top         = 'workspaces_Nov24/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
 
 ws_combined_Top_lumiScalable           = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
 ws_combined_Top_profiledTotalXS        = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS.root'
@@ -220,9 +232,15 @@ scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan_asimov = 'Scan_Yukawa_Nov
 scan_combined_Top                                         = 'Scan_Top_Nov08'
 scan_hgg_Top                                              = 'Scan_Top_Nov08_hgg'
 scan_hzz_Top                                              = 'Scan_Top_Nov08_hzz'
-scan_combined_Top_asimov                                  = 'Scan_Top_Nov08_asimov'
-scan_hgg_Top_asimov                                       = 'Scan_Top_Nov08_hgg_asimov'
-scan_hzz_Top_asimov                                       = 'Scan_Top_Nov08_hzz_asimov'
+
+# scan_combined_Top_asimov                                  = 'Scan_Top_Nov08_asimov'
+# scan_hgg_Top_asimov                                       = 'Scan_Top_Nov08_hgg_asimov'
+# scan_hzz_Top_asimov                                       = 'Scan_Top_Nov08_hzz_asimov'
+scan_combined_Top_asimov                                  = 'Scan_Top_Nov26_asimov'
+scan_hgg_Top_asimov                                       = 'Scan_Top_Nov26_hgg_asimov'
+scan_hzz_Top_asimov                                       = 'Scan_Top_Nov26_hzz_asimov'
+
+
 
 scan_combined_Top_extendedRange_asimov                    = 'Scan_Top_Nov20_asimov'
 scan_hgg_Top_extendedRange_asimov                         = 'Scan_Top_Nov20_hzz_asimov'

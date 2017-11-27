@@ -230,7 +230,7 @@ class CombineScan(Container):
     #____________________________________________________________________
     def CreatePostfit( self ):
 
-        finalPostfitWS = abspath(join( self.subDirectory, 'POSTFIT_' + basename(self.datacard).replace('/','') ))
+        finalPostfitWS = abspath(join( self.subDirectory, 'POSTFIT_' + ( 'ASIMOV_' if self.asimov else '' ) + basename(self.datacard).replace('/','') ))
 
         cmd = self.ParseBestfitCommand()
 
@@ -524,12 +524,14 @@ class CombineScan(Container):
         else:
             cmd.append( 'combine' )
 
+        
+        scanName = '_POSTFIT_' + ( 'ASIMOV_' if self.asimov else '' ) + self.name
         cmd.extend([
             # 'combine',
             self.datacard,
-            '-n {0}'.format( '_POSTFIT_' + self.name ),
+            '-n {0}'.format( scanName ),
             ])
-        self.postfitRootFileBasename = 'higgsCombine{0}.MultiDimFit.mH125.root'.format( '_POSTFIT_' + self.name )
+        self.postfitRootFileBasename = 'higgsCombine{0}.MultiDimFit.mH125.root'.format( scanName )
 
         if self.doFastscan:
             cmd.append( '--fastScan' )

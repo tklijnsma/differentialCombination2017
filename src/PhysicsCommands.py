@@ -191,7 +191,7 @@ def BasicDrawScanResults(
     base.SetMaximum( min( 6., deltaNLLRange[1] ) )
     base.SetMarkerColor(0)
     base.GetXaxis().SetTitle( '#mu' )
-    base.GetYaxis().SetTitle( '#Delta NLL' )
+    base.GetYaxis().SetTitle( '2#DeltaNLL' )
 
     base.GetXaxis().SetTitleSize( 0.06 )
     base.GetYaxis().SetTitleSize( 0.06 )
@@ -268,7 +268,7 @@ def BasicDrawScanResults(
         Tg = ROOT.TGraph(
             nPoints,
             array( 'd', POIvals ),
-            array( 'd', deltaNLLs ),
+            array( 'd', [ 2.*val for val in deltaNLLs ] ),
             )
         ROOT.SetOwnership( Tg, False )
         Tg.SetName( 'Tg_' + POI )
@@ -295,7 +295,7 @@ def BasicDrawScanResults(
         # Dots at the error bounds
 
         rightDot = ROOT.TGraph(
-            1, array( 'f', [ minimaAndUncertainties['rightBound'] ] ), array( 'f', [ 0.5 ] )
+            1, array( 'f', [ minimaAndUncertainties['rightBound'] ] ), array( 'f', [ 1.0 ] )
             )
         ROOT.SetOwnership( rightDot, False )
         if minimaAndUncertainties['wellDefinedRightBound']:
@@ -307,7 +307,7 @@ def BasicDrawScanResults(
         rightDot.Draw('PSAME')
 
         leftDot = ROOT.TGraph(
-            1, array( 'f', [ minimaAndUncertainties['leftBound'] ] ), array( 'f', [ 0.5 ] )
+            1, array( 'f', [ minimaAndUncertainties['leftBound'] ] ), array( 'f', [ 1.0 ] )
             )
         ROOT.SetOwnership( leftDot, False )
         if minimaAndUncertainties['wellDefinedLeftBound']:
