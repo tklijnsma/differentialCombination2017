@@ -242,6 +242,9 @@ def PlotSpectraOnTwoPanel(
         xTitle       = 'p_{T}^{H}',
         yMinLimit = 0.001,
         yMaxExternalTop = None,
+        lastBinIsNotOverflow = False,
+        xMinExternal = None,
+        xMaxExternal = None,
         ):
 
     TOP_PANEL_LOGSCALE = True
@@ -263,7 +266,10 @@ def PlotSpectraOnTwoPanel(
             container.uncs.append(unc)
 
         container.xMin = container.binBoundaries[0]
-        container.xMax = container.binBoundaries[-2] + ( container.binBoundaries[-2] - container.binBoundaries[-3] )
+        if lastBinIsNotOverflow:
+            container.xMax = container.binBoundaries[-1]
+        else:
+            container.xMax = container.binBoundaries[-2] + ( container.binBoundaries[-2] - container.binBoundaries[-3] )
         container.yMinRatio = min([ unc.leftBound for unc in container.uncs ])
         container.yMaxRatio = max([ unc.rightBound for unc in container.uncs ])
         container.yMinCrosssection = min([ unc.leftBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) ])
@@ -271,6 +277,10 @@ def PlotSpectraOnTwoPanel(
 
     xMin = min([ container.xMin for container in containers ])
     xMax = max([ container.xMax for container in containers ])
+    if not xMinExternal is None:
+        xMin = xMinExternal
+    if not xMaxExternal is None:
+        xMax = xMaxExternal
 
     for container in containers:
         if container.binBoundaries[-1] < xMax: container.binBoundaries[-1] = xMax
@@ -659,6 +669,14 @@ def PlotParametrizationsOnCombination(
             ( contour.x[ contour.y.index(contour.yMax) ], contour.yMax ),
             ])
 
+        if getattr( container, 'OnlyYMaximaOfContour', False ):
+            x1, y1 = points[-2]
+            x2, y2 = points[-1]
+            points.extend([
+                ( xBestfit + 0.5*(x1-xBestfit), yBestfit + 0.5*(y1-yBestfit) ),
+                ( xBestfit + 0.5*(x2-xBestfit), yBestfit + 0.5*(y2-yBestfit) )
+                ])
+
     if STRAIGHT_LINE_TO_SM:
         dxSM = xBestfit - container.xSM
         dySM = yBestfit - container.ySM
@@ -910,13 +928,13 @@ def PlotMultipleScans(
                 l.DrawLatex(
                     container.unc.leftBound - 0.013*(xMax-xMin), 1.0 + 0.013*(yMax-yMin),
                     '{0:+.2f}'.format(
-                        abs(container.unc.leftBound),
+                        container.unc.leftBound,
                         ))
                 l.SetTextAlign(11)
                 l.DrawLatex(
                     container.unc.rightBound + 0.013*(xMax-xMin), 1.0 + 0.013*(yMax-yMin),
                     '{0:+.2f}'.format(
-                        abs(container.unc.rightBound),
+                        container.unc.rightBound,
                         ))
 
 

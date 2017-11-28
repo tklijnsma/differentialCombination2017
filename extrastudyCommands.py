@@ -59,6 +59,13 @@ def AppendParserOptions( parser ):
             # super(FooAction, self).__call__( parser, namespace, values, option_string=None )
             # setattr( namespace, self.dest, values )
 
+    parser.add_argument( '--inclusive_combineCards',                  action=CustomAction )
+    parser.add_argument( '--inclusive_t2ws',                          action=CustomAction )
+    parser.add_argument( '--inclusive_scan',                          action=CustomAction )
+
+    parser.add_argument( '--onlyNormalization_Top',                   action=CustomAction )
+    parser.add_argument( '--onlyNormalization_Yukawa',                action=CustomAction )
+
     parser.add_argument( '--FitBR_t2ws',                              action=CustomAction )
     parser.add_argument( '--FitBR_bestfit',                           action=CustomAction )
     parser.add_argument( '--FitBR_scan',                              action=CustomAction )
@@ -89,6 +96,190 @@ def AppendParserOptions( parser ):
 def main( args ):
 
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+
+
+    #____________________________________________________________________
+    if args.inclusive_combineCards:
+        Commands.BasicCombineCards(
+            'suppliedInput/combinedCard_smH_{0}_INCLUSIVE.txt'.format(datestr),
+            'hgg=' + LatestPaths.card_hgg_INC_unprocessed,
+            'hzz=' + LatestPaths.card_hzz_INC_unprocessed
+            )
+
+    #____________________________________________________________________
+    if args.inclusive_t2ws:
+
+        extraOptions = [
+            '--PO verbose=2',
+            '--PO \'higgsMassRange=123,127\'',
+            ]
+
+        Commands.BasicT2WSwithModel(
+            LatestPaths.card_combined_INC,
+            pathToModel = 'FitBRModel.py',
+            modelName   = 'fitTotalXSModel',
+            suffix       = 'fitTotalXS',
+            extraOptions = extraOptions,
+            )
+
+    #____________________________________________________________________
+    if args.inclusive_scan:
+        
+        ws = LatestPaths.ws_combined_totalXS
+
+        ASIMOV = False
+        if args.asimov: ASIMOV = True
+
+        totalXS_ranges = [ 0., 2. ]
+
+        jobDirectory = 'Scan_TotalXS_{0}'.format( datestr )
+        if ASIMOV: jobDirectory += '_asimov'
+        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+
+        nPoints = 55
+        nPointsPerJob = 5
+        queue = 'short.q'
+
+        Commands.MultiDimCombineTool(
+            ws,
+            nPoints       = nPoints,
+            nPointsPerJob = nPointsPerJob,
+            queue         = queue,
+            notOnBatch    = False,
+            jobDirectory  = jobDirectory,
+            fastscan      = False,
+            asimov        = ASIMOV,
+            jobPriority   = 0,
+            extraOptions  = [
+                # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
+                '-P r',
+                '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
+                # '--setPhysicsModelParameters {0}'.format(
+                #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
+                #     ),
+                # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
+                #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
+                # '--saveSpecifiedFunc {0}'.format(','.join(
+                #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                '--squareDistPoiStep',
+                ]
+            )
+
+
+    #____________________________________________________________________
+    if args.onlyNormalization_Top:
+        
+        expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350., 10000. ]
+
+        extraOptions = [
+            '--PO verbose=2',
+            '--PO \'higgsMassRange=123,127\'',
+            '--PO linearTerms=False',
+            '--PO splitggH=True',
+            ]
+
+        if args.hzz:
+            extraOptions.append( '--PO isOnlyHZZ=True' )
+        if args.hgg:
+            extraOptions.append( '--PO isOnlyHgg=True' )
+
+        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
+
+        extraOptions.append(
+            '--PO SM=[ct=1,cg=0,file={0}]'.format(
+                TheoryFileInterface.FileFinder( ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True )
+                )
+            )
+        
+        theoryFiles = TheoryFileInterface.FileFinder(
+            ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
+            )
+        possibleTheories = []
+        for theoryFile in theoryFiles:
+            ct = Commands.ConvertStrToFloat( re.search( r'ct_([\dmp]+)', theoryFile ).group(1) )
+            cg = Commands.ConvertStrToFloat( re.search( r'cg_([\dmp]+)', theoryFile ).group(1) )
+            possibleTheories.append(
+                '--PO theory=[ct={0},cg={1},file={2}]'.format(
+                    ct, cg, theoryFile
+                    )                
+                )
+        extraOptions.extend(possibleTheories)
+
+        suffix = 'Top'
+        extraOptions.append( '--PO ProfileTotalXS=True' )
+        suffix += '_profiledTotalXS'
+        extraOptions.append( '--PO FitOnlyNormalization=True' )
+        suffix += '_fitOnlyNormalization'
+
+        extraOptions.append(
+            '--PO binBoundaries={0}'.format( ','.join([ str(b) for b in expBinBoundaries ]) )
+            )
+
+        Commands.BasicT2WSwithModel(
+            LatestPaths.card_combined_INC,
+            'CouplingModel.py',
+            suffix = suffix,
+            extraOptions = extraOptions,
+            )
+
+
+    #____________________________________________________________________
+    if args.onlyNormalization_Yukawa:
+
+        expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
+
+        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_YukawaSummed )
+
+        extraOptions = [
+            '--PO verbose=2',
+            '--PO \'higgsMassRange=123,127\'',
+            '--PO linearTerms=True',
+            '--PO splitggH=True',
+            ]
+
+        extraOptions.append(
+            '--PO binBoundaries={0}'.format( ','.join([ str(b) for b in expBinBoundaries ]) )
+            )
+
+        extraOptions.append(
+            '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
+                TheoryFileInterface.FileFinder( kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
+                )
+            )
+
+        possibleTheories = []
+        for kappab in [ -2, -1, 0, 1, 2 ]:
+            for kappac in [ -10, -5, 0, 1, 5, 10 ]:
+                if ( kappab == 1 and kappac == 1 ) or ( kappab == 0 and kappac == 0 ): continue
+                else:
+                    possibleTheories.append(
+                        '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
+                            kappab, kappac,
+                            TheoryFileInterface.FileFinder( kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
+                            )
+                        )
+        # Sample only a few needed theories
+        import random
+        random.seed(1002)
+        extraOptions.extend( random.sample( possibleTheories, 6 ) )
+
+
+        suffix = 'Yukawa'
+
+        extraOptions.append( '--PO ProfileTotalXS=True' )
+        suffix += '_profiledTotalXS'
+
+        extraOptions.append( '--PO FitOnlyNormalization=True' )
+        suffix += '_fitOnlyNormalization'
+
+
+        Commands.BasicT2WSwithModel(
+            LatestPaths.card_combined_INC,
+            'CouplingModel.py',
+            suffix = suffix,
+            extraOptions = extraOptions,
+            )
+
 
 
     #____________________________________________________________________

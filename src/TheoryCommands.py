@@ -659,6 +659,7 @@ def GetTH2FromListOfRootFiles(
         zVariable = 'deltaNLL',
         # defaultHValue = None,
         defaultHValue = 999.,
+        forceBestfitAtZero = False,
         ):
 
     # Read values from specified rootfiles
@@ -711,6 +712,20 @@ def GetTH2FromListOfRootFiles(
     yBinBoundaries = inferBinBoundaries( yBinCenters )
 
 
+    # If starting from pre-fit, sometimes something goes wrong... look for actual minimum:
+    dontSkipBestfit = False
+    if not forceBestfitAtZero:
+        minDeltaNLL = min(GetListFromScan('deltaNLL'))
+        if minDeltaNLL < 0.0:
+            Commands.Warning( 'There are <0 deltaNLL values - the start fit was NOT the best fit!!' )
+            iBestfit = GetListFromScan('deltaNLL').index( minDeltaNLL )
+            for point in scan:
+                point['deltaNLL'] -= minDeltaNLL
+            xBestfit = GetListFromScan(xCoupling)[iBestfit]
+            yBestfit = GetListFromScan(yCoupling)[iBestfit]
+            dontSkipBestfit = True
+
+
     H2name = GetUniqueRootName()
     H2 = ROOT.TH2D(
         H2name, '',
@@ -727,7 +742,7 @@ def GetTH2FromListOfRootFiles(
 
     for iPoint in xrange(nPoints):
 
-        if scan[iPoint][xCoupling] == xBestfit and scan[iPoint][yCoupling] == yBestfit:
+        if scan[iPoint][xCoupling] == xBestfit and scan[iPoint][yCoupling] == yBestfit and not dontSkipBestfit:
             continue
 
         try:

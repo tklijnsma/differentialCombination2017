@@ -67,6 +67,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingContourPlot_Top_BRdependencyComparison',  action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_BRdependencyComparison_bigRange',  action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_ProfiledTotalXS',       action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Top_FitOnlyNormalization',  action=CustomAction )
 
     parser.add_argument( '--couplingContourPlot_Top_onlyNormalization',     action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_skippedLastBin',        action=CustomAction )
@@ -157,8 +158,8 @@ def main( args ):
         # INCLUDE_BR_COUPLING_DEPENDENCY = True
         INCLUDE_BR_COUPLING_DEPENDENCY = False
 
-        # PROFILE_TOTAL_XS               = True
-        PROFILE_TOTAL_XS               = False
+        PROFILE_TOTAL_XS               = True
+        # PROFILE_TOTAL_XS               = False
 
         # FIT_ONLY_NORMALIZATION         = True
         FIT_ONLY_NORMALIZATION         = False
@@ -640,14 +641,24 @@ def main( args ):
 
         # rootfiles = glob( 'Scan_Top_Nov23_hzz_0' + '/*.root' )
         # rootfiles = glob( 'Scan_Top_Nov23_hzz_asimov_2' + '/*.root' )
-        rootfiles = glob( 'Scan_Top_Nov27_asimov_1' + '/*.root' )
+        # rootfiles = glob( 'Scan_Top_Nov27_asimov_1' + '/*.root' )
+        # rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_Top) )
+        rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_TopCtCb) )
+
+        # res = TheoryCommands.PlotCouplingScan2D(
+        #     rootfiles,
+        #     xCoupling = 'ct',
+        #     yCoupling = 'cg',
+        #     SM = ( 1.0, 0.0 ),
+        #     )
 
         res = TheoryCommands.PlotCouplingScan2D(
             rootfiles,
             xCoupling = 'ct',
-            yCoupling = 'cg',
-            SM = ( 1.0, 0.0 ),
+            yCoupling = 'cb',
+            SM = ( 1.0, 1.0 ),
             )
+
 
         print '\nBest fit:'
         print res.xCoupling, '=', res.xBestfit
@@ -728,9 +739,9 @@ def main( args ):
         combined.name = 'combined'
 
         containers = [
-            hgg,
             hzz,
-            # combined
+            hgg,
+            combined
             ]
         for container in containers: container.title = titles.get( container.name, container.name )
 
@@ -842,49 +853,6 @@ def main( args ):
             )
 
     #____________________________________________________________________
-    if args.couplingContourPlot_Top_onlyNormalization:
-
-        containers = []
-
-        # ctMin = -2.0
-        # ctMax = 6.5
-        # cgMin = -0.45
-        # cgMax = 0.25
-
-        ctMin = -1.0
-        ctMax = 2.0
-        cgMin = -0.1
-        cgMax = 0.2
-
-        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles( combined_rootfiles, xCoupling, yCoupling, verbose   = False, )
-        combined.color = 1
-        combined.name  = 'combined'
-        combined.title = 'Nominal'
-        containers.append(combined)
-
-        onlyNormalization_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_fitOnlyNormalization_asimov ) )
-        onlyNormalization = TheoryCommands.GetTH2FromListOfRootFiles( onlyNormalization_rootfiles, xCoupling, yCoupling, verbose   = False, )
-        onlyNormalization.color = 2
-        onlyNormalization.name  = 'onlyNormalization'
-        onlyNormalization.title = 'Only normalization'
-        containers.append(onlyNormalization)
-
-        PlotCommands.BasicMixedContourPlot(
-            containers,
-            xMin = ctMin,
-            xMax = ctMax,
-            yMin = cgMin,
-            yMax = cgMax,
-            xTitle    = titles.get( xCoupling, xCoupling ),
-            yTitle    = titles.get( yCoupling, yCoupling ),
-            plotname  = 'contours_onlyNormalization',
-            x_SM      = 1.,
-            y_SM      = 0.,
-            plotIndividualH2s = True,
-            )
-
-    #____________________________________________________________________
     if args.couplingContourPlot_TopCtCb:
         containers = []
 
@@ -910,6 +878,7 @@ def main( args ):
             xCoupling,
             yCoupling,
             verbose   = False,
+            forceBestfitAtZero = True, # Failed row of -1 at the top screws up best fit finding
             )
         hgg.color = 2
         hgg.name = 'hgg'
@@ -961,10 +930,15 @@ def main( args ):
 
         containers = []
 
-        ctMin = -1.0
-        ctMax = 2.0
-        cgMin = -0.1
-        cgMax = 0.2
+        # ctMin = -1.0
+        # ctMax = 2.0
+        # cgMin = -0.1
+        # cgMax = 0.2
+
+        ctMin = -8.5
+        ctMax = 8.5
+        cgMin = -0.65
+        cgMax = 0.65
 
         combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_asimov ) )
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
@@ -1041,10 +1015,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -0.2,
-            xMax = 2.0,
-            yMin = -0.08,
-            yMax = 0.135,
+            xMin = -8.5,
+            xMax = 8.5,
+            yMin = -0.65,
+            yMax = 0.65,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_profiledTotalXS',
@@ -1053,6 +1027,49 @@ def main( args ):
             plotIndividualH2s = True,
             )
 
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top_FitOnlyNormalization:
+
+        containers = []
+
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_asimov ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'regular'
+        combined.title = 'Nominal'
+        containers.append(combined)
+
+        onlyNormalization_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_fitOnlyNormalization_asimov ) )
+        onlyNormalization = TheoryCommands.GetTH2FromListOfRootFiles(
+            onlyNormalization_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        onlyNormalization.color = 2
+        onlyNormalization.name = 'onlyNormalization'
+        onlyNormalization.title = 'Fitting only normalization'
+        containers.append(onlyNormalization)
+
+        PlotCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -8.5,
+            xMax = 8.5,
+            yMin = -0.65,
+            yMax = 0.65,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_onlyNormalization',
+            x_SM      = 1.,
+            y_SM      = 0.,
+            plotIndividualH2s = True,
+            )
 
     #____________________________________________________________________
     if args.couplingContourPlot_Top_BRdependencyComparison:
@@ -1451,8 +1468,8 @@ def main( args ):
         suffix = ''
 
         container.ws_coupling         = LatestPaths.ws_combined_Top
-        # container.scanDir_coupling    = LatestPaths.scan_combined_Top
-        container.scanDir_coupling    = LatestPaths.scan_combined_Top_bigRange2
+        container.scanDir_coupling    = LatestPaths.scan_combined_Top
+        # container.scanDir_coupling    = LatestPaths.scan_combined_Top_bigRange2
 
         # container.ws_coupling         = LatestPaths.ws_combined_Top_skippedLastBin
         # container.scanDir_coupling    = LatestPaths.scan_combined_Top_skippedLastBin        
@@ -1474,9 +1491,9 @@ def main( args ):
         container.ySM                 = 0.0
 
         container.ManualPoints = [
-            ( lambda xBestfit, xSM: xSM, lambda yBestfit, ySM: ySM ),
-            ( lambda xBestfit, xSM: xBestfit + 1.0*(xBestfit-xSM) -0.05 , lambda yBestfit, ySM: yBestfit  + 1.0*(yBestfit-ySM) ),
-            ( lambda xBestfit, xSM: xBestfit + 2.0*(xBestfit-xSM) -0.10 , lambda yBestfit, ySM: yBestfit  + 2.0*(yBestfit-ySM) ),
+            # ( lambda xBestfit, xSM: xSM, lambda yBestfit, ySM: ySM ),
+            # ( lambda xBestfit, xSM: xBestfit + 1.0*(xBestfit-xSM) -0.05 , lambda yBestfit, ySM: yBestfit  + 1.0*(yBestfit-ySM) ),
+            # ( lambda xBestfit, xSM: xBestfit + 2.0*(xBestfit-xSM) -0.10 , lambda yBestfit, ySM: yBestfit  + 2.0*(yBestfit-ySM) ),
             # 
             # ( lambda xBestfit, xSM: xSM + 0.5*(xBestfit-xSM) , lambda yBestfit, ySM: ySM ),
             # ( lambda xBestfit, xSM: xSM + 0.5*(xBestfit-xSM) , lambda yBestfit, ySM: ySM  + 0.01 ),

@@ -328,8 +328,13 @@ def BasicDrawScanResults(
 
 def FigureOutBinning( POIs ):
     POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
-    Ranges = [ Commands.InterpretPOI( POI )[2] for POI in POIs ]
 
+    # Very ugly hack to make sure that LT30 is the first element of the sorted list
+    if '_LT' in POIs[-1] or '_LE' in POIs[-1]:
+        POIs = [ POIs[-1] ] + POIs[:-1]
+
+    Ranges = [ Commands.InterpretPOI( POI )[2] for POI in POIs ]
+    
     rangeLengthList = list(set(map( len, Ranges[:-1] )))
     if len(rangeLengthList) != 1:
         print 'ERROR: Ranges are inconsistent:'

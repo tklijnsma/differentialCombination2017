@@ -386,9 +386,9 @@ def main( args ):
         couplingVariationContainers = [
             # ct_cg,
             # ct_cb,
-            # kappab_kappac_Gluon,
-            # kappab_kappac_Quark,
-            # kappab_kappac_QuarkScaled,
+            kappab_kappac_Gluon,
+            kappab_kappac_Quark,
+            kappab_kappac_QuarkScaled,
             ]
 
         # n_theoryFiles_kappab_kappac = len( theoryFiles_kappab_kappac )
@@ -409,7 +409,7 @@ def main( args ):
             couplingVariationContainer.containers = [ container for container in containers_kappab_kappac if container.kappab == kappabVal ]
             couplingVariationContainer.ws = LatestPaths.ws_combined_Yukawa
             couplingVariationContainer.SM = SM_kappab_kappac
-            couplingVariationContainers.append( couplingVariationContainer )
+            # couplingVariationContainers.append( couplingVariationContainer )
 
 
 
@@ -418,6 +418,9 @@ def main( args ):
         DO_PARAMETRIZATION = True
 
         TOP_PANEL_LOGSCALE = True
+
+        SKIP_KAPPAB_0_KAPPAC_1 = True
+        # SKIP_KAPPAB_0_KAPPAC_1 = False
 
 
         def SetParametrizedTgs( couplingVariationContainer ):
@@ -478,7 +481,11 @@ def main( args ):
         for DO_PARAMETRIZATION in [ False, True ]:
             for couplingVariationContainer in couplingVariationContainers:
                 SetParametrizedTgs( couplingVariationContainer )
-                containers = couplingVariationContainer.containers
+
+                if SKIP_KAPPAB_0_KAPPAC_1:
+                    containers = [ container for container in couplingVariationContainer.containers if not ( getattr( container, 'kappab', 999. ) == 0.0 and getattr( container, 'kappac', 999. ) == 1.0 ) ]
+                else:
+                    containers = couplingVariationContainer.containers
 
                 c.Clear()
 

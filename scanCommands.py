@@ -64,6 +64,9 @@ def AppendParserOptions( parser ):
     group.add_argument( '--top',    action='store_true' )
 
     parser.add_argument( '--nominal',                                  action='store_true' )
+    parser.add_argument( '--lumiStudy',                                action='store_true' )
+    parser.add_argument( '--profiledTotalXS',                          action='store_true' )
+    parser.add_argument( '--fitOnlyNormalization',                     action='store_true' )
 
 
 
@@ -99,9 +102,11 @@ def main( args ):
 
         # usePostfitWS = abspath( 'Scan_Top_Nov26_asimov/postfit_and_fastscan/POSTFIT_combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root' )
         # useFastscan  = abspath( 'Scan_Top_Nov26_asimov/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
+        # usePostfitWS = abspath( 'Scan_Top_Nov27_hgg_0/postfit_and_fastscan/POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root' )
+        # useFastscan  = abspath( 'Scan_Top_Nov27_hgg_0/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
 
-        RUN_QUICKLY = True
-        # RUN_QUICKLY = False
+        # RUN_QUICKLY = True
+        RUN_QUICKLY = False
 
 
         # ======================================
@@ -183,6 +188,15 @@ def main( args ):
                     datacard = LatestPaths.ws_hzz_Yukawa
                 scan.datacard = datacard
 
+            elif args.lumiStudy:
+                scan.datacard = LatestPaths.ws_combined_Yukawa_lumiScalable
+                scan.PhysicsModelParameters.append( 'lumiScale=8.356546' )
+                suffix += '_lumiStudy'
+
+            elif args.fitOnlyNormalization:
+                scan.datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization
+                suffix += '_fitOnlyNormalization'
+
             else:
                 print 'Pass physics option'
                 return
@@ -194,9 +208,24 @@ def main( args ):
                 datacard = LatestPaths.ws_combined_Top
                 if args.hgg:
                     datacard = LatestPaths.ws_hgg_Top
+                    scan.deltaNLLCutOff = 50.
+                    Commands.Warning( 'Setting deltaNLLCutOff to 50 for hgg' )
                 if args.hzz:
                     datacard = LatestPaths.ws_hzz_Top
                 scan.datacard = datacard
+
+            elif args.lumiStudy:
+                scan.datacard = LatestPaths.ws_combined_Top_lumiScalable
+                scan.PhysicsModelParameters.append( 'lumiScale=8.356546' )
+                suffix += 'lumiStudy'
+
+            elif args.profiledTotalXS:
+                scan.datacard = LatestPaths.ws_combined_Top_profiledTotalXS
+                suffix += '_profiledTotalXS'
+
+            elif args.fitOnlyNormalization:
+                scan.datacard = LatestPaths.ws_combined_Top_profiledTotalXS_fitOnlyNormalization
+                suffix += '_fitOnlyNormalization'
 
             else:
                 print 'Pass physics option'

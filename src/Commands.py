@@ -79,15 +79,16 @@ def BasicCombineCards(
 
 
 def BasicT2WS(
-    datacard,
-    extraOptions=None,
-    outputWS=None,
-    outputDir=None,
-    autoMaps=False,
-    manualMaps=None,
-    smartMaps=None,
-    verbose=False,
-    ):
+        datacard,
+        extraOptions=None,
+        outputWS=None,
+        outputDir=None,
+        autoMaps=False,
+        manualMaps=None,
+        smartMaps=None,
+        verbose=False,
+        suffix='',
+        ):
 
     if outputDir is None:
         outputDir = abspath( 'workspaces_{0}'.format(datestr) )
@@ -95,6 +96,7 @@ def BasicT2WS(
     
     if not outputWS:
         outputWS = basename(datacard).replace( '.txt', '.root' )
+    outputWS = outputWS.replace( '.root', suffix + '.root' )
     outputWS = join( outputDir, outputWS )
 
     signalprocesses, processes, bins = ListProcesses( datacard )
@@ -215,8 +217,6 @@ def BasicT2WSwithModel(
     if suffix != None:
         outputWS = outputWS.replace( '.root', '_{0}.root'.format(suffix) )
 
-    signalprocesses, processes, bins = ListProcesses( datacard )
-
     moduleName = basename(pathToModel).replace('.py','')
     if modelName == None:
         modelName = moduleName[0].lower() + moduleName[1:]
@@ -239,6 +239,8 @@ def BasicT2WSwithModel(
     # Possibility to use maps here as well
 
     if smartMaps:
+
+        signalprocesses, processes, bins = ListProcesses( datacard )
 
         # Manual maps should override smart maps; gather all the patters that are already in a manualMap
         if manualMaps:
@@ -868,6 +870,7 @@ def BasicCombineTool(
     currentdir = os.getcwd()
     if not jobDirectory:
         jobDirectory = TEMPJOBDIR
+    if asimov: jobDirectory += '_asimov'
     jobDirectory = AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
 
     if not TESTMODE:
@@ -1068,13 +1071,13 @@ def InterpretPOI( POI ):
     if len(observableRange) == 1:
         rangeStr = observableRange[0]
         if 'GT' in rangeStr or 'GE' in rangeStr :
-            Range = [ float( rangeStr.replace('GT','').replace('GE','') ), 'INF' ]
+            Range = [ ConvertStrToFloat( rangeStr.replace('GT','').replace('GE','') ), 'INF' ]
         elif 'LT' in rangeStr or 'LE' in rangeStr :
-            Range = [ '-INF', float( rangeStr.replace('LT','').replace('LE','') ) ]
+            Range = [ '-INF', ConvertStrToFloat( rangeStr.replace('LT','').replace('LE','') ) ]
         else:
-            Range = [ float( rangeStr ) ]
+            Range = [ ConvertStrToFloat( rangeStr ) ]
     elif len(observableRange) == 2:
-        Range = [ float(i) for i in observableRange ]
+        Range = [ ConvertStrToFloat(i) for i in observableRange ]
     else:
         print 'ERROR: Could not make sense of observable range \'{0}\''.format( '_'.join(observableRange) )
         return

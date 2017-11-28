@@ -152,6 +152,62 @@ def RenameProcesses_Hgg_differentials(
             outdatacardTxt
             )
 
+    # New bin boundaries
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genAbsRapidity_0p9_1p2(\W)',
+            r'\1smH_YH_0p90_1p20\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genAbsRapidity_1p2_3p0(\W)',
+            r'\1smH_YH_1p20_2p50\2',
+            outdatacardTxt
+            )
+
+
+    # ======================================
+    # ptjet renaming Nov28
+
+    # Category names:
+    # InsideAcceptance_genJet2p5Pt0_m1000p0_30p0
+    # InsideAcceptance_genJet2p5Pt0_30p0_55p0
+    # InsideAcceptance_genJet2p5Pt0_55p0_95p0
+    # InsideAcceptance_genJet2p5Pt0_95p0_120p0
+    # InsideAcceptance_genJet2p5Pt0_120p0_200p0
+    # InsideAcceptance_genJet2p5Pt0_200p0_13000p0
+
+    # Process names:
+    # smH_PTJ_LT30
+    # smH_PTJ_30_55
+    # smH_PTJ_55_95
+    # smH_PTJ_95_120
+    # smH_PTJ_120_200
+    # smH_PTJ_GT200
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genJet2p5Pt0_m1000p0_30p0(\W)',
+            r'\1smH_PTJ_LT30\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genJet2p5Pt0_200p0_13000p0(\W)',
+            r'\1smH_PTJ_GT200\2',
+            outdatacardTxt
+            )
+
+    for i in xrange(3):
+        outdatacardTxt = re.sub(
+            r'(\W)InsideAcceptance_genJet2p5Pt0_([m\d]+)p0_(\d+)p0(\W)',
+            r'\1smH_PTJ_\2_\3\4',
+            outdatacardTxt
+            )
+
 
     # ======================================
     # Process simple global replacements

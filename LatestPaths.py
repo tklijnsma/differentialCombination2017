@@ -41,14 +41,33 @@ card_combined_smH_NJ           = 'suppliedInput/combinedCard_NJ_smH_Nov12.txt'
 
 
 # ----- YH -----
+# card_hgg_smH_YH_unprocessed    = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov11/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins.txt'
+# card_hgg_smH_YH                = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov11/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_renamedProcesses.txt'
 
-card_hgg_smH_YH_unprocessed    = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov11/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins.txt'
-card_hgg_smH_YH                = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov11/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_renamedProcesses.txt'
+card_hgg_smH_YH_unprocessed      = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination.txt'
+card_hgg_smH_YH                  = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses.txt'
 
 # No OutsideAcceptance in hzz, so no renumbering necessary
 card_hzz_smH_YH                = 'suppliedInput/fromDavid/YH_NNLOPS_Nov12/smH/hzz4l_comb_13TeV_xs.txt'
 
-card_combined_smH_YH           = 'suppliedInput/combinedCard_YH_smH_Nov12.txt'
+# card_combined_smH_YH           = 'suppliedInput/combinedCard_YH_smH_Nov12.txt'
+card_combined_smH_YH           = 'suppliedInput/combinedCard_YH_smH_Nov28.txt'
+
+
+# ----- PTJ -----
+
+card_hzz_smH_PTJ               = 'suppliedInput/fromDavid/PTJET_NNLOPS_Nov28/smH/hzz4l_comb_13TeV_xs.txt'
+card_hgg_smH_PTJ_unprocessed   = 'suppliedInput/fromVittorio/differential_Jet2p5Pt0NNLOPS_newBins_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins.txt'
+card_hgg_smH_PTJ               = 'suppliedInput/fromVittorio/differential_Jet2p5Pt0NNLOPS_newBins_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.txt'
+card_combined_smH_PTJ          = 'suppliedInput/combinedCard_PTJ_smH_Nov28.txt'
+
+
+# ----- INCLUSIVE -----
+card_hgg_INC_unprocessed       = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt'
+card_hzz_INC_unprocessed       = 'suppliedInput/fromDavid/differential_Nov27/smH/hzz4l_comb_13TeV_xs.txt'
+card_combined_INC              = 'suppliedInput/combinedCard_smH_Nov27_INCLUSIVE.txt'
+
+
 
 
 ########################################
@@ -100,6 +119,15 @@ ws_hgg_smH_NJ                = 'workspaces_Nov12/Datacard_13TeV_differential_Nje
 ws_hzz_smH_NJ                = 'workspaces_Nov12/hzz4l_comb_13TeV_xs.root'
 ws_combined_smH_NJ           = 'workspaces_Nov12/combinedCard_NJ_smH_Nov12.root'
 
+ws_hgg_smH_YH                = 'workspaces_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses.root'
+ws_hzz_smH_YH                = 'workspaces_Nov28/hzz4l_comb_13TeV_xs.root'
+ws_combined_smH_YH           = 'workspaces_Nov28/combinedCard_YH_smH_Nov28.root'
+
+ws_hgg_smH_PTJ               = 'workspaces_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
+ws_hzz_smH_PTJ               = 'workspaces_Nov28/hzz4l_comb_13TeV_xs_ptjet.root'
+ws_combined_smH_PTJ          = 'workspaces_Nov28/combinedCard_PTJ_smH_Nov28.root'
+
+
 # ---------------------
 # Workspaces for extra studies
 
@@ -108,6 +136,8 @@ ws_ratio_of_BRs_globalScales = 'workspaces_Nov20/combinedCard_smH_Nov07_FitBRMod
 ws_totalXS                   = 'workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel_fitTotalXS.root'
 ws_combined_ggH_xHfixed      = 'workspaces_Nov08/combinedCard_Nov03_xHfixed.root'
 ws_combined_ratioOfBRs       = 'workspaces_Nov14/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_ratioOfBRs.root'
+
+ws_combined_totalXS          = 'workspaces_Nov27/combinedCard_smH_Nov27_INCLUSIVE_FitBRModel_fitTotalXS.root'
 
 
 # ======================================
@@ -123,7 +153,9 @@ ws_combined_Yukawa_lumiScalable                        = 'workspaces_Nov06/combi
 ws_combined_Yukawa_profiledTotalXS                     = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS.root'
 ws_combined_Yukawa_couplingDependentBR                 = 'workspaces_Nov10/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
 # ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov17/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
-ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov20/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
+# ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov20/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
+ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov28/combinedCard_smH_Nov27_INCLUSIVE_CouplingModel_Yukawa_profiledTotalXS_fitOnlyNormalization.root'
+
 
 # ======================================
 # kappat kappag
@@ -143,11 +175,18 @@ ws_combined_Top    = 'workspaces_Nov24/combinedCard_Nov03_CouplingModel_Top_with
 ws_hgg_Top         = 'workspaces_Nov24/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
 ws_hzz_Top         = 'workspaces_Nov24/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
 
-ws_combined_Top_lumiScalable           = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
-ws_combined_Top_profiledTotalXS        = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS.root'
+# ws_combined_Top_lumiScalable           = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
+# ws_combined_Top_profiledTotalXS        = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS.root'
 ws_combined_Top_couplingDependentBR    = 'workspaces_Nov10/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
-ws_combined_Top_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov17/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
 ws_combined_Top_skippedLastBin         = 'workspaces_Nov17/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_skippedLastBin.root'
+
+# ws_combined_Top_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov17/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
+ws_combined_Top_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov28/combinedCard_smH_Nov27_INCLUSIVE_CouplingModel_Top_profiledTotalXS_fitOnlyNormalization.root'
+
+# Without problematic SM norm
+ws_combined_Top_lumiScalable           = 'workspaces_Nov27/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
+ws_combined_Top_profiledTotalXS        = 'workspaces_Nov27/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS.root'
+
 
 ws_combined_TopCtCb = 'workspaces_Nov15/combinedCard_Nov03_CouplingModel_TopCtCb_withTheoryUncertainties.root'
 ws_hgg_TopCtCb      = 'workspaces_Nov15/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_TopCtCb_withTheoryUncertainties.root'
@@ -169,15 +208,33 @@ scan_combined_NJ  = 'Scan_nJets_Nov12'
 scan_hgg_NJ       = 'Scan_nJets_Nov12_0'
 scan_hzz_NJ       = 'Scan_nJets_Nov12_1'
 
+scan_combined_YH  = 'Scan_YH_Nov28'
+scan_hgg_YH       = 'Scan_YH_Nov28_0'
+scan_hzz_YH       = 'Scan_YH_Nov28_1'
+
+scan_combined_PTJ = 'Scan_PTJ_Nov28_1'
+scan_hgg_PTJ      = 'Scan_PTJ_Nov28_0'
+scan_hzz_PTJ      = 'Scan_PTJ_Nov28'
+
+scan_combined_YH_asimov  = 'Scan_YH_Nov28_asimov'
+scan_hgg_YH_asimov       = 'Scan_YH_Nov28_asimov_0'
+scan_hzz_YH_asimov       = 'Scan_YH_Nov28_asimov_1'
+
+scan_combined_PTJ_asimov = 'Scan_PTJ_Nov28_asimov'
+scan_hgg_PTJ_asimov      = 'Scan_PTJ_Nov28_asimov_0'
+scan_hzz_PTJ_asimov      = 'Scan_PTJ_Nov28_asimov_1'
+
 
 # ======================================
 # Extra studies
 
 scan_ratioOfBRs                  = 'Scan_ratioOfBRs_Nov08'
 scan_ratioOfBRs_globalScales     = 'Scan_ratioOfBRs_Nov20_globalScales'
-scan_combined_totalXS            = 'Scan_TotalXS_Nov08'
+# scan_combined_totalXS            = 'Scan_TotalXS_Nov08'
 scan_combined_PTH_xHfixed        = 'Scan_PTH_Nov08_xHfixed'
 scan_combined_PTH_xHfixed_asimov = 'Scan_PTH_Nov17_xHfixed_asimov'
+
+scan_combined_totalXS            = 'Scan_TotalXS_Nov27'
 
 
 # ======================================
@@ -193,7 +250,6 @@ scan_hzz_Yukawa_asimov                                      = 'Scan_Yukawa_Nov03
 scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
 scan_combined_Yukawa_fitOnlyNormalization                   = 'Scan_Yukawa_Nov20_profiledTotalXS_fitOnlyNormalization'
 # scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov20_profiledTotalXS_fitOnlyNormalization_asimov'
-
 
 scan_combined_Yukawa_lumiStudy_asimov                       = 'Scan_Yukawa_Nov06_lumiStudy_asimov'
 scan_combined_Yukawa_noTheoryUncertainties_asimov           = 'Scan_Yukawa_Nov06_noTheoryUncertainties_asimov'
@@ -229,37 +285,48 @@ scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan_asimov = 'Scan_Yukawa_Nov
 # scan_hzz_Top_asimov      = 'Scan_Top_Nov07_hzz_asimov'
 # scan_hgg_Top_asimov      = 'Scan_Top_Nov07_hgg_asimov'
 
-scan_combined_Top                                         = 'Scan_Top_Nov08'
-scan_hgg_Top                                              = 'Scan_Top_Nov08_hgg'
-scan_hzz_Top                                              = 'Scan_Top_Nov08_hzz'
+# scan_combined_Top                                         = 'Scan_Top_Nov08'
+# scan_hgg_Top                                              = 'Scan_Top_Nov08_hgg'
+# scan_hzz_Top                                              = 'Scan_Top_Nov08_hzz'
+scan_combined_Top                                         = 'Scan_Top_Nov27_0'
+# scan_hgg_Top                                              = 'Scan_Top_Nov27_hgg_0'
+scan_hgg_Top                                              = 'Scan_Top_Nov28_hgg_0'
+scan_hzz_Top                                              = 'Scan_Top_Nov26_hzz'
 
 # scan_combined_Top_asimov                                  = 'Scan_Top_Nov08_asimov'
 # scan_hgg_Top_asimov                                       = 'Scan_Top_Nov08_hgg_asimov'
 # scan_hzz_Top_asimov                                       = 'Scan_Top_Nov08_hzz_asimov'
-scan_combined_Top_asimov                                  = 'Scan_Top_Nov26_asimov'
+scan_combined_Top_asimov                                  = 'Scan_Top_Nov27_asimov_1'
 scan_hgg_Top_asimov                                       = 'Scan_Top_Nov26_hgg_asimov'
 scan_hzz_Top_asimov                                       = 'Scan_Top_Nov26_hzz_asimov'
 
 
+# TODO:
+# Scan_TotalXS_Nov27
 
 scan_combined_Top_extendedRange_asimov                    = 'Scan_Top_Nov20_asimov'
 scan_hgg_Top_extendedRange_asimov                         = 'Scan_Top_Nov20_hzz_asimov'
 scan_hzz_Top_extendedRange_asimov                         = 'Scan_Top_Nov20_hgg_asimov'
 
 scan_combined_Top_fitOnlyNormalization                    = 'Scan_Top_Nov17_profiledTotalXS_fitOnlyNormalization'
-scan_combined_Top_fitOnlyNormalization_asimov             = 'Scan_Top_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
+# scan_combined_Top_fitOnlyNormalization_asimov             = 'Scan_Top_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
 scan_combined_Top_bigRange                                = 'Scan_Top_Nov17'
 scan_combined_Top_bigRange2                               = 'Scan_Top_Nov19'
 scan_combined_Top_skippedLastBin                          = 'Scan_Top_Nov17_skippedLastBin'
 scan_combined_Top_skippedLastBin_asimov                   = 'Scan_Top_Nov17_skippedLastBin_asimov'
 scan_combined_Top_lumiStudy_asimov                        = 'Scan_Top_Nov09_lumiStudy_asimov'
-scan_combined_Top_profiledTotalXS_asimov                  = 'Scan_Top_Nov09_profiledTotalXS_asimov'
+# scan_combined_Top_profiledTotalXS_asimov                  = 'Scan_Top_Nov09_profiledTotalXS_asimov'
 scan_combined_Top_couplingDependentBR_asimov              = 'Scan_Top_Nov10_couplingDependentBR_asimov'
 scan_combined_Top_couplingDependentBR_fixedKappaV_asimov  = 'Scan_Top_Nov10_couplingDependentBR_fixedKappaV_asimov'
 # scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov = 'Scan_Top_Nov16_couplingDependentBR_kappaVMaxOne_asimov'
 scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov = 'Scan_Top_Nov17_couplingDependentBR_kappaVMaxOne_asimov'
-
 scan_combined_Top_couplingDependentBR_bigRange_asimov     = 'Scan_Top_Nov19_couplingDependentBR_asimov'
+
+
+scan_combined_Top_fitOnlyNormalization_asimov             = 'Scan_Top_Nov28_fitOnlyNormalization_asimov_0'
+scan_combined_Top_profiledTotalXS_asimov                  = 'Scan_Top_Nov27_profiledTotalXS_asimov_0'
+scan_combined_Top_lumiStudy_asimov                        = 'Scan_Top_Nov27lumiStudy_asimov_1'
+
 
 scan_combined_TopCtCb                                    = 'Scan_TopCtCb_Nov15'
 scan_hgg_TopCtCb                                         = 'Scan_TopCtCb_Nov15_hgg'

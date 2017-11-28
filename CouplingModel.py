@@ -200,25 +200,32 @@ class CouplingModel( PhysicsModel ):
 
         self.setMH()
 
-        self.figureOutBinning()
-
-        self.makeParametrizationsFromTheory()
-
-        if self.FitBR:
-            self.MakeWidthExpressions()
-    
-        if self.ProfileTotalXS:
+        if self.FitOnlyNormalization:
+            self.makeParametrizationsFromTheory()
             self.MakeTotalXSExpressions()
+            self.modelBuilder.doVar('bkg_modifier[1.0]')
+            self.modelBuilder.out.var('bkg_modifier').setConstant(True)
+            self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
 
-        if self.FitRatioOfBRs:
-            self.MakeRatioOfBRsExpressions()
+        else:
+            self.figureOutBinning()
 
-        self.defineYieldParameters()
+            self.makeParametrizationsFromTheory()
 
-        self.addTheoryUncertaintyNuisances()
+            if self.FitBR:
+                self.MakeWidthExpressions()
+        
+            if self.ProfileTotalXS:
+                self.MakeTotalXSExpressions()
+
+            if self.FitRatioOfBRs:
+                self.MakeRatioOfBRsExpressions()
+
+            self.defineYieldParameters()
+
+            self.addTheoryUncertaintyNuisances()
 
         self.chapter( 'Starting model.getYieldScale()' )
-
 
 
     #____________________________________________________________________
@@ -1191,6 +1198,10 @@ class CouplingModel( PhysicsModel ):
             self.modelBuilder.out.var('r_totalXS').setVal(1.0)
             self.modelBuilder.out.var('r_totalXS').setConstant(True)
             self.modelBuilder.factory_( 'expr::globalTotalXSmodifier( "@0/@1", totalXS, totalXS_SM )' )
+
+            if self.verbose:
+                self.modelBuilder.out.function('globalTotalXSmodifier').Print()
+
 
 
     #____________________________________________________________________

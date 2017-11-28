@@ -22,6 +22,8 @@ import OneOfCommands
 import TheoryCommands
 import CorrelationMatrices
 import MergeHGGWDatacards
+from Container import Container
+import PlotCommands
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -49,7 +51,15 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--rapidity_combineCards',              action=CustomAction )
     parser.add_argument( '--rapidity_t2ws_unsplit',              action=CustomAction )
     parser.add_argument( '--rapidity_bestfit_unsplit',           action=CustomAction )
-    parser.add_argument( '--plot_rapiditySpectra',                  action=CustomAction )
+    parser.add_argument( '--rapidity_plot',                      action=CustomAction )
+
+    parser.add_argument( '--ptjet_rename_hgg',                action=CustomAction )
+    parser.add_argument( '--ptjet_combineCards',              action=CustomAction )
+    parser.add_argument( '--ptjet_t2ws_unsplit',              action=CustomAction )
+    parser.add_argument( '--ptjet_bestfit_unsplit',           action=CustomAction )
+    parser.add_argument( '--ptjet_plot',                      action=CustomAction )
+
+
 
 
 ########################################
@@ -58,8 +68,110 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
-    TheoryCommands.SetPlotDir( 'plots_{0}_nJets'.format(datestr) )
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
 
+
+    ########################################
+    # PTJET
+    ########################################
+
+    #____________________________________________________________________
+    if args.ptjet_rename_hgg:
+        MergeHGGWDatacards.RenameProcesses_Hgg_differentials(
+            LatestPaths.card_hgg_smH_PTJ_unprocessed
+            )
+
+
+    #____________________________________________________________________
+    if args.ptjet_combineCards:
+        Commands.BasicCombineCards(
+            'suppliedInput/combinedCard_PTJ_smH_{0}.txt'.format(datestr),
+            'hgg=' + LatestPaths.card_hgg_smH_PTJ,
+            'hzz=' + LatestPaths.card_hzz_smH_PTJ
+            )
+
+
+    #____________________________________________________________________
+    if args.ptjet_t2ws_unsplit:
+
+        datacard = LatestPaths.card_combined_smH_PTJ
+        if args.hgg:
+            datacard = LatestPaths.card_hgg_smH_PTJ
+        if args.hzz:
+            datacard = LatestPaths.card_hzz_smH_PTJ
+
+        if args.hzz:
+
+            # hzz_PTJ_LT30_cat4e
+            # hzz_PTJ_30_55_cat4e
+            # hzz_PTJ_55_95_cat4e
+            # hzz_PTJ_GT95_cat4e
+
+            # smH_PTJ_LT30
+            # smH_PTJ_30_55
+            # smH_PTJ_55_95
+            # smH_PTJ_95_120
+            # smH_PTJ_120_200
+            # smH_PTJ_GT200
+
+            # smH_PTJ_LT30
+            # smH_PTJ_30_55
+            # smH_PTJ_55_95
+            # smH_PTJ_GT95
+
+            Commands.BasicT2WS(
+                datacard,
+                manualMaps=[
+                    '--PO \'map=.*/smH_PTJ_LT30:r_smH_PTJ_LT30[1.0,-1.0,4.0]\'',
+                    '--PO \'map=.*/smH_PTJ_30_55:r_smH_PTJ_30_55[1.0,-1.0,4.0]\'',
+                    '--PO \'map=.*/smH_PTJ_55_95:r_smH_PTJ_55_95[1.0,-1.0,4.0]\'',
+                    '--PO \'map=.*/smH_PTJ_95_120:r_smH_PTJ_GT95[1.0,-1.0,4.0]\'',
+                    '--PO \'map=.*/smH_PTJ_120_200:r_smH_PTJ_GT95[1.0,-1.0,4.0]\'',
+                    '--PO \'map=.*/smH_PTJ_GT200:r_smH_PTJ_GT95[1.0,-1.0,4.0]\'',
+                    ],
+                suffix = '_ptjet'
+                )
+
+        else:
+            Commands.BasicT2WS(
+                datacard,
+                smartMaps = [
+                    ( r'.*/smH_PTJ_([pm\d\_GELT]+)', r'r_smH_PTJ_\1[1.0,-1.0,4.0]' )
+                    ],
+                # suffix = '_ptjet'
+                )
+
+    #____________________________________________________________________
+    if args.ptjet_bestfit_unsplit:
+
+        ASIMOV = True
+        # ASIMOV = False
+
+        nPoints       = 55
+        nPointsPerJob = 5
+
+        ws = LatestPaths.ws_combined_smH_PTJ
+        if args.hgg:
+            ws = LatestPaths.ws_hgg_smH_PTJ
+        if args.hzz:
+            ws = LatestPaths.ws_hzz_smH_PTJ
+            nPointsPerJob = nPoints
+
+        Commands.BasicCombineTool(
+            ws,
+            POIpattern    = '*',
+            nPoints       = nPoints,
+            nPointsPerJob = nPointsPerJob,
+            jobDirectory  = 'Scan_PTJ_{0}'.format(datestr),
+            queue         = 'short.q',
+            asimov        = ASIMOV,
+            )
+
+
+
+    ########################################
+    # AbsRapidity
+    ########################################
 
     #____________________________________________________________________
     if args.rename_hgg_rapidity:
@@ -76,7 +188,6 @@ def main( args ):
             'hzz=' + LatestPaths.card_hzz_smH_YH
             )
 
-            
 
     #____________________________________________________________________
     if args.rapidity_t2ws_unsplit:
@@ -87,189 +198,216 @@ def main( args ):
         if args.hzz:
             datacard = LatestPaths.card_hzz_smH_YH
 
-        if args.hzz:
-            Commands.BasicT2WS(
-                datacard,
-                manualMaps=[
-                    '--PO \'map=.*/smH_NJ_0:r_smH_NJ_0[1.0,-1.0,4.0]\'',
-                    '--PO \'map=.*/smH_NJ_1:r_smH_NJ_1[1.0,-1.0,4.0]\'',
-                    '--PO \'map=.*/smH_NJ_2:r_smH_NJ_2[1.0,-1.0,4.0]\'',
-                    '--PO \'map=.*/smH_NJ_3:r_smH_NJ_GE3[1.0,-1.0,4.0]\'',
-                    '--PO \'map=.*/smH_NJ_GE4:r_smH_NJ_GE3[1.0,-1.0,4.0]\'',
-                    ],
-                )
-        else:
-            Commands.BasicT2WS(
-                datacard,
-                smartMaps = [
-                    ( r'.*/smH_NJ_([\d\_GE]+)', r'r_smH_NJ_\1[1.0,-1.0,4.0]' )
-                    ],
-                )
+        # smH_YH_0p0_0p15
+        # smH_YH_0p15_0p30
+        # smH_YH_0p30_0p60
+        # smH_YH_0p60_0p90
+        # smH_YH_0p90_1p20
+        # smH_YH_1p20_2p50
+
+        Commands.BasicT2WS(
+            datacard,
+            smartMaps = [
+                ( r'.*/smH_YH_([pm\d\_GE]+)', r'r_smH_YH_\1[1.0,-1.0,4.0]' )
+                ],
+            )
 
     #____________________________________________________________________
     if args.rapidity_bestfit_unsplit:
 
-        ASIMOV = False
+        # ASIMOV = False
+        ASIMOV = True
 
-        nPoints       = 39
-        nPointsPerJob = 3
+        nPoints       = 55
+        nPointsPerJob = 5
 
-        ws = LatestPaths.ws_combined_smH_NJ
+        ws = LatestPaths.ws_combined_smH_YH
         if args.hgg:
-            ws = LatestPaths.ws_hgg_smH_NJ
+            ws = LatestPaths.ws_hgg_smH_YH
         if args.hzz:
-            ws = LatestPaths.ws_hzz_smH_NJ
-            nPoints       = 39
-            nPointsPerJob = 39
+            ws = LatestPaths.ws_hzz_smH_YH
+            nPointsPerJob = nPoints
 
         Commands.BasicCombineTool(
             ws,
             POIpattern    = '*',
-            nPoints       = 39,
-            nPointsPerJob = 3,
-            jobDirectory  = 'Scan_nJets_{0}'.format(datestr),
+            nPoints       = nPoints,
+            nPointsPerJob = nPointsPerJob,
+            jobDirectory  = 'Scan_YH_{0}'.format(datestr),
             queue         = 'short.q',
             asimov        = ASIMOV,
             )
 
 
     #____________________________________________________________________
-    if args.plot_rapiditySpectra:
+    def DrawScan(
+            ws,
+            scandir,
+            name,
+            pattern = '',
+            ):
 
-        # ======================================
-        # Specify SMXS
+        POIs = Commands.ListPOIs( ws )
 
-        # binBoundaries = [ 0, 1, 2, 3, 4, 5 ]
+        scans = PhysicsCommands.GetScanResults(
+            POIs,
+            scandir,
+            pattern = pattern
+            )
+        PhysicsCommands.BasicDrawScanResults( POIs, scans, name=name )
+        # PhysicsCommands.BasicDrawSpectrum(    POIs, scans, name=name )
 
-        # binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
-        # binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
+        return POIs, scans
 
-        # YR4_totalXS = 55.70628722 # pb
+    # Use pt cross sections for now
+    binBoundaries_hgg = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
+    binBoundaries_hzz = [ 0., 15., 30., 85., 200., 1000. ]
+    binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
+    binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
 
-        # shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
-        # shape_hzz = [
-        #     0.208025,
-        #     0.234770,
-        #     0.165146 + 0.218345,
-        #     0.087552 + 0.059154,
-        #     0.022612 + 0.004398,
-        #     ]
-        # hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
-        # hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
+    YR4_totalXS = LatestPaths.YR4_totalXS
+    shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
+    shape_hzz = [ 0.208025, 0.234770, 0.165146 + 0.218345, 0.087552 + 0.059154, 0.022612 + 0.004398, ]
+    hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
+    hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
 
-
-        # ======================================
-        # Start drawing
-
-        def DrawScan(
-                ws,
-                scandir,
-                pattern,
-                name,
-                ):
-
-            POIs = Commands.ListPOIs( ws )
-            scans = PhysicsCommands.GetScanResults(
-                POIs,
-                scandir,
-                pattern = pattern
-                )
-            PhysicsCommands.BasicDrawScanResults( POIs, scans, name=name )
-            # PhysicsCommands.BasicDrawSpectrum(    POIs, scans, name=name )
-
-            return POIs, scans
-
+    #____________________________________________________________________
+    if args.rapidity_plot:
 
         combinationPOIs, combinationscans = DrawScan(
-            ws      = LatestPaths.ws_njets_combined_unsplit,
-            scandir = 'Scan_nJets_Sep19',
-            pattern = 'combinedCard',
+            ws      = LatestPaths.ws_combined_smH_YH,
+            scandir = LatestPaths.scan_combined_YH,
             name    = 'combination',
+            # pattern = 'combinedCard',
             )
 
         hggPOIs, hggscans = DrawScan(
-            ws      = LatestPaths.ws_njets_hgg_unsplit,
-            scandir = 'Scan_nJets_Sep19_0',
-            pattern = 'Datacard_13TeV_differential_Njets',
+            ws      = LatestPaths.ws_hgg_smH_YH,
+            scandir = LatestPaths.scan_hgg_YH,
             name    = 'hgg',
+            # pattern = 'Datacard_13TeV_differential_Njets',
             )
 
         hzzPOIs, hzzscans = DrawScan(
-            ws      = LatestPaths.ws_njets_hzz_unsplit,
-            scandir = 'Scan_nJets_Sep19_2',
-            pattern = 'hzz4l_comb',
+            ws      = LatestPaths.ws_hzz_smH_YH,
+            scandir = LatestPaths.scan_hzz_YH,
             name    = 'hzz',
+            # pattern = 'hzz4l_comb',
             )
 
-        fineBinning = [ 0, 1, 2, 3, 4, 5 ]
-        hzzBinning  = [ 0, 1, 2, 3, 5 ]
+        # ======================================
+        # Load into suitable containers for two panel plotting
 
-        fineBinWidths = [ fineBinning[i+1]-fineBinning[i] for i in xrange(len(fineBinning)-1) ]
-        hzzBinWidths  = [ hzzBinning[i+1]-hzzBinning[i]   for i in xrange(len(hzzBinning)-1) ]
+        Commands.Warning( 'No cross sections available yet; place holder!!' )
+        xs_per_bin = hgg_crosssections[:len(combinationPOIs)]
 
-        percentage_fineBinning = [ 0.620010, 0.260148, 0.082666, 0.023464, 0.013713 ]
-        percentage_hzzBinning  = [ 0.620010, 0.260148, 0.082666, 0.023464 + 0.013713 ]
+        containers = []
 
-        xs_fineBinning = [ xs * LatestPaths.YR4_totalXS / binWidth for xs, binWidth in zip( percentage_fineBinning, fineBinWidths ) ]
-        xs_hzzBinning  = [ xs * LatestPaths.YR4_totalXS / binWidth for xs, binWidth in zip( percentage_hzzBinning, hzzBinWidths ) ]
+        hgg               = Container()
+        hgg.name          = 'hgg'
+        hgg.title         = 'H#rightarrow#gamma#gamma'
+        hgg.color         = 2
+        hgg.POIs          = hggPOIs
+        hgg.Scans         = hggscans
+        hgg.SMcrosssections = xs_per_bin
+        containers.append(hgg)
 
+        hzz               = Container()
+        hzz.name          = 'hzz'
+        hzz.title         = 'H#rightarrowZZ'
+        hzz.color         = 4
+        hzz.POIs          = hzzPOIs
+        hzz.Scans         = hzzscans
+        hzz.SMcrosssections = xs_per_bin
+        containers.append(hzz)
 
-        # For big mu plot, comment out xs's
-        PhysicsCommands.BasicCombineSpectra(
-            ( 'combination', combinationPOIs, combinationscans,
-                ( 'AsBlocks', False ),
-                ( 'SetLineColor', 1 ),
-                ( 'SetMarkerStyle', 8 ),
-                # # Block settings
-                # ( 'SetLineColor', 1 ),
-                # ( 'SetMarkerStyle', 2 ),
-                # # ( 'SetFillColorAlpha', 1, 0.2 ),
-                # ( 'SetFillColor', 13 ),
-                # # ( 'SetFillStyle', 3544 ),
-                # ( 'SetFillStyle', 3345 ),
-                ),
-            ( 'hgg', hggPOIs, hggscans,
-                ( 'SetLineColor', 2 ),
-                ( 'SetMarkerStyle', 5 ),
-                ( 'SetFillColorAlpha', 2, 0.2 ),
-                ),
-            ( 'hzz', hzzPOIs, hzzscans,
-                ( 'SetLineColor', 4 ),
-                ( 'SetMarkerStyle', 8 ),
-                ( 'SetFillColorAlpha', 4, 0.2 ),
-                ),
-            hzz_SMXS         = xs_hzzBinning,
-            hgg_SMXS         = xs_fineBinning,
-            combination_SMXS = xs_fineBinning,
-            # legendLeft       = True
+        combination               = Container()
+        combination.name          = 'combination'
+        combination.title         = 'Combination'
+        combination.POIs          = combinationPOIs
+        combination.Scans         = combinationscans
+        combination.SMcrosssections = xs_per_bin
+        containers.append(combination)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'rapiditySpectrum_twoPanel',
+            containers,
+            xTitle = '|y_{H}|',
+            # yMinLimit = 0.07,
+            # yMaxExternalTop = 500
+            lastBinIsNotOverflow=True,
             )
 
+    #____________________________________________________________________
+    if args.ptjet_plot:
 
-        PhysicsCommands.BasicCombineSpectra(
-            ( 'combination', combinationPOIs, combinationscans,
-                ( 'AsBlocks', False ),
-                ( 'SetLineColor', 1 ),
-                ( 'SetMarkerStyle', 8 ),
-                # # Block settings
-                # ( 'SetLineColor', 1 ),
-                # ( 'SetMarkerStyle', 2 ),
-                # # ( 'SetFillColorAlpha', 1, 0.2 ),
-                # ( 'SetFillColor', 13 ),
-                # # ( 'SetFillStyle', 3544 ),
-                # ( 'SetFillStyle', 3345 ),
-                ),
-            ( 'hgg', hggPOIs, hggscans,
-                ( 'SetLineColor', 2 ),
-                ( 'SetMarkerStyle', 5 ),
-                ( 'SetFillColorAlpha', 2, 0.2 ),
-                ),
-            ( 'hzz', hzzPOIs, hzzscans,
-                ( 'SetLineColor', 4 ),
-                ( 'SetMarkerStyle', 8 ),
-                ( 'SetFillColorAlpha', 4, 0.2 ),
-                ),
-            printTable=True,
-            bottomRatioPlot = True,
+        combinationPOIs, combinationscans = DrawScan(
+            ws      = LatestPaths.ws_combined_smH_PTJ,
+            scandir = LatestPaths.scan_combined_PTJ,
+            name    = 'combination',
+            # pattern = 'combinedCard',
+            )
+
+        hggPOIs, hggscans = DrawScan(
+            ws      = LatestPaths.ws_hgg_smH_PTJ,
+            scandir = LatestPaths.scan_hgg_PTJ,
+            name    = 'hgg',
+            # pattern = 'Datacard_13TeV_differential_Njets',
+            )
+
+        Commands.Warning( 'Made mistake in t2ws, now correcting by renaming POIs...' )
+        combinationPOIs = [ POI.replace('YH','PTJ') for POI in combinationPOIs ]
+        hggPOIs = [ POI.replace('YH','PTJ') for POI in hggPOIs ]
+
+
+        hzzPOIs, hzzscans = DrawScan(
+            ws      = LatestPaths.ws_hzz_smH_PTJ,
+            scandir = LatestPaths.scan_hzz_PTJ,
+            name    = 'hzz',
+            # pattern = 'hzz4l_comb',
+            )
+
+        # ======================================
+        # Load into suitable containers for two panel plotting
+
+        Commands.Warning( 'No cross sections available yet; place holder!!' )
+        xs_per_bin = hgg_crosssections[:len(combinationPOIs)]
+
+        containers = []
+
+        hgg               = Container()
+        hgg.name          = 'hgg'
+        hgg.title         = 'H#rightarrow#gamma#gamma'
+        hgg.color         = 2
+        hgg.POIs          = hggPOIs
+        hgg.Scans         = hggscans
+        hgg.SMcrosssections = xs_per_bin
+        containers.append(hgg)
+
+        hzz               = Container()
+        hzz.name          = 'hzz'
+        hzz.title         = 'H#rightarrowZZ'
+        hzz.color         = 4
+        hzz.POIs          = hzzPOIs
+        hzz.Scans         = hzzscans
+        hzz.SMcrosssections = xs_per_bin
+        containers.append(hzz)
+
+        combination               = Container()
+        combination.name          = 'combination'
+        combination.title         = 'Combination'
+        combination.POIs          = combinationPOIs
+        combination.Scans         = combinationscans
+        combination.SMcrosssections = xs_per_bin
+        containers.append(combination)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'ptjetSpectrum_twoPanel',
+            containers,
+            xTitle = 'p_{T}^{jet}',
+            # yMinLimit = 0.07,
+            # yMaxExternalTop = 500
+            xMinExternal = 0.0,
             )
 
 
