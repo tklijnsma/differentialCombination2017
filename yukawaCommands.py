@@ -910,6 +910,7 @@ def main( args ):
             xCoupling,
             yCoupling,
             verbose   = False,
+            forceBestfitAtZero = True
             )
         combined.color = 1
         combined.name  = 'regular'
@@ -922,6 +923,7 @@ def main( args ):
             xCoupling,
             yCoupling,
             verbose   = False,
+            forceBestfitAtZero = True
             )
         profiledTotalXS.color = 4
         profiledTotalXS.name = 'profiledTotalXS'
@@ -937,6 +939,51 @@ def main( args ):
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_profiledTotalXS',
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_onlyNormalization:
+
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+
+        containers = []
+
+        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            combined_rootfiles, xCoupling, yCoupling, verbose   = False,
+            forceBestfitAtZero = True
+            )
+        combined.color = 1
+        combined.name  = 'combined'
+        combined.title = 'Nominal'
+        containers.append(combined)
+
+        onlyNormalization_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_fitOnlyNormalization_asimov ) )
+        onlyNormalization = TheoryCommands.GetTH2FromListOfRootFiles(
+            onlyNormalization_rootfiles, xCoupling, yCoupling, verbose   = False, 
+            forceBestfitAtZero = True
+            )
+        onlyNormalization.color = 2
+        onlyNormalization.name  = 'onlyNormalization'
+        onlyNormalization.title = 'Only normalization'
+        containers.append(onlyNormalization)
+
+        PlotCommands.BasicMixedContourPlot(
+            containers,
+            xMin = -35.,
+            xMax = 35.,
+            yMin = -13.,
+            yMax = 13.,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_onlyNormalization',
             x_SM      = 1.,
             y_SM      = 1.,
             plotIndividualH2s = True,
@@ -1125,44 +1172,6 @@ def main( args ):
             plotIndividualH2s = True,
             )
 
-
-
-    #____________________________________________________________________
-    if args.couplingContourPlot_Yukawa_onlyNormalization:
-
-        xCoupling = 'kappac'
-        yCoupling = 'kappab'
-        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
-
-        containers = []
-
-        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles( combined_rootfiles, xCoupling, yCoupling, verbose   = False, )
-        combined.color = 1
-        combined.name  = 'combined'
-        combined.title = 'Nominal'
-        containers.append(combined)
-
-        onlyNormalization_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_fitOnlyNormalization_asimov ) )
-        onlyNormalization = TheoryCommands.GetTH2FromListOfRootFiles( onlyNormalization_rootfiles, xCoupling, yCoupling, verbose   = False, )
-        onlyNormalization.color = 2
-        onlyNormalization.name  = 'onlyNormalization'
-        onlyNormalization.title = 'Only normalization'
-        containers.append(onlyNormalization)
-
-        PlotCommands.BasicMixedContourPlot(
-            containers,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
-            yMax = 13.,
-            xTitle    = titles.get( xCoupling, xCoupling ),
-            yTitle    = titles.get( yCoupling, yCoupling ),
-            plotname  = 'contours_onlyNormalization',
-            x_SM      = 1.,
-            y_SM      = 1.,
-            plotIndividualH2s = True,
-            )
 
 
     #____________________________________________________________________

@@ -59,7 +59,10 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--ptjet_bestfit_unsplit',           action=CustomAction )
     parser.add_argument( '--ptjet_plot',                      action=CustomAction )
 
-
+    parser.add_argument( '--njets_plot',                      action=CustomAction )
+    parser.add_argument( '--pth_plot',                      action=CustomAction )
+    parser.add_argument( '--pth_ggH_plot',                      action=CustomAction )
+    parser.add_argument( '--plot_all',                      action=CustomAction )
 
 
 ########################################
@@ -69,6 +72,13 @@ def AppendParserOptions( parser ):
 def main( args ):
 
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+
+    if args.plot_all:
+        args.rapidity_plot = True
+        args.ptjet_plot    = True
+        args.njets_plot    = True
+        args.pth_plot      = True
+        args.pth_ggH_plot  = True
 
 
     ########################################
@@ -239,58 +249,30 @@ def main( args ):
             )
 
 
-    #____________________________________________________________________
-    def DrawScan(
-            ws,
-            scandir,
-            name,
-            pattern = '',
-            ):
-
-        POIs = Commands.ListPOIs( ws )
-
-        scans = PhysicsCommands.GetScanResults(
-            POIs,
-            scandir,
-            pattern = pattern
-            )
-        PhysicsCommands.BasicDrawScanResults( POIs, scans, name=name )
-        # PhysicsCommands.BasicDrawSpectrum(    POIs, scans, name=name )
-
-        return POIs, scans
-
-    # Use pt cross sections for now
-    binBoundaries_hgg = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
-    binBoundaries_hzz = [ 0., 15., 30., 85., 200., 1000. ]
-    binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
-    binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
-
-    YR4_totalXS = LatestPaths.YR4_totalXS
-    shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
-    shape_hzz = [ 0.208025, 0.234770, 0.165146 + 0.218345, 0.087552 + 0.059154, 0.022612 + 0.004398, ]
-    hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
-    hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
+    ########################################
+    # Plotting
+    ########################################
 
     #____________________________________________________________________
     if args.rapidity_plot:
 
         combinationPOIs, combinationscans = DrawScan(
             ws      = LatestPaths.ws_combined_smH_YH,
-            scandir = LatestPaths.scan_combined_YH,
+            scandir = LatestPaths.scan_combined_YH_asimov,
             name    = 'combination',
             # pattern = 'combinedCard',
             )
 
         hggPOIs, hggscans = DrawScan(
             ws      = LatestPaths.ws_hgg_smH_YH,
-            scandir = LatestPaths.scan_hgg_YH,
+            scandir = LatestPaths.scan_hgg_YH_asimov,
             name    = 'hgg',
             # pattern = 'Datacard_13TeV_differential_Njets',
             )
 
         hzzPOIs, hzzscans = DrawScan(
             ws      = LatestPaths.ws_hzz_smH_YH,
-            scandir = LatestPaths.scan_hzz_YH,
+            scandir = LatestPaths.scan_hzz_YH_asimov,
             name    = 'hzz',
             # pattern = 'hzz4l_comb',
             )
@@ -298,10 +280,9 @@ def main( args ):
         # ======================================
         # Load into suitable containers for two panel plotting
 
-        Commands.Warning( 'No cross sections available yet; place holder!!' )
-        xs_per_bin = hgg_crosssections[:len(combinationPOIs)]
-
         containers = []
+
+        LatestPaths.obs_yh.Print()
 
         hgg               = Container()
         hgg.name          = 'hgg'
@@ -309,7 +290,7 @@ def main( args ):
         hgg.color         = 2
         hgg.POIs          = hggPOIs
         hgg.Scans         = hggscans
-        hgg.SMcrosssections = xs_per_bin
+        hgg.SMcrosssections = LatestPaths.obs_yh.crosssection_over_binwidth()
         containers.append(hgg)
 
         hzz               = Container()
@@ -318,7 +299,7 @@ def main( args ):
         hzz.color         = 4
         hzz.POIs          = hzzPOIs
         hzz.Scans         = hzzscans
-        hzz.SMcrosssections = xs_per_bin
+        hzz.SMcrosssections = LatestPaths.obs_yh.crosssection_over_binwidth()
         containers.append(hzz)
 
         combination               = Container()
@@ -326,13 +307,14 @@ def main( args ):
         combination.title         = 'Combination'
         combination.POIs          = combinationPOIs
         combination.Scans         = combinationscans
-        combination.SMcrosssections = xs_per_bin
+        combination.SMcrosssections = LatestPaths.obs_yh.crosssection_over_binwidth()
         containers.append(combination)
 
         PlotCommands.PlotSpectraOnTwoPanel(
-            'rapiditySpectrum_twoPanel',
+            'twoPanel_rapiditySpectrum',
             containers,
             xTitle = '|y_{H}|',
+            yTitleTop = '#Delta#sigma/#Delta|y_{H}| (pb)',
             # yMinLimit = 0.07,
             # yMaxExternalTop = 500
             lastBinIsNotOverflow=True,
@@ -343,73 +325,286 @@ def main( args ):
 
         combinationPOIs, combinationscans = DrawScan(
             ws      = LatestPaths.ws_combined_smH_PTJ,
-            scandir = LatestPaths.scan_combined_PTJ,
+            scandir = LatestPaths.scan_combined_PTJ_asimov,
             name    = 'combination',
             # pattern = 'combinedCard',
             )
 
         hggPOIs, hggscans = DrawScan(
             ws      = LatestPaths.ws_hgg_smH_PTJ,
-            scandir = LatestPaths.scan_hgg_PTJ,
+            scandir = LatestPaths.scan_hgg_PTJ_asimov,
             name    = 'hgg',
             # pattern = 'Datacard_13TeV_differential_Njets',
             )
 
-        Commands.Warning( 'Made mistake in t2ws, now correcting by renaming POIs...' )
-        combinationPOIs = [ POI.replace('YH','PTJ') for POI in combinationPOIs ]
-        hggPOIs = [ POI.replace('YH','PTJ') for POI in hggPOIs ]
-
-
         hzzPOIs, hzzscans = DrawScan(
             ws      = LatestPaths.ws_hzz_smH_PTJ,
-            scandir = LatestPaths.scan_hzz_PTJ,
+            scandir = LatestPaths.scan_hzz_PTJ_asimov,
             name    = 'hzz',
             # pattern = 'hzz4l_comb',
             )
 
+
         # ======================================
         # Load into suitable containers for two panel plotting
 
-        Commands.Warning( 'No cross sections available yet; place holder!!' )
-        xs_per_bin = hgg_crosssections[:len(combinationPOIs)]
-
         containers = []
 
-        hgg               = Container()
-        hgg.name          = 'hgg'
-        hgg.title         = 'H#rightarrow#gamma#gamma'
-        hgg.color         = 2
-        hgg.POIs          = hggPOIs
-        hgg.Scans         = hggscans
-        hgg.SMcrosssections = xs_per_bin
+        hgg                 = Container()
+        hgg.name            = 'hgg'
+        hgg.title           = 'H#rightarrow#gamma#gamma'
+        hgg.color           = 2
+        hgg.POIs            = hggPOIs
+        hgg.Scans           = hggscans
+        hgg.SMcrosssections = LatestPaths.obs_ptjet.crosssection_over_binwidth()
         containers.append(hgg)
 
-        hzz               = Container()
-        hzz.name          = 'hzz'
-        hzz.title         = 'H#rightarrowZZ'
-        hzz.color         = 4
-        hzz.POIs          = hzzPOIs
-        hzz.Scans         = hzzscans
-        hzz.SMcrosssections = xs_per_bin
+        hzz                 = Container()
+        hzz.name            = 'hzz'
+        hzz.title           = 'H#rightarrowZZ'
+        hzz.color           = 4
+        hzz.POIs            = hzzPOIs
+        hzz.Scans           = hzzscans
+        hzz.SMcrosssections = LatestPaths.obs_ptjet_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
-        combination               = Container()
-        combination.name          = 'combination'
-        combination.title         = 'Combination'
-        combination.POIs          = combinationPOIs
-        combination.Scans         = combinationscans
-        combination.SMcrosssections = xs_per_bin
+        combination                 = Container()
+        combination.name            = 'combination'
+        combination.title           = 'Combination'
+        combination.POIs            = combinationPOIs
+        combination.Scans           = combinationscans
+        combination.SMcrosssections = LatestPaths.obs_ptjet.crosssection_over_binwidth()
         containers.append(combination)
 
         PlotCommands.PlotSpectraOnTwoPanel(
-            'ptjetSpectrum_twoPanel',
+            'twoPanel_ptjetSpectrum',
             containers,
-            xTitle = 'p_{T}^{jet}',
+            xTitle = 'p_{T}^{jet} (GeV)',
+            yTitleTop = '#Delta#sigma/#Deltap_{T}^{jet} (pb/GeV)',
             # yMinLimit = 0.07,
-            # yMaxExternalTop = 500
+            yMaxExternalTop = 10,
             xMinExternal = 0.0,
+            # yMinLimit    = 0.1
             )
 
+
+    #____________________________________________________________________
+    if args.njets_plot:
+
+        combinationPOIs, combinationscans = DrawScan(
+            ws      = LatestPaths.ws_combined_smH_NJ,
+            scandir = LatestPaths.scan_combined_NJ,
+            name    = 'combination',
+            )
+
+        hggPOIs, hggscans = DrawScan(
+            ws      = LatestPaths.ws_hgg_smH_NJ,
+            scandir = LatestPaths.scan_hgg_NJ,
+            name    = 'hgg',
+            )
+
+        hzzPOIs, hzzscans = DrawScan(
+            ws      = LatestPaths.ws_hzz_smH_NJ,
+            scandir = LatestPaths.scan_hzz_NJ,
+            name    = 'hzz',
+            )
+
+        LatestPaths.obs_njets.Print()
+        LatestPaths.obs_njets_hzzBinning.Print()
+
+        containers = []
+
+        hgg                 = Container()
+        hgg.name            = 'hgg'
+        hgg.title           = 'H#rightarrow#gamma#gamma'
+        hgg.color           = 2
+        hgg.POIs            = hggPOIs
+        hgg.Scans           = hggscans
+        hgg.SMcrosssections = LatestPaths.obs_njets.crosssection_over_binwidth()
+        containers.append(hgg)
+
+        hzz                 = Container()
+        hzz.name            = 'hzz'
+        hzz.title           = 'H#rightarrowZZ'
+        hzz.color           = 4
+        hzz.POIs            = hzzPOIs
+        hzz.Scans           = hzzscans
+        hzz.SMcrosssections = LatestPaths.obs_njets_hzzBinning.crosssection_over_binwidth()
+        containers.append(hzz)
+
+        combination                 = Container()
+        combination.name            = 'combination'
+        combination.title           = 'Combination'
+        combination.POIs            = combinationPOIs
+        combination.Scans           = combinationscans
+        combination.SMcrosssections = LatestPaths.obs_njets.crosssection_over_binwidth()
+        containers.append(combination)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'twoPanel_nJetsSpectrum',
+            containers,
+            xTitle = 'N_{jets}',
+            # yMinLimit = 0.07,
+            # yMaxExternalTop = 500,
+            yTitleTop = '#Delta#sigma/#DeltaN_{jets} (pb)',
+            )
+
+
+    #____________________________________________________________________
+    if args.pth_plot:
+
+        combinationPOIs, combinationscans = DrawScan(
+            ws      = LatestPaths.ws_combined_smH,
+            scandir = LatestPaths.scan_combined_PTH,
+            name    = 'combination',
+            )
+
+        hggPOIs, hggscans = DrawScan(
+            ws      = LatestPaths.ws_hgg_smH,
+            scandir = LatestPaths.scan_hgg_PTH,
+            name    = 'hgg',
+            )
+
+        hzzPOIs, hzzscans = DrawScan(
+            ws      = LatestPaths.ws_hzz_smH,
+            scandir = LatestPaths.scan_hzz_PTH,
+            name    = 'hzz',
+            )
+
+        LatestPaths.obs_pth.Print()
+        LatestPaths.obs_pth_hzzBinning.Print()
+
+        containers = []
+
+        hgg                 = Container()
+        hgg.name            = 'hgg'
+        hgg.title           = 'H#rightarrow#gamma#gamma'
+        hgg.color           = 2
+        hgg.POIs            = hggPOIs
+        hgg.Scans           = hggscans
+        hgg.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        containers.append(hgg)
+
+        hzz                 = Container()
+        hzz.name            = 'hzz'
+        hzz.title           = 'H#rightarrowZZ'
+        hzz.color           = 4
+        hzz.POIs            = hzzPOIs
+        hzz.Scans           = hzzscans
+        hzz.SMcrosssections = LatestPaths.obs_pth_hzzBinning.crosssection_over_binwidth()
+        containers.append(hzz)
+
+        combination                 = Container()
+        combination.name            = 'combination'
+        combination.title           = 'Combination'
+        combination.POIs            = combinationPOIs
+        combination.Scans           = combinationscans
+        combination.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        containers.append(combination)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'twoPanel_pthSpectrum',
+            containers,
+            xTitle = 'p_{T}^{H} (GeV)',
+            yTitleTop = '#Delta#sigma/#Deltap_{T}^{H} (pb/GeV)',
+            # 
+            # yMinExternalTop = 0.0005,
+            # yMaxExternalTop = 110.,
+            )
+
+    #____________________________________________________________________
+    if args.pth_ggH_plot:
+
+        combinationPOIs, combinationscans = DrawScan(
+            ws      = LatestPaths.ws_combined_ggH_xHfixed,
+            scandir = LatestPaths.scan_combined_PTH_ggH,
+            name    = 'combination',
+            )
+
+        hggPOIs, hggscans = DrawScan(
+            ws      = LatestPaths.ws_hgg_ggH_xHfixed,
+            scandir = LatestPaths.scan_hgg_PTH_ggH,
+            name    = 'hgg',
+            )
+
+        hzzPOIs, hzzscans = DrawScan(
+            ws      = LatestPaths.ws_hzz_ggH_xHfixed,
+            scandir = LatestPaths.scan_hzz_PTH_ggH,
+            name    = 'hzz',
+            )
+
+        Commands.Warning( 'No ggH-only cross sections known yet! Using ggH+xH (smH) cross sections for now' )
+        LatestPaths.obs_pth.Print()
+        LatestPaths.obs_pth_hzzBinning.Print()
+
+        containers = []
+
+        hgg                 = Container()
+        hgg.name            = 'hgg'
+        hgg.title           = 'H#rightarrow#gamma#gamma'
+        hgg.color           = 2
+        hgg.POIs            = hggPOIs
+        hgg.Scans           = hggscans
+        hgg.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        containers.append(hgg)
+
+        hzz                 = Container()
+        hzz.name            = 'hzz'
+        hzz.title           = 'H#rightarrowZZ'
+        hzz.color           = 4
+        hzz.POIs            = hzzPOIs
+        hzz.Scans           = hzzscans
+        hzz.SMcrosssections = LatestPaths.obs_pth_hzzBinning.crosssection_over_binwidth()
+        containers.append(hzz)
+
+        combination                 = Container()
+        combination.name            = 'combination'
+        combination.title           = 'Combination'
+        combination.POIs            = combinationPOIs
+        combination.Scans           = combinationscans
+        combination.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        containers.append(combination)
+
+        l = PlotCommands.TLatexMultiPanel(
+            lambda c: 1.0 - c.GetRightMargin() - 0.01,
+            lambda c: 1.0 - c.GetTopMargin() - 0.14,
+            '(non-ggH fixed to SM)'
+            )
+        l.SetTextSize(0.05)
+        l.SetTextAlign(33)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'twoPanel_pth_ggH_Spectrum',
+            containers,
+            xTitle = 'p_{T}^{H} (GeV)',
+            yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
+            topPanelObjects = [ ( l, '' ) ],
+            )
+
+
+
+#____________________________________________________________________
+def DrawScan(
+        ws,
+        scandir,
+        name,
+        pattern = '',
+        verbose = True,
+        ):
+
+    POIs = Commands.ListPOIs( ws )
+    POIs.sort( key=Commands.POIsorter )
+    if verbose: print 'Sorted POIs:', POIs
+
+    scans = PhysicsCommands.GetScanResults(
+        POIs,
+        scandir,
+        pattern = pattern
+        )
+    PhysicsCommands.BasicDrawScanResults( POIs, scans, name=name )
+    # PhysicsCommands.BasicDrawSpectrum(    POIs, scans, name=name )
+
+    return POIs, scans
 
 
 ########################################

@@ -9,8 +9,8 @@ Thomas Klijnsma
 
 import Commands
 
-import os, itertools, operator, re, argparse, sys, random
-from math import isnan, isinf
+import os, itertools, operator, re, argparse, sys, random, numpy
+from math import isnan, isinf, log10
 from os.path import *
 from glob import glob
 from copy import deepcopy
@@ -96,6 +96,60 @@ class TLegendMultiPanel(object):
         leg.Draw( drawStr )
 
 
+class TLatexMultiPanel(object):
+    """docstring"""
+    def __init__(
+            self,
+            x, y, text,
+            ):
+        self.x = x
+        self.y = y
+        self.text = text
+
+        self._SetTextSize = None
+        self._SetTextAlign = 31
+        self._SetTextColor = None
+        self._SetNDC = True
+        self._SetTextFont = 42
+
+    def SetTextSize( self, val ):
+        self._SetTextSize = val
+    def SetTextAlign( self, val ):
+        self._SetTextAlign = val
+    def SetTextColor( self, val ):
+        self._SetTextColor = val
+    def SetNDC( self, val ):
+        self._SetNDC = val
+    def SetTextFont( self, val ):
+        self._SetTextFont = val
+
+    def Draw( self, drawStr = '' ):
+
+        if callable(self.x): self.x = self.x( ROOT.gPad )
+        if callable(self.y): self.y = self.y( ROOT.gPad )
+
+        l = ROOT.TLatex()
+        ROOT.SetOwnership( l, False )
+
+        if not self._SetTextSize is None:
+            l.SetTextSize( self._SetTextSize )
+        if not self._SetTextAlign is None:
+            l.SetTextAlign( self._SetTextAlign )
+        if not self._SetTextColor is None:
+            l.SetTextColor( self._SetTextColor )
+        if not self._SetNDC is None:
+            l.SetNDC( self._SetNDC )
+        if not self._SetTextFont is None:
+            l.SetTextFont( self._SetTextFont )
+
+        print 'In Draw():'
+        print '  x    = ', self.x
+        print '  y    = ', self.y
+        print '  text = ', self.text
+
+        l.DrawLatex( self.x, self.y, self.text )
+
+
 
 #____________________________________________________________________
 def PlotWithBottomPanel(
@@ -119,7 +173,9 @@ def PlotWithBottomPanel(
         bottomPadLeftMargin   = 0.12,
         bottomPadRightMargin  = 0.02,
         # 
-        SetTopPanelLogScale = False
+        SetTopPanelLogScale = False,
+        # 
+        disableCMSText = False
         ):
 
     c.Clear()
@@ -231,6 +287,11 @@ def PlotWithBottomPanel(
     axisHolderBottom.GetYaxis().SetTitleSize( axisHolderTop.GetYaxis().GetTitleSize() * heightRatio )
     axisHolderBottom.GetYaxis().SetTitleOffset( 1./heightRatio)
 
+    if not disableCMSText:
+        topPad.cd()
+        Commands.GetCMSLabel( textSize=0.08 )
+        Commands.GetCMSLumi( textSize=0.07 )
+
     SaveC(plotName)
     c.SetCanvasSize( _width, _height )
 
@@ -240,15 +301,32 @@ def PlotSpectraOnTwoPanel(
         plotname,
         containers,
         xTitle       = 'p_{T}^{H}',
+        yTitleTop    = '#Delta#sigma (pb/GeV)',
         yMinLimit = 0.001,
+        yMinExternalTop = None,
         yMaxExternalTop = None,
         lastBinIsNotOverflow = False,
         xMinExternal = None,
         xMaxExternal = None,
+        verbose = True,
+        # 
+        scaleLastBin = 'previousBin',
+        # 
+        topPanelObjects = None,
+        bottomPanelObjects = None,
         ):
+
+    if verbose: print 'Plotting \'{0}\''.format(plotname)
+
 
     TOP_PANEL_LOGSCALE = True
 
+    addLaterToTopPanelObjects = []
+    addLaterToBottomPanelObjects = []
+    if not topPanelObjects is None:
+        addLaterToTopPanelObjects = topPanelObjects
+    if not bottomPanelObjects is None:
+        addLaterToBottomPanelObjects = bottomPanelObjects
     topPanelObjects    = []
     bottomPanelObjects = []
 
@@ -265,6 +343,15 @@ def PlotSpectraOnTwoPanel(
             unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
             container.uncs.append(unc)
 
+        # If last bin is indeed an overflow, and scaleLastBin is not set to False, scale the last bin
+        if not lastBinIsNotOverflow and not scaleLastBin == False:
+            if scaleLastBin == 'previousBin':
+                container.scale = container.binBoundaries[-1] - container.binBoundaries[-2]
+            else:
+                container.scale = scaleLastBin
+            container.SMcrosssections[-1] /= container.scale
+
+
         container.xMin = container.binBoundaries[0]
         if lastBinIsNotOverflow:
             container.xMax = container.binBoundaries[-1]
@@ -272,7 +359,14 @@ def PlotSpectraOnTwoPanel(
             container.xMax = container.binBoundaries[-2] + ( container.binBoundaries[-2] - container.binBoundaries[-3] )
         container.yMinRatio = min([ unc.leftBound for unc in container.uncs ])
         container.yMaxRatio = max([ unc.rightBound for unc in container.uncs ])
-        container.yMinCrosssection = min([ unc.leftBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) ])
+        if TOP_PANEL_LOGSCALE:
+            container.yMinCrosssection = min([
+                min([ unc.leftBound  * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) if unc.leftBound > 0.0 ]),
+                min([ unc.min        * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) if unc.min > 0.0 ]),
+                min([ unc.rightBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) if unc.rightBound > 0.0 ]),
+                ]) 
+        else:
+            container.yMinCrosssection = min([ unc.leftBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) ])
         container.yMaxCrosssection = max([ unc.rightBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) ])
 
     xMin = min([ container.xMin for container in containers ])
@@ -291,7 +385,6 @@ def PlotSpectraOnTwoPanel(
 
 
     # Bottom plot base
-
     yMinAbsBottom = min([ container.yMinRatio for container in containers ])
     yMaxAbsBottom = max([ container.yMaxRatio for container in containers ])
     yMinBottom = yMinAbsBottom - 0.1*(yMaxAbsBottom-yMinAbsBottom)
@@ -311,20 +404,21 @@ def PlotSpectraOnTwoPanel(
 
 
     # Top plot base
-
     yMinAbsTop = min([ container.yMinCrosssection for container in containers ])
     yMaxAbsTop = max([ container.yMaxCrosssection for container in containers ])
 
     if TOP_PANEL_LOGSCALE:
-        yMinAbsTop = yMinAbsTop
-        yMinTop = max( yMinLimit, 0.5*yMinAbsTop )
-        yMaxTop = 2.*yMaxAbsTop
+        yMaxTop = yMaxAbsTop + ( yMaxAbsTop / yMinAbsTop )**0.2 * yMaxAbsTop
+        # yMinTop = yMinAbsTop - yMinAbsTop * ( yMaxAbsTop / yMinAbsTop )**-0.2
+        yMinTop = 0.5*yMinAbsTop
     else:
         yMinTop = yMinAbsTop - 0.1*(yMaxAbsTop-yMinAbsTop)
         yMaxTop = yMaxAbsTop + 0.1*(yMaxAbsTop-yMinAbsTop)
 
     if yMaxExternalTop: 
         yMaxTop = yMaxExternalTop
+    if yMinExternalTop: 
+        yMinTop = yMinExternalTop
 
     baseTop = GetPlotBase(
         xMin = xMin,
@@ -340,7 +434,7 @@ def PlotSpectraOnTwoPanel(
 
     leg = TLegendMultiPanel(
         lambda c: c.GetLeftMargin() + 0.01,
-        lambda c: 1 - c.GetTopMargin() - 0.19,
+        lambda c: 1 - c.GetTopMargin() - 0.12,
         lambda c: 1 - c.GetRightMargin() - 0.01,
         lambda c: 1 - c.GetTopMargin()
         )
@@ -465,7 +559,66 @@ def PlotSpectraOnTwoPanel(
             leg.AddEntry( Tgcrosssection.GetName(), container.title, 'PE' )
 
 
+        # ======================================
+        # Print table of uncertainties and cross sections
+
+        strList = lambda L: ', '.join([ '{0:<9.3f}'.format(f) for f in L ])
+        print '\nSignal strengths and cross sections in {0}, {1}:'.format( plotname, container.name )
+        print 'binBoundaries : ' + strList( container.binBoundaries )
+        print 'mu            : ' + strList( [ container.uncs[i].min for i in xrange(container.nBins) ] )
+        print 'mu_error_down : ' + strList( [ container.uncs[i].leftError for i in xrange(container.nBins) ] )
+        print 'mu_error_up   : ' + strList( [ container.uncs[i].rightError for i in xrange(container.nBins) ] )
+        print 'mu_bound_down : ' + strList( [ container.uncs[i].leftBound for i in xrange(container.nBins) ] )
+        print 'mu_bound_up   : ' + strList( [ container.uncs[i].rightBound for i in xrange(container.nBins) ] )
+        print 'xs            : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].min for i in xrange(container.nBins) ] )
+        print 'xs_error_down : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].leftError for i in xrange(container.nBins) ] )
+        print 'xs_error_up   : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].rightError for i in xrange(container.nBins) ] )
+        print 'xs_bound_down : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].leftBound for i in xrange(container.nBins) ] )
+        print 'xs_bound_up   : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].rightBound for i in xrange(container.nBins) ] )
+
+
+    # ======================================
+    # Add label for last bin regarding scaling
+
+    if not lastBinIsNotOverflow:
+        textSize = 0.03
+
+        # Pick highest y to start (including combination, this only matters for y height)
+        yOverflow = max([ container.SMcrosssections[-1] * container.uncs[-1].rightBound for container in containers ])
+
+        # Add a label per scaled spectrum
+        for i, container in enumerate([ con for con in containers if not con.name == 'combination']):
+
+            yOverflowInNDC = lambda c, i_lambda=i: (
+                c.GetBottomMargin()
+                + log10(yOverflow/yMinTop)/log10(yMaxTop/yMinTop) * ( 1.0 - c.GetTopMargin() - c.GetBottomMargin() )
+                + i_lambda * 4.5*textSize
+                + 2.5*textSize
+                )
+
+            scaleText = str(int(container.scale)) if float(container.scale).is_integer() else '{0:.2f}'.format(container.scale)
+            l = TLatexMultiPanel(
+                    lambda c: 1. - c.GetRightMargin() - 0.01,
+                    yOverflowInNDC,
+                    '#int_{{#lower[0.3]{{{0}}}}}^{{#lower[0.0]{{#infty}}}}#sigma({1}) d{1} / {2}'.format(
+                        container.binBoundaries[-2],
+                        xTitle.replace(' (GeV)',''),
+                        scaleText
+                        )
+                    )
+            l.SetTextSize(textSize)
+            l.SetTextColor(container.color)
+            topPanelObjects.append( ( l, '' ) )
+
+
+
     topPanelObjects.append( ( leg, '' ) )
+
+    # Add objects that were given in the input
+    for obj in addLaterToTopPanelObjects:
+        topPanelObjects.append(obj)
+    for obj in addLaterToBottomPanelObjects:
+        bottomPanelObjects.append(obj)
 
     ROOT.gStyle.SetEndErrorSize(3)
     PlotWithBottomPanel(
@@ -473,13 +626,16 @@ def PlotSpectraOnTwoPanel(
         topPanelObjects,
         bottomPanelObjects,
         xTitle = xTitle,
-        yTitleTop    = '#Delta#sigma (pb/GeV)',
+        yTitleTop    = yTitleTop,
         yTitleBottom = 'ratio w.r.t. SM',
         SetTopPanelLogScale = TOP_PANEL_LOGSCALE,
         topPadLeftMargin = 0.14,
         bottomPadLeftMargin = 0.14,
         )
     ROOT.gStyle.SetEndErrorSize(1)
+
+
+
 
 
 #____________________________________________________________________
@@ -1178,6 +1334,122 @@ def BasicMixedContourPlot(
 
             SaveC( plotname + '_' + container.name )
 
+
+#____________________________________________________________________
+def PlotCorrelationMatrix(
+        container
+        ):
+    numpy.set_printoptions( precision=2, linewidth=100 )
+
+    POIs = Commands.ListPOIs(container.ws)
+    Commands.SortPOIs(POIs)
+    nBins = len(POIs)
+
+    # Obtain correlation matrix
+    corrMat = [ [ 999 for j in xrange(nBins) ] for i in xrange(nBins) ]
+    with Commands.OpenRootFile( container.corrRootFile ) as rootFp:
+        fit = rootFp.Get('fit')
+        for iBin1, POI1 in enumerate( POIs ):
+            for iBin2, POI2 in enumerate( POIs ):
+                corrMat[iBin1][iBin2] = fit.correlation( POI1, POI2 )
+
+    print 'Found the following corrMat from', container.corrRootFile
+    print numpy.array(corrMat)
+    
+
+    # ======================================
+    # Make plot
+
+    c.Clear()
+    SetCMargins(
+        TopMargin   = 0.08,
+        RightMargin = 0.14,
+        BottomMargin = 0.17,
+        )
+
+    titleDict = {
+        'PTH' : 'p_{T}^{H} (GeV)',
+        }
+    productionMode, observableName, _ = Commands.InterpretPOI(POIs[0])
+    observableName = titleDict.get( observableName, observableName )
+    xTitle = getattr( container, 'xTitle', observableName )
+
+    # Construct the binning labels
+    def toStr( number ):
+        if number == '-INF':
+            string = '-#infty'
+        elif number == 'INF':
+            string = '#infty'
+        elif number.is_integer():
+            string = '{0:d}'.format(int(number))
+        else:
+            string = '{0:0.2f}'.format(number)
+        return string
+
+    binningLabels = []
+    for POI in POIs:
+        _1, _2, binBoundaries = Commands.InterpretPOI(POI)
+        binBoundariesAsStrs = [ toStr(i) for i in binBoundaries ]
+        if len(binBoundaries) == 1:
+            binningLabels.append( binBoundariesAsStrs[0] )
+        elif len(binBoundaries) == 2:
+            binningLabels.append( '(' + ', '.join(binBoundariesAsStrs) + ')'  )
+
+
+    H = ROOT.TH2D(
+        GetUniqueRootName(),
+        # '#scale[0.85]{{Bin-to-bin correlation matrix for {0}}}'.format(observableName),
+        '',
+        nBins, 0., nBins,
+        nBins, 0., nBins
+        )
+    ROOT.SetOwnership( H, False )
+    H.SetContour(100)
+
+    for iRow in xrange(nBins):
+        for iCol in xrange(nBins):
+            H.SetBinContent( iCol+1, iRow+1, corrMat[iRow][iCol] )
+    H.GetZaxis().SetRangeUser(-1.0,1.0)
+
+    for iBin in xrange(nBins):
+        H.GetXaxis().SetBinLabel( iBin+1, binningLabels[iBin] )
+        H.GetYaxis().SetBinLabel( iBin+1, binningLabels[iBin] )
+    H.GetXaxis().SetTitle( xTitle )
+    H.GetXaxis().SetTitleSize(0.05)
+    H.GetXaxis().SetTitleOffset( 1.6 )
+    H.GetXaxis().SetLabelSize(0.045)
+    H.GetYaxis().SetLabelSize(0.045)
+
+    H.Draw('COLZ TEXT')
+
+
+    # ======================================
+    # Set some style
+
+    ROOT.gStyle.SetHistMinimumZero() # To draw the "0", otherwise ROOT leaves it empty
+    ROOT.gStyle.SetPaintTextFormat('1.2g')
+
+    n_stops = 3
+    stops  = [ 0.0, 0.5, 1.0 ]
+    reds   = [ 0.0, 1.0, 1.0 ]
+    blues  = [ 1.0, 1.0, 0.0 ]
+    greens = [ 0.0, 1.0, 0.0 ]
+
+    ROOT.TColor.CreateGradientColorTable(
+        n_stops,
+        array('d', stops ),
+        array('d', reds ),
+        array('d', greens ),
+        array('d', blues ),
+        255 )
+
+    Commands.GetCMSLabel()
+    Commands.GetCMSLumi()
+
+    SaveC( 'corrMat_' + basename(container.corrRootFile).replace('/','').replace('higgsCombine_','').replace('higgsCombine','').replace('.root','') )
+
+    # Set back to default
+    numpy.set_printoptions( precision=8, linewidth=75 )
 
 
 ########################################

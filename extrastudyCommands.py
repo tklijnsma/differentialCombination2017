@@ -86,7 +86,9 @@ def AppendParserOptions( parser ):
 
     parser.add_argument( '--CorrelationMatrixScaleDependence_Yukawa', action=CustomAction )
 
-    parser.add_argument( '--PlotParametrizationShapes',                        action=CustomAction )
+    parser.add_argument( '--PlotParametrizationShapes',               action=CustomAction )
+
+    parser.add_argument( '--CreateParametrizationTables',              action=CustomAction )    
 
 
 ########################################
@@ -2379,6 +2381,95 @@ def main( args ):
                             )
 
             SaveC( '_minmax_corrMat_{0}'.format(name), asPNG=True, asROOT=True )
+
+
+    #____________________________________________________________________
+    if args.CreateParametrizationTables:
+
+        titles = {
+            'kappab' : '\\kappa_b',
+            'kappac' : '\\kappa_c',
+            'ct'     : '\\kappa_t',
+            'cg'     : '\\kappa_g',
+            'cb'     : '\\kappa_b',
+            }
+
+        wss = [
+            LatestPaths.ws_combined_Yukawa,
+            LatestPaths.ws_combined_Top,
+            LatestPaths.ws_combined_TopCtCb,
+            ]
+
+        for ws in wss:
+
+            with Commands.OpenRootFile( ws ) as rootFp:
+                w = rootFp.Get('w')
+
+            theoryBinBoundariesArgList = ROOT.RooArgList( w.set('theoryBinBoundaries') )
+            nTheoryBins         = theoryBinBoundariesArgList.getSize()-1
+            theoryBinBoundaries = [ theoryBinBoundariesArgList[i].getVal() for i in xrange(nTheoryBins+1) ] 
+
+            def numToStr( number ):
+                if float(number).is_integer():
+                    return str(int(number))
+                else:
+                    return '{0:.2f}'.format(number)
+
+            texText = [ '% ' + Commands.TagGitCommitAndModule() ]
+            texText.append( '% Used workspace: {0}'.format(ws) )
+            for iParam in xrange(nTheoryBins):
+                with Commands.RedirectStdout() as redirected:
+                    w.function( 'parametrization{0}'.format(iParam) ).Print()
+                    formulaPrinted = redirected.read()
+
+                match = re.search( r'formula=\"(.*?)\"', formulaPrinted )
+                if not match:
+                    print 'No match for parametrization {0}; continuing'.format(iParam)
+                    continue
+                formula = match.group(1)
+
+                match = re.search( r'actualVars=\((.*?)\)', formulaPrinted )
+                if not match:
+                    print 'No match for parametrization {0}; continuing'.format(iParam)
+                    continue
+                actualVars = match.group(1).split(',')
+
+
+                formula = formula.replace( '+-', '-' )
+                for iVar, actualVar in enumerate(actualVars):
+
+                    formula = formula.replace( '@{0}*@{0}'.format(iVar), '\,' + titles.get( actualVar, actualVar ) + '^2' )
+                    formula = formula.replace( '@{0}'.format(iVar),      '\,' + titles.get( actualVar, actualVar ) )
+
+                formula = re.sub( r'(\d\.\d\d\d\d)\d*', r'\1', formula )
+
+                formula = formula.replace( '*', '' )
+                if formula.startswith('('): formula = formula[1:]
+                if formula.endswith(')'):   formula = formula[:-1]
+
+                formula = re.sub( r'e(\-\d+)', r'\\cdot 10^{\1}', formula )
+
+                texText.append(
+                    '{0:3} & $({1}-{2})$ & ${3}$ \\\\'.format(
+                        iParam,
+                        numToStr(theoryBinBoundaries[iParam]),
+                        numToStr(theoryBinBoundaries[iParam+1]),
+                        formula
+                        )
+                    )
+
+            if Commands.IsTestMode():
+                print '\n'.join(texText)
+            else:
+
+                outdir = 'parametrizationTexs_{0}'.format(datestr)
+                if not isdir(outdir): os.makedirs(outdir)
+                texFile = join( outdir, 'parametrization_{0}.tex'.format( basename(ws).replace('/','').replace('.root','') ) )
+
+                print 'Writing output to', texFile
+
+                with open(texFile, 'w' ) as texFp:
+                    texFp.write( '\n'.join(texText) )
 
 
 

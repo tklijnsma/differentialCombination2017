@@ -8,6 +8,7 @@ Thomas Klijnsma
 ########################################
 
 import Commands
+from Container import Container
 
 import os, tempfile, shutil, re, glob, itertools, sys, numpy, operator, pprint, re
 from os.path import *
@@ -15,6 +16,10 @@ from operator import itemgetter
 from array import array
 from math import log, exp, sqrt, copysign
 from copy import deepcopy
+
+# Needed for the observable class
+sys.path.append('..')
+import LatestPaths
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -104,14 +109,6 @@ def GetPlotBase(
         base.GetYaxis().SetTitleSize( 0.06 )
 
     return base
-
-
-
-# class Container:
-#     def __init__(self, **kwds):
-#         print 'Warning: Should replace this class with the more common Container.Container'
-#         self.__dict__.update(kwds)
-from Container import Container
 
 
 ########################################
@@ -426,6 +423,28 @@ def Rebin(
 
     return expBinValues
 
+#____________________________________________________________________
+def MergeBins( some_binned_data, binMerging, binning=None ):
+    """
+    Use e.g. "[ 1, 2, [3,4], [5,6] ]" for the binMerging. The order matters!
+    If binning is given, the binned data is assumed to be *density*, rather than an inclusive number
+    """
+    ret = []
+    for bins in binMerging:
+        if isinstance( bins, int ):
+            # Case for only 1 bin; simply copy
+            ret.append( some_binned_data[bins] )
+        else:
+            sum = 0.
+            if binning is None:
+                for iBin in bins:
+                    sum += some_binned_data[iBin]
+            else:
+                for iBin in bins:
+                    sum += some_binned_data[iBin] * (binning[iBin+1]-binning[iBin])
+                sum /= ( binning[ bins[-1]+1 ] - binning[0] )
+            ret.append(sum)                
+    return ret
 
 #____________________________________________________________________
 # Not sure which funcion uses this
@@ -659,7 +678,7 @@ def GetTH2FromListOfRootFiles(
         zVariable = 'deltaNLL',
         # defaultHValue = None,
         defaultHValue = 999.,
-        forceBestfitAtZero = False,
+        forceBestfitAtZero = True,
         ):
 
     # Read values from specified rootfiles

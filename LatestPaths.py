@@ -1,5 +1,5 @@
 ########################################
-# Variables
+# Physical quantities
 ########################################
 
 YR4_totalXS = 55.70628722 # pb
@@ -7,6 +7,109 @@ YR4_totalXS = 55.70628722 # pb
 SM_BR_hgg = 2.270E-03
 SM_BR_hzz = 0.02641
 SM_ratio_of_BRs = SM_BR_hgg / SM_BR_hzz
+
+
+########################################
+# Functions
+########################################
+
+from copy import deepcopy
+
+#____________________________________________________________________
+class Observable(object):
+    """Simple class that returns shape, cross section, or cross section over bin width"""
+    def __init__(self,
+            name,
+            title,
+            shape,
+            binning,
+            lastBinIsOverflow = True,
+            ):
+        if not len(binning) == len(shape)+1:
+            raise RuntimeError( 'len(binning)[={0}] =/= len(shape)+1[={1}]'.format( len(binning), len(shape) ) )
+        self.name = name
+        self.title = title
+        self.shape = shape
+        self.binning = binning
+        self.lastBinIsOverflow = lastBinIsOverflow
+        self.nBins = len(self.shape)
+
+    def crosssection(self):
+        return [ s * YR4_totalXS for s in self.shape ]
+
+    def crosssection_over_binwidth(self):
+        xs = self.crosssection()
+        if self.lastBinIsOverflow:
+            xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins-1) ] + [ xs[-1] ]
+        else:
+            xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins) ]
+        return xs_o_binwidth
+
+    def mergeBins( self, mergeList ):
+        newshape   = []
+        newbinning = [ self.binning[0] ]
+        for bins in mergeList:
+            if isinstance( bins, int ):
+                newshape.append( self.shape[bins] )
+                newbinning.append( self.binning[bins+1] ) # Always add right bound of bin
+            else:
+                shapesum = 0.
+                for iBin in bins:
+                    shapesum += self.shape[iBin]
+                newshape.append(shapesum)
+                newbinning.append( self.binning[bins[-1]+1] ) # Always add right bound of bin
+
+        if not len(newbinning) == len(newshape)+1:
+            raise RuntimeError( 'len(newbinning)[={0}] =/= len(newshape)+1[={1}]'.format( len(newbinning), len(newshape) ) )
+
+        copy = deepcopy(self)
+        copy.shape = newshape
+        copy.binning = newbinning
+        copy.nBins = len(newshape)
+        return copy
+
+    def Print( self ):
+        xs = self.crosssection()
+        xs_over_binwidth = self.crosssection_over_binwidth()
+        strList = lambda L: ', '.join([ '{0:<9.3f}'.format(f) for f in L ])
+        print '\n Cross sections for observable {0} ({1})'.format( self.name, self.title )
+        print 'shape:            ' + strList(self.shape)
+        print 'binning:          ' + strList(self.binning)
+        print 'xs:               ' + strList(xs)
+        print 'xs_over_binwidth: ' + strList(xs_over_binwidth)
+
+
+########################################
+# Binning and SM differentials
+########################################
+
+binning_ptjet = [ -1000.0, 30.0, 55.0, 95.0, 120.0, 200.0, 13000.0 ]
+binning_yh    = [ 0.0, 0.15, 0.3, 0.6, 0.9, 1.2, 2.5 ]
+binning_pth   = [ 0.0, 15.0, 30.0, 45.0, 85.0, 125.0, 200.0, 350.0, 10000.0 ]
+binning_njets = [ -0.5, 0.5, 1.5, 2.5, 3.5, 100.0 ]
+
+shape_ptjet   = [ 78.53302819,  20.52882251,  13.40260032,   3.79521629, 4.44346963, 1.62691503]
+shape_yh      = [ 8.88641092, 8.86086463, 17.34621208, 16.38134718, 15.14497828, 51.87741436 ]
+shape_pth     = [ 27.46607434,  29.44961617,  19.6934684,   26.59903008,  10.46543842, 6.31602595,   2.0582112, 0.28218741 ]
+shape_njets   = [ 78.53302819, 30.8512632, 9.1331588, 2.41446376, 1.39813801 ]
+
+# Normalize to 1.0
+shape_njets = [ i/sum(shape_njets) for i in shape_njets ]
+shape_pth   = [ i/sum(shape_pth) for i in shape_pth ]
+shape_ptjet = [ i/sum(shape_ptjet) for i in shape_ptjet ]
+shape_yh    = [ i/sum(shape_yh) for i in shape_yh ]
+
+obs_pth   = Observable( name = 'pth', title = 'p_{T}^{H}', shape = shape_pth, binning = binning_pth )
+obs_njets = Observable( name = 'njets', title = 'N_{jets}', shape = shape_njets, binning = binning_njets )
+obs_yh    = Observable( name = 'yh', title = '|y_{H}|', shape = shape_yh, binning = binning_yh, lastBinIsOverflow=False )
+obs_ptjet = Observable( name = 'ptjet', title = 'p_{T}^{jet}', shape = shape_ptjet, binning = binning_ptjet )
+
+hzz_binMerging_pth   = [ 0, 1, [2,3], [4,5], [6,7] ]
+hzz_binMerging_ptjet = [ 0, 1, 2, [3,4,5] ]
+hzz_binMerging_njets = [ 0, 1, 2, [3,4] ]
+obs_pth_hzzBinning = obs_pth.mergeBins(hzz_binMerging_pth)
+obs_ptjet_hzzBinning = obs_ptjet.mergeBins(hzz_binMerging_ptjet)
+obs_njets_hzzBinning = obs_njets.mergeBins(hzz_binMerging_njets)
 
 
 ########################################
@@ -100,8 +203,13 @@ theoryUncertainties_Top               = 'correlationMatrices_Nov24_Top/errors_fo
 
 
 # Correlation matrices for differential observables
-correlationMatrix_PTH                 = 'corrMat_Nov15_combinedCard_smH_Nov07/higgsCombine_CORRMAT_combinedCard_smH_Nov07.MultiDimFit.mH125.root'
-correlationMatrix_NJ                  = 'corrMat_Nov15_combinedCard_NJ_smH_Nov12/higgsCombine_CORRMAT_combinedCard_NJ_smH_Nov12.MultiDimFit.mH125.root'
+# correlationMatrix_PTH                 = 'corrMat_Nov15_combinedCard_smH_Nov07/higgsCombine_CORRMAT_combinedCard_smH_Nov07.MultiDimFit.mH125.root'
+# correlationMatrix_NJ                  = 'corrMat_Nov15_combinedCard_NJ_smH_Nov12/higgsCombine_CORRMAT_combinedCard_NJ_smH_Nov12.MultiDimFit.mH125.root'
+correlationMatrix_PTH                   = 'corrMat_Nov29_combinedCard_smH_Nov07/higgsCombine_CORRMAT_combinedCard_smH_Nov07.MultiDimFit.mH125.root'
+correlationMatrix_PTH_ggH               = 'corrMat_Nov29_combinedCard_Nov03_xHfixed_1/higgsCombine_CORRMAT_combinedCard_Nov03_xHfixed.MultiDimFit.mH125.root'
+correlationMatrix_NJ                    = 'corrMat_Nov29_combinedCard_NJ_smH_Nov12/higgsCombine_CORRMAT_combinedCard_NJ_smH_Nov12.MultiDimFit.mH125.root'
+correlationMatrix_YH                    = 'corrMat_Nov29_combinedCard_YH_smH_Nov28/higgsCombine_CORRMAT_combinedCard_YH_smH_Nov28.MultiDimFit.mH125.root'
+correlationMatrix_PTJ                   = 'corrMat_Nov29_combinedCard_PTJ_smH_Nov28/higgsCombine_CORRMAT_combinedCard_PTJ_smH_Nov28.MultiDimFit.mH125.root'
 
 
 ########################################
@@ -123,10 +231,17 @@ ws_hgg_smH_YH                = 'workspaces_Nov28/Datacard_13TeV_differential_Abs
 ws_hzz_smH_YH                = 'workspaces_Nov28/hzz4l_comb_13TeV_xs.root'
 ws_combined_smH_YH           = 'workspaces_Nov28/combinedCard_YH_smH_Nov28.root'
 
-ws_hgg_smH_PTJ               = 'workspaces_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
 ws_hzz_smH_PTJ               = 'workspaces_Nov28/hzz4l_comb_13TeV_xs_ptjet.root'
-ws_combined_smH_PTJ          = 'workspaces_Nov28/combinedCard_PTJ_smH_Nov28.root'
 
+# Wrong variable name (causes problems with file-naming, although physics is correct)
+# ws_hgg_smH_PTJ               = 'workspaces_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
+# ws_combined_smH_PTJ          = 'workspaces_Nov28/combinedCard_PTJ_smH_Nov28.root'
+ws_hgg_smH_PTJ               = 'workspaces_Nov30/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
+ws_combined_smH_PTJ          = 'workspaces_Nov30/combinedCard_PTJ_smH_Nov28.root'
+
+ws_combined_ggH_xHfixed      = 'workspaces_Nov08/combinedCard_Nov03_xHfixed.root'
+ws_hgg_ggH_xHfixed           = 'workspaces_Nov29/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed.root'
+ws_hzz_ggH_xHfixed           = 'workspaces_Nov29/hzz4l_comb_13TeV_xs_processesShifted_xHfixed.root'
 
 # ---------------------
 # Workspaces for extra studies
@@ -134,9 +249,7 @@ ws_combined_smH_PTJ          = 'workspaces_Nov28/combinedCard_PTJ_smH_Nov28.root
 ws_ratio_of_BRs              = 'workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel.root'
 ws_ratio_of_BRs_globalScales = 'workspaces_Nov20/combinedCard_smH_Nov07_FitBRModel_globalScales.root'
 ws_totalXS                   = 'workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel_fitTotalXS.root'
-ws_combined_ggH_xHfixed      = 'workspaces_Nov08/combinedCard_Nov03_xHfixed.root'
 ws_combined_ratioOfBRs       = 'workspaces_Nov14/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_ratioOfBRs.root'
-
 ws_combined_totalXS          = 'workspaces_Nov27/combinedCard_smH_Nov27_INCLUSIVE_FitBRModel_fitTotalXS.root'
 
 
@@ -204,6 +317,10 @@ scan_combined_PTH = 'Scan_PTH_Nov07'
 scan_hgg_PTH      = 'Scan_PTH_Nov07_hgg'
 scan_hzz_PTH      = 'Scan_PTH_Nov08_hzz'
 
+scan_combined_PTH_ggH = 'Scan_PTH_Nov08_xHfixed'
+scan_hgg_PTH_ggH      = 'Scan_PTH_Nov29_xHfixed_hgg'
+scan_hzz_PTH_ggH      = 'Scan_PTH_Nov29_xHfixed_hzz'
+
 scan_combined_NJ  = 'Scan_nJets_Nov12'
 scan_hgg_NJ       = 'Scan_nJets_Nov12_0'
 scan_hzz_NJ       = 'Scan_nJets_Nov12_1'
@@ -220,8 +337,10 @@ scan_combined_YH_asimov  = 'Scan_YH_Nov28_asimov'
 scan_hgg_YH_asimov       = 'Scan_YH_Nov28_asimov_0'
 scan_hzz_YH_asimov       = 'Scan_YH_Nov28_asimov_1'
 
-scan_combined_PTJ_asimov = 'Scan_PTJ_Nov28_asimov'
-scan_hgg_PTJ_asimov      = 'Scan_PTJ_Nov28_asimov_0'
+# scan_combined_PTJ_asimov = 'Scan_PTJ_Nov28_asimov'
+# scan_hgg_PTJ_asimov      = 'Scan_PTJ_Nov28_asimov_0'
+scan_combined_PTJ_asimov = 'Scan_PTJ_Nov30_asimov'
+scan_hgg_PTJ_asimov      = 'Scan_PTJ_Nov30_asimov_0'
 scan_hzz_PTJ_asimov      = 'Scan_PTJ_Nov28_asimov_1'
 
 
@@ -247,9 +366,10 @@ scan_combined_Yukawa_asimov                                 = 'Scan_Yukawa_Nov03
 scan_hgg_Yukawa_asimov                                      = 'Scan_Yukawa_Nov03_hgg_asimov'
 scan_hzz_Yukawa_asimov                                      = 'Scan_Yukawa_Nov03_hzz_asimov'
 
-scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
+# scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
 scan_combined_Yukawa_fitOnlyNormalization                   = 'Scan_Yukawa_Nov20_profiledTotalXS_fitOnlyNormalization'
 # scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov20_profiledTotalXS_fitOnlyNormalization_asimov'
+scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'Scan_Yukawa_Nov28_fitOnlyNormalization_asimov_1'
 
 scan_combined_Yukawa_lumiStudy_asimov                       = 'Scan_Yukawa_Nov06_lumiStudy_asimov'
 scan_combined_Yukawa_noTheoryUncertainties_asimov           = 'Scan_Yukawa_Nov06_noTheoryUncertainties_asimov'
@@ -334,6 +454,7 @@ scan_hzz_TopCtCb                                         = 'Scan_TopCtCb_Nov15_h
 scan_combined_TopCtCb_asimov                             = 'Scan_TopCtCb_Nov15_asimov'
 scan_hgg_TopCtCb_asimov                                  = 'Scan_TopCtCb_Nov15_hgg_asimov'
 scan_hzz_TopCtCb_asimov                                  = 'Scan_TopCtCb_Nov15_hzz_asimov'
+
 
 
 ########################################

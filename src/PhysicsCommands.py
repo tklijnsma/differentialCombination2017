@@ -102,7 +102,8 @@ def GetScanResults(
     verbose=False,
     ):
 
-    POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
+    # POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
+    POIs.sort( key=Commands.POIsorter )
 
     scans = []
     for POI in POIs:
@@ -327,11 +328,11 @@ def BasicDrawScanResults(
 
 
 def FigureOutBinning( POIs ):
-    POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
-
-    # Very ugly hack to make sure that LT30 is the first element of the sorted list
-    if '_LT' in POIs[-1] or '_LE' in POIs[-1]:
-        POIs = [ POIs[-1] ] + POIs[:-1]
+    # POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
+    # # Very ugly hack to make sure that LT30 is the first element of the sorted list
+    # if '_LT' in POIs[-1] or '_LE' in POIs[-1]:
+    #     POIs = [ POIs[-1] ] + POIs[:-1]
+    POIs.sort( key=Commands.POIsorter )
 
     Ranges = [ Commands.InterpretPOI( POI )[2] for POI in POIs ]
     
@@ -350,8 +351,12 @@ def FigureOutBinning( POIs ):
             leftBound, rightBound = Range
 
             if leftBound == '-INF':
+                # Try either the same bin width to the left, unless that's
+                #  > 0.0, in that case just pick 0.0
                 nextLeftBound, nextRightBound = map( float, Ranges[iRange+1] )
                 leftBound = rightBound - ( nextRightBound - nextLeftBound )
+                if leftBound > 0.:
+                    leftBound = 0.
 
             if rightBound == 'INF':
                 previousLeftBound, previousRightBound = map( float, Ranges[iRange-1] )

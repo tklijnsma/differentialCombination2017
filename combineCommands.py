@@ -64,6 +64,13 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--RenumberHzzProcesses_smHcard',  action=CustomAction )
     parser.add_argument( '--CombineCards_smHcard',          action=CustomAction )
 
+    parser.add_argument( '--corrMat_PTH',                   action=CustomAction )
+    parser.add_argument( '--corrMat_PTH_ggH',               action=CustomAction )
+    parser.add_argument( '--corrMat_NJ',                    action=CustomAction )
+    parser.add_argument( '--corrMat_YH',                    action=CustomAction )
+    parser.add_argument( '--corrMat_PTJ',                   action=CustomAction )
+    parser.add_argument( '--plotCorrelationMatrices',       action=CustomAction )
+
     parser.add_argument( '--renamehgg',                       action=CustomAction )
     parser.add_argument( '--mergehgg',                        action=CustomAction )
     parser.add_argument( '--t2ws',                            action=CustomAction )
@@ -77,6 +84,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--reparseBestfit',                  action=CustomAction )
     parser.add_argument( '--smartMapTest',                    action=CustomAction )
 
+    parser.add_argument( '--t2ws_split',                      action=CustomAction )
 
     parser.add_argument( '--t2ws_combined_unsplit',           action=CustomAction )
     parser.add_argument( '--t2ws_hgg_unsplit',                action=CustomAction )
@@ -95,7 +103,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--scan_combined_unsplit',         action=CustomAction )
     parser.add_argument( '--scan_hgg_unsplit',              action=CustomAction )
     parser.add_argument( '--scan_hzz_unsplit',              action=CustomAction )
-    parser.add_argument( '--scan_combined_split_xHfixed',   action=CustomAction )
+    parser.add_argument( '--scan_split_xHfixed',            action=CustomAction )
 
     parser.add_argument( '--plot_ptSpectra',                action=CustomAction )
     parser.add_argument( '--plot_ptSpectra_ggHxH',          action=CustomAction )
@@ -190,66 +198,79 @@ def main( args ):
             )
 
     #____________________________________________________________________
+    if args.t2ws_split:
 
-    if args.t2ws_combined_split:
+        # No real use case for this
+        # FIXXH = True
+        # if not FIXXH:
+        #     Commands.BasicT2WS(
+        #         LatestPaths.card_combined_ggHxH_PTH,
+        #         smartMaps = [
+        #             ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+        #             ],
+        #         )
+        # else:
 
-        FIXXH = True
+        datacard = LatestPaths.card_combined_ggHxH_PTH
+        if args.hgg: datacard = LatestPaths.card_hgg_ggHxH_PTH
+        if args.hzz: datacard = LatestPaths.card_hzz_ggHxH_PTH
 
-        if not FIXXH:
-
+        if args.hzz:
             Commands.BasicT2WS(
-                LatestPaths.card_combined_ggHxH_PTH,
-                smartMaps = [
-                    ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+                datacard,
+                manualMaps=[
+                    '--PO \'map=.*/ggH_PTH_0_15:r_ggH_PTH_0_15[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_15_30:r_ggH_PTH_15_30[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_30_45:r_ggH_PTH_30_85[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_45_85:r_ggH_PTH_30_85[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_85_125:r_ggH_PTH_85_200[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_125_200:r_ggH_PTH_85_200[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_200_350:r_ggH_PTH_GT200[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_GT350:r_ggH_PTH_GT200[1.0,0.0,3.0]\'',
                     ],
+                outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
                 )
 
         else:
-
             Commands.BasicT2WS(
-                LatestPaths.card_combined_ggHxH_PTH,
+                datacard,
                 smartMaps = [
                     ( r'.*/ggH_PTH_([\d\_GT]+)', r'r_ggH_PTH_\1[1.0,-1.0,4.0]' )
                     ],
-                outputWS = basename(LatestPaths.card_combined_ggHxH_PTH).replace( '.txt', '_xHfixed.root' )
+                outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
                 )
 
 
-    if args.t2ws_hgg_split:
+    # if args.t2ws_hgg_split:
+    #     Commands.BasicT2WS(
+    #         LatestPaths.card_hgg_ggHxH_PTH,
+    #         smartMaps = [
+    #             ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
+    #             ],
+    #         )
 
-        # Specific for HZZ
-        Commands.BasicT2WS(
-            LatestPaths.card_hgg_ggHxH_PTH,
-            smartMaps = [
-                ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
-                ],
-            )
-
-
-    if args.t2ws_hzz_split:
-
-        # Specific for HZZ
-        Commands.BasicT2WS(
-            LatestPaths.card_hzz_ggHxH_PTH,
-            manualMaps=[
-                '--PO \'map=.*/ggH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/xH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-                ],
-            )
+    # if args.t2ws_hzz_split:
+    #     Commands.BasicT2WS(
+    #         LatestPaths.card_hzz_ggHxH_PTH,
+    #         manualMaps=[
+    #             '--PO \'map=.*/ggH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/ggH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/ggH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/ggH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/ggH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/ggH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/ggH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/ggH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+    #             '--PO \'map=.*/xH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
+    #             ],
+    #         )
 
 
     #____________________________________________________________________
@@ -297,83 +318,61 @@ def main( args ):
 
 
     #____________________________________________________________________
-    if args.corrMat_combined_unsplit:
+    if args.corrMat_PTH:
+        Commands.ComputeCorrMatrix( LatestPaths.ws_combined_smH, onBatch = False )
 
-        # ws = LatestPaths.ws_combined_smH
-        # ws = LatestPaths.ws_combined_ggH_xHfixed
-        ws = LatestPaths.ws_combined_smH_NJ
+    #____________________________________________________________________
+    if args.corrMat_PTH_ggH:
+        Commands.ComputeCorrMatrix( LatestPaths.ws_combined_ggH_xHfixed, onBatch = False )
 
-        wsTag = basename(ws).replace('/','').replace('.root','')
+    #____________________________________________________________________
+    if args.corrMat_NJ:
+        Commands.ComputeCorrMatrix( LatestPaths.ws_combined_smH_NJ, onBatch = False )
 
-        Commands.SetTempJobDir( 'corrMat_{0}_{1}'.format( datestr, wsTag ) )
-        postfitFilename = join( Commands.TEMPJOBDIR, 'higgsCombine_POSTFIT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
-        corrmatFilename = join( Commands.TEMPJOBDIR, 'higgsCombine_CORRMAT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
+    #____________________________________________________________________
+    if args.corrMat_YH:
+        Commands.Warning( 'Using asimov ws for YH (blinded)' )
+        Commands.ComputeCorrMatrix( LatestPaths.ws_combined_smH_YH, asimov=True, onBatch = False )
 
-        if not isfile( postfitFilename ):
-            args.redoPostfit = True
-
-        if args.redoPostfit:
-            # First regular best fit
-            Commands.BasicBestfit(
-                ws,
-                onBatch=False,
-                batchJobSubDir = 'job_{0}'.format( basename(ws).replace('/','').replace('.root','') ),
-                extraOptions = [
-                    '-m 125',
-                    '--floatOtherPOIs=1',
-                    # '--computeCovarianceMatrix=1',
-                    '--saveWorkspace',
-                    '-n _POSTFIT_{0}'.format( wsTag )
-                    ]
-                )
-
-        if Commands.IsTestMode():
-            pdfIndicesToFreeze = [ 'some', 'pdfs' ]
-        else:
-            pdfIndicesToFreeze = Commands.ListOfPDFIndicesToFreeze( postfitFilename, verbose=False )
-
-        Commands.BasicBestfit(
-            postfitFilename,
-            onBatch=False,
-            batchJobSubDir = 'job_{0}'.format( basename(ws).replace('/','').replace('.root','') ),
-            extraOptions = [
-                '-m 125',
-                '--floatOtherPOIs=1',
-                '--algo none',
-                '--snapshotName MultiDimFit',
-                '--saveWorkspace',
-                '--computeCovarianceMatrix=1',
-                '--freezeNuisances {0}'.format( ','.join(pdfIndicesToFreeze) ),
-                '-n _CORRMAT_{0}'.format( wsTag )
-                ]
-            )
+    #____________________________________________________________________
+    if args.corrMat_PTJ:
+        Commands.Warning( 'Using asimov ws for PTJ (blinded)' )
+        Commands.ComputeCorrMatrix( LatestPaths.ws_combined_smH_PTJ, asimov=True, onBatch = False )
 
 
-    # #____________________________________________________________________
-    # if args.plotCorrelationMatrix:
+    #____________________________________________________________________
+    if args.plotCorrelationMatrices:
 
-    #     PTH  = True
-    #     # PTH  = False
-
-    #     # NJ   = True
-    #     NJ   = False
-
-
-    #     # ======================================
-    #     # 
-
-    #     if PTH:
-    #         corrMatFile = LatestPaths.correlationMatrix_PTH
-    #         ws          = ''
-    #     elif NJ:
-    #         corrMatFile = LatestPaths.correlationMatrix_NJ
+        pth = Container()
+        pth.ws           = LatestPaths.ws_combined_smH
+        pth.corrRootFile = LatestPaths.correlationMatrix_PTH
+        pth.xTitle       = 'p_{T}^{H} (GeV)'
+        PlotCommands.PlotCorrelationMatrix( pth )
 
 
-    #     corrMatFp = ROOT.TFile.Open( corrMatFile )
-    #     fit = corrMatFp.Get('fit')
+        pth_ggH = Container()
+        pth_ggH.ws           = LatestPaths.ws_combined_ggH_xHfixed
+        pth_ggH.corrRootFile = LatestPaths.correlationMatrix_PTH_ggH
+        pth_ggH.xTitle       = 'p_{T}^{H} (GeV) (non-ggH fixed to SM)'
+        PlotCommands.PlotCorrelationMatrix( pth_ggH )
 
+        njets = Container()
+        njets.ws           = LatestPaths.ws_combined_smH_NJ
+        njets.corrRootFile = LatestPaths.correlationMatrix_NJ
+        njets.xTitle       = 'N_{jets}'
+        PlotCommands.PlotCorrelationMatrix( njets )
 
+        yh = Container()
+        yh.ws           = LatestPaths.ws_combined_smH_YH
+        yh.corrRootFile = LatestPaths.correlationMatrix_YH
+        yh.xTitle       = '|y_{H}|'
+        PlotCommands.PlotCorrelationMatrix( yh )
 
+        ptjet = Container()
+        ptjet.ws           = LatestPaths.ws_combined_smH_PTJ
+        ptjet.corrRootFile = LatestPaths.correlationMatrix_PTJ
+        ptjet.xTitle       = 'p_{T}^{j1}'
+        PlotCommands.PlotCorrelationMatrix( ptjet )
 
 
 
@@ -417,47 +416,38 @@ def main( args ):
             POIRange      = [ 0.0, 3.0 ]
             )
 
-    if args.scan_combined_split_xHfixed:
+    if args.scan_split_xHfixed:
+
+        ws = LatestPaths.ws_combined_ggH_xHfixed
+        if args.hgg: ws = LatestPaths.ws_hgg_ggH_xHfixed
+        if args.hzz: ws = LatestPaths.ws_hzz_ggH_xHfixed
+
+        jobDirectory  = 'Scan_PTH_{0}_xHfixed'.format(datestr)
+        if args.hgg: jobDirectory += '_hgg'
+        if args.hzz: jobDirectory += '_hzz'
+        if args.asimov: jobDirectory += '_asimov'
+
+        nPoints = 55
+        nPointsPerJob = 5
+        if args.hzz: nPointsPerJob = nPoints
+
         Commands.BasicCombineTool(
-            LatestPaths.ws_combined_ggH_xHfixed,
+            ws,
             POIpattern    = '*',
-            nPoints       = 39,
-            nPointsPerJob = 3,
-            jobDirectory  = 'Scan_PTH_{0}_xHfixed'.format(datestr) + ( '_asimov' if ASIMOV else '' ),
+            # POIpattern    = 'GT',
+            POIRange      = ( [ 0.0, 4.0 ] if args.hzz else None ), # Limit to 0.0 for scan stability
+            nPoints       = nPoints,
+            nPointsPerJob = nPointsPerJob,
+            jobDirectory  = jobDirectory,
             queue         = 'short.q',
             asimov        = ASIMOV,
             )
 
 
+    #____________________________________________________________________
+    if args.plot_ptSpectra_new:
 
-    if args.plot_ptSpectra or args.plot_ptSpectra_new:
-
-        # ======================================
-        # Specify SMXS
-
-        binBoundaries_hgg = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
-        binBoundaries_hzz = [ 0., 15., 30., 85., 200., 1000. ]
-
-        binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
-        binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
-
-        YR4_totalXS = 55.70628722 # pb
-
-        shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
-        shape_hzz = [
-            0.208025,
-            0.234770,
-            0.165146 + 0.218345,
-            0.087552 + 0.059154,
-            0.022612 + 0.004398,
-            ]
-        hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
-        hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
-
-        # ws_hgg_smH
-        # ws_hzz_smH
-        # ws_combined_smH
-
+        Commands.Warning('Don\'t use - use --pth_plot in rapidityCommands.py')
 
         # ======================================
         # Start drawing
@@ -493,47 +483,82 @@ def main( args ):
         # PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
 
 
-
-    #____________________________________________________________________
-    if args.plot_ptSpectra_new:
-
         containers = []
 
-        hgg               = Container()
-        hgg.name          = 'hgg'
-        hgg.title         = 'H#rightarrow#gamma#gamma'
-        hgg.color         = 2
-        hgg.POIs          = hggPOIs
-        hgg.Scans         = hggscans
-        hgg.SMcrosssections = hgg_crosssections
+        hgg                 = Container()
+        hgg.name            = 'hgg'
+        hgg.title           = 'H#rightarrow#gamma#gamma'
+        hgg.color           = 2
+        hgg.POIs            = hggPOIs
+        hgg.Scans           = hggscans
+        hgg.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
         containers.append(hgg)
 
-        hzz               = Container()
-        hzz.name          = 'hzz'
-        hzz.title         = 'H#rightarrowZZ'
-        hzz.color         = 4
-        hzz.POIs          = hzzPOIs
-        hzz.Scans         = hzzscans
-        hzz.SMcrosssections = hzz_crosssections
+        hzz                 = Container()
+        hzz.name            = 'hzz'
+        hzz.title           = 'H#rightarrowZZ'
+        hzz.color           = 4
+        hzz.POIs            = hzzPOIs
+        hzz.Scans           = hzzscans
+        hzz.SMcrosssections = LatestPaths.obs_pth_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
-        combination               = Container()
-        combination.name          = 'combination'
-        combination.title         = 'Combination'
-        combination.POIs          = combinationPOIs
-        combination.Scans         = combinationscans
-        combination.SMcrosssections = hgg_crosssections
+        combination                 = Container()
+        combination.name            = 'combination'
+        combination.title           = 'Combination'
+        combination.POIs            = combinationPOIs
+        combination.Scans           = combinationscans
+        combination.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
         containers.append(combination)
 
         PlotCommands.PlotSpectraOnTwoPanel(
-            'ptSpectrum_twoPanel',
+            'pthSpectrum_twoPanel',
             containers,
+            xTitle = 'p_{T}^{H}',
+            yTitleTop = '#Delta#sigma/#Deltap_{T}^{H} (pb/GeV)',
             )
+
+        # PlotCommands.PlotSpectraOnTwoPanel(
+        #     'ptjetSpectrum_twoPanel',
+        #     containers,
+        #     xTitle = 'p_{T}^{jet}',
+        #     yTitleTop = '#Delta#sigma/#Deltap_{T}^{jet} (pb/GeV)',
+        #     # yMinLimit = 0.07,
+        #     # yMaxExternalTop = 500
+        #     xMinExternal = 0.0,
+        #     # yMinLimit    = 0.1
+        #     )
 
 
     #____________________________________________________________________
     # Old style plots (2 separate PDFs for top and bottom plot)
     if args.plot_ptSpectra:
+
+        # ======================================
+        # Specify SMXS
+
+        binBoundaries_hgg = [ 0., 15., 30., 45., 85., 125., 200., 350., 1000. ]
+        binBoundaries_hzz = [ 0., 15., 30., 85., 200., 1000. ]
+
+        binWidths_hgg = [ binBoundaries_hgg[i+1] - binBoundaries_hgg[i] for i in xrange(len(binBoundaries_hgg)-1) ]
+        binWidths_hzz = [ binBoundaries_hzz[i+1] - binBoundaries_hzz[i] for i in xrange(len(binBoundaries_hzz)-1) ]
+
+        YR4_totalXS = 55.70628722 # pb
+
+        shape_hgg = [ 0.208025, 0.234770, 0.165146, 0.218345, 0.087552, 0.059154, 0.022612, 0.004398 ]
+        shape_hzz = [
+            0.208025,
+            0.234770,
+            0.165146 + 0.218345,
+            0.087552 + 0.059154,
+            0.022612 + 0.004398,
+            ]
+        hgg_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hgg, binWidths_hgg ) ]
+        hzz_crosssections = [ s * YR4_totalXS / binWidth for s, binWidth in zip( shape_hzz, binWidths_hzz ) ]
+
+        # ws_hgg_smH
+        # ws_hzz_smH
+        # ws_combined_smH
 
 
         PhysicsCommands.BasicCombineSpectra(
@@ -693,64 +718,75 @@ def main( args ):
             pattern = ''
             )
         PhysicsCommands.BasicDrawScanResults( combinationPOIs, combinationscans, name='combination' )
-        PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
+        # PhysicsCommands.BasicDrawSpectrum( combinationPOIs, combinationscans, name='combination' )
 
+        combination               = Container()
+        combination.name          = 'combination'
+        combination.title         = 'Combination'
+        combination.POIs          = combinationPOIs
+        combination.Scans         = combinationscans
+        combination.SMcrosssections = hgg_crosssections
 
-        PhysicsCommands.BasicCombineSpectra(
-            ( 'combination' + ( '_asimov' if ASIMOV else '' ), combinationPOIs, combinationscans,
-                ( 'AsBlocks', False ),
-                ( 'SetLineColor', 1 ),
-                ( 'SetMarkerStyle', 8 ),
-                # # Block settings
-                # ( 'SetLineColor', 1 ),
-                # ( 'SetMarkerStyle', 2 ),
-                # # ( 'SetFillColorAlpha', 1, 0.2 ),
-                # ( 'SetFillColor', 13 ),
-                # # ( 'SetFillStyle', 3544 ),
-                # ( 'SetFillStyle', 3345 ),
-                ),
-            # ( 'hgg', hggPOIs, hggscans,
-            #     ( 'SetLineColor', 2 ),
-            #     ( 'SetMarkerStyle', 5 ),
-            #     ( 'SetFillColorAlpha', 2, 0.2 ),
-            #     ),
-            # ( 'hzz', hzzPOIs, hzzscans,
-            #     ( 'SetLineColor', 4 ),
-            #     ( 'SetMarkerStyle', 8 ),
-            #     ( 'SetFillColorAlpha', 4, 0.2 ),
-            #     ),
-            # hzz_SMXS         = hzz_crosssections,
-            # hgg_SMXS         = hgg_crosssections,
-            combination_SMXS = hgg_crosssections,
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'ptSpectrum_ggHxH_twoPanel',
+            [ combination ],
             )
 
+        # PhysicsCommands.BasicCombineSpectra(
+        #     ( 'combination' + ( '_asimov' if ASIMOV else '' ), combinationPOIs, combinationscans,
+        #         ( 'AsBlocks', False ),
+        #         ( 'SetLineColor', 1 ),
+        #         ( 'SetMarkerStyle', 8 ),
+        #         # # Block settings
+        #         # ( 'SetLineColor', 1 ),
+        #         # ( 'SetMarkerStyle', 2 ),
+        #         # # ( 'SetFillColorAlpha', 1, 0.2 ),
+        #         # ( 'SetFillColor', 13 ),
+        #         # # ( 'SetFillStyle', 3544 ),
+        #         # ( 'SetFillStyle', 3345 ),
+        #         ),
+        #     # ( 'hgg', hggPOIs, hggscans,
+        #     #     ( 'SetLineColor', 2 ),
+        #     #     ( 'SetMarkerStyle', 5 ),
+        #     #     ( 'SetFillColorAlpha', 2, 0.2 ),
+        #     #     ),
+        #     # ( 'hzz', hzzPOIs, hzzscans,
+        #     #     ( 'SetLineColor', 4 ),
+        #     #     ( 'SetMarkerStyle', 8 ),
+        #     #     ( 'SetFillColorAlpha', 4, 0.2 ),
+        #     #     ),
+        #     # hzz_SMXS         = hzz_crosssections,
+        #     # hgg_SMXS         = hgg_crosssections,
+        #     combination_SMXS = hgg_crosssections,
+        #     )
 
-        PhysicsCommands.BasicCombineSpectra(
-            ( 'combination' + ( '_asimov' if ASIMOV else '' ), combinationPOIs, combinationscans,
-                ( 'AsBlocks', False ),
-                ( 'SetLineColor', 1 ),
-                ( 'SetMarkerStyle', 8 ),
-                # # Block settings
-                # ( 'SetLineColor', 1 ),
-                # ( 'SetMarkerStyle', 2 ),
-                # # ( 'SetFillColorAlpha', 1, 0.2 ),
-                # ( 'SetFillColor', 13 ),
-                # # ( 'SetFillStyle', 3544 ),
-                # ( 'SetFillStyle', 3345 ),
-                ),
-            # ( 'hgg', hggPOIs, hggscans,
-            #     ( 'SetLineColor', 2 ),
-            #     ( 'SetMarkerStyle', 5 ),
-            #     ( 'SetFillColorAlpha', 2, 0.2 ),
-            #     ),
-            # ( 'hzz', hzzPOIs, hzzscans,
-            #     ( 'SetLineColor', 4 ),
-            #     ( 'SetMarkerStyle', 8 ),
-            #     ( 'SetFillColorAlpha', 4, 0.2 ),
-            #     ),
-            printTable=True,
-            bottomRatioPlot = True,
-            )
+
+        # PhysicsCommands.BasicCombineSpectra(
+        #     ( 'combination' + ( '_asimov' if ASIMOV else '' ), combinationPOIs, combinationscans,
+        #         ( 'AsBlocks', False ),
+        #         ( 'SetLineColor', 1 ),
+        #         ( 'SetMarkerStyle', 8 ),
+        #         # # Block settings
+        #         # ( 'SetLineColor', 1 ),
+        #         # ( 'SetMarkerStyle', 2 ),
+        #         # # ( 'SetFillColorAlpha', 1, 0.2 ),
+        #         # ( 'SetFillColor', 13 ),
+        #         # # ( 'SetFillStyle', 3544 ),
+        #         # ( 'SetFillStyle', 3345 ),
+        #         ),
+        #     # ( 'hgg', hggPOIs, hggscans,
+        #     #     ( 'SetLineColor', 2 ),
+        #     #     ( 'SetMarkerStyle', 5 ),
+        #     #     ( 'SetFillColorAlpha', 2, 0.2 ),
+        #     #     ),
+        #     # ( 'hzz', hzzPOIs, hzzscans,
+        #     #     ( 'SetLineColor', 4 ),
+        #     #     ( 'SetMarkerStyle', 8 ),
+        #     #     ( 'SetFillColorAlpha', 4, 0.2 ),
+        #     #     ),
+        #     printTable=True,
+        #     bottomRatioPlot = True,
+        #     )
 
 
     ########################################
