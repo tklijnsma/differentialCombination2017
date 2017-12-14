@@ -58,10 +58,16 @@ PLOTDIR = 'plots_{0}'.format(datestr)
 def SetPlotDir( newdir ):
     global PLOTDIR
     PLOTDIR = newdir
+
 SAVEROOT = False
 def SaveAsRoot( newvalue=True ):
     global SAVEROOT
     SAVEROOT = newvalue
+SAVEPNG = False
+def SaveAsPng( newvalue=True ):
+    global SAVEPNG
+    SAVEPNG = newvalue
+
 def SaveC( outname, asPNG=False, asROOT=False ):
     global PLOTDIR
     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
@@ -73,7 +79,7 @@ def SaveC( outname, asPNG=False, asROOT=False ):
 
     outname = join( PLOTDIR, subdir, basename(outname).replace('.pdf','').replace('.png','') )
     c.SaveAs( outname + '.pdf' )
-    if asPNG:
+    if asPNG or SAVEPNG:
         c.SaveAs( outname + '.png' )
     if asROOT or SAVEROOT:
         c.SaveAs( outname + '.root' )
@@ -82,7 +88,7 @@ def SaveC( outname, asPNG=False, asROOT=False ):
 ROOTCOUNTER = 1000
 def GetUniqueRootName():
     global ROOTCOUNTER
-    name = 'root{0}'.format(ROOTCOUNTER)
+    name = 'root{0}_{1}'.format( ROOTCOUNTER, Commands.__uniqueid__().next() )
     ROOTCOUNTER += 1
     return name
 
@@ -315,6 +321,13 @@ def GetTheoryTGraph(
 #____________________________________________________________________
 # Generic function the returns a function integral( a, b, verbose=False ), which is evaluated for binBoundaries and binValues
 def GetIntegral( binBoundaries, binValues ):
+
+    if len(binBoundaries)-1 != len(binValues):
+        # more_or_less = 'more' if len(binValues) > len(binBoundaries)-1 else 'less'
+        # Commands.Warning( 'Found {0} binValues[{1}] than bins[{2}]; will limit to {3} bins' )
+        # Actually, just throw an error; the chance that this is intended is really slim
+        Commands.ThrowError( 'Found len(binBoundaries) = {0}, but len(binValues) = {1}'.format( len(binBoundaries), len(binValues) ) )
+
     nBins = len(binValues)
     binCenters = [ 0.5*( binBoundaries[i+1] + binBoundaries[i] ) for i in xrange(nBins-1) ]
 
@@ -323,10 +336,15 @@ def GetIntegral( binBoundaries, binValues ):
 
     def integralfunction( a, b, verbose=False ):
 
-        if verbose: print '\n\nInterpolation function called with a = {0} and b = {1}'.format( a, b )
+        if verbose: print '\n\nInterpolation function called with a = {0} and b = {1} (defined range: {2} to {3})'.format( a, b, binBoundaries[0], binBoundaries[-1] )
 
         aInterpolated = False
         bInterpolated = False
+
+        if a < binBoundaries[0] and b < binBoundaries[0]:
+            return 0.0
+        elif a > binBoundaries[-1] and b > binBoundaries[-1]:
+            return 0.0
 
         # Extrapolating
         if a < binBoundaries[0]:
@@ -342,24 +360,33 @@ def GetIntegral( binBoundaries, binValues ):
             bInterpolated = True
 
         # Find binValues at x = a and x = b
+        if verbose: print 'Looking for left and right bound in binBoundaries'
         for iBin in xrange(nBins):
 
             if aInterpolated and bInterpolated: break
 
+            if verbose: print '\niBin = {0}'.format(iBin)
+            if verbose: print '( a[{0}] >= binBoundaries[iBin][{1}] and a[{0}] < binBoundaries[iBin+1][{2}] ) == {3}'.format(
+                a, binBoundaries[iBin], binBoundaries[iBin+1], ( a >= binBoundaries[iBin] and a < binBoundaries[iBin+1] )
+                )
             if not aInterpolated and ( a >= binBoundaries[iBin] and a < binBoundaries[iBin+1] ):
                 ya = binValues[iBin]
                 ia = iBin
                 aInterpolated = True
 
+            if verbose: print '( b[{0}] > binBoundaries[iBin][{1}] and b[{0}] <= binBoundaries[iBin+1][{2}] ) == {3}'.format(
+                b, binBoundaries[iBin], binBoundaries[iBin+1], ( b > binBoundaries[iBin] and b <= binBoundaries[iBin+1] )
+                )
             if not bInterpolated and ( b > binBoundaries[iBin] and b <= binBoundaries[iBin+1] ):
                 yb = binValues[iBin]
                 ib = iBin
                 bInterpolated = True
 
+        if not aInterpolated:
+            Commands.ThrowError( 'Problem determining integration range for left bound' )
 
-        if not aInterpolated or not bInterpolated:
-            Commands.ThrowError( 'Somehow this case was not interpolated; this is wrong' )
-            return 0.
+        if not bInterpolated:
+            Commands.ThrowError( 'Problem determining integration range for right bound' )
 
         binBoundaries_integration = [ a  ] + binBoundaries[ia+1:ib+1] + [ b  ]
         
@@ -614,9 +641,6 @@ def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
     TH2.Draw( 'CONT Z LIST' )
     ROOT.gPad.Update()
 
-    if verbose:
-        print '    Contours found'
-
     contours_genObj = ROOT.gROOT.GetListOfSpecials().FindObject('contours')
 
     Tgs = []
@@ -630,6 +654,7 @@ def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
             Tgs.append( TgClone )
 
     if verbose:
+        print '    {0} contours found'.format(len(Tgs))
         for Tg in Tgs:
             N = Tg.GetN()
             xList = [ Tg.GetX()[iPoint] for iPoint in xrange(N) ]

@@ -9,6 +9,7 @@ Thomas Klijnsma
 
 import os, pexpect, subprocess
 from os.path import *
+import AuthorizationAgent.AuthorizationAgent as AuthorizationAgent
 
 
 ########################################
@@ -26,7 +27,7 @@ def main():
 
 
     www_onlxplus = '/afs/cern.ch/user/t/tklijnsm/www/'
-    plotdir_onlxplus = join( www_onlxplus, 'differentials2017/ptCombination' )
+    plotdir_onlxplus = join( www_onlxplus, 'differentials2017/ptCombination_v2' )
     if plotdir_onlxplus.endswith('/'): plotdir_onlxplus = plotdir_onlxplus[:-1]
 
 
@@ -45,6 +46,7 @@ def main():
     # cmd = 'rsync -avWe ssh --delete-before www/ tklijnsm@lxplus.cern.ch:/afs/cern.ch/user/t/tklijnsm/www/differentials2017/ptCombination'
     cmd = 'rsync -avW --delete-before -e ssh www/ tklijnsm@lxplus.cern.ch:{0}'.format( plotdir_onlxplus )
     output = executeCommandWithPassword( cmd )
+    # output = executeCommand( cmd )
     print output
 
 
@@ -52,6 +54,7 @@ def main():
     cmd = 'afind %s -t d -e "fs setacl -dir {} -acl webserver:afs read"' % plotdir_onlxplus
     sshcmd = 'ssh tklijnsm@lxplus.cern.ch \'{0}\''.format( cmd )
     executeCommandWithPassword( sshcmd )
+    # executeCommand( sshcmd )
 
 
 
@@ -65,7 +68,8 @@ def executeCommandWithPassword( cmd, expectString='Password:', verbose=False ):
         print "\nGot unexpected output: %s %s" % (child.before, child.after)
         return
     else:
-        child.sendline( executeCommand( 'python ~/.ssh/userio.py -d Rx4jVf9cA', getOutput=True ) )
+
+        child.sendline( getpw() )
 
     output = child.read()
     return output
@@ -91,7 +95,11 @@ def createPngsForAllPdfs( directory ):
         cmd = 'convert -density 150 {0} -quality 90 -trim {1}'.format( pdf, png )
         executeCommand( cmd )
 
-
+def getpw():
+    return AuthorizationAgent.ReadKeyCipherFilePair( 
+        keyFile='/mnt/t3nfs01/data01/shome/tklijnsm/.keys/key_Dec08_0fEuNc.key',
+        pwFile='/mnt/t3nfs01/data01/shome/tklijnsm/.keys/pw_Dec08_Ed3fqK.pw'
+        )
 
 
 

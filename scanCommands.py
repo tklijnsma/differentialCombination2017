@@ -60,10 +60,12 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingScan',                             action=CustomAction )
 
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument( '--yukawa', action='store_true' )
-    group.add_argument( '--top',    action='store_true' )
+    group.add_argument( '--yukawa',  action='store_true' )
+    group.add_argument( '--top',     action='store_true' )
+    group.add_argument( '--topctcb', action='store_true' )
 
     parser.add_argument( '--nominal',                                  action='store_true' )
+    parser.add_argument( '--highpt',                                   action='store_true' )
     parser.add_argument( '--lumiStudy',                                action='store_true' )
     parser.add_argument( '--profiledTotalXS',                          action='store_true' )
     parser.add_argument( '--fitOnlyNormalization',                     action='store_true' )
@@ -90,8 +92,8 @@ def main( args ):
     #____________________________________________________________________
     if args.couplingScan:
         # Commands.TestMode(True)
-        if not( args.yukawa or args.top ):
-            print 'Use either --yukawa or --top'
+        if not( args.yukawa or args.top or args.topctcb ):
+            print 'Use --yukawa, --top, or --topctcb'
             return
 
         RECREATE_POSTFIT = True
@@ -104,6 +106,15 @@ def main( args ):
         # useFastscan  = abspath( 'Scan_Top_Nov26_asimov/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
         # usePostfitWS = abspath( 'Scan_Top_Nov27_hgg_0/postfit_and_fastscan/POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root' )
         # useFastscan  = abspath( 'Scan_Top_Nov27_hgg_0/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
+
+        # usePostfitWS = abspath( 'Scan_Top_Dec03_0/postfit_and_fastscan/POSTFIT_combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root' )
+        # useFastscan  = abspath( 'Scan_Top_Dec03_0/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
+        # if args.hgg:
+        #     usePostfitWS = abspath( 'Scan_Top_Dec03_hgg/postfit_and_fastscan/POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root' )
+        #     useFastscan  = abspath( 'Scan_Top_Dec03_hgg/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
+        # if args.hzz:
+        #     usePostfitWS = abspath( 'Scan_Top_Dec03_hzz/postfit_and_fastscan/POSTFIT_hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root' )
+        #     useFastscan  = abspath( 'Scan_Top_Dec03_hzz/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.MultiDimFit.mH125.root' )
 
         # RUN_QUICKLY = True
         RUN_QUICKLY = False
@@ -150,12 +161,27 @@ def main( args ):
             ct_ranges = [ -8.5, 8.5 ]
             cg_ranges = [ -0.65, 0.65 ]
             baseContainer.POIs = [ 'ct', 'cg' ]
-            baseContainer.PhysicsModelParameters = [ 'ct=1.0', 'cg=0.0' ]
+            if args.asimov: baseContainer.PhysicsModelParameters = [ 'ct=1.0', 'cg=0.0' ]
             baseContainer.PhysicsModelParameterRanges = [
                 'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
                 'cg={0},{1}'.format( cg_ranges[0], cg_ranges[1] )
                 ]
             baseContainer.subDirectory = 'Scan_Top_{0}'.format(datestr)
+            if args.highpt: baseContainer.subDirectory = 'Scan_TopHighPt_{0}'.format(datestr)
+
+        elif args.topctcb:
+            baseContainer.deltaNLLCutOff = 30.
+            baseContainer.nPoints = 120**2
+            ct_ranges = [ -0.1, 2. ]
+            cb_ranges = [ -10.0, 16.0 ]
+            baseContainer.POIs = [ 'ct', 'cb' ]
+            baseContainer.PhysicsModelParameterRanges = [
+                'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
+                'cb={0},{1}'.format( cb_ranges[0], cb_ranges[1] )
+                ]
+            baseContainer.subDirectory = 'Scan_TopCtCb_{0}'.format(datestr)
+            if args.highpt: baseContainer.subDirectory = 'Scan_TopCtCbHighPt_{0}'.format(datestr)
+
 
         # Load settings into a scan baseContainer
         scan = CombineToolWrapper.CombineScan(baseContainer)
@@ -204,14 +230,23 @@ def main( args ):
         # ----------------------
         if args.top:
 
+            if args.highpt:
+                ws_nominal_combined = LatestPaths.ws_combined_TopHighPt
+                ws_nominal_hgg      = LatestPaths.ws_hgg_TopHighPt
+                ws_nominal_hzz      = LatestPaths.ws_hzz_TopHighPt
+            else:
+                ws_nominal_combined = LatestPaths.ws_combined_Top
+                ws_nominal_hgg      = LatestPaths.ws_hgg_Top
+                ws_nominal_hzz      = LatestPaths.ws_hzz_Top
+
             if args.nominal:
-                datacard = LatestPaths.ws_combined_Top
+                datacard = ws_nominal_combined
                 if args.hgg:
-                    datacard = LatestPaths.ws_hgg_Top
+                    datacard = ws_nominal_hgg
                     scan.deltaNLLCutOff = 50.
                     Commands.Warning( 'Setting deltaNLLCutOff to 50 for hgg' )
                 if args.hzz:
-                    datacard = LatestPaths.ws_hzz_Top
+                    datacard = ws_nominal_hzz
                 scan.datacard = datacard
 
             elif args.lumiStudy:
@@ -224,8 +259,36 @@ def main( args ):
                 suffix += '_profiledTotalXS'
 
             elif args.fitOnlyNormalization:
-                scan.datacard = LatestPaths.ws_combined_Top_profiledTotalXS_fitOnlyNormalization
+                scan.datacard =(
+                    LatestPaths.ws_combined_Top_profiledTotalXS_fitOnlyNormalization
+                    if not args.highpt else
+                    LatestPaths.ws_combined_TopHighPt_profiledTotalXS_fitOnlyNormalization
+                    )
                 suffix += '_fitOnlyNormalization'
+
+            else:
+                print 'Pass physics option'
+                return
+
+        if args.topctcb:
+            if args.highpt:
+                ws_nominal_combined = LatestPaths.ws_combined_TopCtCbHighPt
+                ws_nominal_hgg      = LatestPaths.ws_hgg_TopCtCbHighPt
+                ws_nominal_hzz      = LatestPaths.ws_hzz_TopCtCbHighPt
+            else:
+                ws_nominal_combined = LatestPaths.ws_combined_TopCtCb
+                ws_nominal_hgg      = LatestPaths.ws_hgg_TopCtCb
+                ws_nominal_hzz      = LatestPaths.ws_hzz_TopCtCb
+
+            if args.nominal:
+                datacard = ws_nominal_combined
+                if args.hgg:
+                    datacard = ws_nominal_hgg
+                    scan.deltaNLLCutOff = 50.
+                    Commands.Warning( 'Setting deltaNLLCutOff to 50 for hgg' )
+                if args.hzz:
+                    datacard = ws_nominal_hzz
+                scan.datacard = datacard
 
             else:
                 print 'Pass physics option'

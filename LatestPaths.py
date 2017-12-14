@@ -1,3 +1,7 @@
+import sys
+sys.path.append('src')
+from Observable import Observable
+
 ########################################
 # Physical quantities
 ########################################
@@ -8,75 +12,7 @@ SM_BR_hgg = 2.270E-03
 SM_BR_hzz = 0.02641
 SM_ratio_of_BRs = SM_BR_hgg / SM_BR_hzz
 
-
-########################################
-# Functions
-########################################
-
-from copy import deepcopy
-
-#____________________________________________________________________
-class Observable(object):
-    """Simple class that returns shape, cross section, or cross section over bin width"""
-    def __init__(self,
-            name,
-            title,
-            shape,
-            binning,
-            lastBinIsOverflow = True,
-            ):
-        if not len(binning) == len(shape)+1:
-            raise RuntimeError( 'len(binning)[={0}] =/= len(shape)+1[={1}]'.format( len(binning), len(shape) ) )
-        self.name = name
-        self.title = title
-        self.shape = shape
-        self.binning = binning
-        self.lastBinIsOverflow = lastBinIsOverflow
-        self.nBins = len(self.shape)
-
-    def crosssection(self):
-        return [ s * YR4_totalXS for s in self.shape ]
-
-    def crosssection_over_binwidth(self):
-        xs = self.crosssection()
-        if self.lastBinIsOverflow:
-            xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins-1) ] + [ xs[-1] ]
-        else:
-            xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins) ]
-        return xs_o_binwidth
-
-    def mergeBins( self, mergeList ):
-        newshape   = []
-        newbinning = [ self.binning[0] ]
-        for bins in mergeList:
-            if isinstance( bins, int ):
-                newshape.append( self.shape[bins] )
-                newbinning.append( self.binning[bins+1] ) # Always add right bound of bin
-            else:
-                shapesum = 0.
-                for iBin in bins:
-                    shapesum += self.shape[iBin]
-                newshape.append(shapesum)
-                newbinning.append( self.binning[bins[-1]+1] ) # Always add right bound of bin
-
-        if not len(newbinning) == len(newshape)+1:
-            raise RuntimeError( 'len(newbinning)[={0}] =/= len(newshape)+1[={1}]'.format( len(newbinning), len(newshape) ) )
-
-        copy = deepcopy(self)
-        copy.shape = newshape
-        copy.binning = newbinning
-        copy.nBins = len(newshape)
-        return copy
-
-    def Print( self ):
-        xs = self.crosssection()
-        xs_over_binwidth = self.crosssection_over_binwidth()
-        strList = lambda L: ', '.join([ '{0:<9.3f}'.format(f) for f in L ])
-        print '\n Cross sections for observable {0} ({1})'.format( self.name, self.title )
-        print 'shape:            ' + strList(self.shape)
-        print 'binning:          ' + strList(self.binning)
-        print 'xs:               ' + strList(xs)
-        print 'xs_over_binwidth: ' + strList(xs_over_binwidth)
+Observable.YR4_totalXS = YR4_totalXS
 
 
 ########################################
@@ -186,6 +122,8 @@ derivedTheoryFiles_YukawaSummed             = 'derivedTheoryFiles_Nov03_YukawaSu
 # derivedTheoryFiles_Top                      = 'derivedTheoryFiles_Nov06_Top'
 derivedTheoryFiles_Top                      = 'derivedTheoryFiles_Nov24_Top'
 
+derivedTheoryFiles_TopHighPt                = 'derivedTheoryFiles_Dec07_TopHighPt'
+
 
 ########################################
 # Correlation matrices and uncertainties
@@ -209,7 +147,7 @@ correlationMatrix_PTH                   = 'corrMat_Nov29_combinedCard_smH_Nov07/
 correlationMatrix_PTH_ggH               = 'corrMat_Nov29_combinedCard_Nov03_xHfixed_1/higgsCombine_CORRMAT_combinedCard_Nov03_xHfixed.MultiDimFit.mH125.root'
 correlationMatrix_NJ                    = 'corrMat_Nov29_combinedCard_NJ_smH_Nov12/higgsCombine_CORRMAT_combinedCard_NJ_smH_Nov12.MultiDimFit.mH125.root'
 correlationMatrix_YH                    = 'corrMat_Nov29_combinedCard_YH_smH_Nov28/higgsCombine_CORRMAT_combinedCard_YH_smH_Nov28.MultiDimFit.mH125.root'
-correlationMatrix_PTJ                   = 'corrMat_Nov29_combinedCard_PTJ_smH_Nov28/higgsCombine_CORRMAT_combinedCard_PTJ_smH_Nov28.MultiDimFit.mH125.root'
+correlationMatrix_PTJ                   = 'corrMat_Nov30_combinedCard_PTJ_smH_Nov28/higgsCombine_CORRMAT_combinedCard_PTJ_smH_Nov28.MultiDimFit.mH125.root'
 
 
 ########################################
@@ -246,7 +184,8 @@ ws_hzz_ggH_xHfixed           = 'workspaces_Nov29/hzz4l_comb_13TeV_xs_processesSh
 # ---------------------
 # Workspaces for extra studies
 
-ws_ratio_of_BRs              = 'workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel.root'
+# ws_ratio_of_BRs              = 'workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel.root' # Probably not wrong but safer to use new result
+ws_ratio_of_BRs              = 'workspaces_Dec11/combinedCard_smH_Nov07_FitBRModel.root'
 ws_ratio_of_BRs_globalScales = 'workspaces_Nov20/combinedCard_smH_Nov07_FitBRModel_globalScales.root'
 ws_totalXS                   = 'workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel_fitTotalXS.root'
 ws_combined_ratioOfBRs       = 'workspaces_Nov14/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_ratioOfBRs.root'
@@ -288,6 +227,10 @@ ws_combined_Top    = 'workspaces_Nov24/combinedCard_Nov03_CouplingModel_Top_with
 ws_hgg_Top         = 'workspaces_Nov24/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
 ws_hzz_Top         = 'workspaces_Nov24/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
 
+ws_combined_TopHighPt = 'workspaces_Dec11/combinedCard_Nov03_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+ws_hgg_TopHighPt      = 'workspaces_Dec11/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+ws_hzz_TopHighPt      = 'workspaces_Dec11/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+
 # ws_combined_Top_lumiScalable           = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
 # ws_combined_Top_profiledTotalXS        = 'workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS.root'
 ws_combined_Top_couplingDependentBR    = 'workspaces_Nov10/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
@@ -295,6 +238,7 @@ ws_combined_Top_skippedLastBin         = 'workspaces_Nov17/combinedCard_Nov03_Co
 
 # ws_combined_Top_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov17/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
 ws_combined_Top_profiledTotalXS_fitOnlyNormalization = 'workspaces_Nov28/combinedCard_smH_Nov27_INCLUSIVE_CouplingModel_Top_profiledTotalXS_fitOnlyNormalization.root'
+ws_combined_TopHighPt_profiledTotalXS_fitOnlyNormalization = 'workspaces_Dec12/combinedCard_smH_Nov27_INCLUSIVE_CouplingModel_Top_profiledTotalXS_fitOnlyNormalization.root'
 
 # Without problematic SM norm
 ws_combined_Top_lumiScalable           = 'workspaces_Nov27/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
@@ -304,6 +248,10 @@ ws_combined_Top_profiledTotalXS        = 'workspaces_Nov27/combinedCard_Nov03_Co
 ws_combined_TopCtCb = 'workspaces_Nov15/combinedCard_Nov03_CouplingModel_TopCtCb_withTheoryUncertainties.root'
 ws_hgg_TopCtCb      = 'workspaces_Nov15/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_TopCtCb_withTheoryUncertainties.root'
 ws_hzz_TopCtCb      = 'workspaces_Nov15/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopCtCb_withTheoryUncertainties.root'
+
+ws_combined_TopCtCbHighPt = 'workspaces_Dec12/combinedCard_Nov03_CouplingModel_TopCtCbHighPt_withTheoryUncertainties.root'
+ws_hgg_TopCtCbHighPt      = 'workspaces_Dec12/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_TopCtCbHighPt_withTheoryUncertainties.root'
+ws_hzz_TopCtCbHighPt      = 'workspaces_Dec12/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopCtCbHighPt_withTheoryUncertainties.root'
 
 
 ########################################
@@ -347,7 +295,8 @@ scan_hzz_PTJ_asimov      = 'Scan_PTJ_Nov28_asimov_1'
 # ======================================
 # Extra studies
 
-scan_ratioOfBRs                  = 'Scan_ratioOfBRs_Nov08'
+# scan_ratioOfBRs                  = 'Scan_ratioOfBRs_Nov08' # Probably not wrong, but renewed to be safe
+scan_ratioOfBRs                  = 'Scan_ratioOfBRs_Dec11'
 scan_ratioOfBRs_globalScales     = 'Scan_ratioOfBRs_Nov20_globalScales'
 # scan_combined_totalXS            = 'Scan_TotalXS_Nov08'
 scan_combined_PTH_xHfixed        = 'Scan_PTH_Nov08_xHfixed'
@@ -362,6 +311,7 @@ scan_combined_totalXS            = 'Scan_TotalXS_Nov27'
 scan_combined_Yukawa                                        = 'Scan_Yukawa_Nov03_0'
 scan_hgg_Yukawa                                             = 'Scan_Yukawa_Nov03_hgg'
 scan_hzz_Yukawa                                             = 'Scan_Yukawa_Nov03_hzz'
+
 scan_combined_Yukawa_asimov                                 = 'Scan_Yukawa_Nov03_asimov'
 scan_hgg_Yukawa_asimov                                      = 'Scan_Yukawa_Nov03_hgg_asimov'
 scan_hzz_Yukawa_asimov                                      = 'Scan_Yukawa_Nov03_hzz_asimov'
@@ -408,10 +358,17 @@ scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan_asimov = 'Scan_Yukawa_Nov
 # scan_combined_Top                                         = 'Scan_Top_Nov08'
 # scan_hgg_Top                                              = 'Scan_Top_Nov08_hgg'
 # scan_hzz_Top                                              = 'Scan_Top_Nov08_hzz'
-scan_combined_Top                                         = 'Scan_Top_Nov27_0'
 # scan_hgg_Top                                              = 'Scan_Top_Nov27_hgg_0'
-scan_hgg_Top                                              = 'Scan_Top_Nov28_hgg_0'
-scan_hzz_Top                                              = 'Scan_Top_Nov26_hzz'
+
+# scan_combined_Top                                         = 'Scan_Top_Nov27_0'
+# scan_hgg_Top                                              = 'Scan_Top_Nov28_hgg_0'
+# scan_hzz_Top                                              = 'Scan_Top_Nov26_hzz'
+
+# scan_hzz_Top                                              = 'Scan_Top_Dec03_hzz'
+
+scan_combined_Top                                         = 'Scan_Top_Dec03_2'
+scan_hgg_Top                                              = 'Scan_Top_Dec03_hgg_0'
+scan_hzz_Top                                              = 'Scan_Top_Dec03_hzz_0'
 
 # scan_combined_Top_asimov                                  = 'Scan_Top_Nov08_asimov'
 # scan_hgg_Top_asimov                                       = 'Scan_Top_Nov08_hgg_asimov'
@@ -420,6 +377,11 @@ scan_combined_Top_asimov                                  = 'Scan_Top_Nov27_asim
 scan_hgg_Top_asimov                                       = 'Scan_Top_Nov26_hgg_asimov'
 scan_hzz_Top_asimov                                       = 'Scan_Top_Nov26_hzz_asimov'
 
+scan_combined_TopHighPt                                   = 'Scan_TopHighPt_Dec11'
+scan_hgg_TopHighPt                                        = 'Scan_TopHighPt_Dec11_hgg'
+scan_hzz_TopHighPt                                        = 'Scan_TopHighPt_Dec11_hzz_0'
+
+scan_combined_TopHighPt_asimov                            = 'Scan_TopHighPt_Dec12_asimov_2'
 
 # TODO:
 # Scan_TotalXS_Nov27

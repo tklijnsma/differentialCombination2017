@@ -184,6 +184,7 @@ def BasicDrawScanResults(
     # print deltaNLLRange
 
     c.Clear()
+    c.SetTopMargin(0.08)
 
     base = ROOT.TH1F()
     base.Draw('P')
@@ -197,7 +198,7 @@ def BasicDrawScanResults(
     base.GetXaxis().SetTitleSize( 0.06 )
     base.GetYaxis().SetTitleSize( 0.06 )
 
-    leg = ROOT.TLegend( 0.5, 0.5, 1-RightMargin, 1-TopMargin )
+    leg = ROOT.TLegend( 0.5, 0.5, 1-RightMargin, 1-c.GetTopMargin() )
     leg.SetFillStyle(0)
     leg.SetBorderSize(0)
 
@@ -323,6 +324,10 @@ def BasicDrawScanResults(
 
     leg.Draw()
 
+
+    Commands.GetCMSLabel()
+    Commands.GetCMSLumi()
+
     SaveC( 'parabolas_{0}_{1}_{2}'.format( productionMode, observableName, name ) )
 
 
@@ -386,6 +391,9 @@ def GetTGraphForSpectrum(
     scalePOIs = None,
     ):
 
+    if not scalePOIs is None:
+        Commands.Warning( 'scalePOIs is deprecated! Do not use it!' )
+
     # Sort by first number of observable range
     POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
     binBoundaries = FigureOutBinning( POIs )
@@ -401,6 +409,8 @@ def GetTGraphForSpectrum(
     POICenters  = []
     POIErrsLeft  = []
     POIErrsRight = []
+    POIBoundsLeft  = []
+    POIBoundsRight = []
     for POI, scan in zip( POIs, scans ):
 
         POIvals, deltaNLLs = FilterScan( scan )
@@ -408,8 +418,8 @@ def GetTGraphForSpectrum(
         minimaAndUncertainties = FindMinimaAndErrors( POIvals, deltaNLLs )
 
         POICenter   = minimaAndUncertainties['min']
-        POIErrLeft  = minimaAndUncertainties['leftError']
-        POIErrRight = minimaAndUncertainties['rightError']
+        POIErrLeft  = abs(minimaAndUncertainties['leftError'])
+        POIErrRight = abs(minimaAndUncertainties['rightError'])
 
         if scalePOIs:
             POICenter   *= scalePOIs[ POIs.index(POI) ]
@@ -419,6 +429,11 @@ def GetTGraphForSpectrum(
         POICenters.append(   POICenter )
         POIErrsLeft.append(  POIErrLeft )
         POIErrsRight.append( POIErrRight )
+
+        # These are not scaled under scalePOIs, which is somewhat deprecated anyway
+        POIBoundsLeft.append(  minimaAndUncertainties['leftBound'] )
+        POIBoundsRight.append( minimaAndUncertainties['rightBound'] )
+
 
 
     Tg = ROOT.TGraphAsymmErrors(
@@ -452,6 +467,8 @@ def GetTGraphForSpectrum(
     Tg.POICenters    = POICenters
     Tg.POIErrsLeft   = POIErrsLeft
     Tg.POIErrsRight  = POIErrsRight
+    Tg.POIBoundsLeft = POIBoundsLeft
+    Tg.POIBoundsRight = POIBoundsRight
 
     Tg.POIErrsSymm   = [ 0.5*(abs(i)+abs(j)) for i, j in zip( POIErrsLeft, POIErrsRight ) ]
     Tg.POIErrsSymmPerc = [ 100.*err/(val+0.0000000001) for err, val in zip( Tg.POIErrsSymm, Tg.POICenters ) ]
@@ -1021,6 +1038,8 @@ def FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=False ):
         'leftBound'  : -999,
         'rightError' : 999,
         'rightBound' : 999,
+        'symmError'  : 999,
+        'symmBound'  : 999,
         'wellDefinedRightBound' : False,
         'wellDefinedLeftBound'  : False,
         }
@@ -1087,6 +1106,8 @@ def FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=False ):
         'leftBound'  : leftBound,
         'rightError' : rightError,
         'rightBound' : rightBound,
+        'symmError'  : 0.5*( abs(leftError) + abs(rightError) ),
+        'symmBound'  : minimumPOIval + 0.5*( abs(leftError) + abs(rightError) ),
         'wellDefinedRightBound' : wellDefinedRightBound,
         'wellDefinedLeftBound'  : wellDefinedLeftBound,
         }

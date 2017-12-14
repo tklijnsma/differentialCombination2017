@@ -8,7 +8,7 @@ Thomas Klijnsma
 ########################################
 
 import os, itertools, operator, re, argparse, sys, random, numpy
-from math import isnan, isinf
+from math import isnan, isinf, sqrt
 from os.path import *
 from glob import glob
 from copy import deepcopy
@@ -27,6 +27,7 @@ import TheoryFileInterface
 import OutputInterface
 from Container import Container
 from Parametrization import Parametrization, WSParametrization
+import PlotCommands
 
 
 from time import strftime
@@ -89,6 +90,9 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--PlotParametrizationShapes',               action=CustomAction )
 
     parser.add_argument( '--CreateParametrizationTables',              action=CustomAction )    
+    
+    parser.add_argument( '--MiniCombineTest',                          action=CustomAction )    
+    parser.add_argument( '--HbbInclusionPlots',                        action=CustomAction )
 
 
 ########################################
@@ -98,6 +102,363 @@ def AppendParserOptions( parser ):
 def main( args ):
 
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+
+
+    #____________________________________________________________________
+    if args.MiniCombineTest:
+        import MiniCombine
+
+        ASIMOV = True
+
+        DO_TOP = True
+        DO_YUKAWA = not(DO_TOP)
+
+        DO_HIGH_PT = True
+        # DO_HIGH_PT = False
+
+
+        # ======================================
+        # 
+
+        if ASIMOV:
+            combinationResult = LatestPaths.scan_combined_PTH_xHfixed_asimov
+        else:
+            combinationResult = LatestPaths.scan_combined_PTH_ggH
+
+        Commands.Warning( 'The correlation matrix is not calculated on Asimov!!' )
+        correlationMatrixFile = LatestPaths.correlationMatrix_PTH_ggH
+
+
+        # ======================================
+        # Set histograms to take parametrization from
+
+        if DO_YUKAWA:
+            couplings = [ 'kappac', 'kappab' ]
+            SM = TheoryFileInterface.FileFinder(
+                kappab=1, kappac=1, muR=1, muF=1, Q=1,
+                expectOneFile=True,
+                directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
+                loadImmediately=True
+                )
+            derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                kappab='*', kappac='*', muR=1, muF=1, Q=1,
+                directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
+                loadImmediately=True
+                )
+            includeLinearTerms = True
+
+            # It's not convenient to have the >400 SM bins for <400 variations
+            nBinsVariations = len(derivedTheoryFileContainers[0].binBoundaries)-1
+            SM.binBoundaries = SM.binBoundaries[:nBinsVariations+1]
+            SM.crosssection  = SM.crosssection[:nBinsVariations]
+            SM.ratios        = SM.ratios[:nBinsVariations]
+
+        elif DO_TOP:
+            couplings = [ 'ct', 'cg' ]
+            if DO_HIGH_PT:
+                SM = TheoryFileInterface.FileFinder(
+                    ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
+                    expectOneFile=True,
+                    directory = LatestPaths.derivedTheoryFiles_TopHighPt,
+                    loadImmediately=True
+                    )
+                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                    ct='*', cg='*', muR=1, muF=1, Q=1, cb=1,
+                    directory = LatestPaths.derivedTheoryFiles_TopHighPt,
+                    loadImmediately=True
+                    )
+                derivedTheoryFileContainers = [ d for d in derivedTheoryFileContainers if not (d.ct == 1. and d.cg == 0.) ]
+            else:
+                SM = TheoryFileInterface.FileFinder(
+                    ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
+                    expectOneFile=True,
+                    directory = LatestPaths.derivedTheoryFiles_Top,
+                    loadImmediately=True
+                    )
+                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                    ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb',
+                    directory = LatestPaths.derivedTheoryFiles_Top,
+                    loadImmediately=True
+                    )
+                # It's not convenient to have the >400 SM bins for <400 variations
+                nBinsVariations = len(derivedTheoryFileContainers[0].binBoundaries)-1
+                SM.binBoundaries = SM.binBoundaries[:nBinsVariations+1]
+                SM.crosssection  = SM.crosssection[:nBinsVariations]
+                SM.ratios        = SM.ratios[:nBinsVariations]
+
+            includeLinearTerms = False
+            xMin = -6.8
+            xMax = 6.8
+            yMin = -0.6
+            yMax = 0.6
+            NPointsX = 200
+            NPointsY = 200
+
+
+        # ======================================
+        # 
+
+        miniCombine_allBins = MiniCombine.MiniCombine()
+        miniCombine_allBins.lastBinIsOverflow = [ True if DO_TOP else False ]
+
+        Commands.Warning( 'Using the scan result of the last bin' )
+        miniCombine_allBins.SetCombinationResult( combinationResult, excludeLastBin=False )
+
+        miniCombine_allBins.SetCorrelationMatrix(
+            correlationMatrixFile
+            # forceDiagonalMatrix = True
+            )
+
+        miniCombine_allBins.couplings = couplings
+        miniCombine_allBins.SetSM(SM)
+        miniCombine_allBins.Parametrize( derivedTheoryFileContainers, includeLinearTerms )
+
+        miniCombine_allBins.Link()
+        miniCombine_allBins.BuildChi2Function()
+
+        miniCombine_allBins.name = 'MiniCombine_allBins'
+        miniCombine_allBins.ScanGrid(
+            NPointsX, xMin, xMax,
+            NPointsY, yMin, yMax,
+            )
+
+
+        # ======================================
+        # 
+
+        miniCombine = MiniCombine.MiniCombine()
+        miniCombine.lastBinIsOverflow = [ True if DO_TOP else False ]
+
+        Commands.Warning( 'Not using the scan result of the last bin' )
+        miniCombine.SetCombinationResult( combinationResult, excludeLastBin=True )
+
+        miniCombine.SetCorrelationMatrix(
+            correlationMatrixFile
+            # forceDiagonalMatrix = True
+            )
+
+        miniCombine.couplings = couplings
+        miniCombine.SetSM(SM)
+        miniCombine.Parametrize( derivedTheoryFileContainers, includeLinearTerms )
+
+
+        # ======================================
+        # 
+
+        miniCombine.Link()
+
+        # Plug in the Hgg sensitivity manually
+        # miniCombine.AddMuConstraint(         mu = 1.0, unc = 0.5*(0.98+0.76)/0.57, left = 350., right = 450. )
+        # miniCombine.AddOverflowMuConstraint( mu = 1.0, unc = 0.5*(1.54+0.97)/0.43, left = 450. )
+
+        miniCombine.AddAsymMuConstraint( 
+            mu = 1.0,
+            unc_up = 0.82/0.53, unc_down = -0.66/0.53,
+            left = 350, right = 600
+            )
+        miniCombine.AddAsymMuOverflowConstraint( 
+            mu = 1.0,
+            unc_up = 3.63/0.38, unc_down = -1.65/0.38,
+            left = 600
+            )
+
+        miniCombine.BuildChi2Function()
+        miniCombine.ScanGrid(
+            NPointsX, xMin, xMax,
+            NPointsY, yMin, yMax,
+            )
+
+
+        # ======================================
+        # Now add Hbb
+
+        # Hbb covmat:
+        #        r1                       r2
+        # r1     7.637            0.3554
+        # r2     0.3554           6.52
+
+
+        miniCombine.AddMuConstraint(         mu = 1.0, unc = sqrt(7.637), left = 350., right = 575. )
+        miniCombine.AddOverflowMuConstraint( mu = 1.0, unc = sqrt(6.520), left = 575. )
+
+        miniCombine.BuildChi2Function()
+        miniCombine.ScanGrid(
+            NPointsX, xMin, xMax,
+            NPointsY, yMin, yMax,
+            )
+
+
+        # Also again, using only Hbb
+        miniCombine.ClearConstraints()
+
+        miniCombine.AddMuConstraint(         mu = 1.0, unc = sqrt(7.637), left = 350., right = 575. )
+        miniCombine.AddOverflowMuConstraint( mu = 1.0, unc = sqrt(6.520), left = 575. )
+        
+        miniCombine.BuildChi2Function()
+        miniCombine.ScanGrid(
+            NPointsX, xMin, xMax,
+            NPointsY, yMin, yMax,
+            )
+
+
+
+        # for unc in [ 1.0, 2.0, 2.5, 3.0, 4.0 ]:
+
+        #     print '\n' + '-'*70
+        #     print 'Scanning with constraint uncertainty', unc
+
+        #     miniCombine.ClearConstraints()
+        #     miniCombine.AddMuConstraint(
+        #         mu = 1.0, unc = unc, left = 350., right = 600.
+        #         )
+        #     miniCombine.AddOverflowMuConstraint(
+        #         mu = 1.0, unc = unc, left = 600.
+        #         )
+        #     miniCombine.BuildChi2Function()
+
+        #     miniCombine.ScanGrid(
+        #         NPointsX, xMin, xMax,
+        #         NPointsY, yMin, yMax,
+        #         )
+
+
+    #____________________________________________________________________
+    if args.HbbInclusionPlots:
+
+        def GetObjectsFromRootFile( rootFile ):
+            with Commands.OpenRootFile( rootFile ) as rootFp:
+                canvas = rootFp.Get('ctc')
+                L = canvas.GetListOfPrimitives()
+
+                ret = {
+                    'contours_1sigma' : [],
+                    'bestfitPoint'    : None,
+                    'H2'              : None,
+                    }
+
+                # print '\nPrinting content of', rootFile
+                for i in xrange(L.GetEntries()):
+                    obj = L.At(i)
+                    # print obj.GetName()
+
+                    if 'contour_1sigma' in obj.GetName():
+                        ret['contours_1sigma'].append( obj )
+                    elif 'bestfitpoint' in obj.GetName() or 'bestfitPoint' in obj.GetName():
+                        ret['bestfitPoint'] = obj
+                    elif obj.GetName() == 'H2':
+                        ret['H2'] = obj
+                    else:
+                        continue
+                    
+                    ROOT.SetOwnership( obj, False )    
+
+            if ret['contours_1sigma'] == 0:
+                Commands.ThrowError( 'No objects with substr \'contour_1sigma\' found in {0}'.format(rootFile) )
+
+            return ret
+
+
+        containers = []
+
+        # plots_Dec13/MiniCombine_allBins_ct_cg.root
+        # plots_Dec13/MiniCombine_ct_cg_350to600_uncup1p55_uncdownm1p25_600to800_uncup9p55_uncdownm4p34.root
+        # plots_Dec13/MiniCombine_ct_cg_350to575_unc2p76_GT575_unc2p55.root
+        # plots_Dec13/MiniCombine_ct_cg_350to600_uncup1p55_uncdownm1p25_600to800_uncup9p55_uncdownm4p34_350to575_unc2p76_GT575_unc2p55.root
+
+        nominal = Container()
+        nominal.name     = 'nominal'
+        nominal.title    = 'nominal'
+        nominal.rootFile = 'plots_Dec13/MiniCombine_allBins_ct_cg.root'
+        nominal.color    = 1
+        containers.append(nominal)
+
+        miniCombine_hgg = Container()
+        miniCombine_hgg.name     = 'hgg'
+        miniCombine_hgg.title    = 'H#rightarrow#gamma#gamma p_{T}^{H} (350, 600, #infty)'
+        miniCombine_hgg.rootFile = 'plots_Dec13/MiniCombine_ct_cg_350to600_uncup1p55_uncdownm1p25_600to800_uncup9p55_uncdownm4p34.root'
+        miniCombine_hgg.color    = 2
+        containers.append(miniCombine_hgg)
+
+        miniCombine_hbb = Container()
+        miniCombine_hbb.name     = 'hbb'
+        miniCombine_hbb.title    = 'H#rightarrowbb p_{T}^{H} (350, 575, #infty)'
+        miniCombine_hbb.rootFile = 'plots_Dec13/MiniCombine_ct_cg_350to575_unc2p76_GT575_unc2p55.root'
+        miniCombine_hbb.color    = 4
+        containers.append(miniCombine_hbb)
+
+        miniCombine_hgg_hbb = Container()
+        miniCombine_hgg_hbb.name     = 'hgghbb'
+        miniCombine_hgg_hbb.title    = 'H#rightarrow#gamma#gamma (split bins) and H#rightarrowbb'
+        miniCombine_hgg_hbb.rootFile = 'plots_Dec13/MiniCombine_ct_cg_350to600_uncup1p55_uncdownm1p25_600to800_uncup9p55_uncdownm4p34_350to575_unc2p76_GT575_unc2p55.root'
+        miniCombine_hgg_hbb.color    = 8
+        containers.append(miniCombine_hgg_hbb)
+
+        Persistence = []
+        for container in containers:
+            objs = GetObjectsFromRootFile( container.rootFile )
+            container.contours_1sigma = objs['contours_1sigma']
+            container.contours_2sigma = []
+            container.bestfitPoint    = objs['bestfitPoint']
+            container.H2              = objs['H2']
+            Persistence.append(objs)
+
+            print '\n1sigma contour extrema of {0}'.format( container.name )
+            for Tg in container.contours_1sigma:
+                xs, ys = TheoryCommands.GetXYfromTGraph(Tg)
+                print ' ', Tg.GetName()
+                print '    xMin =', min(xs)
+                print '    xMax =', max(xs)
+                print '    yMin =', min(ys)
+                print '    yMax =', max(ys)
+
+
+        PlotCommands.BasicMixedContourPlot(
+            [ nominal, miniCombine_hgg, miniCombine_hbb ],
+            xMin = -5.0,
+            xMax = 5.0,
+            yMin = -0.40,
+            yMax = 0.40,
+            # 
+            xTitle    = '#kappa_{t}',
+            yTitle    = '#kappa_{g}',
+            plotname  = 'contours_MiniCombine_1',
+            x_SM      = 1.,
+            y_SM      = 0.,
+            plotIndividualH2s = False,
+            filterContours = False,
+            only1sigmaContours = True,
+            nLegendColumns = 3
+            )
+
+        PlotCommands.BasicMixedContourPlot(
+            [ nominal, miniCombine_hgg_hbb ],
+            xMin = -5.0,
+            xMax = 5.0,
+            yMin = -0.40,
+            yMax = 0.40,
+            # 
+            xTitle    = '#kappa_{t}',
+            yTitle    = '#kappa_{g}',
+            plotname  = 'contours_MiniCombine_2',
+            x_SM      = 1.,
+            y_SM      = 0.,
+            plotIndividualH2s = False,
+            filterContours = False,
+            only1sigmaContours = True,
+            nLegendColumns = 2
+            )
+
+        miniCombine_hgg_hbb.color = 1
+        PlotCommands.PlotSingle2DHistogram(
+            miniCombine_hgg_hbb,
+            xMin = -5.0,
+            xMax = 5.0,
+            yMin = -0.40,
+            yMax = 0.40,
+            xTitle    = '#kappa_{t}',
+            yTitle    = '#kappa_{g}',
+            plotname = 'MiniCombine_0_hgg_hbb',
+            )
 
 
     #____________________________________________________________________
@@ -170,6 +531,8 @@ def main( args ):
 
     #____________________________________________________________________
     if args.onlyNormalization_Top:
+
+        USE_HIGHPT_PARAMETRIZATION = True
         
         expBinBoundaries = [ 0., 15., 30., 45., 85., 125., 200., 350., 10000. ]
 
@@ -185,17 +548,28 @@ def main( args ):
         if args.hgg:
             extraOptions.append( '--PO isOnlyHgg=True' )
 
-        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
+
+        if USE_HIGHPT_PARAMETRIZATION:
+            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_TopHighPt )
+            Commands.Warning( 'Correlation matrix was made using low pt spectra!!' )
+        else:
+            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
 
         extraOptions.append(
             '--PO SM=[ct=1,cg=0,file={0}]'.format(
                 TheoryFileInterface.FileFinder( ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True )
                 )
             )
-        
-        theoryFiles = TheoryFileInterface.FileFinder(
-            ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
-            )
+
+        if USE_HIGHPT_PARAMETRIZATION:
+            theoryFiles = TheoryFileInterface.FileFinder(
+                ct='*', cg='*', cb=1, muR=1, muF=1, Q=1, filter='ct_1_cg_0',
+                )            
+        else:
+            theoryFiles = TheoryFileInterface.FileFinder(
+                ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
+                )
+
         possibleTheories = []
         for theoryFile in theoryFiles:
             ct = Commands.ConvertStrToFloat( re.search( r'ct_([\dmp]+)', theoryFile ).group(1) )
@@ -292,8 +666,8 @@ def main( args ):
             '--PO \'higgsMassRange=123,127\'',
             ]
 
-        USE_GLOBAL_SCALES = True
-        # USE_GLOBAL_SCALES = False
+        # USE_GLOBAL_SCALES = True
+        USE_GLOBAL_SCALES = False
 
         if USE_GLOBAL_SCALES:
             Commands.BasicT2WSwithModel(
@@ -367,8 +741,8 @@ def main( args ):
         ASIMOV = False
         if args.asimov: ASIMOV = True
         
-        USE_GLOBAL_SCALES = True
-        # USE_GLOBAL_SCALES = False
+        # USE_GLOBAL_SCALES = True
+        USE_GLOBAL_SCALES = False
 
         jobDirectory = 'Scan_ratioOfBRs_{0}'.format( datestr )
 
@@ -423,8 +797,8 @@ def main( args ):
     if args.FitBR_plot:
 
 
-        USE_GLOBAL_SCALES = True
-        # USE_GLOBAL_SCALES = False
+        # USE_GLOBAL_SCALES = True
+        USE_GLOBAL_SCALES = False
 
         if USE_GLOBAL_SCALES:
             scanRootFiles = glob( LatestPaths.scan_ratioOfBRs_globalScales + '/*.root' )
@@ -468,7 +842,7 @@ def main( args ):
         # Make plot
 
         c.Clear()
-        SetCMargins()
+        SetCMargins( TopMargin=0.09 )
 
         yMinAbs = min( scanContainer.y )
         yMaxAbs = max( scanContainer.y )
@@ -528,32 +902,35 @@ def main( args ):
 
 
         l = ROOT.TLatex()
-        l.SetTextColor(2)
-        l.SetTextSize(0.04)
+        l.SetNDC()
+        l.SetTextColor(1)
+        l.SetTextSize(0.05)
 
-        l.SetTextAlign(31)
-        l.DrawLatex(
-            scanContainer.extrema.leftBound, 1.0 + 0.013*(yMax-yMin),
-            '-{0:.2f} ({1:d}%)'.format(
-                abs(scanContainer.extrema.leftError),
-                int( abs(scanContainer.extrema.leftError) / xBestfit * 100. )
-                )
-            )
+        # l.SetTextAlign(31)
+        # l.DrawLatex(
+        #     scanContainer.extrema.leftBound, 1.0 + 0.013*(yMax-yMin),
+        #     '-{0:.2f} ({1:d}%)'.format(
+        #         abs(scanContainer.extrema.leftError),
+        #         int( abs(scanContainer.extrema.leftError) / xBestfit * 100. )
+        #         )
+        #     )
+        # l.SetTextAlign(11)
+        # l.DrawLatex(
+        #     scanContainer.extrema.rightBound, 1.0 + 0.013*(yMax-yMin),
+        #     '+{0:.2f} ({1:d}%)'.format(
+        #         abs(scanContainer.extrema.rightError),
+        #         int( abs(scanContainer.extrema.rightError) / xBestfit * 100. )
+        #         )
+        #     )
+        # l.SetTextAlign(21)
+        # l.DrawLatex(
+        #     xBestfit, 1.0 + 0.013*(yMax-yMin),
+        #     '{0:.3f}'.format( xBestfit )
+        #     )
 
-        l.SetTextAlign(11)
-        l.DrawLatex(
-            scanContainer.extrema.rightBound, 1.0 + 0.013*(yMax-yMin),
-            '+{0:.2f} ({1:d}%)'.format(
-                abs(scanContainer.extrema.rightError),
-                int( abs(scanContainer.extrema.rightError) / xBestfit * 100. )
-                )
-            )
-
-        l.SetTextAlign(21)
-        l.DrawLatex(
-            xBestfit, 1.0 + 0.013*(yMax-yMin),
-            '{0:.3f}'.format( xBestfit )
-            )
+        l.DrawLatex( 0.55, 0.8, 'R = {0:.3f} _{{{1:+.3f}}}^{{{2:+.3f}}}'.format(
+            xBestfit, -abs(scanContainer.extrema.leftError), scanContainer.extrema.rightError
+            ))
 
 
         TgPoints = ROOT.TGraph( 2,
@@ -565,6 +942,8 @@ def main( args ):
         TgPoints.SetMarkerColor(2)
         TgPoints.Draw('PSAME')
 
+        Commands.GetCMSLabel()
+        Commands.GetCMSLumi()
 
         SaveC( 'BRscan' + ( '_globalScales' if USE_GLOBAL_SCALES else '' ) )
 
@@ -705,11 +1084,15 @@ def main( args ):
                 scanContainer.y.append( y )
 
 
+        print '[info] Multiplying all x by {0}'.format( LatestPaths.YR4_totalXS )
+        scanContainer.x = [ LatestPaths.YR4_totalXS*x for x in scanContainer.x ]
+
         # FindMinimaAndErrors assumes deltaNLL (not 2*deltaNLL), so compute it before scaling
         scanContainer.extrema = PhysicsCommands.FindMinimaAndErrors( scanContainer.x, scanContainer.y, returnContainer=True )
 
         print '[info] Multiplying by 2: deltaNLL --> chi^2'
         scanContainer.y = [ 2.*y for y in scanContainer.y ]
+
 
         scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
         scanContainer.Tg.SetMarkerStyle(8)
@@ -720,7 +1103,7 @@ def main( args ):
         # Make plot
 
         c.Clear()
-        SetCMargins()
+        SetCMargins( TopMargin = 0.09 )
 
         yMinAbs = min( scanContainer.y )
         yMaxAbs = max( scanContainer.y )
@@ -731,15 +1114,15 @@ def main( args ):
 
         # xMin = min( scanContainer.x )
         # xMax = max( scanContainer.x )
-        xMin = 0.6
-        xMax = 1.4
+        xMin = 0.8 * LatestPaths.YR4_totalXS
+        xMax = 1.4 * LatestPaths.YR4_totalXS
 
         base = GetPlotBase(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
             yMax = yMax,
-            xTitle = '#sigma/#sigma_{SM}',
+            xTitle = '#sigma_{tot}',
             # yTitle = '#Delta NLL',
             yTitle = '2#DeltaNLL',
             )
@@ -779,7 +1162,7 @@ def main( args ):
         #     uncLine.SetLineColor(2)
         #     uncLine.Draw()
 
-        smLine = ROOT.TLine( 1.0, yMin, 1.0, yMax )
+        smLine = ROOT.TLine( LatestPaths.YR4_totalXS, yMin, LatestPaths.YR4_totalXS, yMax )
         smLine.SetLineWidth(2)
         smLine.SetLineColor(9)
         smLine.Draw()
@@ -788,32 +1171,35 @@ def main( args ):
 
 
         l = ROOT.TLatex()
-        l.SetTextColor(2)
-        l.SetTextSize(0.04)
+        l.SetNDC()
+        l.SetTextColor(1)
+        l.SetTextSize(0.05)
 
-        l.SetTextAlign(31)
-        l.DrawLatex(
-            scanContainer.extrema.leftBound, 1.0 + 0.013*(yMax-yMin),
-            '-{0:.2f} ({1:d}%)'.format(
-                abs(scanContainer.extrema.leftError),
-                int( abs(scanContainer.extrema.leftError) / xBestfit * 100. )
-                )
-            )
+        # l.SetTextAlign(31)
+        # l.DrawLatex(
+        #     scanContainer.extrema.leftBound, 1.0 + 0.013*(yMax-yMin),
+        #     '-{0:.2f} ({1:d}%)'.format(
+        #         abs(scanContainer.extrema.leftError),
+        #         int( abs(scanContainer.extrema.leftError) / xBestfit * 100. )
+        #         )
+        #     )
+        # l.SetTextAlign(11)
+        # l.DrawLatex(
+        #     scanContainer.extrema.rightBound, 1.0 + 0.013*(yMax-yMin),
+        #     '+{0:.2f} ({1:d}%)'.format(
+        #         abs(scanContainer.extrema.rightError),
+        #         int( abs(scanContainer.extrema.rightError) / xBestfit * 100. )
+        #         )
+        #     )
+        # l.SetTextAlign(21)
+        # l.DrawLatex(
+        #     xBestfit, 1.0 + 0.013*(yMax-yMin),
+        #     '{0:.3f}'.format( xBestfit )
+        #     )
 
-        l.SetTextAlign(11)
-        l.DrawLatex(
-            scanContainer.extrema.rightBound, 1.0 + 0.013*(yMax-yMin),
-            '+{0:.2f} ({1:d}%)'.format(
-                abs(scanContainer.extrema.rightError),
-                int( abs(scanContainer.extrema.rightError) / xBestfit * 100. )
-                )
-            )
-
-        l.SetTextAlign(21)
-        l.DrawLatex(
-            xBestfit, 1.0 + 0.013*(yMax-yMin),
-            '{0:.3f}'.format( xBestfit )
-            )
+        l.DrawLatex( 0.65, 0.8, '#sigma_{{tot}} = {0:.1f} _{{{1:+.1f}}}^{{{2:+.1f}}}'.format(
+            xBestfit, -abs(scanContainer.extrema.leftError), scanContainer.extrema.rightError
+            ))
 
 
         TgPoints = ROOT.TGraph( 2,
@@ -825,7 +1211,8 @@ def main( args ):
         TgPoints.SetMarkerColor(2)
         TgPoints.Draw('PSAME')
 
-
+        Commands.GetCMSLabel()
+        Commands.GetCMSLumi()
 
         SaveC( 'totalXSscan' )
 
@@ -1304,28 +1691,99 @@ def main( args ):
         corrMatFile = 'corrMat_Nov08_combinedCard_Nov03_xHfixed/higgsCombine_CORRMAT_combinedCard_Nov03_xHfixed.MultiDimFit.mH125.root'
 
 
-        # NORMALIZE_BY_SMXS = True
-        NORMALIZE_BY_SMXS = False
+        NORMALIZE_BY_SMXS = True
+        # NORMALIZE_BY_SMXS = False
 
+        DO_TOP            = True
+        # DO_TOP            = False
+
+        DO_YUKAWA = not(DO_TOP)
+
+        PUT_CONSTRAINT_ON_LAST_BIN = True
+        # PUT_CONSTRAINT_ON_LAST_BIN = False
+
+        # VARYING_HBB_UNCERTAINTY = True
+        VARYING_HBB_UNCERTAINTY = False
+
+        DO_HIGH_PT = True
+        # DO_HIGH_PT = False
 
 
         # ======================================
         # Load parametrization from derived theory files
 
-        SM = TheoryFileInterface.FileFinder(
-            kappab=1, kappac=1, muR=1, muF=1, Q=1,
-            expectOneFile=True,
-            directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
-            loadImmediately=True
-            )
-        derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
-            kappab='*', kappac='*', muR=1, muF=1, Q=1,
-            directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
-            loadImmediately=True
-            )
+        if VARYING_HBB_UNCERTAINTY and not PUT_CONSTRAINT_ON_LAST_BIN:
+            Commands.ThrowError( 'Don\'t put VARYING_HBB_UNCERTAINTY to True and PUT_CONSTRAINT_ON_LAST_BIN to False' )
+
+        if DO_YUKAWA:
+            # Set up exp binning used for the fit
+            expBinning = [ 0., 15., 30., 45., 85., 125. ]
+
+            SM = TheoryFileInterface.FileFinder(
+                kappab=1, kappac=1, muR=1, muF=1, Q=1,
+                expectOneFile=True,
+                directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
+                loadImmediately=True
+                )
+            derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                kappab='*', kappac='*', muR=1, muF=1, Q=1,
+                directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
+                loadImmediately=True
+                )
+
+            lastBinIsOverflow = False
+
+        elif DO_TOP:
+
+            # Set up exp binning used for the fit
+            expBinning = [ 0., 15., 30., 45., 85., 125., 200., 350., 10000. ]
+
+            if DO_HIGH_PT:
+
+                SM = TheoryFileInterface.FileFinder(
+                    ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
+                    expectOneFile=True,
+                    directory = LatestPaths.derivedTheoryFiles_TopHighPt,
+                    loadImmediately=True
+                    )
+                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                    ct='*', cg='*', muR=1, muF=1, Q=1, cb=1,
+                    directory = LatestPaths.derivedTheoryFiles_TopHighPt,
+                    loadImmediately=True
+                    )
+                derivedTheoryFileContainers = [ d for d in derivedTheoryFileContainers if not (d.ct == 1. and d.cg == 0.) ]
+
+            else:
+                SM = TheoryFileInterface.FileFinder(
+                    ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
+                    expectOneFile=True,
+                    directory = LatestPaths.derivedTheoryFiles_Top,
+                    loadImmediately=True
+                    )
+                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                    ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb',
+                    directory = LatestPaths.derivedTheoryFiles_Top,
+                    loadImmediately=True
+                    )
+
+            lastBinIsOverflow = True
+
+
+        yieldParameterNames = []
+        for left, right in zip( expBinning[:-1], expBinning[1:] ):
+            if lastBinIsOverflow and right == expBinning[-1]:
+                yieldParameterNames.append( 'r_ggH_PTH_GT{0}'.format( int(left) ) )
+            else:
+                yieldParameterNames.append( 'r_ggH_PTH_{0}_{1}'.format( int(left), int(right) ) )
+        nBinsExp = len(expBinning) - 1
+
+
         parametrization = Parametrization()
         parametrization.SetSM(SM)
-        parametrization.Parametrize( derivedTheoryFileContainers )
+        parametrization.Parametrize( derivedTheoryFileContainers,
+            includeLinearTerms = False,
+            couplingsToParametrize = [ 'ct', 'cg' ]
+            )
 
         theoryBinBoundaries = SM.binBoundaries
 
@@ -1360,13 +1818,6 @@ def main( args ):
         # SMXSs = [ s * LatestPaths.YR4_totalXS for s in shape ]
 
 
-        # Set up exp binning used for the fit
-        expBinning = [ 0., 15., 30., 45., 85., 125. ]
-        yieldParameterNames = []
-        for left, right in zip( expBinning[:-1], expBinning[1:] ):
-            yieldParameterNames.append( 'r_ggH_PTH_{0}_{1}'.format( int(left), int(right) ) )
-        nBinsExp = len(expBinning) - 1
-
         # Re-normalize the shape
         # shape = shape[:nBinsExp]
         # shape = [ s / sum(shape) for s in shape ]
@@ -1381,11 +1832,16 @@ def main( args ):
                 SM_integralFunction( expBinning[i], expBinning[i+1] )
                 )
 
-
         print '\nDetermined SM:'
         print '  SMXStot    = ', SMXStot
         # print '  shape      = ', shape
         print '  SMXSs      = ', SMXSs
+
+        if DO_HIGH_PT:
+            SMXS_350_600 = SM_integralFunction( 350., 600. )
+            SMXS_GT600   = SM_integralFunction( 600., 10000. )
+            print 'SMXS_350_600 = ', SMXS_350_600
+            print 'SMXS_GT600   = ', SMXS_GT600
 
 
         # ======================================
@@ -1469,17 +1925,36 @@ def main( args ):
 
         VERBOSITY_IN_CHI2 = True
         # VERBOSITY_IN_CHI2 = False
-        
+
         f = lambda number, width = 6: '{0:+{width}.{decimals}f}'.format( number, width=width, decimals=width-4 )
         def chi2_function( inputTuple ):
             kappac, kappab = inputTuple
 
-            XSs_perGeV_parametrization = parametrization.EvaluateForBinning(
-                theoryBinBoundaries, expBinning,
-                kappab = kappab, kappac = kappac,
-                returnRatios=False,
-                verbose = True if VERBOSITY_IN_CHI2 else False
-                )
+            if DO_YUKAWA:
+                XSs_perGeV_parametrization = parametrization.EvaluateForBinning(
+                    theoryBinBoundaries, expBinning,
+                    kappab = kappab, kappac = kappac,
+                    returnRatios=False,
+                    verbose = True if VERBOSITY_IN_CHI2 else False
+                    )
+            elif DO_TOP:
+                XSs_perGeV_parametrization = parametrization.EvaluateForBinning(
+                    theoryBinBoundaries, expBinning,
+                    ct=kappac, cg=kappab,
+                    returnRatios=False,
+                    verbose = True if VERBOSITY_IN_CHI2 else False
+                    )
+
+                if DO_HIGH_PT:
+                    XSs_perGeV_parametrization_600boundary = parametrization.EvaluateForBinning(
+                        theoryBinBoundaries, expBinning[:-1] + [ 600., 10000. ],
+                        ct=kappac, cg=kappab,
+                        returnRatios=False,
+                        verbose = True if VERBOSITY_IN_CHI2 else False
+                        )
+                    mu_350_600 = XSs_perGeV_parametrization_600boundary[-2] / SMXS_350_600
+                    mu_GT600   = XSs_perGeV_parametrization_600boundary[-1] / SMXS_GT600
+
 
             XSs_parametrization = [ xs * binWidth for xs, binWidth in zip( XSs_perGeV_parametrization, binWidths ) ]
 
@@ -1489,133 +1964,184 @@ def main( args ):
             else:
                 S_parametrization = [ xs / sum(XSs_parametrization) for xs in XSs_parametrization ]
 
-
             # Calculate the column
             x_column = numpy.array( [ s_parametrization - s_data for s_parametrization, s_data in zip( S_parametrization, S_data ) ] ).T
-
             chi2 = x_column.T.dot(  covMat_inversed_npArray.dot( x_column )  )
+
+
+            if PUT_CONSTRAINT_ON_LAST_BIN:
+                mu_lastbin = XSs_parametrization[-1] / XSs_data[-1]
+
+                if VARYING_HBB_UNCERTAINTY:
+                    deltaq = abs( mu_lastbin - 1.0 ) / hbb_uncertainty
+                    # print '    mu_lastbin = {0:.2f}; Adding deltaq = {1:.3f} to chi2 (hbb unc = {2:.2f})'.format( mu_lastbin, deltaq, hbb_uncertainty )
+                else:
+                    if mu_lastbin > 1.0:
+                        deltaq = abs( mu_lastbin - 1.0 ) / 2.5
+                    else:
+                        deltaq = abs( mu_lastbin - 1.0 ) / 2.3
+
+                chi2 += deltaq
+
 
             if VERBOSITY_IN_CHI2:
                 print ''
-                print '    kappac = {0}, kappab = {1}'.format( f(kappac), f(kappab) )
+                if DO_YUKAWA:
+                    print '    kappac = {0}, kappab = {1}'.format( f(kappac), f(kappab) )
+                elif DO_TOP:
+                    print '    ct = {0}, cg = {1}'.format( f(kappac), f(kappab) )
                 print '    XSs_parametrization: ' + ' | '.join([ f(number) for number in XSs_parametrization ])
                 print '    Shape_param:         ' + ' | '.join([ f(number) for number in S_parametrization ])
                 print '    Shape_data:          ' + ' | '.join([ f(number) for number in S_data ])
+                print '    mu_350_600 =', mu_350_600
+                print '    mu_GT600   =', mu_GT600
                 print '    Chi2: {0:.8f}'.format(chi2)
 
             return chi2
 
 
         # ======================================
-        # Do a best fit
-        
-        from scipy.optimize import minimize
-        print ''
-        res = minimize( chi2_function, [ 1., 1. ], method='Nelder-Mead', tol=1e-6 )
-        print 'End of minimization'
-        print res
+        # Loop - can be only 1 iteration
 
-        chi2_bestfit = res.fun
-        kappac_bestfit = res.x[0]
-        kappab_bestfit = res.x[1]
-
-
-        # ======================================
-        # Do a scan
-
-        if NORMALIZE_BY_SMXS:
-            kappacMin = -45.
-            kappacMax = 45.
-            kappabMin = -23.
-            kappabMax = 23.
+        if VARYING_HBB_UNCERTAINTY:
+            hbb_uncertainties = [ 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.4, 3.0 ]
         else:
-            # kappacMin = -1000.
-            # kappacMax = 1000.
-            # kappabMin = -1000.
-            # kappabMax = 1000.
+            hbb_uncertainties = [ 999 ]
 
-            kappacMin = -100000.
-            kappacMax = 100000.
-            kappabMin = -100000.
-            kappabMax = 100000.
+        from scipy.optimize import minimize
+        for hbb_uncertainty in hbb_uncertainties:
 
 
+            # ======================================
+            # Do a best fit
+            
+            print ''
+            res = minimize( chi2_function, [ 1., 1. ], method='Nelder-Mead', tol=1e-6 )
+            print 'End of minimization'
+            print res
 
-        kappacNPoints       = 200
-        kappabNPoints       = 200
-        kappacBinBoundaries = [ kappacMin + i*(kappacMax-kappacMin)/float(kappacNPoints) for i in xrange(kappacNPoints+1) ]
-        kappabBinBoundaries = [ kappabMin + i*(kappabMax-kappabMin)/float(kappabNPoints) for i in xrange(kappabNPoints+1) ]
-        kappacPoints        = [ 0.5*(kappacBinBoundaries[i]+kappacBinBoundaries[i+1]) for i in xrange(kappacNPoints) ]
-        kappabPoints        = [ 0.5*(kappabBinBoundaries[i]+kappabBinBoundaries[i+1]) for i in xrange(kappabNPoints) ]
-
-        H2 = ROOT.TH2F(
-            'H2', '',
-            kappacNPoints, array( 'f', kappacBinBoundaries ),
-            kappabNPoints, array( 'f', kappabBinBoundaries ),
-            )
+            chi2_bestfit = res.fun
+            kappac_bestfit = res.x[0]
+            kappab_bestfit = res.x[1]
 
 
-        print '\n\nDoing scan'
+            # ======================================
+            # Do a scan
 
-        # VERBOSITY_IN_CHI2 = True
-        VERBOSITY_IN_CHI2 = False
-        iIteration = 0
-
-        for i_kappab, kappabVal in enumerate(kappabPoints):
-            for i_kappac, kappacVal in enumerate(kappacPoints):
-
-                if i_kappab % 50 == 0 and i_kappac % 50 == 0:
-                    # print '  ', i_kappab, i_kappac
-                    VERBOSITY_IN_CHI2 = True
-
-                H2.SetBinContent( i_kappac, i_kappab, chi2_function( (kappacVal, kappabVal) ) - chi2_bestfit )
-
-                VERBOSITY_IN_CHI2 = False
+            # kappac <--> ct, kappab <--> cg
 
 
-        print ''
-        contours_1sigma = TheoryCommands.GetContoursFromTH2( H2, 2.30 )
-        contours_2sigma = TheoryCommands.GetContoursFromTH2( H2, 6.18 )
+            if DO_YUKAWA:
+                if NORMALIZE_BY_SMXS:
+                    kappacMin = -45.
+                    kappacMax = 45.
+                    kappabMin = -23.
+                    kappabMax = 23.
+                else:
+                    # kappacMin = -1000.
+                    # kappacMax = 1000.
+                    # kappabMin = -1000.
+                    # kappabMax = 1000.
+
+                    kappacMin = -100000.
+                    kappacMax = 100000.
+                    kappabMin = -100000.
+                    kappabMax = 100000.
+
+            elif DO_TOP:
+                kappacMin = -6.8
+                kappacMax = 6.8
+                kappabMin = -0.6
+                kappabMax = 0.6
 
 
-        # ======================================
-        # Plotting
+            kappacNPoints       = 200
+            kappabNPoints       = 200
+            kappacBinBoundaries = [ kappacMin + i*(kappacMax-kappacMin)/float(kappacNPoints) for i in xrange(kappacNPoints+1) ]
+            kappabBinBoundaries = [ kappabMin + i*(kappabMax-kappabMin)/float(kappabNPoints) for i in xrange(kappabNPoints+1) ]
+            kappacPoints        = [ 0.5*(kappacBinBoundaries[i]+kappacBinBoundaries[i+1]) for i in xrange(kappacNPoints) ]
+            kappabPoints        = [ 0.5*(kappabBinBoundaries[i]+kappabBinBoundaries[i+1]) for i in xrange(kappabNPoints) ]
 
-        H2.SetTitle('')
-        H2.GetXaxis().SetTitle( '#kappa_{c}' )
-        H2.GetYaxis().SetTitle( '#kappa_{b}' )
-        H2.SetMaximum(7.0)
+            H2 = ROOT.TH2F(
+                'H2', '',
+                kappacNPoints, array( 'f', kappacBinBoundaries ),
+                kappabNPoints, array( 'f', kappabBinBoundaries ),
+                )
 
-        c.Clear()
-        SetCMargins(
-            LeftMargin   = 0.12,
-            RightMargin  = 0.10,
-            BottomMargin = 0.12,
-            TopMargin    = 0.09,
-            )
-        H2.Draw('COLZ')
+            print '\n\nDoing scan'
 
-        for Tg in contours_1sigma:
-            Tg.SetLineWidth(2)
-            Tg.Draw('LSAME')
-        for Tg in contours_2sigma:
-            Tg.SetLineWidth(2)
-            Tg.SetLineStyle(2)
-            Tg.Draw('LSAME')
+            # VERBOSITY_IN_CHI2 = True
+            VERBOSITY_IN_CHI2 = False
+            iIteration = 0
 
-        SMpoint = ROOT.TGraph( 1, array( 'f', [1.0] ), array( 'f', [1.0] ) )
-        SMpoint.SetMarkerStyle(21)
-        SMpoint.SetMarkerSize(2)
-        SMpoint.Draw('PSAME')
+            for i_kappab, kappabVal in enumerate(kappabPoints):
+                for i_kappac, kappacVal in enumerate(kappacPoints):
 
-        bestfitpoint = ROOT.TGraph( 1, array( 'f', [kappac_bestfit] ), array( 'f', [kappab_bestfit] ) )
-        bestfitpoint.SetMarkerStyle(34)
-        bestfitpoint.SetMarkerSize(1.1)
-        bestfitpoint.SetMarkerColor(13)
-        bestfitpoint.Draw('PSAME')
-        bestfitpoint.SetName('bestfitpoint')
+                    if i_kappab % 50 == 0 and i_kappac % 50 == 0:
+                        # print '  ', i_kappab, i_kappac
+                        VERBOSITY_IN_CHI2 = True
 
-        SaveC( 'TheoristChi2Fit', asROOT = True )
+                    H2.SetBinContent( i_kappac, i_kappab, chi2_function( (kappacVal, kappabVal) ) - chi2_bestfit )
+
+                    VERBOSITY_IN_CHI2 = False
+
+
+            print ''
+            contours_1sigma = TheoryCommands.GetContoursFromTH2( H2, 2.30 )
+            contours_2sigma = TheoryCommands.GetContoursFromTH2( H2, 6.18 )
+
+
+            # ======================================
+            # Plotting
+
+            H2.SetTitle('')
+            H2.GetXaxis().SetTitle( '#kappa_{c}' )
+            H2.GetYaxis().SetTitle( '#kappa_{b}' )
+            H2.SetMaximum(7.0)
+
+            c.Clear()
+            SetCMargins(
+                LeftMargin   = 0.12,
+                RightMargin  = 0.10,
+                BottomMargin = 0.12,
+                TopMargin    = 0.09,
+                )
+            H2.Draw('COLZ')
+
+            for Tg in contours_1sigma:
+                Tg.SetLineWidth(2)
+                Tg.Draw('LSAME')
+            for Tg in contours_2sigma:
+                Tg.SetLineWidth(2)
+                Tg.SetLineStyle(2)
+                Tg.Draw('LSAME')
+
+            SMpoint = ROOT.TGraph( 1, array( 'f', [1.0] ), array( 'f', [1.0] ) )
+            SMpoint.SetMarkerStyle(21)
+            SMpoint.SetMarkerSize(2)
+            SMpoint.Draw('PSAME')
+
+            bestfitpoint = ROOT.TGraph( 1, array( 'f', [kappac_bestfit] ), array( 'f', [kappab_bestfit] ) )
+            bestfitpoint.SetMarkerStyle(34)
+            bestfitpoint.SetMarkerSize(1.1)
+            bestfitpoint.SetMarkerColor(13)
+            bestfitpoint.Draw('PSAME')
+            bestfitpoint.SetName('bestfitpoint')
+
+            suffix = ''
+            if DO_TOP:
+                suffix += '_Top'
+            elif DO_YUKAWA:
+                suffix += '_Yukawa'
+            if PUT_CONSTRAINT_ON_LAST_BIN:
+                suffix += '_lastBinConstrained'
+            if VARYING_HBB_UNCERTAINTY:
+                suffix += '_hbbUnc_{0}'.format( Commands.ConvertFloatToStr(hbb_uncertainty) )
+
+            SaveC(
+                'TheoristChi2Fit' + suffix,
+                asROOT = True, asPNG=True
+                )
 
 
     #____________________________________________________________________
@@ -2406,8 +2932,8 @@ def main( args ):
                 w = rootFp.Get('w')
 
             theoryBinBoundariesArgList = ROOT.RooArgList( w.set('theoryBinBoundaries') )
-            nTheoryBins         = theoryBinBoundariesArgList.getSize()-1
-            theoryBinBoundaries = [ theoryBinBoundariesArgList[i].getVal() for i in xrange(nTheoryBins+1) ] 
+            nTheoryBins         = theoryBinBoundariesArgList.getSize()
+            theoryBinBoundaries = [ 0. ] + [ theoryBinBoundariesArgList[i].getVal() for i in xrange(nTheoryBins) ] 
 
             def numToStr( number ):
                 if float(number).is_integer():

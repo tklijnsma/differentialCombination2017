@@ -10,6 +10,8 @@ Thomas Klijnsma
 import os, tempfile, shutil, re, subprocess, sys, traceback, itertools
 from os.path import *
 from glob import glob
+from datetime import datetime
+import random
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -576,8 +578,11 @@ def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False
 
 
 #____________________________________________________________________
-def ConvertFloatToStr( number ):
+def ConvertFloatToStr( number, nDecimals=None ):
     number = float(number)
+    if not nDecimals is None:
+        string = '{:.{nDecimals}f}'.format( number, nDecimals=nDecimals ).replace('-','m').replace('.','p')
+        return string
     if number.is_integer():
         number = int(number)
     string = str(number).replace('-','m').replace('.','p')
@@ -1239,7 +1244,7 @@ class OpenRootFile():
 
     def __enter__(self):
         if not isfile(self._rootFile):
-            Commands.ThrowError( 'File {0} does not exist'.format(self._rootFile) )
+            ThrowError( 'File {0} does not exist'.format(self._rootFile) )
         self._rootFp = ROOT.TFile.Open(self._rootFile)
         return self._rootFp
 
@@ -1382,6 +1387,34 @@ def GetCMSLumi(
         if y is None:
             y = 1. - ROOT.gPad.GetTopMargin() + textOffset
         l.DrawLatex( x, y, latexStr )
+
+def __uniqueid__():
+    mynow=datetime.now
+    sft=datetime.strftime
+    # store old datetime each time in order to check if we generate during same microsecond (glucky wallet !)
+    # or if daylight savings event occurs (when clocks are adjusted backward) [rarely detected at this level]
+    old_time=mynow() # fake init - on very speed machine it could increase your seed to seed + 1... but we have our contingency :)
+    # manage seed
+    seed_range_bits=14 # max range for seed
+    seed_max_value=2**seed_range_bits - 1 # seed could not exceed 2**nbbits - 1
+    # get random seed
+    seed=random.getrandbits(seed_range_bits)
+    current_seed=str(seed)
+    # producing new ids
+    while True:
+        # get current time 
+        current_time=mynow()
+        if current_time <= old_time:
+            # previous id generated in the same microsecond or Daylight saving time event occurs (when clocks are adjusted backward)
+            seed = max(1,(seed + 1) % seed_max_value)
+            current_seed=str(seed)
+        # generate new id (concatenate seed and timestamp as numbers)
+        #newid=hex(int(''.join([sft(current_time,'%f%S%M%H%d%m%Y'),current_seed])))[2:-1]
+        newid=int(''.join([sft(current_time,'%f%S%M%H%d%m%Y'),current_seed]))
+        # save current time
+        old_time=current_time
+        # return a new id
+        yield newid
 
 
 ########################################

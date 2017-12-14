@@ -205,6 +205,11 @@ class CouplingModel( PhysicsModel ):
             self.MakeTotalXSExpressions()
             self.modelBuilder.doVar('bkg_modifier[1.0]')
             self.modelBuilder.out.var('bkg_modifier').setConstant(True)
+            self.modelBuilder.doVar('hgg_xH_modifier[1.0]')
+            self.modelBuilder.out.var('hgg_xH_modifier').setConstant(True)
+            self.modelBuilder.doVar('hzz_xH_modifier[1.0]')
+            self.modelBuilder.out.var('hzz_xH_modifier').setConstant(True)
+
             self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
 
         else:
@@ -292,6 +297,16 @@ class CouplingModel( PhysicsModel ):
 
         if self.verbose:
             print '    --> Scaling with \'{0}\''.format( yieldParameter )
+            
+            # print '          test print:'
+            # try:
+            #     self.modelBuilder.out.var(yieldParameter).Print()
+            # except ReferenceError:
+            #     try:
+            #         self.modelBuilder.out.function(yieldParameter).Print()
+            #     except ReferenceError:
+            #         print '          yieldParameter \'{0}\' does not seem to be in the ws!!'.format(yieldParameter)
+
         return yieldParameter
 
 

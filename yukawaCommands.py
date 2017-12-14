@@ -96,6 +96,12 @@ def main( args ):
     print expBinBoundaries
     print ''
 
+    # For uniform plotting
+    kappacMin_global = -35.
+    kappacMax_global = 35.
+    kappabMin_global = -9.
+    kappabMax_global = 11.
+
     TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
 
     # ======================================
@@ -649,7 +655,7 @@ def main( args ):
             PlotCommands.PlotMultipleScans(
                 [ container ],
                 xTitle   = kappa,
-                yTitle   = '2#Delta NLL',
+                yTitle   = '2#DeltaNLL',
                 yMax     = 5.,
                 plotname = 'oneKappaScan_{0}_{1}'.format( kappa, basename(scanDir).replace('/','') ),
                 draw1sigmaline = True,
@@ -834,10 +840,14 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             TH2FsToPlot,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
-            yMax = 13.,
+            # xMin = -37.,
+            # xMax = 37.,
+            # yMin = -11.,
+            # yMax = 11.,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_perDecayChannel' + ( '_asimov' if ASIMOV else '' ),
@@ -882,10 +892,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
-            yMax = 13.,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_ratioOfBRs',
@@ -932,10 +942,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
-            yMax = 13.,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_profiledTotalXS',
@@ -977,10 +987,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -35.,
-            xMax = 35.,
-            yMin = -13.,
-            yMax = 13.,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_onlyNormalization',
@@ -1037,10 +1047,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -25.,
-            xMax = 25.,
-            yMin = -9.,
-            yMax = 9.,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_theoryCrossCheck',
@@ -1069,7 +1079,7 @@ def main( args ):
             )
         combined.color = 1
         combined.name = 'regularBR'
-        combined.title = 'BR constant'
+        combined.title = 'SM BR'
         containers.append( combined )
 
         # scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_asimov ) )
@@ -1112,10 +1122,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -25.,
-            xMax = 25.,
-            yMin = -9.,
-            yMax = 13.,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_BRcouplingDependency',
@@ -1160,10 +1170,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -25.,
-            xMax = 25.,
-            yMin = -9.,
-            yMax = 9.,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_highLumiStudy',
@@ -1228,10 +1238,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -25.,
-            xMax = 25.,
-            yMin = -9.,
-            yMax = 9.,
+            xMin = kappacMin_global - 1.,
+            xMax = kappacMax_global - 1.,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_atfchi2',
@@ -1476,7 +1486,7 @@ def main( args ):
         container.MaximaOfContour     = True
         container.BestFit             = True
 
-        PlotCommands.PlotParametrizationsOnCombination( container )
+        PlotCommands.PlotParametrizationsOnCombination( container, OnOneCanvas=True )
 
 
 

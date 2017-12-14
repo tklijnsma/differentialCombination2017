@@ -136,6 +136,7 @@ class WSParametrization():
         self.theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS( self.file )
         self.expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
 
+
         mus = self.Evaluate( **kwargs )
         if self.returnWhat == 'theory': mus = mus[1:]
 
@@ -149,6 +150,9 @@ class WSParametrization():
             container.binBoundaries = deepcopy( self.theoryBinBoundaries )
         elif self.returnWhat == 'exp':
             container.binBoundaries = deepcopy( self.expBinBoundaries )
+            if 'xMax' in kwargs:
+                container.binBoundaries[-1] = kwargs['xMax']
+                del kwargs['xMax']
         elif self.returnWhat == 'both':
             container.binBoundaries = [ deepcopy(self.theoryBinBoundaries), deepcopy(self.expBinBoundaries) ]
 
@@ -163,8 +167,11 @@ class WSParametrization():
 
 
 class Parametrization():
-    def __init__( self, SM=None ):
-        self.verbose = True
+
+    THROW_EVALUATION_WARNINGS = True
+
+    def __init__( self, verbose=True, SM=None ):
+        self.verbose = verbose
         self.Persistence = []
 
         self.parametrizedByMatrixInversion = False
@@ -262,11 +269,11 @@ class Parametrization():
                 for couplingCombination, component in zip( couplingCombinations, components ):
                     print '    comp. {0:30} = {1}'.format( ', '.join(couplingCombination), component )
 
-        print 'Maximal variations per component over all bins:'
+        if self.verbose: print 'Maximal variations per component over all bins:'
         for iComponent in xrange(nComponents):
             maxVar = max([ abs(components[iComponent]) for components in componentsPerBin ])
             couplingCombination = couplingCombinations[iComponent]
-            print '    comp. {0:30} = {1}'.format( ', '.join(couplingCombination), maxVar )
+            if self.verbose: print '    comp. {0:30} = {1}'.format( ', '.join(couplingCombination), maxVar )
 
         self.componentsPerBin = componentsPerBin
 
@@ -285,7 +292,7 @@ class Parametrization():
         self.verbose = kwargs.get( 'verbose', False )
         for key, value in kwargs.iteritems():
             if self.verbose:
-                print '[in Parametrization] Setting {0} to {1}'.format( key, value )
+                if self.THROW_EVALUATION_WARNINGS:print '[in Parametrization] Setting {0} to {1}'.format( key, value )
             setattr( self, key, value )
 
 
@@ -304,6 +311,7 @@ class Parametrization():
 
                 xsFromParametrization.append( res )
 
+            self.THROW_EVALUATION_WARNINGS = False
             return xsFromParametrization
 
 
@@ -317,6 +325,7 @@ class Parametrization():
                     xs.append(
                         self.parabolicParametrizationFunction( C, *coefficients )
                         )
+                self.THROW_EVALUATION_WARNINGS = False
                 return xs
 
             else:
@@ -331,16 +340,27 @@ class Parametrization():
                 for fitEval in self.fitEvals:
                     xs.append( fitEval.getVal() )
 
+                self.THROW_EVALUATION_WARNINGS = False
                 return xs
 
 
-    def EvaluateForBinning( self, theory_binning, exp_binning, returnRatios=True, **kwargs ):
+    def EvaluateForBinning( self, theory_binning, exp_binning, returnRatios=True, lastBinIsOverflow=False, **kwargs ):
         theory_xs = self.Evaluate(**kwargs)
+
+        if len(theory_binning)-1 > len(theory_xs):
+            if self.THROW_EVALUATION_WARNINGS: Commands.Warning( 'Supplied binning has {0} bins, whereas the parametrization only yields {1} values; assuming the last few bins can be thrown away'.format( len(theory_binning), len(theory_xs) ) )
+            theory_binning = theory_binning[:len(theory_xs)+1]
+        elif len(theory_binning)-1 < len(theory_xs):
+            Commands.ThrowError( 'Supplied binning has {0} bins, whereas the parametrization yields {1} values; This cannot be integrated over'.format( len(theory_binning), len(theory_xs) ) )
+
         integral = TheoryCommands.GetIntegral( theory_binning, theory_xs )
 
         exp_xs = []
         for left, right in zip( exp_binning[:-1], exp_binning[1:] ):
-            exp_xs.append( integral( left, right ) / ( right - left ) )
+            if lastBinIsOverflow and right == exp_binning[-1]:
+                exp_xs.append( integral( left, right ) )
+            else:
+                exp_xs.append( integral( left, right ) / ( right - left ) )
 
         if returnRatios:
             if not self.hasSM:
@@ -352,9 +372,11 @@ class Parametrization():
 
             ratios = [ xs / SMxs if SMxs != 0. else 0. for xs, SMxs in zip( exp_xs, exp_xs_SM ) ]
 
+            self.THROW_EVALUATION_WARNINGS = False
             return ratios
 
         else:
+            self.THROW_EVALUATION_WARNINGS = False
             return exp_xs
 
 

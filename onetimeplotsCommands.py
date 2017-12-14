@@ -280,6 +280,7 @@ def main( args ):
         readList = lambda theoryFiles: [ TheoryFileInterface.ReadDerivedTheoryFile( theoryFile ) for theoryFile in theoryFiles ]
 
 
+        # ----------------------------
         TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
 
         theoryFiles_ct_cg = TheoryFileInterface.FileFinder(
@@ -288,21 +289,37 @@ def main( args ):
         containers_ct_cg = readList( theoryFiles_ct_cg )
         SM_ct_cg = TheoryFileInterface.ReadDerivedTheoryFile( TheoryFileInterface.FileFinder( ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True ) )
 
-
         theoryFiles_ct_cb = TheoryFileInterface.FileFinder(
             ct='*', cb='*', muR=1, muF=1, Q=1, filter='cg'
             )
         containers_ct_cb = readList( theoryFiles_ct_cb )
         SM_ct_cb = SM_ct_cg # Same SM
 
+        # ----------------------------
+        containers_ct_cg_HighPt = TheoryFileInterface.FileFinder(
+            ct='*', cg='*', cb=1, muR=1, muF=1, Q=1, filter='ct_1_cg_0', loadImmediately=True,
+            directory = LatestPaths.derivedTheoryFiles_TopHighPt
+            )
+        SM_ct_cg_HighPt = TheoryFileInterface.FileFinder(
+            ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True, loadImmediately=True,
+            directory = LatestPaths.derivedTheoryFiles_TopHighPt
+            )
 
+        # ----------------------------
+        containers_ct_cb_HighPt = TheoryFileInterface.FileFinder(
+            ct='*', cb='*', cg=0, muR=1, muF=1, Q=1, filter='ct_1_cg_0', loadImmediately=True,
+            directory = LatestPaths.derivedTheoryFiles_TopHighPt
+            )            
+        SM_ct_cb_HighPt = SM_ct_cg_HighPt # Same SM
+
+
+        # ----------------------------
         theoryFiles_kappab_kappac = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
             directory = LatestPaths.derivedTheoryFiles_YukawaSummed
             )
         containers_kappab_kappac = readList( theoryFiles_kappab_kappac )
         SM_kappab_kappac = [ container for container in containers_kappab_kappac if container.kappab == 1. and container.kappac == 1. ][0]
-
 
         theoryFiles_kappab_kappac_Gluon = TheoryFileInterface.FileFinder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
@@ -344,15 +361,24 @@ def main( args ):
         containers_kappab_kappac_QuarkScaled.sort( key=kappaSorter )
         containers_ct_cg.sort( key=kappaSorter )
         containers_ct_cb.sort( key=kappaSorter )
+        containers_ct_cg_HighPt.sort( key=kappaSorter )
 
 
         ct_cg = Container()
         ct_cg.name = 'kappat_kappag'
         ct_cg.couplings = [ 'ct', 'cg' ]
         ct_cg.containers = containers_ct_cg
-        # ct_cg.ws = LatestPaths.ws_combined_split_top
         ct_cg.ws = LatestPaths.ws_combined_Top
         ct_cg.SM = SM_ct_cg
+
+        ct_cg_HighPt = Container()
+        ct_cg_HighPt.name = 'kappat_kappag_HighPt'
+        ct_cg_HighPt.couplings = [ 'ct', 'cg' ]
+        ct_cg_HighPt.containers = containers_ct_cg_HighPt
+        ct_cg_HighPt.ws = LatestPaths.ws_combined_TopHighPt
+        # ct_cg_HighPt.parametrizeByFitting = True
+        # ct_cg_HighPt.includeLinearTerms = False
+        ct_cg_HighPt.SM = SM_ct_cg_HighPt
 
         ct_cb = Container()
         ct_cb.name = 'kappat_kappab'
@@ -360,6 +386,13 @@ def main( args ):
         ct_cb.containers = containers_ct_cb
         ct_cb.ws = LatestPaths.ws_combined_TopCtCb
         ct_cb.SM = SM_ct_cb
+
+        ct_cb_HighPt = Container()
+        ct_cb_HighPt.name = 'kappat_kappab_HighPt'
+        ct_cb_HighPt.couplings = [ 'ct', 'cb' ]
+        ct_cb_HighPt.containers = containers_ct_cb_HighPt
+        ct_cb_HighPt.ws = LatestPaths.ws_combined_TopCtCbHighPt
+        ct_cb_HighPt.SM = SM_ct_cb_HighPt
 
         kappab_kappac_Gluon = Container()
         kappab_kappac_Gluon.name = 'kappab_kappac_Gluon'
@@ -385,10 +418,12 @@ def main( args ):
 
         couplingVariationContainers = [
             # ct_cg,
-            # ct_cb,
-            kappab_kappac_Gluon,
-            kappab_kappac_Quark,
-            kappab_kappac_QuarkScaled,
+            ct_cb,
+            # ct_cg_HighPt,
+            ct_cb_HighPt,
+            # kappab_kappac_Gluon,
+            # kappab_kappac_Quark,
+            # kappab_kappac_QuarkScaled,
             ]
 
         # n_theoryFiles_kappab_kappac = len( theoryFiles_kappab_kappac )
@@ -446,7 +481,12 @@ def main( args ):
 
             elif DO_PARAMETRIZATION and hasattr( couplingVariationContainer, 'parametrizeByFitting' ):
                 parametrization = Parametrization()
-                parametrization.ParametrizeByFitting( couplingVariationContainer.containers, fitWithScipy=True )
+                parametrization.ParametrizeByFitting(
+                    couplingVariationContainer.containers,
+                    fitWithScipy=True,
+                    includeLinearTerms = getattr( couplingVariationContainer, 'includeLinearTerms', True ),
+                    couplingsToParametrize = couplingVariationContainer.couplings
+                    )
 
                 for container in couplingVariationContainer.containers:
                     # kwargs = { coupling : float(getattr( container, coupling )) for coupling in couplingVariationContainer.couplings }
@@ -638,6 +678,7 @@ def main( args ):
                     SetTopPanelLogScale = TOP_PANEL_LOGSCALE,
                     topPadLeftMargin = 0.14,
                     bottomPadLeftMargin = 0.14,
+                    disableCMSText = True,
                     )
 
 

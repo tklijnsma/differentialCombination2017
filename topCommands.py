@@ -57,6 +57,7 @@ def AppendParserOptions( parser ):
             # setattr( namespace, self.dest, values )
 
     parser.add_argument( '--createDerivedTheoryFiles_Top',                  action=CustomAction )
+    parser.add_argument( '--createDerivedTheoryFiles_Top_highPt',           action=CustomAction )
     parser.add_argument( '--CorrelationMatrices_Top',                       action=CustomAction )
     parser.add_argument( '--couplingT2WS_Top',                              action=CustomAction )
     parser.add_argument( '--couplingBestfit_Top',                           action=CustomAction )
@@ -93,12 +94,11 @@ def main( args ):
     print expBinBoundaries
     print ''
 
-    # LATESTDATACARD_Top            = 'suppliedInput/combinedCard_Jul26.txt'
-
-    # LATESTWORKSPACE_Top           = 'workspaces_Aug11/combinedCard_Jul26_CouplingModel_Top_withTheoryUncertainties.root'
-
-    # LATESTCORRELATIONMATRIX_Top   = 'plots_CorrelationMatrices_Aug11_Top/corrMat_exp.txt'
-    # LATESTTHEORYUNCERTAINTIES_Top = 'plots_CorrelationMatrices_Aug11_Top/errors_for_corrMat_exp.txt'
+    # For uniform plotting
+    ctMin_global = -8.5
+    ctMax_global = 8.5
+    cgMin_global = -0.65
+    cgMax_global = 0.65
 
     TheoryCommands.SetPlotDir( 'plots_{0}_Top'.format(datestr) )
 
@@ -109,16 +109,31 @@ def main( args ):
             verbose = True,
             )
 
+    #____________________________________________________________________
+    if args.createDerivedTheoryFiles_Top_highPt:
+        TheoryFileInterface.CreateDerivedTheoryFiles_Top_highPt(
+            verbose = True,
+            )
 
     #____________________________________________________________________
     if args.CorrelationMatrices_Top:
 
-        CorrelationMatrices.SetPlotDir( 'correlationMatrices_{0}_Top'.format(datestr) )
+        # USE_HIGHPT_PARAMETRIZATION = True
+        USE_HIGHPT_PARAMETRIZATION = False
 
-        variationFiles = TheoryFileInterface.FileFinder(
-            directory = LatestPaths.derivedTheoryFiles_Top,
-            ct = 1.0, cg = 0.0, cb = 1.0
-            )
+        if USE_HIGHPT_PARAMETRIZATION:
+            Commands.ThrowError( 'Only have min-max spectra for high pt at the moment - can not do this' )
+            # CorrelationMatrices.SetPlotDir( 'correlationMatrices_{0}_TopHighPt'.format(datestr) )
+            # variationFiles = TheoryFileInterface.FileFinder(
+            #     directory = LatestPaths.derivedTheoryFiles_Top,
+            #     ct = 1.0, cg = 0.0, cb = 1.0
+            #     )
+        else:
+            CorrelationMatrices.SetPlotDir( 'correlationMatrices_{0}_Top'.format(datestr) )
+            variationFiles = TheoryFileInterface.FileFinder(
+                directory = LatestPaths.derivedTheoryFiles_Top,
+                ct = 1.0, cg = 0.0, cb = 1.0
+                )
 
         variations = [
             TheoryFileInterface.ReadDerivedTheoryFile( variationFile ) for variationFile in variationFiles ]
@@ -155,11 +170,11 @@ def main( args ):
         # MAKELUMISCALABLE               = True
         MAKELUMISCALABLE               = False
 
-        # INCLUDE_BR_COUPLING_DEPENDENCY = True
-        INCLUDE_BR_COUPLING_DEPENDENCY = False
+        INCLUDE_BR_COUPLING_DEPENDENCY = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY = False
 
-        PROFILE_TOTAL_XS               = True
-        # PROFILE_TOTAL_XS               = False
+        # PROFILE_TOTAL_XS               = True
+        PROFILE_TOTAL_XS               = False
 
         # FIT_ONLY_NORMALIZATION         = True
         FIT_ONLY_NORMALIZATION         = False
@@ -167,6 +182,11 @@ def main( args ):
 
         # EXCLUDE_LAST_BIN               = True
         EXCLUDE_LAST_BIN               = False
+
+
+        USE_HIGHPT_PARAMETRIZATION     = True
+        # USE_HIGHPT_PARAMETRIZATION     = False
+        
 
 
         # ======================================
@@ -177,8 +197,12 @@ def main( args ):
         if args.hzz:
             datacard = LatestPaths.card_hzz_ggHxH_PTH
 
-        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
-
+        if USE_HIGHPT_PARAMETRIZATION:
+            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_TopHighPt )
+            Commands.Warning( 'Correlation matrix was made using low pt spectra!!' )
+        else:
+            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
+            
         if INCLUDE_THEORY_UNCERTAINTIES:
             correlationMatrix   = LatestPaths.correlationMatrix_Top
             theoryUncertainties = LatestPaths.theoryUncertainties_Top
@@ -208,9 +232,15 @@ def main( args ):
                 )
             )
         
-        theoryFiles = TheoryFileInterface.FileFinder(
-            ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
-            )
+        if USE_HIGHPT_PARAMETRIZATION:
+            theoryFiles = TheoryFileInterface.FileFinder(
+                ct='*', cg='*', cb=1, muR=1, muF=1, Q=1, filter='ct_1_cg_0',
+                )            
+        else:
+            theoryFiles = TheoryFileInterface.FileFinder(
+                ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
+                )
+
         possibleTheories = []
         for theoryFile in theoryFiles:
             ct = Commands.ConvertStrToFloat( re.search( r'ct_([\dmp]+)', theoryFile ).group(1) )
@@ -224,6 +254,9 @@ def main( args ):
 
 
         suffix = 'Top'
+        if USE_HIGHPT_PARAMETRIZATION:
+            suffix += 'HighPt'
+
         if INCLUDE_THEORY_UNCERTAINTIES:
             extraOptions.extend([
                 '--PO correlationMatrix={0}'.format(  LatestPaths.correlationMatrix_Top ),
@@ -286,6 +319,9 @@ def main( args ):
         # PROFILE_TOTAL_XS               = True
         PROFILE_TOTAL_XS               = False
 
+        USE_HIGHPT_PARAMETRIZATION     = True
+        # USE_HIGHPT_PARAMETRIZATION     = False
+
 
         # ======================================
 
@@ -295,7 +331,11 @@ def main( args ):
         if args.hzz:
             datacard = LatestPaths.card_hzz_ggHxH_PTH
 
-        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
+        if USE_HIGHPT_PARAMETRIZATION:
+            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_TopHighPt )
+            Commands.Warning( 'Correlation matrix was made using low pt spectra!!' )
+        else:
+            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
 
         if INCLUDE_THEORY_UNCERTAINTIES:
             correlationMatrix   = LatestPaths.correlationMatrix_Top
@@ -319,13 +359,20 @@ def main( args ):
 
         extraOptions.append(
             '--PO SM=[ct=1,cb=1,file={0}]'.format(
-                TheoryFileInterface.FileFinder( ct=1, cb=1, cg=1, muR=1, muF=1, Q=1, expectOneFile=True )
+                TheoryFileInterface.FileFinder( ct=1, cb=1, cg=0, muR=1, muF=1, Q=1, expectOneFile=True )
                 )
             )
         
-        theoryFiles = TheoryFileInterface.FileFinder(
-            ct='*', cb='*', muR=1, muF=1, Q=1, filter='cg'
-            )
+        if USE_HIGHPT_PARAMETRIZATION:
+            theoryFiles = TheoryFileInterface.FileFinder(
+                ct='*', cb='*', cg=0, muR=1, muF=1, Q=1, filter='ct_1_cg_0',
+                )            
+        else:
+            theoryFiles = TheoryFileInterface.FileFinder(
+                ct='*', cb='*', muR=1, muF=1, Q=1, filter='cg'
+                )
+
+
         possibleTheories = []
         for theoryFile in theoryFiles:
             ct = Commands.ConvertStrToFloat( re.search( r'ct_([\dmp]+)', theoryFile ).group(1) )
@@ -339,6 +386,9 @@ def main( args ):
 
 
         suffix = 'TopCtCb'
+        if USE_HIGHPT_PARAMETRIZATION:
+            suffix += 'HighPt'
+
         if INCLUDE_THEORY_UNCERTAINTIES:
             extraOptions.extend([
                 '--PO correlationMatrix={0}'.format(  LatestPaths.correlationMatrix_Top ),
@@ -378,260 +428,6 @@ def main( args ):
             )
 
 
-
-
-    #____________________________________________________________________
-    if args.couplingBestfit_Top:
-
-        # ======================================
-        # Manage flags
-
-        doFastscan = False
-        if args.notFastscan: doFastscan = False
-        if args.fastscan:    doFastscan = True
-
-        ASIMOV = False
-        if args.asimov: ASIMOV = True
-
-        # LUMISTUDY                      = True
-        LUMISTUDY                      = False
-
-        # PROFILE_TOTAL_XS               = True
-        PROFILE_TOTAL_XS               = False
-
-        # FIT_ONLY_NORMALIZATION         = True
-        FIT_ONLY_NORMALIZATION         = False
-
-        # INCLUDE_BR_COUPLING_DEPENDENCY = True
-        INCLUDE_BR_COUPLING_DEPENDENCY = False
-
-        # FIX_KAPPAV                     = True
-        FIX_KAPPAV                     = False
-
-        # MAX_KAPPAV_ONE                 = True
-        MAX_KAPPAV_ONE                 = False
-
-
-        # DO_KAPPAT_KAPPAB               = True
-        DO_KAPPAT_KAPPAB               = False
-
-        # DO_ONLY_ONE_KAPPA              = True
-        DO_ONLY_ONE_KAPPA              = False
-
-
-        # EXCLUDE_LAST_BIN               = True
-        EXCLUDE_LAST_BIN               = False
-
-
-        if not INCLUDE_BR_COUPLING_DEPENDENCY and FIX_KAPPAV:
-            Commands.ThrowError( 'INCLUDE_BR_COUPLING_DEPENDENCY == False and FIX_KAPPAV == True is not allowed' )
-        if FIX_KAPPAV and MAX_KAPPAV_ONE:
-            Commands.ThrowError( 'FIX_KAPPAV == True and MAX_KAPPAV_ONE == True is not allowed' )
-
-
-        # ======================================
-        # Select right datacard
-
-        datacard = LatestPaths.ws_combined_Top
-        if args.hgg:
-            datacard = LatestPaths.ws_hgg_Top
-        if args.hzz:
-            datacard = LatestPaths.ws_hzz_Top
-
-        if ( LUMISTUDY ) and ( args.hzz or args.hgg ):
-            print '[fixme] These studies not implemented for hgg or hzz'
-            sys.exit()
-        if LUMISTUDY:
-            datacard = LatestPaths.ws_combined_Top_lumiScalable
-        if PROFILE_TOTAL_XS:
-            datacard = LatestPaths.ws_combined_Top_profiledTotalXS
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            datacard = LatestPaths.ws_combined_Top_couplingDependentBR
-        if FIT_ONLY_NORMALIZATION:
-            datacard = LatestPaths.ws_combined_Top_profiledTotalXS_fitOnlyNormalization
-        if EXCLUDE_LAST_BIN:
-            datacard = LatestPaths.ws_combined_Top_skippedLastBin
-
-        if DO_KAPPAT_KAPPAB:
-            datacard = LatestPaths.ws_combined_TopCtCb
-            if args.hgg:
-                datacard = LatestPaths.ws_hgg_TopCtCb
-            if args.hzz:
-                datacard = LatestPaths.ws_hzz_TopCtCb
-
-
-        # ======================================
-        # Set some job specifics (ranges, number of points)
-
-        jobDirectory = 'Scan_Top_{0}'.format( datestr )
-        if DO_KAPPAT_KAPPAB: jobDirectory = 'Scan_TopCtCb_{0}'.format( datestr )
-        if args.hgg: jobDirectory += '_hgg'
-        if args.hzz: jobDirectory += '_hzz'
-
-        ct_ranges = [ -1., 2. ]
-        cg_ranges = [ -0.1, 0.2 ]
-
-        if DO_KAPPAT_KAPPAB:
-            ct_ranges = [ -0.1, 2. ]
-            cb_ranges = [ -10.0, 14.0 ]
-
-        if doFastscan:
-            nPoints = 6400
-            nPointsPerJob = 1600
-            queue = 'short.q'
-        else:
-            nPoints = 6400
-            nPointsPerJob = 20
-            # nPoints = 4900
-            # nPointsPerJob = 14
-            queue = 'all.q'
-            # if ASIMOV:
-            #     # This does not converge in time
-            #     queue = 'short.q'
-            #     nPoints = 1600
-            #     nPointsPerJob = 2
-            if args.hzz:
-                nPointsPerJob = 320
-                queue = 'short.q'
-
-
-        print 'WARNING ' * 7
-        print 'TEMPORARY CODE - REMOVE THIS'
-        print 'ALSO TURN BACK ON squareDistPoiStep !!'
-        # nPoints = 6400 * 4
-        # nPoints = 10000
-        nPoints   = 60*60
-        ct_ranges = [ -3.5, 7.5 ]
-        cg_ranges = [ -0.65, 0.5 ]
-
-
-        # ======================================
-        # Construct the fit command and process flags
-
-        # --------------------
-        # Setting POIs
-
-        POIs = [ 'ct', 'cg' ]
-        if DO_KAPPAT_KAPPAB:
-            POIs = [ 'ct', 'cb' ]
-
-
-        # --------------------
-        # Setting physicsModelParameters
-
-        physicsModelParameters = [ 'ct=1.0', 'cg=0.0' ]
-        if DO_KAPPAT_KAPPAB:
-            physicsModelParameters = [ 'ct=1.0', 'cb=1.0' ]
-        if LUMISTUDY:
-            physicsModelParameters.append( 'lumiScale=8.356546' )
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            physicsModelParameters.append( 'kappa_V=0.99' )
-
-
-        # --------------------
-        # Setting physicsModelParameterRanges
-
-        physicsModelParameterRanges = [
-            'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
-            'cg={0},{1}'.format( cg_ranges[0], cg_ranges[1] )
-            ]
-        if DO_KAPPAT_KAPPAB:
-            # Actually overwrite list contents
-            physicsModelParameterRanges = [
-                'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
-                'cb={0},{1}'.format( cb_ranges[0], cb_ranges[1] )
-                ]
-        if INCLUDE_BR_COUPLING_DEPENDENCY and not FIX_KAPPAV:
-            if MAX_KAPPAV_ONE:
-                physicsModelParameterRanges.append( 'kappa_V=-100.0,1.0' )
-            else:
-                physicsModelParameterRanges.append( 'kappa_V=-100.0,100.0' )
-
-
-        # --------------------
-        # Specify floating and frozen nuisances
-
-        floatNuisances  = []
-        freezeNuisances = []
-
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            if FIX_KAPPAV:
-                freezeNuisances.append( 'kappa_V' )
-            else:
-                floatNuisances.append( 'kappa_V' )
-
-        if DO_ONLY_ONE_KAPPA:
-            floatNuisances.append( theOtherKappa )
-
-
-        # --------------------
-        # Construct extraOptions
-
-        extraOptions = [
-            # '--squareDistPoiStep',
-            '-P ' + ' -P '.join(POIs),
-            '--setPhysicsModelParameters '      + ','.join(physicsModelParameters),
-            '--setPhysicsModelParameterRanges ' + ':'.join(physicsModelParameterRanges),
-            ]
-
-        if len(floatNuisances) > 0:
-            extraOptions.append( '--floatNuisances ' + ','.join(floatNuisances) )
-        if len(freezeNuisances) > 0:
-            extraOptions.append( '--freezeNuisances ' + ','.join(freezeNuisances) )
-
-
-        # --------------------
-        # Compile list of variables to save
-
-        variablesToSave = []
-        variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
-        variablesToSave.extend( [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ] )
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            variablesToSave.extend( Commands.ListSet( datacard, 'hgg_yieldParameters' ) )
-            variablesToSave.extend( Commands.ListSet( datacard, 'hzz_yieldParameters' ) )
-            variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
-        if PROFILE_TOTAL_XS:
-            variablesToSave.extend([ 'r_totalXS', 'totalXSmodifier', 'totalXS_SM', 'totalXS' ])
-            if FIT_ONLY_NORMALIZATION:
-                variablesToSave.append( 'globalTotalXSmodifier' )
-        extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
-
-
-        # ======================================
-        # Appropriately name scan, create jobDirectoy and submit command
-
-        if PROFILE_TOTAL_XS:
-            jobDirectory += '_profiledTotalXS'
-            if FIT_ONLY_NORMALIZATION:
-                jobDirectory += '_fitOnlyNormalization'
-        if LUMISTUDY:
-            jobDirectory += '_lumiStudy'
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            jobDirectory += '_couplingDependentBR'
-            if FIX_KAPPAV:
-                jobDirectory += '_fixedKappaV'
-            elif MAX_KAPPAV_ONE:
-                jobDirectory += '_kappaVMaxOne'
-        if EXCLUDE_LAST_BIN:
-            jobDirectory += '_skippedLastBin'
-        if ASIMOV:                          jobDirectory += '_asimov'
-        if doFastscan:                      jobDirectory += '_fastscan'
-
-        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
-        if Commands.IsTestMode(): print '\nWould now create new directory: {0}'.format( basename(jobDirectory) )
-
-        Commands.MultiDimCombineTool(
-            datacard,
-            nPoints       = nPoints,
-            nPointsPerJob = nPointsPerJob,
-            queue         = queue,
-            notOnBatch    = False,
-            jobDirectory  = jobDirectory,
-            fastscan      = doFastscan,
-            asimov        = ASIMOV,
-            jobPriority   = 0,
-            extraOptions  = extraOptions
-            )
 
 
     #____________________________________________________________________
@@ -692,15 +488,26 @@ def main( args ):
         # EXTENDED_RANGE = True
         EXTENDED_RANGE = False
 
+        DO_HIGH_PT = True
+        # DO_HIGH_PT = False
+
         if not ASIMOV:
             combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_Top) )
             hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_Top) )
             hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_Top) )
+            if DO_HIGH_PT:
+                combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_TopHighPt) )
+                hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_TopHighPt) )
+                hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_TopHighPt) )
         else:
             combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_Top_asimov) )
             hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_Top_asimov) )
             hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_Top_asimov) )
-
+            if DO_HIGH_PT:
+                combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_TopHighPt_asimov) )
+                Commands.Warning( 'Asimov for Hgg and Hzz was not made; using observed so the script doesn\'t crash' )
+                hgg_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_TopHighPt) )
+                hzz_rootfiles      = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_TopHighPt) )            
 
         if EXTENDED_RANGE:
             combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_Top_extendedRange_asimov) )
@@ -725,6 +532,7 @@ def main( args ):
             yCoupling,
             verbose   = False,
             defaultHValue = 999.,
+            # forceBestfitAtZero = False
             )
         hzz.color = 4
         hzz.name = 'hzz'
@@ -746,21 +554,13 @@ def main( args ):
         for container in containers: container.title = titles.get( container.name, container.name )
 
 
-        ct_ranges = [ -8.5, 8.5 ]
-        cg_ranges = [ -0.65, 0.65 ]
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            # xMin = -0.2,
-            # xMax = 2.0,
-            # yMin = -0.08,
-            # yMax = 0.135,
-            # 
-            # xMin = -1.0,  xMax = 2.0,
-            # yMin = -0.1,  yMax = 0.2,
-            # 
-            xMin = ct_ranges[0],  xMax = ct_ranges[1],
-            yMin = cg_ranges[0],  yMax = cg_ranges[1],
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
             # 
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
@@ -802,10 +602,11 @@ def main( args ):
             # xMax = 2.0,
             # yMin = -0.08,
             # yMax = 0.135,
-            xMin = -1.0,
-            xMax = 2.0,
-            yMin = -0.1,
-            yMax = 0.2,
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
+            # 
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_skippedLastBin' + ( '_asimov' if ASIMOV else '' ),
@@ -972,10 +773,10 @@ def main( args ):
             # xMax = 2.0,
             # yMin = -0.08,
             # yMax = 0.135,
-            xMin = ctMin,
-            xMax = ctMax,
-            yMin = cgMin,
-            yMax = cgMax,
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_LumiStudy',
@@ -1015,10 +816,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -8.5,
-            xMax = 8.5,
-            yMin = -0.65,
-            yMax = 0.65,
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_profiledTotalXS',
@@ -1059,10 +860,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -8.5,
-            xMax = 8.5,
-            yMin = -0.65,
-            yMax = 0.65,
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_onlyNormalization',
@@ -1089,7 +890,7 @@ def main( args ):
             )
         combined.color = 1
         combined.name = 'regularBR'
-        combined.title = 'BR constant'
+        combined.title = 'SM BR'
         containers.append( combined )
 
         # scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_asimov ) )
@@ -1113,7 +914,7 @@ def main( args ):
             )
         scalingBRfixedKappaV.color = 4
         scalingBRfixedKappaV.name = 'scalingBRfixedKappaV'
-        scalingBRfixedKappaV.title = 'BR(#kappa_{t}) (#kappa_{V} fixed)'
+        scalingBRfixedKappaV.title = 'BR(#kappa_{t}, #kappa_{g}) (#kappa_{V} fixed)'
         containers.append( scalingBRfixedKappaV )
 
         # scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov ) )
@@ -1131,10 +932,10 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -0.2,
+            xMin = -0.1,
             xMax = 2.0,
-            yMin = -0.08,
-            yMax = 0.2,
+            yMin = -0.10,
+            yMax = 0.16,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_BRcouplingDependency',
@@ -1453,7 +1254,7 @@ def main( args ):
         container.MaximaOfContour     = True
         container.BestFit             = True
 
-        PlotCommands.PlotParametrizationsOnCombination( container )
+        PlotCommands.PlotParametrizationsOnCombination( container, OnOneCanvas=True )
 
 
     #____________________________________________________________________
@@ -1504,9 +1305,266 @@ def main( args ):
 
         container.MarkerSize = 3.0
 
-        PlotCommands.PlotParametrizationsOnCombination( container )
+        PlotCommands.PlotParametrizationsOnCombination( container, OnOneCanvas=True )
 
 
+
+
+
+    #____________________________________________________________________
+    if args.couplingBestfit_Top:
+
+        Commands.Warning( '--couplingBestfit_Top is deprecated!!' )
+
+        # ======================================
+        # Manage flags
+
+        doFastscan = False
+        if args.notFastscan: doFastscan = False
+        if args.fastscan:    doFastscan = True
+
+        ASIMOV = False
+        if args.asimov: ASIMOV = True
+
+        # LUMISTUDY                      = True
+        LUMISTUDY                      = False
+
+        # PROFILE_TOTAL_XS               = True
+        PROFILE_TOTAL_XS               = False
+
+        # FIT_ONLY_NORMALIZATION         = True
+        FIT_ONLY_NORMALIZATION         = False
+
+        # INCLUDE_BR_COUPLING_DEPENDENCY = True
+        INCLUDE_BR_COUPLING_DEPENDENCY = False
+
+        # FIX_KAPPAV                     = True
+        FIX_KAPPAV                     = False
+
+        # MAX_KAPPAV_ONE                 = True
+        MAX_KAPPAV_ONE                 = False
+
+
+        # DO_KAPPAT_KAPPAB               = True
+        DO_KAPPAT_KAPPAB               = False
+
+        # DO_ONLY_ONE_KAPPA              = True
+        DO_ONLY_ONE_KAPPA              = False
+
+
+        # EXCLUDE_LAST_BIN               = True
+        EXCLUDE_LAST_BIN               = False
+
+
+        if not INCLUDE_BR_COUPLING_DEPENDENCY and FIX_KAPPAV:
+            Commands.ThrowError( 'INCLUDE_BR_COUPLING_DEPENDENCY == False and FIX_KAPPAV == True is not allowed' )
+        if FIX_KAPPAV and MAX_KAPPAV_ONE:
+            Commands.ThrowError( 'FIX_KAPPAV == True and MAX_KAPPAV_ONE == True is not allowed' )
+
+
+        # ======================================
+        # Select right datacard
+
+        datacard = LatestPaths.ws_combined_Top
+        if args.hgg:
+            datacard = LatestPaths.ws_hgg_Top
+        if args.hzz:
+            datacard = LatestPaths.ws_hzz_Top
+
+        if ( LUMISTUDY ) and ( args.hzz or args.hgg ):
+            print '[fixme] These studies not implemented for hgg or hzz'
+            sys.exit()
+        if LUMISTUDY:
+            datacard = LatestPaths.ws_combined_Top_lumiScalable
+        if PROFILE_TOTAL_XS:
+            datacard = LatestPaths.ws_combined_Top_profiledTotalXS
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            datacard = LatestPaths.ws_combined_Top_couplingDependentBR
+        if FIT_ONLY_NORMALIZATION:
+            datacard = LatestPaths.ws_combined_Top_profiledTotalXS_fitOnlyNormalization
+        if EXCLUDE_LAST_BIN:
+            datacard = LatestPaths.ws_combined_Top_skippedLastBin
+
+        if DO_KAPPAT_KAPPAB:
+            datacard = LatestPaths.ws_combined_TopCtCb
+            if args.hgg:
+                datacard = LatestPaths.ws_hgg_TopCtCb
+            if args.hzz:
+                datacard = LatestPaths.ws_hzz_TopCtCb
+
+
+        # ======================================
+        # Set some job specifics (ranges, number of points)
+
+        jobDirectory = 'Scan_Top_{0}'.format( datestr )
+        if DO_KAPPAT_KAPPAB: jobDirectory = 'Scan_TopCtCb_{0}'.format( datestr )
+        if args.hgg: jobDirectory += '_hgg'
+        if args.hzz: jobDirectory += '_hzz'
+
+        ct_ranges = [ -1., 2. ]
+        cg_ranges = [ -0.1, 0.2 ]
+
+        if DO_KAPPAT_KAPPAB:
+            ct_ranges = [ -0.1, 2. ]
+            cb_ranges = [ -10.0, 14.0 ]
+
+        if doFastscan:
+            nPoints = 6400
+            nPointsPerJob = 1600
+            queue = 'short.q'
+        else:
+            nPoints = 6400
+            nPointsPerJob = 20
+            # nPoints = 4900
+            # nPointsPerJob = 14
+            queue = 'all.q'
+            # if ASIMOV:
+            #     # This does not converge in time
+            #     queue = 'short.q'
+            #     nPoints = 1600
+            #     nPointsPerJob = 2
+            if args.hzz:
+                nPointsPerJob = 320
+                queue = 'short.q'
+
+
+        print 'WARNING ' * 7
+        print 'TEMPORARY CODE - REMOVE THIS'
+        print 'ALSO TURN BACK ON squareDistPoiStep !!'
+        # nPoints = 6400 * 4
+        # nPoints = 10000
+        nPoints   = 60*60
+        ct_ranges = [ -3.5, 7.5 ]
+        cg_ranges = [ -0.65, 0.5 ]
+
+
+        # ======================================
+        # Construct the fit command and process flags
+
+        # --------------------
+        # Setting POIs
+
+        POIs = [ 'ct', 'cg' ]
+        if DO_KAPPAT_KAPPAB:
+            POIs = [ 'ct', 'cb' ]
+
+
+        # --------------------
+        # Setting physicsModelParameters
+
+        physicsModelParameters = [ 'ct=1.0', 'cg=0.0' ]
+        if DO_KAPPAT_KAPPAB:
+            physicsModelParameters = [ 'ct=1.0', 'cb=1.0' ]
+        if LUMISTUDY:
+            physicsModelParameters.append( 'lumiScale=8.356546' )
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            physicsModelParameters.append( 'kappa_V=0.99' )
+
+
+        # --------------------
+        # Setting physicsModelParameterRanges
+
+        physicsModelParameterRanges = [
+            'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
+            'cg={0},{1}'.format( cg_ranges[0], cg_ranges[1] )
+            ]
+        if DO_KAPPAT_KAPPAB:
+            # Actually overwrite list contents
+            physicsModelParameterRanges = [
+                'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
+                'cb={0},{1}'.format( cb_ranges[0], cb_ranges[1] )
+                ]
+        if INCLUDE_BR_COUPLING_DEPENDENCY and not FIX_KAPPAV:
+            if MAX_KAPPAV_ONE:
+                physicsModelParameterRanges.append( 'kappa_V=-100.0,1.0' )
+            else:
+                physicsModelParameterRanges.append( 'kappa_V=-100.0,100.0' )
+
+
+        # --------------------
+        # Specify floating and frozen nuisances
+
+        floatNuisances  = []
+        freezeNuisances = []
+
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            if FIX_KAPPAV:
+                freezeNuisances.append( 'kappa_V' )
+            else:
+                floatNuisances.append( 'kappa_V' )
+
+        if DO_ONLY_ONE_KAPPA:
+            floatNuisances.append( theOtherKappa )
+
+
+        # --------------------
+        # Construct extraOptions
+
+        extraOptions = [
+            # '--squareDistPoiStep',
+            '-P ' + ' -P '.join(POIs),
+            '--setPhysicsModelParameters '      + ','.join(physicsModelParameters),
+            '--setPhysicsModelParameterRanges ' + ':'.join(physicsModelParameterRanges),
+            ]
+
+        if len(floatNuisances) > 0:
+            extraOptions.append( '--floatNuisances ' + ','.join(floatNuisances) )
+        if len(freezeNuisances) > 0:
+            extraOptions.append( '--freezeNuisances ' + ','.join(freezeNuisances) )
+
+
+        # --------------------
+        # Compile list of variables to save
+
+        variablesToSave = []
+        variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
+        variablesToSave.extend( [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ] )
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            variablesToSave.extend( Commands.ListSet( datacard, 'hgg_yieldParameters' ) )
+            variablesToSave.extend( Commands.ListSet( datacard, 'hzz_yieldParameters' ) )
+            variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
+        if PROFILE_TOTAL_XS:
+            variablesToSave.extend([ 'r_totalXS', 'totalXSmodifier', 'totalXS_SM', 'totalXS' ])
+            if FIT_ONLY_NORMALIZATION:
+                variablesToSave.append( 'globalTotalXSmodifier' )
+        extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
+
+
+        # ======================================
+        # Appropriately name scan, create jobDirectoy and submit command
+
+        if PROFILE_TOTAL_XS:
+            jobDirectory += '_profiledTotalXS'
+            if FIT_ONLY_NORMALIZATION:
+                jobDirectory += '_fitOnlyNormalization'
+        if LUMISTUDY:
+            jobDirectory += '_lumiStudy'
+        if INCLUDE_BR_COUPLING_DEPENDENCY:
+            jobDirectory += '_couplingDependentBR'
+            if FIX_KAPPAV:
+                jobDirectory += '_fixedKappaV'
+            elif MAX_KAPPAV_ONE:
+                jobDirectory += '_kappaVMaxOne'
+        if EXCLUDE_LAST_BIN:
+            jobDirectory += '_skippedLastBin'
+        if ASIMOV:                          jobDirectory += '_asimov'
+        if doFastscan:                      jobDirectory += '_fastscan'
+
+        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+        if Commands.IsTestMode(): print '\nWould now create new directory: {0}'.format( basename(jobDirectory) )
+
+        Commands.MultiDimCombineTool(
+            datacard,
+            nPoints       = nPoints,
+            nPointsPerJob = nPointsPerJob,
+            queue         = queue,
+            notOnBatch    = False,
+            jobDirectory  = jobDirectory,
+            fastscan      = doFastscan,
+            asimov        = ASIMOV,
+            jobPriority   = 0,
+            extraOptions  = extraOptions
+            )
 
 
 ########################################

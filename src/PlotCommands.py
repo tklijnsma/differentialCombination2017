@@ -46,7 +46,41 @@ datestr = strftime( '%b%d' )
 # Functions
 ########################################
 
+#____________________________________________________________________
+def SetColorPalette():
 
+    # n_stops = 3
+    # stops  = [ 0.0, 0.5, 1.0 ]
+    # reds   = [ 0.0, 1.0, 1.0 ]
+    # blues  = [ 1.0, 1.0, 0.0 ]
+    # greens = [ 0.0, 1.0, 0.0 ]
+
+    # n_stops = 2
+    # stops  = [ 0.0, 1.0 ]
+    # reds   = [ 55./255.,  1.0 ]
+    # greens = [ 138./255., 1.0 ]
+    # blues  = [ 221./255., 1.0 ]
+
+    n_stops = 3
+    stops  = [ 0.0, 0.3, 1.0 ]
+    reds   = [ 55./255.,  166./255., 1.0 ]
+    greens = [ 138./255., 203./255., 1.0 ]
+    blues  = [ 221./255., 238./255., 1.0 ]
+
+
+    ROOT.TColor.CreateGradientColorTable(
+        n_stops,
+        array('d', stops ),
+        array('d', reds ),
+        array('d', greens ),
+        array('d', blues ),
+        255 )
+
+
+
+
+
+#____________________________________________________________________
 class TLegendMultiPanel(object):
     """docstring for TLegendMultiPanel"""
     def __init__(
@@ -96,6 +130,7 @@ class TLegendMultiPanel(object):
         leg.Draw( drawStr )
 
 
+#____________________________________________________________________
 class TLatexMultiPanel(object):
     """docstring"""
     def __init__(
@@ -641,6 +676,7 @@ def PlotSpectraOnTwoPanel(
 #____________________________________________________________________
 def PlotParametrizationsOnCombination(
         container,
+        OnOneCanvas = False
         ):
 
     expBinBoundaries    = container.expBinBoundaries
@@ -687,12 +723,12 @@ def PlotParametrizationsOnCombination(
     newColorCycle = lambda: itertools.cycle( [ 2, 4, 6, 41, 46, 30, 43, 3, 5, 8, 9 ] )
 
     c.Clear()
-    SetCMargins()
+    SetCMargins( TopMargin = 0.09 )
 
     xMin = expBinBoundaries[0]
     xMax = expBinBoundaries[-2] + ( expBinBoundaries[-2] - expBinBoundaries[-3] ) # Overflow will screw up plot
     yMin = 0.0
-    yMax = 3.0
+    yMax = 1.0
 
     base = GetPlotBase(
         xMin = xMin,
@@ -703,15 +739,24 @@ def PlotParametrizationsOnCombination(
         )
     base.Draw('P')
 
-    leg = ROOT.TLegend(
-        c.GetLeftMargin(),
-        1 - c.GetTopMargin() - 0.2,
-        1 - c.GetRightMargin(),
-        1 - c.GetTopMargin() 
-        )
+    if OnOneCanvas:
+        leg = ROOT.TLegend(
+            c.GetLeftMargin(),
+            1 - c.GetTopMargin() - 0.25,
+            c.GetLeftMargin() + 0.5*( 1. - c.GetRightMargin() - c.GetLeftMargin() ),
+            1 - c.GetTopMargin() 
+            )
+        leg.SetNColumns(1)
+    else:
+        leg = ROOT.TLegend(
+            c.GetLeftMargin(),
+            1 - c.GetTopMargin() - 0.17,
+            1 - c.GetRightMargin(),
+            1 - c.GetTopMargin() 
+            )
+        leg.SetNColumns(2)
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
-    leg.SetNColumns(2)
 
 
     # ======================================
@@ -720,32 +765,39 @@ def PlotParametrizationsOnCombination(
     combinationPOIs = Commands.ListPOIs( ws_combination )
     combinationscans = PhysicsCommands.GetScanResults( combinationPOIs, scanDir_combination, pattern = '' )
 
-    Tg = PhysicsCommands.GetTGraphForSpectrum(
+    TgCombination = PhysicsCommands.GetTGraphForSpectrum(
         combinationPOIs,
         combinationscans,
         name = GetUniqueRootName()
         )
 
-    Tg.SetLineColor( 1 )
-    # Tg.SetMarkerStyle( 2 )
-    Tg.SetFillColorAlpha( 1, 0.2 )
-    # Tg.SetFillColor( 13 )
-    # Tg.SetFillStyle( 3544 )
-    # Tg.SetFillStyle( 3345 )
+    TgCombination.SetLineColor( 1 )
+    # TgCombination.SetMarkerStyle( 2 )
+    TgCombination.SetFillColorAlpha( 1, 0.2 )
+    # TgCombination.SetFillColor( 13 )
+    # TgCombination.SetFillStyle( 3544 )
+    # TgCombination.SetFillStyle( 3345 )
 
-    Tg.title = 'Combination'
+    TgCombination.title = 'Combination'
 
-    CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
-        Tg,
-        drawImmediately=True,
-        legendObject=leg,
-        verbose=False,
-        noBoxes=False,
-        # xMinExternal=xMin,
-        xMaxExternal=xMax,
-        yMinExternal=yMin,
-        yMaxExternal=yMax,
-        )
+    # CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+    #     TgCombination,
+    #     drawImmediately=True,
+    #     legendObject=leg,
+    #     verbose=False,
+    #     noBoxes=False,
+    #     # xMinExternal=xMin,
+    #     xMaxExternal=xMax,
+    #     yMinExternal=yMin,
+    #     yMaxExternal=yMax,
+    #     )
+
+    TgCombination.SetLineWidth(1)
+    TgCombination.SetMarkerStyle(8)
+    # TgCombination.Draw('PSAME') # Postpone to later
+
+    yMinAbs = min( TgCombination.POIBoundsLeft[:len(expBinBoundaries)-1] )
+    yMaxAbs = max( TgCombination.POIBoundsRight[:len(expBinBoundaries)-1] )
 
 
     # ======================================
@@ -879,12 +931,12 @@ def PlotParametrizationsOnCombination(
         color = next(colorCycle)
 
         kwargs = { xCoupling : xPoint, yCoupling : yPoint }
-        Tg_param = wsParametrization.GetOutputContainer( returnWhat='exp', **kwargs ).Tg
+        Tg_param = wsParametrization.GetOutputContainer( returnWhat='exp', xMax=xMax, **kwargs ).Tg
 
         Tg_param.SetLineColor(color)
         Tg_param.SetMarkerColor(color)
         Tg_param.SetLineStyle(1)
-        Tg_param.SetLineWidth(4)
+        Tg_param.SetLineWidth(3)
 
         Tg_param.title = '{0} = {1:.1f}, {2} = {3:.1f}'.format(
             xCouplingTitle, xPoint, yCouplingTitle, yPoint
@@ -898,20 +950,64 @@ def PlotParametrizationsOnCombination(
             xMaxExternal=xMax
             )
 
-        Tg_param.RemovePoint( Tg_param.GetN()-1 )
-        Tg_param.SetLineWidth(1)
-        Tg_param.Draw('SAMEL')
+        # For the connecting line
+        # Tg_param.SetLineWidth(1)
+        # Tg_param.Draw('SAMEL')
+
+        if max(Tg_param.yValues) > yMaxAbs:
+            yMaxAbs = max(Tg_param.yValues)
+        if min(Tg_param.yValues) < yMinAbs:
+            print 'Replacing existing yMin ({0}) with {1}, due to'.format( yMinAbs, min(Tg_param.yValues) ), ( xPoint, yPoint )
+            yMinAbs = min(Tg_param.yValues)
+
+
+
+    print '\nFound yMin = {0}, yMax = {1} after looping over TGraphs'.format( yMinAbs, yMaxAbs )
+
+    # Draw actual combination last, so it's on top
+    TgCombination.Draw('PSAME')
+
+    yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
+    yMax = yMaxAbs + 0.4*(yMaxAbs-yMinAbs)
+    if OnOneCanvas:
+        yMax = yMaxAbs + 1.2*(yMaxAbs-yMinAbs)
+    base.SetMinimum(yMin)
+    base.SetMaximum(yMax)
+
 
     leg.Draw()
 
-    SaveC( '{0}_onCombination'.format(plotTitle) )
+    Commands.GetCMSLabel()
+    Commands.GetCMSLumi()
+
+    if not OnOneCanvas:
+        SaveC( '{0}_onCombination'.format(plotTitle) )
 
 
     # ======================================
     # Second plot: The contour with the points on it
 
-    c.Clear()
-    SetCMargins( for2Dhist = True )
+    if not OnOneCanvas:
+        c.Clear()
+        SetCMargins( for2Dhist = True )
+    else:
+        cw = 1.0 - c.GetLeftMargin() - c.GetRightMargin()
+        ch = 1.0 - c.GetBottomMargin() - c.GetTopMargin()
+        smallPad = ROOT.TPad(
+            GetUniqueRootName(), '',
+            c.GetLeftMargin() + 0.50*cw, c.GetBottomMargin() + 0.50*ch,
+            c.GetLeftMargin() + 0.99*cw, c.GetBottomMargin() + 0.99*ch,
+            )
+        ROOT.SetOwnership( smallPad, False )
+        smallPad.SetBottomMargin( 0.14 )
+        smallPad.SetTopMargin(    0.03 )
+        smallPad.SetLeftMargin(   0.12 )
+        smallPad.SetRightMargin(  0.10 )
+        smallPad.Draw()
+        smallPad.cd()
+
+
+    SetColorPalette()
 
     combined.H2.GetXaxis().SetLabelSize(0.045)
     combined.H2.GetYaxis().SetLabelSize(0.045)
@@ -930,6 +1026,7 @@ def PlotParametrizationsOnCombination(
 
     contour.SetLineColor(1)
     contour.SetLineWidth(3)
+    if OnOneCanvas: contour.SetLineWidth(2)
     contour.Draw('SAMEL')
 
 
@@ -943,6 +1040,7 @@ def PlotParametrizationsOnCombination(
         point.SetMarkerStyle(33)
         point.SetMarkerColor(color)
         point.SetMarkerSize( 4.5 if not hasattr( container, 'MarkerSize' ) else container.MarkerSize )
+        if OnOneCanvas: point.SetMarkerSize( 3.0 )
         point.Draw('SAMEP')
 
         point2 = ROOT.TGraph( point )
@@ -951,12 +1049,29 @@ def PlotParametrizationsOnCombination(
         point2.SetMarkerColor(1)
         point2.Draw('SAMEP')
 
+    xMinAbs = min([ x for x,y in points ])
+    xMaxAbs = max([ x for x,y in points ])
+    yMinAbs = min([ y for x,y in points ])
+    yMaxAbs = max([ y for x,y in points ])
+
+    xMin = xMinAbs - 0.15*(xMaxAbs-xMinAbs)
+    xMax = xMaxAbs + 0.15*(xMaxAbs-xMinAbs)
+    yMin = yMinAbs - 0.15*(yMaxAbs-yMinAbs)
+    yMax = yMaxAbs + 0.15*(yMaxAbs-yMinAbs)
+
+    # combined.H2.SetMinimum( yMin )
+    # combined.H2.SetMaximum( yMax )
+    combined.H2.GetXaxis().SetRangeUser( xMin, xMax )
+    combined.H2.GetYaxis().SetRangeUser( yMin, yMax )
+
     c.Update()
-    SaveC( '{0}_pointsOnContour'.format(plotTitle) )
 
-
-
-
+    if not OnOneCanvas:
+        Commands.GetCMSLabel()
+        Commands.GetCMSLumi()
+        SaveC( '{0}_pointsOnContour'.format(plotTitle) )
+    else:
+        SaveC( '{0}_pointsOnContourOnePlot'.format(plotTitle) )
 
 
 #____________________________________________________________________
@@ -979,22 +1094,29 @@ def PlotMultipleScans(
     if yMin is None: yMin = min([ min(container.y) for container in containers if not hasattr( container, 'line' ) ])
     if yMax is None: yMax = max([ max(container.y) for container in containers if not hasattr( container, 'line' ) ])
 
+    titles = {
+        'kappab' : '#kappa_{b}',
+        'kappac' : '#kappa_{c}',
+        'ct'     : '#kappa_{t}',
+        'cg'     : '#kappa_{g}',
+        'cb'     : '#kappa_{b}',
+        }
+
 
     # ======================================
     # Make plot
 
     c.cd()
     c.Clear()
-    SetCMargins()
-
+    SetCMargins( TopMargin = 0.09 )
 
     base = GetPlotBase(
         xMin = xMin,
         xMax = xMax,
         yMin = yMin,
         yMax = yMax,
-        xTitle = xTitle,
-        yTitle = yTitle,
+        xTitle = titles.get( xTitle, xTitle ),
+        yTitle = titles.get( yTitle, yTitle ),
         )
     base.Draw('P')
 
@@ -1118,6 +1240,10 @@ def PlotMultipleScans(
         line1sigma.SetLineColor(14)
         line1sigma.Draw()
 
+
+    Commands.GetCMSLabel()
+    Commands.GetCMSLumi()
+
     SaveC( plotname )
 
 
@@ -1186,6 +1312,8 @@ def BasicMixedContourPlot(
         y_SM      = 1.,
         plotIndividualH2s = False,
         filterContours = True,
+        only1sigmaContours = False,
+        nLegendColumns = None,
         ):
 
     print '\nRunning BasicMixedContourPlot for \'{0}\''.format( plotname )
@@ -1196,12 +1324,13 @@ def BasicMixedContourPlot(
     for container in containers:
         attrs = container.ListAttributes()
 
-        for expectedAttr in [ 'H2', 'name' ]:
-            if not expectedAttr in attrs:
-                Commands.ThrowError(
-                    'Container misses mandatory attribute \'{0}\' (defined attributes: {1})'.format( expectedAttr, ', '.join(attrs) ),
-                    throwException = True
-                    )
+
+        # for expectedAttr in [ 'H2', 'name' ]:
+        #     if not expectedAttr in attrs:
+        #         Commands.ThrowError(
+        #             'Container misses mandatory attribute \'{0}\' (defined attributes: {1})'.format( expectedAttr, ', '.join(attrs) ),
+        #             throwException = True
+        #             )
 
         if not hasattr( container, 'color' ):
             container.color = 1
@@ -1211,13 +1340,22 @@ def BasicMixedContourPlot(
     # Calculate contours
 
     for container in containers:
-        print '\nGetting contours for {0}'.format( container.name )
-        container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
-        container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
+
+        if not hasattr( container, 'contours_1sigma' ):
+            print '\nGetting contours for {0}'.format( container.name )
+            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
+            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
 
         if filterContours:
             container.contours_1sigma = FilterContourHeuristic( container.contours_1sigma, container.xBestfit, container.yBestfit )
             container.contours_2sigma = FilterContourHeuristic( container.contours_2sigma, container.xBestfit, container.yBestfit )
+
+        if hasattr( container, 'bestfitPoint' ):
+            x_root = ROOT.Double(0.)
+            y_root = ROOT.Double(0.)
+            container.bestfitPoint.GetPoint( 0, x_root, y_root )
+            container.xBestfit = float(x_root)
+            container.yBestfit = float(y_root)
 
         print '  Bestfit:'
         print '  {0} = {1}'.format( xTitle, container.xBestfit )
@@ -1229,7 +1367,7 @@ def BasicMixedContourPlot(
 
     c.cd()
     c.Clear()
-    SetCMargins()
+    SetCMargins( TopMargin=0.08 )
 
 
     base = GetPlotBase(
@@ -1254,7 +1392,10 @@ def BasicMixedContourPlot(
         1 - c.GetRightMargin() - 0.01,
         c.GetBottomMargin() + 0.09
         )
+    ROOT.SetOwnership( leg, False )
     leg.SetNColumns( min( 3, len(containers) ) )
+    if not nLegendColumns is None:
+        leg.SetNColumns( nLegendColumns )
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
@@ -1267,25 +1408,27 @@ def BasicMixedContourPlot(
     TpointSM.Draw('PSAME')
 
     for container in containers:
-
-        for Tg in container.contours_1sigma:
-
+        for Tg_original in container.contours_1sigma:
+            Tg = Tg_original.Clone( 'contour_1sigma_' + GetUniqueRootName() )
             Tg.SetLineWidth(2)
             Tg.SetLineColor( container.color )
             Tg.SetLineStyle(1)
+            # Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
             Tg.Draw('CSAME')
-            if Tg == container.contours_1sigma[0]:
+            if Tg_original == container.contours_1sigma[0]:
                 Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
                 leg.AddEntry(
                     Tg.GetName(),
                     container.name if not hasattr( container, 'title' ) else container.title,
                     'l' )
+            ROOT.SetOwnership( Tg, False )
 
-        for Tg in container.contours_2sigma:
-            Tg.SetLineWidth(2)
-            Tg.SetLineColor( container.color )
-            Tg.SetLineStyle(2)
-            Tg.Draw('CSAME')
+        if not only1sigmaContours:
+            for Tg in container.contours_2sigma:
+                Tg.SetLineWidth(2)
+                Tg.SetLineColor( container.color )
+                Tg.SetLineStyle(2)
+                Tg.Draw('CSAME')
 
         Tpoint = ROOT.TGraph( 1, array( 'd', [container.xBestfit] ), array( 'd', [container.yBestfit] ) )
         ROOT.SetOwnership( Tpoint, False )
@@ -1298,41 +1441,147 @@ def BasicMixedContourPlot(
 
     leg.Draw()
 
+    Commands.GetCMSLabel()
+    Commands.GetCMSLumi()
+
+    ContourDummyLegend(
+        c.GetLeftMargin() + 0.01,
+        1. - c.GetTopMargin() - 0.1,
+        1. - c.GetRightMargin() - 0.01,
+        1. - c.GetTopMargin() - 0.01,
+        )
+
     SaveC( plotname )
 
 
     if plotIndividualH2s:
-
         for container in containers:
-
-            c.Clear()
-            SetCMargins(
-                LeftMargin   = 0.12,
-                RightMargin  = 0.10,
-                BottomMargin = 0.12,
-                TopMargin    = 0.09,
+            PlotSingle2DHistogram(
+                container,
+                xMin, xMax,
+                yMin, yMax,
+                xTitle, yTitle,
+                plotname,                
                 )
 
-            container.H2.Draw('COLZ')
 
-            container.H2.GetXaxis().SetRangeUser( xMin, xMax )
-            container.H2.GetYaxis().SetRangeUser( yMin, yMax )
-            container.H2.SetMaximum( 7. )
+#____________________________________________________________________
+def PlotSingle2DHistogram(
+        container,
+        xMin, xMax,
+        yMin, yMax,
+        xTitle, yTitle,
+        plotname,
+        doPNG=False, doROOT=False
+        ):
 
-            container.H2.GetXaxis().SetTitle( xTitle )
-            container.H2.GetYaxis().SetTitle( yTitle )
-            container.H2.GetXaxis().SetTitleSize(0.06)
-            container.H2.GetXaxis().SetLabelSize(0.05)
-            container.H2.GetYaxis().SetTitleSize(0.06)
-            container.H2.GetYaxis().SetLabelSize(0.05)
+    SetColorPalette()
 
-            for Tg in container.contours_1sigma: Tg.Draw('CSAME')
-            for Tg in container.contours_2sigma: Tg.Draw('CSAME')
-            container.bestfitPoint.Draw('PSAME')
+    c.Clear()
+    SetCMargins(
+        # LeftMargin   = 0.12,
+        RightMargin  = 0.10,
+        # BottomMargin = 0.12,
+        TopMargin    = 0.08,
+        )
 
-            c.Update()
+    container.H2.SetMaximum( 7. )
+    container.H2.Draw('COLZ')
 
-            SaveC( plotname + '_' + container.name )
+    # container.H2.GetXaxis().SetLimits( xMin, xMax )
+    container.H2.GetXaxis().SetRangeUser( xMin, xMax )
+    container.H2.GetYaxis().SetRangeUser( yMin, yMax )
+
+    container.H2.GetXaxis().SetTitle( xTitle )
+    container.H2.GetYaxis().SetTitle( yTitle )
+    container.H2.GetXaxis().SetTitleSize(0.06)
+    container.H2.GetXaxis().SetLabelSize(0.05)
+    container.H2.GetYaxis().SetTitleSize(0.06)
+    container.H2.GetYaxis().SetLabelSize(0.05)
+
+    for Tg in container.contours_1sigma:
+        Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
+        Tg.Draw('CSAME')
+    for Tg in container.contours_2sigma:
+        Tg.SetName( 'contour_2sigma_' + GetUniqueRootName() )
+        Tg.Draw('CSAME')
+
+    if hasattr( container, 'color' ):
+        container.bestfitPoint.SetMarkerColor(container.color)
+    container.bestfitPoint.Draw('PSAME')
+
+    c.Update()
+    c.RedrawAxis()
+
+    ContourDummyLegend(
+        c.GetLeftMargin() + 0.01,
+        1. - c.GetTopMargin() - 0.1,
+        1. - c.GetRightMargin() - 0.01,
+        1. - c.GetTopMargin() - 0.01,
+        )
+
+    Commands.GetCMSLabel()
+    Commands.GetCMSLumi()
+    SaveC( plotname + '_' + container.name, asPNG=doPNG, asROOT=doROOT )
+
+
+#____________________________________________________________________
+ContourDummyObjectsCreated = False
+globalDummies = []
+def ContourDummyLegend(
+        x1, y1, x2, y2
+        ):
+
+    global globalDummies
+    global ContourDummyObjectsCreated
+
+    if not ContourDummyObjectsCreated:
+        dummy1sigma = ROOT.TGraph( 1, array( 'f' , [-999.] ), array( 'f' , [-999.] )  )
+        dummy1sigma.SetLineWidth(2)
+        dummy1sigma.SetName('dummy1sigma')
+        ROOT.SetOwnership( dummy1sigma, False )
+
+        dummy2sigma = ROOT.TGraph( 1, array( 'f' , [-999.] ), array( 'f' , [-999.] )  )
+        dummy2sigma.SetLineWidth(2)
+        dummy2sigma.SetLineStyle(2)
+        dummy2sigma.SetName('dummy2sigma')
+        ROOT.SetOwnership( dummy2sigma, False )
+
+        dummySM = ROOT.TGraph( 1, array( 'f' , [-999.] ), array( 'f' , [-999.] )  )
+        dummySM.SetMarkerSize(2)
+        dummySM.SetMarkerStyle(21)
+        dummySM.SetMarkerColor( 12 )
+        dummySM.SetName('dummySM')
+        ROOT.SetOwnership( dummySM, False )
+
+        dummybestfit = ROOT.TGraph( 1, array( 'f' , [-999.] ), array( 'f' , [-999.] )  )
+        dummybestfit.SetMarkerSize(2)
+        dummybestfit.SetMarkerStyle(34)
+        dummybestfit.SetName('dummybestfit')
+        ROOT.SetOwnership( dummybestfit, False )
+
+        ContourDummyObjectsCreated = True
+
+        globalDummies.extend([
+            dummy1sigma,
+            dummy2sigma,
+            dummySM,
+            dummybestfit,
+            ])
+
+    for dummy in globalDummies:
+        dummy.Draw('PSAME')
+
+    leg2 = ROOT.TLegend( x1, y1, x2, y2 )
+    ROOT.SetOwnership( leg2, False )
+    leg2.SetBorderSize(0)
+    leg2.SetFillStyle(0)
+    leg2.SetNColumns(4)
+    leg2.AddEntry( 'dummy1sigma',  '1 #sigma', 'l' )
+    leg2.AddEntry( 'dummy2sigma',  '2 #sigma', 'l' )
+    leg2.AddEntry( 'dummybestfit', 'Bestfit', 'p' )
+    leg2.AddEntry( 'dummySM',      'SM', 'p' )
+    leg2.Draw()
 
 
 #____________________________________________________________________
@@ -1446,7 +1695,8 @@ def PlotCorrelationMatrix(
     Commands.GetCMSLabel()
     Commands.GetCMSLumi()
 
-    SaveC( 'corrMat_' + basename(container.corrRootFile).replace('/','').replace('higgsCombine_','').replace('higgsCombine','').replace('.root','') )
+    plotname = 'corrMat_' + basename(container.corrRootFile).replace('/','').replace('higgsCombine_','').replace('higgsCombine','').replace('.root','').replace('.','_')
+    SaveC( plotname )
 
     # Set back to default
     numpy.set_printoptions( precision=8, linewidth=75 )

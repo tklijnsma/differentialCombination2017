@@ -102,18 +102,26 @@ def FileFinder( **kwargs ):
 
         acceptancePerKey = []
         for key, value in kwargs.iteritems():
-            if value == '*':
-                if key in theoryFile:
+
+            if not key in theoryFile:
+                acceptedByThisKey = False
+            elif value == '*':
+                acceptedByThisKey = True
+            else:
+                valueInFile = Commands.ConvertStrToFloat(
+                    re.search( r'{0}_([\dpm]+)'.format( key), theoryFile ).group(1)
+                    )
+                if value == valueInFile or Commands.ConvertFloatToStr(value) == valueInFile:
                     acceptedByThisKey = True
                 else:
                     acceptedByThisKey = False
-            elif not(
-                    re.search( r'{0}_{1}\D'.format( key, value ), theoryFile )
-                    or re.search( r'{0}_{1}\D'.format( key, Commands.ConvertFloatToStr(value) ), theoryFile )
-                    ):
-                acceptedByThisKey = False
-            else:
-                acceptedByThisKey = True
+            # elif not(
+            #         re.search( r'{0}_{1}\D'.format( key, value ), theoryFile )
+            #         or re.search( r'{0}_{1}\D'.format( key, Commands.ConvertFloatToStr(value) ), theoryFile )
+            #         ):
+            #     acceptedByThisKey = False
+            # else:
+            #     acceptedByThisKey = True
 
             if verbose:
                 print '  Key = {0:10}, Value = {1:10}, Accepted = {2}'.format( key, value, acceptedByThisKey )
@@ -863,15 +871,15 @@ AgnieszkasFilenameDecoder = {
     'ratio_cg004ct15sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : 1.88 ,   'cg' : -0.04 },
     'ratio_cg005ct14sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : -3.67 ,  'cg' : -0.05 },
     'ratio_cg005ct15sw_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : -1.79 ,  'cg' : -0.05 },
-    'ratio_ctcb05_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cb' : -7.46 },
-    'ratio_ctcb08_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.8, 'cb' : -3.67 },
-    'ratio_ctcb09_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9, 'cb' : -1.79 },
-    'ratio_ctcb11_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1, 'cb' : 3.79 },
-    'ratio_ctcb12_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : 4.67 },
-    'ratio_ctcg01_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.1, 'cg' : 0.075 },
-    'ratio_ctcg05_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.5, 'cg' : 0.042 },
-    'ratio_ctcg15_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cg' : -0.042 },
-    'ratio_ctcg2_new'         : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 2.0, 'cg' : -0.083 },
+    'ratio_ctcb05_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 0.5, 'cb' : -7.46 },
+    'ratio_ctcb08_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 0.8, 'cb' : -3.67 },
+    'ratio_ctcb09_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 0.9, 'cb' : -1.79 },
+    'ratio_ctcb11_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 1.1, 'cb' : 3.79 },
+    'ratio_ctcb12_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 1.2, 'cb' : 4.67 },
+    'ratio_ctcg01_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 0.1, 'cg' : 0.075 },
+    'ratio_ctcg05_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 0.5, 'cg' : 0.042 },
+    'ratio_ctcg15_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 1.5, 'cg' : -0.042 },
+    'ratio_ctcg2_new'         : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 2.0, 'cg' : -0.083 },
     # 'SM_NLO'                  : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
     # 'SMmin_NLO'               : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
     # 'SMmax_NLO'               : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
@@ -887,11 +895,57 @@ AgnieszkasFilenameDecoder = {
     'HRes_mR2mF2.top'         : { 'firstColumnIsRatio' : False, 'muR' : 2.0, 'muF' : 2.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
     'HRes_mRhmF1.top'         : { 'firstColumnIsRatio' : False, 'muR' : 0.5, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
     'HRes_mRhmFh.top'         : { 'firstColumnIsRatio' : False, 'muR' : 0.5, 'muF' : 0.5, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    # 
+    # Dec 05: High range files
+    # 
+    'SMNNLOhpt'               : { 'firstColumnIsRatio' : False, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'SMNNLOmaxhpt'            : { 'firstColumnIsRatio' : False, 'muR' : 99.0, 'muF' : 99.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    'SMNNLOminhpt'            : { 'firstColumnIsRatio' : False, 'muR' : 99.0, 'muF' : 99.0, 'Q' : 1.0, 'ct' : 1.0, 'cb' : 1.0, 'cg' : 0.0 },
+    # 
+    'ratiovh_cbct_05_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 0.5, 'cb' : -7.46 },
+    'ratiovh_cbct_08_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 0.8, 'cb' : -3.67 },
+    'ratiovh_cbct_09_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 0.9, 'cb' : -1.79 },
+    'ratiovh_cbct_11_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 1.1, 'cb' : 3.79 },
+    'ratiovh_cbct_12_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.0, 'ct' : 1.2, 'cb' : 4.67 },
+    # 
+    'ratiovh_ctcg_01_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 0.1, 'cg' : 0.075 },
+    'ratiovh_ctcg_05_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 0.5, 'cg' : 0.042 },
+    'ratiovh_ctcg_15_new'     : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 1.5, 'cg' : -0.042 },
+    'ratiovh_ctcg_2_new'      : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 1.0, 'ct' : 2.0, 'cg' : -0.083 },
+    # 
+    'ratiovh_cg003ct12_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -2.98 ,  'cg' : -0.03 },
+    'ratiovh_cg003ct13_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -0.85 ,  'cg' : -0.03 },
+    'ratiovh_cg003ct14_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : 3.31 ,   'cg' : -0.03 },
+    'ratiovh_cg004ct12_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.2, 'cb' : -4.89 ,  'cg' : -0.04 },
+    'ratiovh_cg004ct13_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.3, 'cb' : -3.34 ,  'cg' : -0.04 },
+    'ratiovh_cg004ct15_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : 1.88 ,   'cg' : -0.04 },
+    'ratiovh_cg005ct14_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.4, 'cb' : -3.67 ,  'cg' : -0.05 },
+    'ratiovh_cg005ct15_new'   : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.5, 'cb' : -1.79 ,  'cg' : -0.05 },
+    # 
+    'ratiovh_ctdown_new'      : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 1.1 },
+    'ratiovh_ctup_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'ct' : 0.9 },
+    'ratiovh_cgdown_new'      : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : 0.008 },
+    'ratiovh_cgup_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cg' : -0.008 },
+    'ratiovh_cbdown_new'      : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : 4.0 },
+    'ratiovh_cbup_new'        : { 'firstColumnIsRatio' : True, 'muR' : 1.0, 'muF' : 1.0, 'Q' : 1.0, 'cb' : -2.0 },
     }
-
 
 #____________________________________________________________________
 def DumpContainerToFile_Top( container, prefix, outdir ):
+
+    # Check if ratios, crosssection and binBoundaries have expected lenghts
+    if not(
+        len(container.crosssection) == len(container.binBoundaries)-1
+        and len(container.ratios) == len(container.binBoundaries)-1
+        ):
+        Commands.ThrowError((
+            'Lists have unexpected lenghts. Found:'
+            '\n  file = {3}'
+            '\n  len(binBoundaries) = {0}'
+            '\n  len(crosssection)  = {1}'
+            '\n  len(ratios)        = {2}'
+            ).format( len(container.binBoundaries), len(container.crosssection), len(container.ratios), container.file )
+            )
 
     outname = prefix
     for coupling in [ 'ct', 'cg', 'cb' ]:
@@ -919,6 +973,7 @@ def DumpContainerToFile_Top( container, prefix, outdir ):
         w = lambda text: outFp.write( text + ' \n' )
 
         w( 'file={0}'.format(container.file) )
+        if hasattr( container, 'secondfile' ): w( 'secondfile={0}'.format(container.secondfile) )
 
         if hasattr( container, 'ct' ): w( 'ct={0}'.format(container.ct) )
         if hasattr( container, 'cg' ): w( 'cg={0}'.format(container.cg) )
@@ -930,6 +985,10 @@ def DumpContainerToFile_Top( container, prefix, outdir ):
 
         if hasattr( container, 'Q' ):  w( 'Q={0}'.format(container.Q) )
 
+        w( 'n_binBoundaries={0}'.format(len(container.binBoundaries)) )
+        w( 'n_crosssection={0}'.format(len(container.crosssection)) )
+        w( 'n_ratios={0}'.format(len(container.ratios)) )
+
         w( 'binBoundaries={0}'.format( ','.join(map( str, container.binBoundaries )) ) )
         w( 'crosssection={0}'.format( ','.join(map( str, container.crosssection )) ) )
         if hasattr( container, 'binCenters' ): w( 'binCenters={0}'.format( ','.join(map( str, container.binCenters )) ) )
@@ -937,6 +996,8 @@ def DumpContainerToFile_Top( container, prefix, outdir ):
 
 
 #____________________________________________________________________
+faultyBinCenters = [ 401., 410., 420., 430., 440., 450., 460., 470., 480., 490., 500., 510., 520., 530., 540., 550., 560., 570., 580., 590., 600., 610., 620., 630., 640., 650., 660., 670., 680., 690., 700., 710., 720., 730., 740., 750., 760., 770., 780., 790. ]
+correctedBinCenters = [ 405., 415., 425., 435., 445., 455., 465., 475., 485., 495., 505., 515., 525., 535., 545., 555., 565., 575., 585., 595., 605., 615., 625., 635., 645., 655., 665., 675., 685., 695., 705., 715., 725., 735., 745., 755., 765., 775., 785., 795. ]
 def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=False ):
     # Read lines
     with open( theoryFile, 'r' ) as theoryFp:
@@ -984,6 +1045,14 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
         ratios = []
         xss    = []
 
+        # Check for the faulty bin centers
+        correctingForFaultyBinCenters = False
+        binCenters = [ float(line.split()[0]) for line in lines ]
+        if binCenters == faultyBinCenters:
+            Commands.Warning( 'Correcting faulty bin centers to corrected bin centers' )
+            getcorrectedpt = lambda pt: correctedBinCenters[faultyBinCenters.index(pt)]
+            correctingForFaultyBinCenters = True
+
         for line in lines:
 
             components = line.split()
@@ -992,12 +1061,14 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
                 print '    Assuming the first column is a RATIO'
                 pt         = float(components[0])
                 ratio      = float(components[1])
+                if correctingForFaultyBinCenters: pt = getcorrectedpt(pt)
                 SMxs = SM.crosssection[ SM.pts.index(pt) ]
                 xs   = SMxs * ratio
             else:
                 print '    Assuming the first column is a CROSS SECTION - ALSO DIVIDING BY 2.27!!'
                 pt         = float(components[0])
                 xs         = float(components[1]) / 2.27
+                if correctingForFaultyBinCenters: pt = getcorrectedpt(pt)
                 SMxs  = SM.crosssection[ SM.pts.index(pt) ]
                 ratio = xs / SMxs
 
@@ -1010,8 +1081,7 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
             xss.append( xs )
 
         return pts, xss, ratios
-
-    
+   
 
 
 #____________________________________________________________________
@@ -1104,264 +1174,139 @@ def CreateDerivedTheoryFiles_Top(
         DumpContainerToFile_Top( container, prefix='Top', outdir=outdir )
 
 
-########################################
-# Older
-########################################
+
+
 
 #____________________________________________________________________
-def CreateDerivedTheoryFiles_Agnieszka_OLD(
-    pattern = None
-    ):
+def CreateDerivedTheoryFiles_Top_highPt(
+        verbose = True,
+        ):
 
-    outdir = 'derivedTheoryFiles_{0}'.format( datestr )
-    if not isdir( outdir ): os.makedirs( outdir )
+    SMfile = 'suppliedInput/fromAgnieszka/HRes_SMEFT_May16/SM_NNLO'
 
-
-    # ======================================
-    # Determine for which files to create the derived files
-
-    theories = []
-    for ratio in physicsFileDict.keys():
-        # print 'Trying pattern \'{0}\' on \'{1}\''.format( pattern, ratio )
-        if re.search( pattern, ratio ):
-            theories.append( ratio  )
-            # print re.search( pattern, ratio ).group(1)
-        # else:
-        #     print '    No match'
-
-    if len(theories) == 0:
-        Commands.ThrowError( 'Pattern \'{0}\' does not match any know keys'.format(pattern) )
-        return
+    lowRangeFiles = glob( 'suppliedInput/fromAgnieszka/SMEFTscaling_May16/*' )
+    highRangeFiles = (
+        glob( 'suppliedInput/fromAgnieszka/ratio400800_Dec05/ratiovh_cbct_*_new' )
+        + glob( 'suppliedInput/fromAgnieszka/ratio400800_Dec05/ratiovh_ctcg_*_new' )
+        )
 
 
     # ======================================
-    # First get the SM predictions; need to read at least one theory file to know the binning
+    # Make SM variation
 
-    dummymu, binBoundaries, binWidths, binCenters = ReadTheoryFile( physicsFileDict[theories[0]], applyHeuristic=True )
+    SM = Container()
+    SM.file = SMfile
 
-    SM_NNLO = ReadTheoryFile( physicsFileDict['SM_NNLO'], applyHeuristic=True )[0]
-    print '[info] Multiplying list by 1/2.27 (1/(HggBR*1000, from Agnieszka\'s plotting script)'
-    SM_NNLO = [ 1/2.27 * i for i in SM_NNLO ]
-    print '[fixme] Cutting point >400GeV away for now'
-    SM_NNLO = SM_NNLO[:len(binCenters)+1]  # Results go up to 800
+    binCenters, crosssection = ReadLinesOfTheoryFile_Top( SM.file, isSMFile=True, verbose=verbose )
+    newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+        binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
 
-    SM_NNLO_upRatio   = ReadTheoryFile( physicsFileDict['SM_NNLO_upRatio'], applyHeuristic=True )[0]
-    SM_NNLO_upRatio   = SM_NNLO_upRatio[:len(binCenters)+1]  # Results go up to 800
-    SM_NNLO_downRatio = ReadTheoryFile( physicsFileDict['SM_NNLO_downRatio'], applyHeuristic=True )[0]
-    SM_NNLO_downRatio = SM_NNLO_downRatio[:len(binCenters)+1]  # Results go up to 800
+    SM.pts           = binCenters
+    SM.binCenters    = deepcopy( newBinCenters )
+    SM.binBoundaries = deepcopy( binBoundaries )
+    SM.crosssection  = deepcopy( crosssection )
+    SM.ratios        = [ 1.0 for xs in SM.crosssection ]
 
-    SM_NNLO_up   = [ i*j for i,j in zip( SM_NNLO_upRatio, SM_NNLO ) ]
-    SM_NNLO_down = [ i*j for i,j in zip( SM_NNLO_downRatio, SM_NNLO ) ]
-
-    # SM_NNLO has the same bins as coupling variation files
-    # No rebinning necessary now, but the code below does the trick
-
-    # # Read standard model values in original binning
-    # SM_NNLO_originalValues, SM_NNLO_originalBinBoundaries = ReadTheoryFile(
-    #     physicsFileDict['SM_NNLO'], applyHeuristic=True )[0:2]
-    
-    # # Get the rebinned SM values w.r.t. the binning that was used for the scaling of couplings
-    # SM_NNLO = Rebin(
-    #     SM_NNLO_originalBinBoundaries, SM_NNLO_originalValues,
-    #     binBoundaries,
-    #     verbose=True
-    #     )
-
-    outname = join( outdir, 'SM_NNLO.txt' )
-    with open( outname, 'w' ) as outFp:
-        w = lambda text: outFp.write( text + '\n' )
-        w( 'binBoundaries={0}'.format( ','.join( map(str, binBoundaries ) ) ) )
-        w( 'crosssection={0}'.format( ','.join( map(str, SM_NNLO ) ) ) )
-        w( 'crosssection_up={0}'.format( ','.join( map(str, SM_NNLO_up ) ) ) )
-        w( 'crosssection_down={0}'.format( ','.join( map(str, SM_NNLO_down ) ) ) )
+    for key, value in AgnieszkasFilenameDecoder[basename(SM.file).replace('/','')].iteritems():
+        setattr( SM, key, value )
 
 
     # ======================================
-    # Read files and determine binning
+    # Finding pairs of low and high range files
 
-    knownCouplings = [ 'ct', 'cb', 'cg' ]
+    def f(theoryFile):
+        if verbose:
+            print '\n\n' + '-'*80
+            print 'Processing {0}'.format( theoryFile )
+            print '\n'
 
-    for theory in theories:
-        mus = ReadTheoryFile( physicsFileDict[theory], applyHeuristic=True )[0]
-        crosssection = [ mu * SMXS for mu, SMXS in zip( mus, SM_NNLO ) ]
-
-        couplings = {}
-        for coupling in knownCouplings:
-            match = re.search( r'{0}_([mp\d]+)'.format(coupling), theory )
-            if match:
-                couplings[coupling] = float(match.group(1).replace('p','.').replace('m','-'))
-
-
-        outname = join( outdir, theory + '.txt' )
-        with open( outname, 'w' ) as outFp:
-            w = lambda text: outFp.write( text + '\n' )
-
-            for coupling in knownCouplings:
-                match = re.search( r'{0}_([mp\d]+)'.format(coupling), theory )
-                if match:
-                    couplingValue = float(match.group(1).replace('p','.').replace('m','-'))
-                    w( '{0}={1}'.format( coupling, couplingValue ) )
-
-            w( 'binBoundaries={0}'.format( ','.join( map(str, binBoundaries ) ) ) )
-            w( 'crosssection={0}'.format( ','.join( map(str, crosssection ) ) ) )
-            w( 'ratios={0}'.format( ','.join( map(str, mus ) ) ) )
-
-
-
-def LoadTheoryCurves( pattern=None ):
-
-    # theoryPath = lambda filename: join( 'suppliedInput/numbersFromAgnieszka', filename )
-
-    divlist  = lambda l1, l2: map( operator.truediv, l1, l2 )
-    prodlist = lambda l1, l2: map( operator.mul, l1, l2 )
-
-    pt_SM_NNLO, SM_NNLO, ratio_SM_NNLO_down, ratio_SM_NNLO_up = LoadStandardModelCurves(
-        ptAxis=ReadTheoryFile( TheoryPath('ratio_ctup_new') )[0] )
-
-
-    if not pattern:
-        doRatios = [
-            # 'ct_1p2_cb_m2p98_cg_m0p03',
-            # 'ct_1p3_cb_m0p85_cg_m0p03',
-            # 'ct_1p4_cb_3p31_cg_m0p03',
-            # 'ct_1p2_cb_m4p89_cg_m0p04',
-            # 'ct_1p3_cb_m3p34_cg_m0p04',
-            # 'ct_1p5_cb_1p88_cg_m0p04',
-            # 'ct_1p4_cb_m3p67_cg_m0p05',
-            # 'ct_1p5_cb_m1p79_cg_m0p05',
-            'ct_0p1_cg_0p075',
-            'ct_0p5_cg_0p042',
-            'ct_1p5_cg_m0p042',
-            'ct_2p0_cg_m0p083',
-            ]
-    
-    elif pattern == 'SM':
-        return pt_SM_NNLO, SM_NNLO, ratio_SM_NNLO_down, ratio_SM_NNLO_up
-
-    else:
-        doRatios = []
-        for ratio in physicsFileDict.keys():
-            # print 'Trying pattern \'{0}\' on \'{1}\''.format( pattern, ratio )
-            if re.search( pattern, ratio ):
-                doRatios.append( ratio )
-                # print re.search( pattern, ratio ).group(1)
-            # else:
-            #     print '    No match'
-
-        if len(doRatios) == 0:
-            Commands.ThrowError( 'Pattern \'{0}\' does not match any know keys'.format(pattern) )
+        shortFileName = basename(theoryFile).replace('/','')
+        if not shortFileName in AgnieszkasFilenameDecoder:
+            print 'Skipping \'{0}\''.format(shortFileName)
             return
 
+        container = Container()
+        container.file = theoryFile
 
-    Tgs = []
-    for ratioKey in doRatios:
+        binCenters, crosssection, ratios = ReadLinesOfTheoryFile_Top( container.file, verbose, SM=SM )
 
-        pt_variation, ratio = ReadTheoryFile( physicsFileDict[ratioKey] )
+        newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+            binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
 
-        Tg = GetTheoryTGraph(
-            ratioKey,
-            pt_variation, ratio,
-            prodlist( ratio_SM_NNLO_down, ratio ),
-            prodlist( ratio_SM_NNLO_up, ratio )
-            )
+        container.binCenters    = newBinCenters
+        container.binBoundaries = binBoundaries
+        container.crosssection  = crosssection
+        container.ratios        = ratios
 
-        Tg.SM            = SM_NNLO
-        Tg.SM_up_ratio   = ratio_SM_NNLO_up
-        Tg.SM_down_ratio = ratio_SM_NNLO_down
+        # Load values of coupling into container
+        for key, value in AgnieszkasFilenameDecoder[shortFileName].iteritems():
+            setattr( container, key, value )
 
-        Tgs.append( Tg )
-
-
-    BasicTheoryPlot(Tgs)
-    return Tgs
+        return container
 
 
+    lowRangeContainers = [ f(theoryFile) for theoryFile in lowRangeFiles ]
+    highRangeContainers = [ f(theoryFile) for theoryFile in highRangeFiles ]
 
-def LoadStandardModelCurves(
-    ptAxis = None
-    ):
+    lowhighPairs = []
+    for lowContainer in lowRangeContainers:
+        for highContainer in highRangeContainers:
+            try:
+                if (
+                    lowContainer.ct == highContainer.ct
+                    and lowContainer.cg == highContainer.cg
+                    and lowContainer.cb == highContainer.cb
+                    ):
+                    print 'Matched {0} with {1}'.format( lowContainer.file, highContainer.file )
+                    print '   ( ct = {0}, cg = {1}, cb = {2} )'.format( lowContainer.ct, lowContainer.cg, lowContainer.cb )
+                    break
+            except AttributeError:
+                print 'File {0} or {1} has a coupling problem'.format( lowContainer.file, highContainer.file )
+                raise
+        else:
+            print 'Could not find matching high range container for {0}'.format( lowContainer.file )
+            continue
 
-    # if not ptAxis:
-    #     # Read 1 file to get the pt axis of the variation
-    #     ptAxis, ratio_ct_1p1    = ReadTheoryFile( TheoryPath('ratio_ctup_new') )
-
-    # Read the values of the SM cross sections
-    pt_SM_NLO,  SM_NLO             = ReadTheoryFile( TheoryPath('SM_NLO') )
-    pt_SM_NLO,  ratio_SM_NLO_down  = ReadTheoryFile( TheoryPath('SMmin_NLO') )
-    pt_SM_NLO,  ratio_SM_NLO_up    = ReadTheoryFile( TheoryPath('SMmax_NLO') )
-    pt_SM_NNLO, SM_NNLO            = ReadTheoryFile( TheoryPath('SM_NNLO') )
-    pt_SM_NNLO, ratio_SM_NNLO_down = ReadTheoryFile( TheoryPath('SMmin_NNLO') )
-    pt_SM_NNLO, ratio_SM_NNLO_up   = ReadTheoryFile( TheoryPath('SMmax_NNLO') )
-
-    if not ptAxis == None:
-        SM_NNLO            = MapFineToCoarse( pt_SM_NNLO, SM_NNLO, ptAxis )
-        ratio_SM_NNLO_down = MapFineToCoarse( pt_SM_NNLO, ratio_SM_NNLO_down, ptAxis )
-        ratio_SM_NNLO_up   = MapFineToCoarse( pt_SM_NNLO, ratio_SM_NNLO_up, ptAxis )
-        pt_SM_NNLO         = ptAxis
-
-    return pt_SM_NNLO, SM_NNLO, ratio_SM_NNLO_down, ratio_SM_NNLO_up
-
+        lowhighPairs.append( [ lowContainer, highContainer ] )
 
 
-def ReadTheoryFile(
-    theoryFile,
-    applyHeuristic=False,
-    ):
+    outdir = 'derivedTheoryFiles_{0}_TopHighPt'.format( datestr )
+    if not isdir( outdir ): os.makedirs( outdir )
 
-    with open( theoryFile, 'r' ) as theoryFp:
-        lines = [ l.strip() for l in theoryFp.readlines() if not len(l.strip())==0 and not l.strip().startswith('#') ]
+    print '\n'
+    print 'SM.file:'
+    print SM.file
+    print 'SM.ratios ({0}):'.format( len(SM.ratios) )
+    print SM.ratios
+    print 'SM.crosssection ({0}):'.format( len(SM.crosssection) )
+    print SM.crosssection
 
-    binCenters = []
-    mu = []
-    for line in lines:
-        components = line.split()
-        binCenters.append( float(components[0]) )
-        mu.append( float(components[1]) )
+    print '\n' + '='*80
+    for low, high in lowhighPairs:
 
-    if applyHeuristic:
-        binCenters, binBoundaries, binWidths = BinningHeuristic( binCenters )
-        return mu, binBoundaries, binWidths, binCenters
-    else:
-        return binCenters, mu
+        print '\nMerging low {0} with high {1}'.format( low.file, high.file )
 
+        merged = deepcopy( high )
+        merged.secondfile = low.file
 
+        assert low.binBoundaries[-1] == high.binBoundaries[0]
+        merged.binBoundaries = low.binBoundaries[:-1] + high.binBoundaries
+        merged.crosssection  = low.crosssection + high.crosssection
+        merged.ratios         = [ xs / SMxs if not SMxs == 0. else 0. for xs, SMxs in zip( merged.crosssection, SM.crosssection ) ]
 
+        # print len(merged.binBoundaries)
+        # print merged.binBoundaries
+        # print len(merged.crosssection)
+        # print merged.crosssection
 
-def TheoryPath( filename ):
-    return join( 'suppliedInput/theory', filename )
+        # print
+        # print len(SM.binBoundaries)
+        # print SM.binBoundaries
+        # print len(SM.crosssection)
+        # print SM.crosssection
 
-physicsFileDict = {
-    'ct_1p1'                   : TheoryPath( 'ratio_ctup_new' ),
-    'ct_0p9'                   : TheoryPath( 'ratio_ctdown_new' ),
-    'cg_0p008'                 : TheoryPath( 'ratio_cgup_new' ),
-    'cg_m0p008'                : TheoryPath( 'ratio_cgdown_new' ),
-    'cb_4p0'                   : TheoryPath( 'ratio_cbup_new' ),
-    'cb_m2p0'                  : TheoryPath( 'ratio_cbdown_new' ),
-    'ct_1p2_cb_m2p98_cg_m0p03' : TheoryPath( 'ratio_cg003ct12_new' ),
-    'ct_1p3_cb_m0p85_cg_m0p03' : TheoryPath( 'ratio_cg003ct13sw_new' ),
-    'ct_1p4_cb_3p31_cg_m0p03'  : TheoryPath( 'ratio_cg003ct14sw_new' ),
-    'ct_1p2_cb_m4p89_cg_m0p04' : TheoryPath( 'ratio_cg004ct12sw_new' ),
-    'ct_1p3_cb_m3p34_cg_m0p04' : TheoryPath( 'ratio_cg004ct13sw_new' ),
-    'ct_1p5_cb_1p88_cg_m0p04'  : TheoryPath( 'ratio_cg004ct15sw_new' ),
-    'ct_1p4_cb_m3p67_cg_m0p05' : TheoryPath( 'ratio_cg005ct14sw_new' ),
-    'ct_1p5_cb_m1p79_cg_m0p05' : TheoryPath( 'ratio_cg005ct15sw_new' ),
-    'ct_0p5_cb_m7p46'          : TheoryPath( 'ratio_ctcb05_new' ),
-    'ct_0p8_cb_m3p67'          : TheoryPath( 'ratio_ctcb08_new' ),
-    'ct_0p9_cb_m1p79'          : TheoryPath( 'ratio_ctcb09_new' ),
-    'ct_1p1_cb_3p79'           : TheoryPath( 'ratio_ctcb11_new' ),
-    'ct_1p2_cb_4p67'           : TheoryPath( 'ratio_ctcb12_new' ),
-    'ct_0p1_cg_0p075'          : TheoryPath( 'ratio_ctcg01_new' ),
-    'ct_0p5_cg_0p042'          : TheoryPath( 'ratio_ctcg05_new' ),
-    'ct_1p5_cg_m0p042'         : TheoryPath( 'ratio_ctcg15_new' ),
-    'ct_2p0_cg_m0p083'         : TheoryPath( 'ratio_ctcg2_new' ),
-
-    'SM_NLO'                   : TheoryPath( 'SM_NLO' ),
-    'SM_NLO_downRatio'         : TheoryPath( 'SMmin_NLO' ),
-    'SM_NLO_upRatio'           : TheoryPath( 'SMmax_NLO' ),
-    'SM_NNLO'                  : TheoryPath( 'SM_NNLO' ),
-    'SM_NNLO_downRatio'        : TheoryPath( 'SMmin_NNLO' ),
-    'SM_NNLO_upRatio'          : TheoryPath( 'SMmax_NNLO' ),
-    }
+        DumpContainerToFile_Top( merged, prefix='TopHighPt', outdir=outdir )
+    DumpContainerToFile_Top( SM, prefix='TopHighPt', outdir=outdir )
 
 
 

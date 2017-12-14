@@ -77,7 +77,7 @@ class OutputContainer(Container):
 
         if self.xAreBinBoundaries:
             if len(xValues)-1 > len(yValues):
-                print 'More bins found than y-values; cutting away last bins'
+                Commands.Warning( 'Found len(xValues) = {0}, len(yValues) = {1}; need to limit number of bins to make a TGraph'.format( len(xValues), len(yValues) ) )
                 xValues = xValues[:len(yValues)+1]
             elif len(xValues)-1 < len(yValues):
                 Commands.ThrowError(

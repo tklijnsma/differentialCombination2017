@@ -376,6 +376,12 @@ def main( args ):
         combination.SMcrosssections = LatestPaths.obs_ptjet.crosssection_over_binwidth()
         containers.append(combination)
 
+        Commands.Warning( 'Skipping first bin (should be the underflow)' )
+        for container in containers:
+            container.POIs = container.POIs[1:]
+            container.Scans = container.Scans[1:]
+            container.SMcrosssections = container.SMcrosssections[1:]
+
         PlotCommands.PlotSpectraOnTwoPanel(
             'twoPanel_ptjetSpectrum',
             containers,
@@ -383,7 +389,7 @@ def main( args ):
             yTitleTop = '#Delta#sigma/#Deltap_{T}^{jet} (pb/GeV)',
             # yMinLimit = 0.07,
             yMaxExternalTop = 10,
-            xMinExternal = 0.0,
+            xMinExternal = 30.0,
             # yMinLimit    = 0.1
             )
 

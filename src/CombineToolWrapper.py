@@ -200,6 +200,10 @@ class CombineScan(Container):
             # ======================================
             # Make sure there is a fastscan and determine accepted points
 
+            # Now remove any overwriting of PhysicsModelParameters
+            Commands.Warning( 'Deleting any previously PhysicsModelParameters (They will be read from the postfit)' )
+            self.PhysicsModelParameters = []
+
             if self.fastscanRootFile is None:
                 self.Chapter( 'No fastscanRootFile was given - Creating fastscanRootFile' )
                 self.fastscanRootFile = self.DetermineRelevantPointsFromFastScan()
@@ -308,6 +312,9 @@ class CombineScan(Container):
             elif not isfile(self.datacard):
                 Commands.ThrowError( '{0} does not exist'.format(self.datacard) )
             self.datacard = abspath(self.datacard)
+
+            if self.asimov and len(self.PhysicsModelParameters) == 0:
+                Commands.ThrowError( 'PhysicsModelParameters HAS to be set when running on asimov, otherwise behavior is unspecfied!!' )
 
             if self.name is None:
                 self.name = basename(self.datacard).replace('/','').replace('.root','')

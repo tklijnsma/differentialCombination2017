@@ -79,6 +79,7 @@ def main():
     parser.add_argument( '--hgg',   action='store_true' )
 
     parser.add_argument( '--saveroot',   action='store_true' )
+    parser.add_argument( '--savepng',   action='store_true' )
 
     args = parser.parse_args()
 
@@ -96,6 +97,8 @@ def main():
 
     if args.saveroot:
         TheoryCommands.SaveAsRoot()
+    if args.savepng:
+        TheoryCommands.SaveAsPng()
 
 
     ########################################
