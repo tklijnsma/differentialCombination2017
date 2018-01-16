@@ -9,7 +9,12 @@ Thomas Klijnsma
 
 import os, pexpect, subprocess
 from os.path import *
-import AuthorizationAgent.AuthorizationAgent as AuthorizationAgent
+
+try:
+    import AuthorizationAgent.AuthorizationAgent as AuthorizationAgent
+    AUTO_PASSWORDS = True
+except ImportError:
+    AUTO_PASSWORDS = False
 
 
 ########################################
@@ -22,12 +27,16 @@ def main():
     parser = argparse.ArgumentParser()
     # parser.add_argument( '--string', type=str, default='default', help='default string' )
     parser.add_argument( '--pngs', action='store_true', help='boolean')
+    parser.add_argument( '--typePassword', action='store_true', help='boolean')
     # parser.add_argument( '--list', metavar='N', type=str, nargs='+', help='list of strings' )
     args = parser.parse_args()
 
+    if args.typePassword:
+        global AUTO_PASSWORDS
+        AUTO_PASSWORDS = False
 
     www_onlxplus = '/afs/cern.ch/user/t/tklijnsm/www/'
-    plotdir_onlxplus = join( www_onlxplus, 'differentials2017/ptCombination_v2' )
+    plotdir_onlxplus = join( www_onlxplus, 'differentials2017/ptCombination_v3' )
     if plotdir_onlxplus.endswith('/'): plotdir_onlxplus = plotdir_onlxplus[:-1]
 
 
@@ -57,9 +66,10 @@ def main():
     # executeCommand( sshcmd )
 
 
-
-
 def executeCommandWithPassword( cmd, expectString='Password:', verbose=False ):
+    if not AUTO_PASSWORDS:
+        return executeCommand( cmd, getOutput=True )
+
     child = pexpect.spawn( cmd )
     child.timeout = 300
     if verbose: print 'Waiting for expected line \'{0}\'...'.format( expectString )
