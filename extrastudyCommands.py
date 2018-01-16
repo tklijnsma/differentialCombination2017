@@ -15,6 +15,7 @@ from copy import deepcopy
 from array import array
 
 import LatestPaths
+import LatestBinning
 
 sys.path.append('src')
 import Commands
@@ -70,6 +71,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--FitBR_t2ws',                              action=CustomAction )
     parser.add_argument( '--FitBR_bestfit',                           action=CustomAction )
     parser.add_argument( '--FitBR_scan',                              action=CustomAction )
+    parser.add_argument( '--FitBR_scan_crossCheck',                   action=CustomAction )
     parser.add_argument( '--FitBR_plot',                              action=CustomAction )
 
     parser.add_argument( '--TotalXS_t2ws',                            action=CustomAction )
@@ -671,7 +673,7 @@ def main( args ):
 
         if USE_GLOBAL_SCALES:
             Commands.BasicT2WSwithModel(
-                LatestPaths.card_combined_smH_PTH,
+                LatestPaths.card_combined_INC,
                 'FitBRModel.py',
                 extraOptions = extraOptions,
                 modelName    = 'fitGlobalBRModel',
@@ -679,6 +681,7 @@ def main( args ):
                 )
 
         else:
+
             Commands.BasicT2WSwithModel(
                 LatestPaths.card_combined_smH_PTH,
                 'FitBRModel.py',
@@ -687,6 +690,34 @@ def main( args ):
                     ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
                     ],
                 )
+
+            Commands.BasicT2WSwithModel(
+                LatestPaths.card_combined_smH_NJ,
+                'FitBRModel.py',
+                extraOptions = extraOptions,
+                smartMaps    = [
+                    ( r'.*/smH_NJ_([\d\_GTLEpm]+)', r'r_smH_NJ_\1[1.0,-1.0,4.0]' )
+                    ],
+                )
+
+            Commands.BasicT2WSwithModel(
+                LatestPaths.card_combined_smH_YH,
+                'FitBRModel.py',
+                extraOptions = extraOptions,
+                smartMaps    = [
+                    ( r'.*/smH_YH_([\d\_GTLEpm]+)', r'r_smH_YH_\1[1.0,-1.0,4.0]' )
+                    ],
+                )
+
+            Commands.BasicT2WSwithModel(
+                LatestPaths.card_combined_smH_PTJ,
+                'FitBRModel.py',
+                extraOptions = extraOptions,
+                smartMaps    = [
+                    ( r'.*/smH_PTJ_([\d\_GT]+)', r'r_smH_PTJ_\1[1.0,-1.0,4.0]' )
+                    ],
+                )
+
 
     #____________________________________________________________________
     if args.FitBR_bestfit:
@@ -794,158 +825,237 @@ def main( args ):
             )
 
 
+    if args.FitBR_scan_crossCheck:
+
+        datacards = [
+            LatestPaths.ws_ratio_of_BRs_NJ,
+            LatestPaths.ws_ratio_of_BRs_PTJ,
+            LatestPaths.ws_ratio_of_BRs_YH,
+            LatestPaths.ws_ratio_of_BRs_PTH,
+            LatestPaths.ws_ratio_of_BRs_globalScales,
+            ]
+
+        ASIMOV = ( True if args.asimov else False )
+
+        ratio_BR_hgg_hzz_ranges = [ 0.03, 0.16 ]
+
+        jobDirectory = 'out/Scan_ratioOfBRs_{0}'.format( datestr )
+        if ASIMOV: jobDirectory += '_asimov'
+
+        nPoints = 42
+        nPointsPerJob = 3
+        queue = 'short.q'
+
+        for datacard in datacards:
+
+            actualJobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+
+            extraOptions = [
+                '-P ratio_BR_hgg_hzz',
+                '--setPhysicsModelParameterRanges ratio_BR_hgg_hzz={0},{1}'.format( ratio_BR_hgg_hzz_ranges[0], ratio_BR_hgg_hzz_ranges[1] ),
+                # '--saveSpecifiedFunc {0}'.format(','.join(
+                #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                '--squareDistPoiStep',
+                ]
+
+            yieldParameterSets = [ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ]
+            if len(yieldParameterSets) > 0:
+                extraOptions.append( '--setPhysicsModelParameters {0}'.format( ','.join(yieldParameterSets) ) )
+
+            Commands.MultiDimCombineTool(
+                datacard,
+                nPoints       = nPoints,
+                nPointsPerJob = nPointsPerJob,
+                queue         = queue,
+                notOnBatch    = False,
+                jobDirectory  = actualJobDirectory,
+                fastscan      = False,
+                asimov        = ASIMOV,
+                jobPriority   = 0,
+                extraOptions  = extraOptions
+                )
+
+
     if args.FitBR_plot:
 
-
-        # USE_GLOBAL_SCALES = True
-        USE_GLOBAL_SCALES = False
-
-        if USE_GLOBAL_SCALES:
-            scanRootFiles = glob( LatestPaths.scan_ratioOfBRs_globalScales + '/*.root' )
+        if args.asimov:
+            scanDirs = [
+                LatestPaths.scan_ratioOfBRs_NJ_asimov,
+                LatestPaths.scan_ratioOfBRs_PTJ_asimov,
+                LatestPaths.scan_ratioOfBRs_YH_asimov,
+                LatestPaths.scan_ratioOfBRs_PTH_asimov,
+                LatestPaths.scan_ratioOfBRs_INC_asimov,
+                ]
         else:
-            scanRootFiles = glob( LatestPaths.scan_ratioOfBRs + '/*.root' )
-        
-        
-        scanContainer = OutputInterface.OutputContainer()
+            scanDirs = [
+                LatestPaths.scan_ratioOfBRs_NJ,
+                LatestPaths.scan_ratioOfBRs_PTJ,
+                LatestPaths.scan_ratioOfBRs_YH,
+                LatestPaths.scan_ratioOfBRs_PTH,
+                LatestPaths.scan_ratioOfBRs_INC,
+                ]
 
-        x_unfiltered, y_unfiltered = TheoryCommands.BasicReadScan(
-            scanRootFiles,
-            xAttr = 'ratio_BR_hgg_hzz',
-            yAttr = 'deltaNLL',
-            )
+        varNames = [
+            'NJ',
+            'PTJ',
+            'YH',
+            'PTH',
+            'INC',
+            ]
 
-        scanContainer.x = []
-        scanContainer.y = []
-        for x, y in zip( x_unfiltered, y_unfiltered ):
-            if (
-                x > -10.0 and x < 10.
-                and
-                y > -10.0 and y < 10.
-                ):
-                scanContainer.x.append( x )
-                scanContainer.y.append( y )
+        for scanDir, varName in zip( scanDirs, varNames ):
 
+            # if USE_GLOBAL_SCALES:
+            #     scanRootFiles = glob( LatestPaths.scan_ratioOfBRs_globalScales + '/*.root' )
+            # else:
+            #     scanRootFiles = glob( LatestPaths.scan_ratioOfBRs + '/*.root' )
+            
+            scanRootFiles = glob( scanDir + '/*.root' )
+            
+            scanContainer = OutputInterface.OutputContainer()
 
-        # Do uncertainty determination before scaling
-        # FindMinimaAndErrors expects deltaNLL, not 2*deltaNLL
-        scanContainer.extrema = PhysicsCommands.FindMinimaAndErrors( scanContainer.x, scanContainer.y, returnContainer=True )
+            x_unfiltered, y_unfiltered = TheoryCommands.BasicReadScan(
+                scanRootFiles,
+                xAttr = 'ratio_BR_hgg_hzz',
+                yAttr = 'deltaNLL',
+                )
 
-        print '[info] Multiplying by 2: deltaNLL --> chi^2'
-        scanContainer.y = [ 2.*y for y in scanContainer.y ]
-
-        scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
-        scanContainer.Tg.SetMarkerStyle(8)
-        scanContainer.Tg.SetMarkerSize(0.8)
-
-
-        # ======================================
-        # Make plot
-
-        c.Clear()
-        SetCMargins( TopMargin=0.09 )
-
-        yMinAbs = min( scanContainer.y )
-        yMaxAbs = max( scanContainer.y )
-        # yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
-        yMin = 0.0
-        # yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
-        yMax = 5.0
-
-        xMin = min( scanContainer.x )
-        xMax = max( scanContainer.x )
-
-        base = GetPlotBase(
-            xMin = xMin,
-            xMax = xMax,
-            yMin = yMin,
-            yMax = yMax,
-            xTitle = 'BR_{H #rightarrow #gamma#gamma} / BR_{H #rightarrow ZZ}',
-            # yTitle = '#Delta NLL',
-            yTitle = '2#DeltaNLL',
-            )
-        base.Draw('P')
+            scanContainer.x = []
+            scanContainer.y = []
+            for x, y in zip( x_unfiltered, y_unfiltered ):
+                if (
+                    x > -10.0 and x < 10.
+                    and
+                    y > -10.0 and y < 10.
+                    ):
+                    scanContainer.x.append( x )
+                    scanContainer.y.append( y )
 
 
-        scanContainer.Tg.Draw('XPL')
+            # Do uncertainty determination before scaling
+            # FindMinimaAndErrors expects deltaNLL, not 2*deltaNLL
+            scanContainer.extrema = PhysicsCommands.FindMinimaAndErrors( scanContainer.x, scanContainer.y, returnContainer=True )
+
+            print '[info] Multiplying by 2: deltaNLL --> chi^2'
+            scanContainer.y = [ 2.*y for y in scanContainer.y ]
+
+            scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
+            scanContainer.Tg.SetMarkerStyle(8)
+            scanContainer.Tg.SetMarkerSize(0.8)
 
 
-        oneLine = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
-        oneLine.SetLineColor(12)
-        oneLine.Draw()
+            # ======================================
+            # Make plot
+
+            c.Clear()
+            SetCMargins( TopMargin=0.09 )
+
+            yMinAbs = min( scanContainer.y )
+            yMaxAbs = max( scanContainer.y )
+            # yMin = yMinAbs - 0.1*(yMaxAbs-yMinAbs)
+            yMin = 0.0
+            # yMax = yMaxAbs + 0.5*(yMaxAbs-yMinAbs)
+            yMax = 5.0
+
+            # xMin = min( scanContainer.x )
+            # xMax = max( scanContainer.x )
+            xMin = 0.04
+            xMax = 0.15
+
+            base = GetPlotBase(
+                xMin = xMin,
+                xMax = xMax,
+                yMin = yMin,
+                yMax = yMax,
+                xTitle = 'BR_{H #rightarrow #gamma#gamma} / BR_{H #rightarrow ZZ}',
+                # yTitle = '#Delta NLL',
+                yTitle = '2#DeltaNLL',
+                )
+            base.Draw('P')
 
 
-        print '\n' + '-'*70
-        print 'Found range: {0:.4f} < ratio < {1:.4f}'.format( scanContainer.extrema.leftBound, scanContainer.extrema.rightBound )
-
-        # imin
-        # min
-        # leftError
-        # leftBound
-        # rightError
-        # rightBound
-        # wellDefinedRightBound
-        # wellDefinedLeftBound
-
-        # Check number more carefully
-        SM_ratio = LatestPaths.SM_ratio_of_BRs
-        SMLine = ROOT.TLine( SM_ratio, yMin, SM_ratio, yMax )
-        SMLine.SetLineWidth(2)
-        SMLine.SetLineColor(9)
-        SMLine.Draw()
+            scanContainer.Tg.Draw('XPL')
 
 
-        xBestfit = scanContainer.x[ scanContainer.extrema.imin ]
-        bestfitLine = ROOT.TLine( xBestfit, yMin, xBestfit, yMax )
-        bestfitLine.SetLineWidth(2)
-        bestfitLine.SetLineColor(2)
-        bestfitLine.Draw()
+            oneLine = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
+            oneLine.SetLineColor(12)
+            oneLine.Draw()
 
 
-        l = ROOT.TLatex()
-        l.SetNDC()
-        l.SetTextColor(1)
-        l.SetTextSize(0.05)
+            print '\n' + '-'*70
+            print 'Found range: {0:.4f} < ratio < {1:.4f}'.format( scanContainer.extrema.leftBound, scanContainer.extrema.rightBound )
 
-        # l.SetTextAlign(31)
-        # l.DrawLatex(
-        #     scanContainer.extrema.leftBound, 1.0 + 0.013*(yMax-yMin),
-        #     '-{0:.2f} ({1:d}%)'.format(
-        #         abs(scanContainer.extrema.leftError),
-        #         int( abs(scanContainer.extrema.leftError) / xBestfit * 100. )
-        #         )
-        #     )
-        # l.SetTextAlign(11)
-        # l.DrawLatex(
-        #     scanContainer.extrema.rightBound, 1.0 + 0.013*(yMax-yMin),
-        #     '+{0:.2f} ({1:d}%)'.format(
-        #         abs(scanContainer.extrema.rightError),
-        #         int( abs(scanContainer.extrema.rightError) / xBestfit * 100. )
-        #         )
-        #     )
-        # l.SetTextAlign(21)
-        # l.DrawLatex(
-        #     xBestfit, 1.0 + 0.013*(yMax-yMin),
-        #     '{0:.3f}'.format( xBestfit )
-        #     )
+            # imin
+            # min
+            # leftError
+            # leftBound
+            # rightError
+            # rightBound
+            # wellDefinedRightBound
+            # wellDefinedLeftBound
 
-        l.DrawLatex( 0.55, 0.8, 'R = {0:.3f} _{{{1:+.3f}}}^{{{2:+.3f}}}'.format(
-            xBestfit, -abs(scanContainer.extrema.leftError), scanContainer.extrema.rightError
-            ))
+            # Check number more carefully
+            SM_ratio = LatestBinning.SM_ratio_of_BRs
+            SMLine = ROOT.TLine( SM_ratio, yMin, SM_ratio, yMax )
+            SMLine.SetLineWidth(2)
+            SMLine.SetLineColor(9)
+            SMLine.Draw()
 
 
-        TgPoints = ROOT.TGraph( 2,
-            array( 'f', [ scanContainer.extrema.leftBound, scanContainer.extrema.rightBound ] ),
-            array( 'f', [ 1.0, 1.0 ] ),
-            )
-        TgPoints.SetMarkerSize(1.2)
-        TgPoints.SetMarkerStyle(8)
-        TgPoints.SetMarkerColor(2)
-        TgPoints.Draw('PSAME')
+            xBestfit = scanContainer.x[ scanContainer.extrema.imin ]
+            bestfitLine = ROOT.TLine( xBestfit, yMin, xBestfit, yMax )
+            bestfitLine.SetLineWidth(2)
+            bestfitLine.SetLineColor(2)
+            bestfitLine.Draw()
 
-        Commands.GetCMSLabel()
-        Commands.GetCMSLumi()
 
-        SaveC( 'BRscan' + ( '_globalScales' if USE_GLOBAL_SCALES else '' ) )
+            l = ROOT.TLatex()
+            l.SetNDC()
+            l.SetTextColor(1)
+            l.SetTextSize(0.05)
+
+            # l.SetTextAlign(31)
+            # l.DrawLatex(
+            #     scanContainer.extrema.leftBound, 1.0 + 0.013*(yMax-yMin),
+            #     '-{0:.2f} ({1:d}%)'.format(
+            #         abs(scanContainer.extrema.leftError),
+            #         int( abs(scanContainer.extrema.leftError) / xBestfit * 100. )
+            #         )
+            #     )
+            # l.SetTextAlign(11)
+            # l.DrawLatex(
+            #     scanContainer.extrema.rightBound, 1.0 + 0.013*(yMax-yMin),
+            #     '+{0:.2f} ({1:d}%)'.format(
+            #         abs(scanContainer.extrema.rightError),
+            #         int( abs(scanContainer.extrema.rightError) / xBestfit * 100. )
+            #         )
+            #     )
+            # l.SetTextAlign(21)
+            # l.DrawLatex(
+            #     xBestfit, 1.0 + 0.013*(yMax-yMin),
+            #     '{0:.3f}'.format( xBestfit )
+            #     )
+
+            l.DrawLatex( 0.55, 0.8, 'R = {0:.3f} _{{{1:+.3f}}}^{{{2:+.3f}}}'.format(
+                xBestfit, -abs(scanContainer.extrema.leftError), scanContainer.extrema.rightError
+                ))
+            l.DrawLatex( 0.55, 0.6, varName )
+
+
+            TgPoints = ROOT.TGraph( 2,
+                array( 'f', [ scanContainer.extrema.leftBound, scanContainer.extrema.rightBound ] ),
+                array( 'f', [ 1.0, 1.0 ] ),
+                )
+            TgPoints.SetMarkerSize(1.2)
+            TgPoints.SetMarkerStyle(8)
+            TgPoints.SetMarkerColor(2)
+            TgPoints.Draw('PSAME')
+
+            Commands.GetCMSLabel()
+            Commands.GetCMSLumi()
+
+            # SaveC( 'BRscan' + ( '_globalScales' if USE_GLOBAL_SCALES else '' ) )
+            SaveC( 'BRscan_' + basename(scanDir).replace('/','') )
 
 
 
