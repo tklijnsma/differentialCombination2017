@@ -1,5 +1,7 @@
+import Commands
 from copy import deepcopy
-
+from array import array
+import ROOT
 
 #____________________________________________________________________
 class Observable(object):
@@ -23,9 +25,11 @@ class Observable(object):
         self.lastBinIsOverflow = lastBinIsOverflow
         self.nBins = len(self.shape)
 
+    #____________________________________________________________________
     def crosssection(self):
         return [ s * self.YR4_totalXS for s in self.shape ]
 
+    #____________________________________________________________________
     def crosssection_over_binwidth(self):
         xs = self.crosssection()
         if self.lastBinIsOverflow:
@@ -34,6 +38,7 @@ class Observable(object):
             xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins) ]
         return xs_o_binwidth
 
+    #____________________________________________________________________
     def mergeBins( self, mergeList ):
         newshape   = []
         newbinning = [ self.binning[0] ]
@@ -57,6 +62,14 @@ class Observable(object):
         copy.nBins = len(newshape)
         return copy
 
+    #____________________________________________________________________
+    def keepOnlyFirstNBins( self, N ):
+        self.shape   = [ x for i, x in enumerate(self.shape)   if i < N ]
+        self.binning = [ x for i, x in enumerate(self.binning) if i < N+1 ]
+        self.nBins   = len(self.shape)
+        self.lastBinIsOverflow = False
+
+    #____________________________________________________________________
     def Print( self ):
         xs = self.crosssection()
         xs_over_binwidth = self.crosssection_over_binwidth()
@@ -66,3 +79,34 @@ class Observable(object):
         print 'binning:          ' + strList(self.binning)
         print 'xs:               ' + strList(xs)
         print 'xs_over_binwidth: ' + strList(xs_over_binwidth)
+
+    #____________________________________________________________________
+    def BasicHistogram( self, what=None ):
+
+        if what is None:
+            what = 'crosssection_over_binwidth'
+        if not what in [ 'crosssection', 'crosssection_over_binwidth', 'shape' ]:
+            Commands.ThrowError( 'Choose from {0}'.format([ 'crosssection', 'crosssection_over_binwidth', 'shape' ]) )
+
+        if what == 'crosssection':
+            ys = self.crosssection()
+        elif what == 'crosssection_over_binwidth':
+            ys = self.crosssection_over_binwidth()
+            # if self.lastBinIsOverflow:
+            #     ys[-1] /= self.binning[-2] - self.binning[-3]
+
+        elif what == 'shape':
+            ys = self.shape
+
+        uniqueName = 'ObsHist_{0}'.format( Commands.__uniqueid__().next() )
+        H = ROOT.TH1F(
+            uniqueName, uniqueName,
+            len(ys), array( 'f', self.binning )
+            )
+        ROOT.SetOwnership( H, False )
+        H.SetLineWidth(2)
+
+        for iBin in xrange(len(ys)):
+            H.SetBinContent( iBin+1, ys[iBin] )
+
+        return H
