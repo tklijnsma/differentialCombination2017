@@ -72,6 +72,12 @@ def main():
     parser.add_argument( '--testing2PanelCanvas',      action='store_true' )
 
 
+    parser.add_argument( '--hbb_bestfit',      action='store_true' )
+    parser.add_argument( '--hbb_scan',      action='store_true' )
+    parser.add_argument( '--hbb_print',      action='store_true' )
+    parser.add_argument( '--hbbOnly_t2ws',      action='store_true' )
+    parser.add_argument( '--hbbOnly_scan',      action='store_true' )
+
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
 
@@ -95,6 +101,260 @@ def main():
     ########################################
 
     Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
+
+    base = abspath( join( os.environ['CMSSW_BASE'], 'src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/' ))
+
+
+    #____________________________________________________________________
+    if args.hbbOnly_t2ws:
+
+        card = 'suppliedInput/combinedCard_hbb_debuggingTest_Dec19.txt'
+
+        Commands.BasicT2WS(
+            card,
+            manualMaps=[
+                '--PO \'map=.*/ggH_PTH_200_350:r_ggH_PTH_200_350[1.0,0.0,3.0]\'',
+                '--PO \'map=.*/ggH_PTH_350_600:r_ggH_PTH_350_600[1.0,0.0,10.0]\'',
+                '--PO \'map=.*/ggH_PTH_GT600:r_ggH_PTH_GT600[1.0,0.0,10.0]\'',
+                ],
+            outputWS = basename(card).replace( '.txt', '_xHfixed.root' )
+            )
+
+    #____________________________________________________________________
+    if args.hbbOnly_scan:
+
+        ws = join( base, 'out/workspaces_Dec19/combinedCard_hbb_debuggingTest_Dec19_xHfixed.root' )
+
+        cmd = [            
+            'combine',
+            ws,
+            '-n _debugging_hbbOnly_scan01',
+            '-M MultiDimFit',
+            # '--cminDefaultMinimizerType Minuit2',
+            # '--cminDefaultMinimizerAlgo migrad',
+            '--algo=grid',
+            '-P "r_ggH_PTH_350_600"',
+            '--setPhysicsModelParameterRanges r_ggH_PTH_350_600=0.9,1.1 ',
+            '--setPhysicsModelParameters r_ggH_PTH_200_350=1.0,r_ggH_PTH_GT600=1.0,r_ggH_PTH_350_600=1.0',
+            '-m 125.00',
+            # '--squareDistPoi',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '--points=2 ',
+            '-t -1',
+            '--minimizerStrategy 2',
+            '--minimizerTolerance 0.001',
+            '--robustFit 1',
+            '--minimizerAlgoForMinos Minuit2,Migrad',
+            # '--saveSpecifiedFunc qcdeff',
+            '--floatOtherPOIs=1',
+            '--saveWorkspace',
+            ]
+
+        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+
+    #____________________________________________________________________
+    if args.hbb_bestfit:
+
+        # ws = join( base, 'out/workspaces_Dec15/combinedCard_hgg_hzz_hbb_ggHxH_Dec15_xHfixed.root' )
+        # ws = join( base, 'out/workspaces_Dec21/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root' )
+        ws = join( base, 'out/workspaces_Jan16/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root' )
+
+        cmd = [            
+            'combine',
+            ws,
+            '-n _debugging_{0}_hbb_bestfit'.format(datestr),
+            '-M MultiDimFit',
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            # '--algo=grid',
+            # '-P r_ggH_PTH_350_600',
+            # '-P r_ggH_PTH_GT600',
+            # '--setPhysicsModelParameterRanges "r_ggH_PTH_350_600"=0.000,6.500 ',
+            # 
+            # '--setPhysicsModelParameterRanges r1p0=0,5:r2p0=0,5:r3p0=0,5:r0p1=0,5:r1p1=0,5:r2p1=0,5:r3p1=0,5 ',
+            '--setPhysicsModelParameterRanges qcdeff=0.0001,10.0:r1p0=0,5:r2p0=0,5:r3p0=0,5:r0p1=0,5:r1p1=0,5:r2p1=0,5:r3p1=0,5 ',
+            # 
+            '--setPhysicsModelParameters r_ggH_PTH_0_15=1.0,r_ggH_PTH_200_350=1.0,r_ggH_PTH_85_125=1.0,r_ggH_PTH_15_30=1.0,r_ggH_PTH_GT600=1.0,r_ggH_PTH_350_600=1.0,r_ggH_PTH_30_45=1.0,r_ggH_PTH_125_200=1.0,r_ggH_PTH_45_85=1.0',
+            '-m 125.00',
+            '--squareDistPoi',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            # '--points=2 ',
+            '-t -1',
+            '--minimizerStrategy 2',
+            '--minimizerTolerance 0.001',
+            '--robustFit 1',
+            '--minimizerAlgoForMinos Minuit2,Migrad',
+            '--saveSpecifiedFunc qcdeff,r1p0,r2p0,r3p0,r0p1,r1p1,r2p1,r3p1',
+            '--saveWorkspace',
+            '--floatOtherPOIs=1',
+            ]
+
+        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+
+
+    #____________________________________________________________________
+    if args.hbb_scan:
+
+        # ws = base + 'out/workspaces_Dec15/combinedCard_hgg_hzz_hbb_ggHxH_Dec15_xHfixed.root' 
+        # postfit = join( base, 'higgsCombine_debugging_hbb_bestfit_noFloatOtherPOIs.MultiDimFit.mH125.root' )
+        # postfit = join( base, 'higgsCombine_debugging_Dec21_hbb_bestfit.MultiDimFit.mH125.root' )
+        postfit = join( base, 'higgsCombine_debugging_{0}_hbb_bestfit.MultiDimFit.mH125.root'.format(datestr) )
+
+        cmd = [            
+            'combine',
+            postfit,
+            '-n _debugging_Jan15_hbb_scan02',
+            '-M MultiDimFit',
+            '--snapshotName MultiDimFit',
+            '--skipInitialFit',
+            # '--cminDefaultMinimizerType Minuit2',
+            # '--cminDefaultMinimizerAlgo migrad',
+            '--algo=grid',
+            '-P "r_ggH_PTH_350_600"',
+            # 
+            # '--setPhysicsModelParameterRanges r_ggH_PTH_350_600=0.0,2.0:r1p0=0,5:r2p0=0,5:r3p0=0,5:r0p1=0,5:r1p1=0,5:r2p1=0,5:r3p1=0,5 ',
+            '--setPhysicsModelParameterRanges qcdeff=0.0001,10.0:r_ggH_PTH_350_600=0.0,2.0:r1p0=0,5:r2p0=0,5:r3p0=0,5:r0p1=0,5:r1p1=0,5:r2p1=0,5:r3p1=0,5 ',
+            # 
+            '--setPhysicsModelParameters r_ggH_PTH_0_15=1.0,r_ggH_PTH_200_350=1.0,r_ggH_PTH_85_125=1.0,r_ggH_PTH_15_30=1.0,r_ggH_PTH_GT600=1.0,r_ggH_PTH_350_600=1.0,r_ggH_PTH_30_45=1.0,r_ggH_PTH_125_200=1.0,r_ggH_PTH_45_85=1.0',
+            '-m 125.00',
+            # '--squareDistPoi',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '--points=30 ',
+            '-t -1',
+            '--minimizerStrategy 2',
+            '--minimizerTolerance 0.001',
+            '--robustFit 1',
+            '--minimizerAlgoForMinos Minuit2,Migrad',
+            # 
+            # '--saveSpecifiedFunc qcdeff',
+            '--saveSpecifiedFunc qcdeff,r1p0,r2p0,r3p0,r0p1,r1p1,r2p1,r3p1',
+            # '--freezeNuisances qcdeff,r1p0,r2p0,r3p0,r0p1,r1p1,r2p1,r3p1',
+            # '-v 10',
+            ]
+
+        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+
+        # Literal command from svn:
+        # combine comb_2017_ggHbb.root
+        # --cminDefaultMinimizerType Minuit2
+        # --cminDefaultMinimizerAlgo migrad
+        # --algo=grid
+        # --floatOtherPOIs=1
+        # -P r_ggH_PTH_350_600
+        # --setPhysicsModelParameters r_ggH_PTH_GT600=1.0,r_ggH_PTH_350_600=1.0
+        # --squareDistPoi
+        # --saveNLL
+        # --saveInactivePOI 1
+        # -t
+        # -1
+        # --minimizerStrategy 2
+        # --minimizerTolerance 0.001
+        # --robustFit 1
+        # --minimizerAlgoForMinos Minuit2,Migrad
+        # -M MultiDimFit
+        # -m 125.00
+        # --setPhysicsModelParameterRanges r_ggH_PTH_350_600=-10.000,10.000
+
+
+    #____________________________________________________________________
+    if args.hbb_print:
+
+        with Commands.OpenRootFile( 'higgsCombine_debugging_Jan15_hbb_bestfit.MultiDimFit.mH125.root' ) as rootFp:
+            w = rootFp.Get('w')
+
+
+        print 'r*p* at DEFAULT values'
+
+        w.function( 'qcd_pass_cat1_Bin21_hbb_cat1_pass_cat1' ).Print()
+
+        print '\nSome other vars:'
+        w.function( 'Var_RhoPol_Bin_495.0_-1.985_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_0_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_1_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_2_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_3_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Rho_rescaled_495.0_-1.985' ).Print()
+
+
+        print '\n\nr*p* at STRANGE values'
+
+        reset = {
+            'qcdeff' : 8.85844,
+            'r0p1'   : 3.34228,
+            'r1p0'   : 4.09749,
+            'r1p1'   : 4.97966,
+            'r2p0'   : 0.00362817,
+            'r2p1'   : 0.0380896,
+            'r3p0'   : 0.642744,
+            'r3p1'   : 0.0384077,
+            # 
+            'qcd_fail_cat1_Bin1'  : 65041.5,
+            'qcd_fail_cat1_Bin10' : 2563.44,
+            'qcd_fail_cat1_Bin11' : 119152,
+            'qcd_fail_cat1_Bin12' : 134176,
+            'qcd_fail_cat1_Bin13' : 273.105,
+            'qcd_fail_cat1_Bin14' : 113898,
+            'qcd_fail_cat1_Bin15' : 148850,
+            'qcd_fail_cat1_Bin16' : 45569.4,
+            'qcd_fail_cat1_Bin17' : 85297.5,
+            'qcd_fail_cat1_Bin18' : 49202.3,
+            'qcd_fail_cat1_Bin19' : 6533.66,
+            'qcd_fail_cat1_Bin2'  : 314905,
+            'qcd_fail_cat1_Bin20' : 38023.4,
+            'qcd_fail_cat1_Bin21' : 1766.74,
+            'qcd_fail_cat1_Bin22' : 8783.92,
+            'qcd_fail_cat1_Bin23' : 16825.1,
+            'qcd_fail_cat1_Bin3'  : 9330.23,
+            'qcd_fail_cat1_Bin4'  : 296098,
+            'qcd_fail_cat1_Bin5'  : 7002.19,
+            'qcd_fail_cat1_Bin6'  : 143492,
+            'qcd_fail_cat1_Bin7'  : 189575,
+            'qcd_fail_cat1_Bin8'  : 223431,
+            'qcd_fail_cat1_Bin9'  : 75448.3,
+            'qcd_fail_cat2_Bin1'  : 0.265255,
+            'qcd_fail_cat2_Bin10' : 135.548,
+            'qcd_fail_cat2_Bin11' : 38360.7,
+            'qcd_fail_cat2_Bin12' : 1445.61,
+            'qcd_fail_cat2_Bin13' : 1103.76,
+            'qcd_fail_cat2_Bin14' : 26853.1,
+            'qcd_fail_cat2_Bin15' : 33561.8,
+            'qcd_fail_cat2_Bin16' : 26543.1,
+            'qcd_fail_cat2_Bin17' : 37945,
+            'qcd_fail_cat2_Bin18' : 24385.4,
+            'qcd_fail_cat2_Bin19' : 168.786,
+            'qcd_fail_cat2_Bin2'  : 34.5315,
+            'qcd_fail_cat2_Bin20' : 25823.3,
+            'qcd_fail_cat2_Bin21' : 5739.9,
+            'qcd_fail_cat2_Bin22' : 25605.6,
+            'qcd_fail_cat2_Bin23' : 13501.4,
+            'qcd_fail_cat2_Bin3'  : 60362,
+            'qcd_fail_cat2_Bin4'  : 42123.9,
+            'qcd_fail_cat2_Bin5'  : 54895.5,
+            'qcd_fail_cat2_Bin6'  : 21872.1,
+            'qcd_fail_cat2_Bin7'  : 38219.6,
+            'qcd_fail_cat2_Bin8'  : 50236.4,
+            'qcd_fail_cat2_Bin9'  : 1730.5,
+            }
+
+        for varName, value in reset.iteritems():
+            w.var(varName).setVal(value)
+
+
+        for i in xrange(23):
+            w.function( 'qcd_pass_cat1_Bin{0}_hbb_cat1_pass_cat1'.format(i+1) ).Print()
+
+        # w.function( 'qcd_pass_cat1_Bin21_hbb_cat1_pass_cat1' ).Print()
+
+        print '\nSome other vars:'
+        w.function( 'Var_RhoPol_Bin_495.0_-1.985_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_0_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_1_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_2_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Pol_Bin_495.0_-1.985_3_hbb_cat1_pass_cat1' ).Print()
+        w.function( 'Var_Rho_rescaled_495.0_-1.985' ).Print()
 
 
     #____________________________________________________________________
