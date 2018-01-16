@@ -14,6 +14,7 @@ from glob import glob
 from copy import deepcopy
 
 import LatestPaths
+import LatestBinning
 
 sys.path.append('src')
 import Commands
@@ -53,17 +54,17 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--rapidity_bestfit_unsplit',           action=CustomAction )
     parser.add_argument( '--rapidity_plot',                      action=CustomAction )
 
-    parser.add_argument( '--ptjet_rename_hgg',                action=CustomAction )
-    parser.add_argument( '--ptjet_combineCards',              action=CustomAction )
-    parser.add_argument( '--ptjet_t2ws_unsplit',              action=CustomAction )
-    parser.add_argument( '--ptjet_bestfit_unsplit',           action=CustomAction )
-    parser.add_argument( '--ptjet_plot',                      action=CustomAction )
+    parser.add_argument( '--ptjet_rename_hgg',                   action=CustomAction )
+    parser.add_argument( '--ptjet_combineCards',                 action=CustomAction )
+    parser.add_argument( '--ptjet_t2ws_unsplit',                 action=CustomAction )
+    parser.add_argument( '--ptjet_bestfit_unsplit',              action=CustomAction )
+    parser.add_argument( '--ptjet_plot',                         action=CustomAction )
 
-    parser.add_argument( '--njets_plot',                      action=CustomAction )
-    parser.add_argument( '--pth_plot',                      action=CustomAction )
-    parser.add_argument( '--pth_ggH_plot',                      action=CustomAction )
-    parser.add_argument( '--plot_all',                      action=CustomAction )
-
+    parser.add_argument( '--njets_plot',                         action=CustomAction )
+    parser.add_argument( '--pth_plot',                           action=CustomAction )
+    parser.add_argument( '--pth_ggH_plot',                       action=CustomAction )
+    parser.add_argument( '--pth_ggH_hbb_plot',                   action=CustomAction )
+    parser.add_argument( '--plot_all',                           action=CustomAction )
 
 ########################################
 # Methods
@@ -282,7 +283,7 @@ def main( args ):
 
         containers = []
 
-        LatestPaths.obs_yh.Print()
+        LatestBinning.obs_yh.Print()
 
         hgg               = Container()
         hgg.name          = 'hgg'
@@ -290,7 +291,7 @@ def main( args ):
         hgg.color         = 2
         hgg.POIs          = hggPOIs
         hgg.Scans         = hggscans
-        hgg.SMcrosssections = LatestPaths.obs_yh.crosssection_over_binwidth()
+        hgg.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
         containers.append(hgg)
 
         hzz               = Container()
@@ -299,7 +300,7 @@ def main( args ):
         hzz.color         = 4
         hzz.POIs          = hzzPOIs
         hzz.Scans         = hzzscans
-        hzz.SMcrosssections = LatestPaths.obs_yh.crosssection_over_binwidth()
+        hzz.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
         containers.append(hzz)
 
         combination               = Container()
@@ -307,7 +308,7 @@ def main( args ):
         combination.title         = 'Combination'
         combination.POIs          = combinationPOIs
         combination.Scans         = combinationscans
-        combination.SMcrosssections = LatestPaths.obs_yh.crosssection_over_binwidth()
+        combination.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
         containers.append(combination)
 
         PlotCommands.PlotSpectraOnTwoPanel(
@@ -356,7 +357,7 @@ def main( args ):
         hgg.color           = 2
         hgg.POIs            = hggPOIs
         hgg.Scans           = hggscans
-        hgg.SMcrosssections = LatestPaths.obs_ptjet.crosssection_over_binwidth()
+        hgg.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
         containers.append(hgg)
 
         hzz                 = Container()
@@ -365,7 +366,7 @@ def main( args ):
         hzz.color           = 4
         hzz.POIs            = hzzPOIs
         hzz.Scans           = hzzscans
-        hzz.SMcrosssections = LatestPaths.obs_ptjet_hzzBinning.crosssection_over_binwidth()
+        hzz.SMcrosssections = LatestBinning.obs_ptjet_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
         combination                 = Container()
@@ -373,7 +374,7 @@ def main( args ):
         combination.title           = 'Combination'
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
-        combination.SMcrosssections = LatestPaths.obs_ptjet.crosssection_over_binwidth()
+        combination.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
         containers.append(combination)
 
         Commands.Warning( 'Skipping first bin (should be the underflow)' )
@@ -415,8 +416,8 @@ def main( args ):
             name    = 'hzz',
             )
 
-        LatestPaths.obs_njets.Print()
-        LatestPaths.obs_njets_hzzBinning.Print()
+        LatestBinning.obs_njets.Print()
+        LatestBinning.obs_njets_hzzBinning.Print()
 
         containers = []
 
@@ -426,7 +427,7 @@ def main( args ):
         hgg.color           = 2
         hgg.POIs            = hggPOIs
         hgg.Scans           = hggscans
-        hgg.SMcrosssections = LatestPaths.obs_njets.crosssection_over_binwidth()
+        hgg.SMcrosssections = LatestBinning.obs_njets.crosssection_over_binwidth()
         containers.append(hgg)
 
         hzz                 = Container()
@@ -435,7 +436,7 @@ def main( args ):
         hzz.color           = 4
         hzz.POIs            = hzzPOIs
         hzz.Scans           = hzzscans
-        hzz.SMcrosssections = LatestPaths.obs_njets_hzzBinning.crosssection_over_binwidth()
+        hzz.SMcrosssections = LatestBinning.obs_njets_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
         combination                 = Container()
@@ -443,7 +444,7 @@ def main( args ):
         combination.title           = 'Combination'
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
-        combination.SMcrosssections = LatestPaths.obs_njets.crosssection_over_binwidth()
+        combination.SMcrosssections = LatestBinning.obs_njets.crosssection_over_binwidth()
         containers.append(combination)
 
         PlotCommands.PlotSpectraOnTwoPanel(
@@ -477,8 +478,8 @@ def main( args ):
             name    = 'hzz',
             )
 
-        LatestPaths.obs_pth.Print()
-        LatestPaths.obs_pth_hzzBinning.Print()
+        LatestBinning.obs_pth.Print()
+        LatestBinning.obs_pth_hzzBinning.Print()
 
         containers = []
 
@@ -488,7 +489,7 @@ def main( args ):
         hgg.color           = 2
         hgg.POIs            = hggPOIs
         hgg.Scans           = hggscans
-        hgg.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        hgg.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
         containers.append(hgg)
 
         hzz                 = Container()
@@ -497,7 +498,7 @@ def main( args ):
         hzz.color           = 4
         hzz.POIs            = hzzPOIs
         hzz.Scans           = hzzscans
-        hzz.SMcrosssections = LatestPaths.obs_pth_hzzBinning.crosssection_over_binwidth()
+        hzz.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
         combination                 = Container()
@@ -505,7 +506,7 @@ def main( args ):
         combination.title           = 'Combination'
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
-        combination.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
         containers.append(combination)
 
         PlotCommands.PlotSpectraOnTwoPanel(
@@ -540,8 +541,8 @@ def main( args ):
             )
 
         Commands.Warning( 'No ggH-only cross sections known yet! Using ggH+xH (smH) cross sections for now' )
-        LatestPaths.obs_pth.Print()
-        LatestPaths.obs_pth_hzzBinning.Print()
+        LatestBinning.obs_pth.Print()
+        LatestBinning.obs_pth_hzzBinning.Print()
 
         containers = []
 
@@ -551,7 +552,7 @@ def main( args ):
         hgg.color           = 2
         hgg.POIs            = hggPOIs
         hgg.Scans           = hggscans
-        hgg.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        hgg.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
         containers.append(hgg)
 
         hzz                 = Container()
@@ -560,7 +561,7 @@ def main( args ):
         hzz.color           = 4
         hzz.POIs            = hzzPOIs
         hzz.Scans           = hzzscans
-        hzz.SMcrosssections = LatestPaths.obs_pth_hzzBinning.crosssection_over_binwidth()
+        hzz.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
         combination                 = Container()
@@ -568,7 +569,7 @@ def main( args ):
         combination.title           = 'Combination'
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
-        combination.SMcrosssections = LatestPaths.obs_pth.crosssection_over_binwidth()
+        combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
         containers.append(combination)
 
         l = PlotCommands.TLatexMultiPanel(
@@ -586,6 +587,140 @@ def main( args ):
             yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
             topPanelObjects = [ ( l, '' ) ],
             )
+
+
+    #____________________________________________________________________
+    if args.pth_ggH_hbb_plot:
+
+        if args.asimov:
+            combined_scanDir    = LatestPaths.scan_combined_PTH_ggH_asimov
+            hgg_scanDir         = LatestPaths.scan_hgg_PTH_ggH_asimov
+            hzz_scanDir         = LatestPaths.scan_hzz_PTH_ggH_asimov
+            hbb_scanDir         = LatestPaths.scan_hbb_PTH_ggH_asimov
+            combWithHbb_scanDir = LatestPaths.scan_combWithHbb_PTH_ggH_asimov
+        else:
+            combined_scanDir    = LatestPaths.scan_combined_PTH_ggH
+            hgg_scanDir         = LatestPaths.scan_hgg_PTH_ggH
+            hzz_scanDir         = LatestPaths.scan_hzz_PTH_ggH
+            hbb_scanDir         = LatestPaths.scan_hbb_PTH_ggH
+            combWithHbb_scanDir = LatestPaths.scan_combWithHbb_PTH_ggH
+
+        combinationPOIs, combinationscans = DrawScan(
+            ws      = LatestPaths.ws_combined_ggH_xHfixed,
+            scandir = combined_scanDir,
+            name    = 'combination',
+            )
+
+        hggPOIs, hggscans = DrawScan(
+            ws      = LatestPaths.ws_hgg_ggH_xHfixed,
+            scandir = hgg_scanDir,
+            name    = 'hgg',
+            )
+
+        hzzPOIs, hzzscans = DrawScan(
+            ws      = LatestPaths.ws_hzz_ggH_xHfixed,
+            scandir = hzz_scanDir,
+            name    = 'hzz',
+            )
+
+        hbbPOIs, hbbscans = DrawScan(
+            ws      = LatestPaths.ws_hbb_ggH_xHfixed,
+            # scandir = hbb_scanDir,
+            # scandir = 'out/Scan_PTH_Dec18_xHfixed_hbb_asimov',
+            scandir = 'out/Scan_PTH_Dec18_xHfixed_hbb_asimov_0', # With all Hbb options
+            # scandir = 'out/Scan_PTH_Dec18_xHfixed_hbb_asimov_1',
+            name    = 'hbb',
+            )
+
+        combWithHbbPOIs, combWithHbbscans = DrawScan(
+            ws      = LatestPaths.ws_combWithHbb_ggH_xHfixed,
+            # scandir = combWithHbb_scanDir,
+            # scandir = 'out/Scan_PTH_Dec18_xHfixed_combWithHbb_asimov_0',
+            scandir = 'out/Scan_PTH_Dec18_xHfixed_combWithHbb_asimov_1',
+            name    = 'combWithHbb',
+            )
+
+
+        Commands.Warning( 'No ggH-only cross sections known yet! Using ggH+xH (smH) cross sections for now' )
+        LatestBinning.obs_pth.Print()
+        LatestBinning.obs_pth_hzzBinning.Print()
+
+        containers = []
+
+        hgg                 = Container()
+        hgg.name            = 'hgg'
+        hgg.title           = 'H#rightarrow#gamma#gamma'
+        hgg.color           = 2
+        hgg.POIs            = hggPOIs
+        hgg.Scans           = hggscans
+        hgg.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        containers.append(hgg)
+
+        hzz                 = Container()
+        hzz.name            = 'hzz'
+        hzz.title           = 'H#rightarrowZZ'
+        hzz.color           = 4
+        hzz.POIs            = hzzPOIs
+        hzz.Scans           = hzzscans
+        hzz.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
+        containers.append(hzz)
+
+        hbb                 = Container()
+        hbb.name            = 'hbb'
+        hbb.title           = 'H#rightarrowbb'
+        hbb.color           = 8
+        hbb.POIs            = hbbPOIs
+        hbb.Scans           = hbbscans
+        hbb.SMcrosssections = LatestBinning.obs_pth_hbbBinning.crosssection_over_binwidth()
+        containers.append(hbb)
+
+        combination                 = Container()
+        combination.name            = 'combination'
+        combination.title           = 'Combination'
+        combination.color           = 1
+        combination.POIs            = combinationPOIs
+        combination.Scans           = combinationscans
+        combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        containers.append(combination)
+
+        combWithHbb                 = Container()
+        combWithHbb.name            = 'combWithHbb'
+        combWithHbb.title           = 'Comb. with Hbb'
+        combWithHbb.color           = 14
+        combWithHbb.POIs            = combWithHbbPOIs
+        combWithHbb.Scans           = combWithHbbscans
+        combWithHbb.SMcrosssections = LatestBinning.obs_pth_combWithHbbBinning.crosssection_over_binwidth()
+        containers.append(combWithHbb)
+
+
+        for container in containers:
+            if not len(container.POIs) == len(container.SMcrosssections):
+                Commands.ThrowError(
+                    'For container {2}, found {0} POIs, but {1} SM cross sections; something is misaligned.'.format(
+                        len(container.POIs), len(container.SMcrosssections), container.name )
+                    + '\n  POIs:  {0}'.format(container.POIs)
+                    + '\n  SM xs: {0}'.format(container.SMcrosssections)
+                    )
+
+
+
+        l = PlotCommands.TLatexMultiPanel(
+            lambda c: 1.0 - c.GetRightMargin() - 0.01,
+            lambda c: 1.0 - c.GetTopMargin() - 0.14,
+            '(non-ggH fixed to SM)'
+            )
+        l.SetTextSize(0.05)
+        l.SetTextAlign(33)
+
+        PlotCommands.PlotSpectraOnTwoPanel(
+            'twoPanel_pth_ggH_hbb_Spectrum',
+            containers,
+            xTitle = 'p_{T}^{H} (GeV)',
+            yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
+            # topPanelObjects = [ ( l, '' ) ],
+            )
+
+
 
 
 
