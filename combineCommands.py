@@ -59,6 +59,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--RenameHggProcesses_Aug21',      action=CustomAction )
     parser.add_argument( '--RenumberHzzProcesses_Aug21',    action=CustomAction )
     parser.add_argument( '--CombineCards_Aug21',            action=CustomAction )
+    parser.add_argument( '--CombineCards_Dec15_hbb',        action=CustomAction )
 
     parser.add_argument( '--RenameHggProcesses_smHcard',    action=CustomAction )
     parser.add_argument( '--RenumberHzzProcesses_smHcard',  action=CustomAction )
@@ -85,6 +86,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--smartMapTest',                    action=CustomAction )
 
     parser.add_argument( '--t2ws_split',                      action=CustomAction )
+    parser.add_argument( '--t2ws_withhbb',                    action=CustomAction )
 
     parser.add_argument( '--t2ws_combined_unsplit',           action=CustomAction )
     parser.add_argument( '--t2ws_hgg_unsplit',                action=CustomAction )
@@ -144,6 +146,16 @@ def main( args ):
             'hgg=' + LatestPaths.card_hgg_ggHxH_PTH,
             'hzz=' + LatestPaths.card_hzz_ggHxH_PTH
             )
+
+
+    if args.CombineCards_Dec15_hbb:
+        Commands.BasicCombineCards(
+            'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_{0}.txt'.format(datestr),
+            'hgg=' + LatestPaths.card_hgg_ggHxH_PTH,
+            'hzz=' + LatestPaths.card_hzz_ggHxH_PTH,
+            'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
+            )
+
 
     #____________________________________________________________________
     # Renaming and combining of unsplit cards
@@ -240,37 +252,34 @@ def main( args ):
                 outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
                 )
 
+    #____________________________________________________________________
+    if args.t2ws_withhbb:
 
-    # if args.t2ws_hgg_split:
-    #     Commands.BasicT2WS(
-    #         LatestPaths.card_hgg_ggHxH_PTH,
-    #         smartMaps = [
-    #             ( r'.*/.*H_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
-    #             ],
-    #         )
-
-    # if args.t2ws_hzz_split:
-    #     Commands.BasicT2WS(
-    #         LatestPaths.card_hzz_ggHxH_PTH,
-    #         manualMaps=[
-    #             '--PO \'map=.*/ggH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/ggH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/ggH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/ggH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/ggH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/ggH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/ggH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/ggH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-    #             '--PO \'map=.*/xH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-    #             ],
-    #         )
+        if args.hbb:
+            datacard = LatestPaths.card_hbb_ggHxH_PTH
+            Commands.BasicT2WS(
+                datacard,
+                manualMaps=[
+                    # '--PO \'map=.*/ggH_PTH_200_350:r_ggH_PTH_200_350[1.0,0.0,3.0]\'',
+                    '--PO \'map=.*/ggH_PTH_350_600:r_ggH_PTH_350_600[1.0,0.0,10.0]\'',
+                    '--PO \'map=.*/ggH_PTH_GT600:r_ggH_PTH_GT600[1.0,0.0,10.0]\'',
+                    ],
+                outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
+                )
+        else:
+            datacard = LatestPaths.card_combinedWithHbb_ggHxH_PTH
+            Commands.BasicT2WS(
+                datacard,
+                manualMaps=[
+                    '--PO \'map=.*/ggH_PTH_GT350:r_ggH_PTH_350_600[1.0,0.0,10.0]\'',
+                    '--PO \'map=.*/ggH_PTH_350_600:r_ggH_PTH_350_600[1.0,0.0,10.0]\'',
+                    '--PO \'map=.*/ggH_PTH_GT600:r_ggH_PTH_GT600[1.0,0.0,10.0]\'',
+                    ],
+                smartMaps = [
+                    ( r'.*/ggH_PTH_([\d\_GT]+)', r'r_ggH_PTH_\1[1.0,-1.0,4.0]' )
+                    ],
+                outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
+                )
 
 
     #____________________________________________________________________
@@ -421,27 +430,65 @@ def main( args ):
         ws = LatestPaths.ws_combined_ggH_xHfixed
         if args.hgg: ws = LatestPaths.ws_hgg_ggH_xHfixed
         if args.hzz: ws = LatestPaths.ws_hzz_ggH_xHfixed
+        if args.hbb: ws = LatestPaths.ws_hbb_ggH_xHfixed
+        if args.combWithHbb: ws = LatestPaths.ws_combWithHbb_ggH_xHfixed
+        # ws_combinedWithHbb_ggH_xHfixed
 
-        jobDirectory  = 'Scan_PTH_{0}_xHfixed'.format(datestr)
+        jobDirectory  = 'out/Scan_PTH_{0}_xHfixed'.format(datestr)
         if args.hgg: jobDirectory += '_hgg'
         if args.hzz: jobDirectory += '_hzz'
-        if args.asimov: jobDirectory += '_asimov'
+        if args.hbb: jobDirectory += '_hbb'
+        if args.combWithHbb: jobDirectory += '_combWithHbb'
+        # if args.asimov: jobDirectory += '_asimov'
 
-        nPoints = 55
-        nPointsPerJob = 5
+        nPoints = 42
+        nPointsPerJob = 3
         if args.hzz: nPointsPerJob = nPoints
+
+        extraOptions = None
+        POIRange = None
+        if args.hzz:
+            POIRange = [ 0.0, 4.0 ]
+        if args.hbb:
+            nPointsPerJob = nPoints
+            POIRange = [ -10.0, 10.0 ]
+            extraOptions = [
+                '--minimizerStrategy 2',
+                '--minimizerTolerance 0.001',
+                '--robustFit 1',
+                '--minimizerAlgoForMinos Minuit2,Migrad',
+                ]
+        if args.combWithHbb:
+            POIRange = [ 0.0, 6.5 ]
+            # nPoints = 54
+            nPoints = 2
+            nPointsPerJob = 2
+            extraOptions = [
+                '--minimizerStrategy 2',
+                '--minimizerTolerance 0.001',
+                '--robustFit 1',
+                '--minimizerAlgoForMinos Minuit2,Migrad',
+                # '--freezeNuisances qcdeff,r1p0,r2p0,r3p0',
+                # '--saveSpecifiedNuis r1p0,r2p0,r3p0,r0p1,r1p1,r2p1,r3p1,qcdeff',
+                # '--saveSpecifiedNuis qcdeff',
+                # '--saveSpecifiedFunc qcdeff',
+                ]
 
         Commands.BasicCombineTool(
             ws,
-            POIpattern    = '*',
-            # POIpattern    = 'GT',
-            POIRange      = ( [ 0.0, 4.0 ] if args.hzz else None ), # Limit to 0.0 for scan stability
+            # POIpattern    = '*',
+            POIpattern    = '350_600',
+            # POIpattern    = 'GT600',
+            POIRange      = POIRange,
             nPoints       = nPoints,
             nPointsPerJob = nPointsPerJob,
             jobDirectory  = jobDirectory,
             queue         = 'short.q',
             asimov        = ASIMOV,
+            extraOptions  = extraOptions,
+            disableFloatOtherPOIs = ( True if args.combWithHbb else False )
             )
+
 
 
     #____________________________________________________________________
