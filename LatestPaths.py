@@ -3,42 +3,48 @@
 ########################################
 
 # ----- PTH -----
-card_hgg_smH_PTH_unprocessed   = 'out/suppliedInput/fromVittorio/pT_NNLOPS_Nov01/Datacard_13TeV_differential_PtNNLOPS_systs.txt'
-card_hzz_smH_PTH_unprocessed   = 'out/suppliedInput/fromDavid/PTH_NNLOPS_Nov01/smH/hzz4l_comb_13TeV_xs.txt'
+card_hgg_smH_PTH_unprocessed   = 'suppliedInput/fromVittorio/pT_NNLOPS_Nov01/Datacard_13TeV_differential_PtNNLOPS_systs.txt'
+card_hzz_smH_PTH_unprocessed   = 'suppliedInput/fromDavid/PTH_NNLOPS_Nov01/smH/hzz4l_comb_13TeV_xs.txt'
 
-card_hgg_ggHxH_PTH_unprocessed = 'out/suppliedInput/fromVittorio/pT_NNLOPS_ggHxH_Nov03/Datacard_13TeV_differential_PtGghPlusHxNNLOPS.txt'
-card_hzz_ggHxH_PTH_unprocessed = 'out/suppliedInput/fromDavid/PTH_NNLOPS_Nov01/ggH/hzz4l_comb_13TeV_xs.txt'
+card_hgg_ggHxH_PTH_unprocessed = 'suppliedInput/fromVittorio/pT_NNLOPS_ggHxH_Nov03/Datacard_13TeV_differential_PtGghPlusHxNNLOPS.txt'
+card_hzz_ggHxH_PTH_unprocessed = 'suppliedInput/fromDavid/PTH_NNLOPS_Nov01/ggH/hzz4l_comb_13TeV_xs.txt'
 
-card_hgg_ggHxH_PTH             = 'out/suppliedInput/fromVittorio/pT_NNLOPS_ggHxH_Nov03/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses.txt'
-card_hzz_ggHxH_PTH             = 'out/suppliedInput/fromDavid/PTH_NNLOPS_Nov01/ggH/hzz4l_comb_13TeV_xs_processesShifted.txt'
-card_combined_ggHxH_PTH        = 'out/suppliedInput/combinedCard_Nov03.txt'
+# card_hbb_ggHxH_PTH             = 'suppliedInput/fromJavier/cards_PTH_diff_r7402_Dec14/comb_2017_ggHbb.txt'
+# card_hbb_ggHxH_PTH_debuggingTest = 'suppliedInput/combinedCard_hbb_debuggingTest_Dec19.txt'
+# card_combinedWithHbb_ggHxH_PTH = 'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_Dec15.txt'
 
-card_hgg_smH_PTH               = 'out/suppliedInput/fromVittorio/pT_NNLOPS_Nov01/Datacard_13TeV_differential_PtNNLOPS_systs_renamedProcesses.txt'
-card_hzz_smH_PTH               = 'out/suppliedInput/fromDavid/PTH_NNLOPS_Nov01/smH/hzz4l_comb_13TeV_xs_processesShifted.txt'
-card_combined_smH_PTH          = 'out/suppliedInput/combinedCard_smH_Nov07.txt'
+card_hbb_ggHxH_PTH             = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
+card_combinedWithHbb_ggHxH_PTH = 'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_Dec21.txt'
+card_hgg_ggHxH_PTH             = 'suppliedInput/fromVittorio/pT_NNLOPS_ggHxH_Nov03/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses.txt'
+card_hzz_ggHxH_PTH             = 'suppliedInput/fromDavid/PTH_NNLOPS_Nov01/ggH/hzz4l_comb_13TeV_xs_processesShifted.txt'
+card_combined_ggHxH_PTH        = 'suppliedInput/combinedCard_Nov03.txt'
+
+card_hgg_smH_PTH               = 'suppliedInput/fromVittorio/pT_NNLOPS_Nov01/Datacard_13TeV_differential_PtNNLOPS_systs_renamedProcesses.txt'
+card_hzz_smH_PTH               = 'suppliedInput/fromDavid/PTH_NNLOPS_Nov01/smH/hzz4l_comb_13TeV_xs_processesShifted.txt'
+card_combined_smH_PTH          = 'suppliedInput/combinedCard_smH_Nov07.txt'
 
 # ----- NJ -----
-card_hgg_smH_NJ_unprocessed    = 'out/suppliedInput/fromVittorio/differential_Njets2p5NNLOPS_Nov10/Datacard_13TeV_differential_Njets2p5NNLOPS.txt'
-card_hzz_smH_NJ                = 'out/suppliedInput/fromDavid/NJ_NNLOPS_Nov01/smH/hzz4l_comb_13TeV_xs.txt'
-card_hgg_smH_NJ                = 'out/suppliedInput/fromVittorio/differential_Njets2p5NNLOPS_Nov10/Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses.txt'
-card_combined_smH_NJ           = 'out/suppliedInput/combinedCard_NJ_smH_Nov12.txt'
+card_hgg_smH_NJ_unprocessed    = 'suppliedInput/fromVittorio/differential_Njets2p5NNLOPS_Nov10/Datacard_13TeV_differential_Njets2p5NNLOPS.txt'
+card_hzz_smH_NJ                = 'suppliedInput/fromDavid/NJ_NNLOPS_Nov01/smH/hzz4l_comb_13TeV_xs.txt'
+card_hgg_smH_NJ                = 'suppliedInput/fromVittorio/differential_Njets2p5NNLOPS_Nov10/Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses.txt'
+card_combined_smH_NJ           = 'suppliedInput/combinedCard_NJ_smH_Nov12.txt'
 
 # ----- YH -----
-card_hgg_smH_YH_unprocessed      = 'out/suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination.txt'
-card_hgg_smH_YH                  = 'out/suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses.txt'
-card_hzz_smH_YH                = 'out/suppliedInput/fromDavid/YH_NNLOPS_Nov12/smH/hzz4l_comb_13TeV_xs.txt' # No OutsideAcceptance in hzz, so no renumbering necessary
-card_combined_smH_YH           = 'out/suppliedInput/combinedCard_YH_smH_Nov28.txt'
+card_hgg_smH_YH_unprocessed    = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination.txt'
+card_hgg_smH_YH                = 'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses.txt'
+card_hzz_smH_YH                = 'suppliedInput/fromDavid/YH_NNLOPS_Nov12/smH/hzz4l_comb_13TeV_xs.txt' # No OutsideAcceptance in hzz, so no renumbering necessary
+card_combined_smH_YH           = 'suppliedInput/combinedCard_YH_smH_Nov28.txt'
 
 # ----- PTJ -----
-card_hzz_smH_PTJ               = 'out/suppliedInput/fromDavid/PTJET_NNLOPS_Nov28/smH/hzz4l_comb_13TeV_xs.txt'
-card_hgg_smH_PTJ_unprocessed   = 'out/suppliedInput/fromVittorio/differential_Jet2p5Pt0NNLOPS_newBins_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins.txt'
-card_hgg_smH_PTJ               = 'out/suppliedInput/fromVittorio/differential_Jet2p5Pt0NNLOPS_newBins_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.txt'
-card_combined_smH_PTJ          = 'out/suppliedInput/combinedCard_PTJ_smH_Nov28.txt'
+card_hzz_smH_PTJ               = 'suppliedInput/fromDavid/PTJET_NNLOPS_Nov28/smH/hzz4l_comb_13TeV_xs.txt'
+card_hgg_smH_PTJ_unprocessed   = 'suppliedInput/fromVittorio/differential_Jet2p5Pt0NNLOPS_newBins_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins.txt'
+card_hgg_smH_PTJ               = 'suppliedInput/fromVittorio/differential_Jet2p5Pt0NNLOPS_newBins_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.txt'
+card_combined_smH_PTJ          = 'suppliedInput/combinedCard_PTJ_smH_Nov28.txt'
 
 # ----- INCLUSIVE -----
-card_hgg_INC_unprocessed       = 'out/suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt'
-card_hzz_INC_unprocessed       = 'out/suppliedInput/fromDavid/differential_Nov27/smH/hzz4l_comb_13TeV_xs.txt'
-card_combined_INC              = 'out/suppliedInput/combinedCard_smH_Nov27_INCLUSIVE.txt'
+card_hgg_INC_unprocessed       = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt'
+card_hzz_INC_unprocessed       = 'suppliedInput/fromDavid/differential_Nov27/smH/hzz4l_comb_13TeV_xs.txt'
+card_combined_INC              = 'suppliedInput/combinedCard_smH_Nov27_INCLUSIVE.txt'
 
 
 ########################################
@@ -93,6 +99,15 @@ ws_hgg_smH                   = 'out/workspaces_Nov07/Datacard_13TeV_differential
 ws_hzz_smH                   = 'out/workspaces_Nov08/hzz4l_comb_13TeV_xs_processesShifted.root'
 ws_combined_smH              = 'out/workspaces_Nov07/combinedCard_smH_Nov07.root'
 
+ws_combined_ggH_xHfixed      = 'out/workspaces_Nov08/combinedCard_Nov03_xHfixed.root'
+ws_hgg_ggH_xHfixed           = 'out/workspaces_Nov29/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed.root'
+ws_hzz_ggH_xHfixed           = 'out/workspaces_Nov29/hzz4l_comb_13TeV_xs_processesShifted_xHfixed.root'
+
+# ws_hbb_ggH_xHfixed           = 'out/workspaces_Dec15/comb_2017_ggHbb_xHfixed.root'
+# ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Dec15/combinedCard_hgg_hzz_hbb_ggHxH_Dec15_xHfixed.root'
+ws_hbb_ggH_xHfixed           = 'out/workspaces_Dec21/comb_2017_ggHbb_xHfixed.root'
+ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Dec21/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root'
+
 ws_hgg_smH_NJ                = 'out/workspaces_Nov12/Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses.root'
 ws_hzz_smH_NJ                = 'out/workspaces_Nov12/hzz4l_comb_13TeV_xs.root'
 ws_combined_smH_NJ           = 'out/workspaces_Nov12/combinedCard_NJ_smH_Nov12.root'
@@ -109,20 +124,21 @@ ws_hzz_smH_PTJ               = 'out/workspaces_Nov28/hzz4l_comb_13TeV_xs_ptjet.r
 ws_hgg_smH_PTJ               = 'out/workspaces_Nov30/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
 ws_combined_smH_PTJ          = 'out/workspaces_Nov30/combinedCard_PTJ_smH_Nov28.root'
 
-ws_combined_ggH_xHfixed      = 'out/workspaces_Nov08/combinedCard_Nov03_xHfixed.root'
-ws_hgg_ggH_xHfixed           = 'out/workspaces_Nov29/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed.root'
-ws_hzz_ggH_xHfixed           = 'out/workspaces_Nov29/hzz4l_comb_13TeV_xs_processesShifted_xHfixed.root'
-
 # ---------------------
 # Workspaces for extra studies
 
 # ws_ratio_of_BRs              = 'out/workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel.root' # Probably not wrong but safer to use new result
-ws_ratio_of_BRs              = 'out/workspaces_Dec11/combinedCard_smH_Nov07_FitBRModel.root'
-ws_ratio_of_BRs_globalScales = 'out/workspaces_Nov20/combinedCard_smH_Nov07_FitBRModel_globalScales.root'
+# ws_ratio_of_BRs              = 'out/workspaces_Dec11/combinedCard_smH_Nov07_FitBRModel.root'
+# ws_ratio_of_BRs_globalScales = 'out/workspaces_Nov20/combinedCard_smH_Nov07_FitBRModel_globalScales.root'
 ws_totalXS                   = 'out/workspaces_Nov08/combinedCard_smH_Nov07_FitBRModel_fitTotalXS.root'
 ws_combined_ratioOfBRs       = 'out/workspaces_Nov14/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_ratioOfBRs.root'
 ws_combined_totalXS          = 'out/workspaces_Nov27/combinedCard_smH_Nov27_INCLUSIVE_FitBRModel_fitTotalXS.root'
 
+ws_ratio_of_BRs_NJ           = 'out/workspaces_Dec20/combinedCard_NJ_smH_Nov12_FitBRModel.root'
+ws_ratio_of_BRs_PTJ          = 'out/workspaces_Dec20/combinedCard_PTJ_smH_Nov28_FitBRModel.root'
+ws_ratio_of_BRs_YH           = 'out/workspaces_Dec20/combinedCard_YH_smH_Nov28_FitBRModel.root'
+ws_ratio_of_BRs_PTH          = 'out/workspaces_Dec20/combinedCard_smH_Nov07_FitBRModel.root'
+ws_ratio_of_BRs_globalScales = 'out/workspaces_Dec20/combinedCard_smH_Nov27_INCLUSIVE_FitBRModel_globalScales.root'
 
 # ======================================
 # kappab kappac
@@ -200,6 +216,15 @@ scan_hzz_PTH      = 'out/Scan_PTH_Nov08_hzz'
 scan_combined_PTH_ggH = 'out/Scan_PTH_Nov08_xHfixed'
 scan_hgg_PTH_ggH      = 'out/Scan_PTH_Nov29_xHfixed_hgg'
 scan_hzz_PTH_ggH      = 'out/Scan_PTH_Nov29_xHfixed_hzz'
+scan_hbb_PTH_ggH      = 'out/Scan_PTH_Dec15_xHfixed_hbb'
+scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb'
+
+scan_combined_PTH_ggH_asimov    = 'out/Scan_PTH_Dec15_xHfixed_asimov_asimov'
+scan_hgg_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hgg_asimov_asimov'
+scan_hzz_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hzz_asimov_asimov'
+scan_hbb_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hbb_asimov_asimov'
+scan_combWithHbb_PTH_ggH_asimov = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb_asimov_asimov'
+
 
 scan_combined_NJ  = 'out/Scan_nJets_Nov12'
 scan_hgg_NJ       = 'out/Scan_nJets_Nov12_0'
@@ -237,6 +262,19 @@ scan_ratioOfBRs_globalScales     = 'out/Scan_ratioOfBRs_Nov20_globalScales'
 # scan_combined_PTH_xHfixed_asimov = 'out/Scan_PTH_Nov17_xHfixed_asimov'
 
 scan_combined_totalXS            = 'out/Scan_TotalXS_Nov27'
+
+scan_ratioOfBRs_NJ   = 'out/Scan_ratioOfBRs_Dec20'
+scan_ratioOfBRs_PTJ  = 'out/Scan_ratioOfBRs_Dec20_0'
+scan_ratioOfBRs_YH   = 'out/Scan_ratioOfBRs_Dec20_1'
+scan_ratioOfBRs_PTH  = 'out/Scan_ratioOfBRs_Dec20_2'
+scan_ratioOfBRs_INC  = 'out/Scan_ratioOfBRs_Dec20_3'
+
+scan_ratioOfBRs_NJ_asimov   = 'out/Scan_ratioOfBRs_Dec20_asimov'
+scan_ratioOfBRs_PTJ_asimov  = 'out/Scan_ratioOfBRs_Dec20_asimov_0'
+scan_ratioOfBRs_YH_asimov   = 'out/Scan_ratioOfBRs_Dec20_asimov_1'
+scan_ratioOfBRs_PTH_asimov  = 'out/Scan_ratioOfBRs_Dec20_asimov_2'
+scan_ratioOfBRs_INC_asimov  = 'out/Scan_ratioOfBRs_Dec20_asimov_3'
+
 
 
 # ======================================
