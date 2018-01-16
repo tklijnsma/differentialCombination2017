@@ -188,9 +188,9 @@ def BasicDrawScanResults(
 
     base = ROOT.TH1F()
     base.Draw('P')
-    base.GetXaxis().SetLimits( POIRange[0], POIRange[1] )
+    base.GetXaxis().SetLimits( POIRange[0], min( 5., POIRange[1] ) )
     base.SetMinimum( deltaNLLRange[0] )
-    base.SetMaximum( min( 6., deltaNLLRange[1] ) )
+    base.SetMaximum( 5.0 )
     base.SetMarkerColor(0)
     base.GetXaxis().SetTitle( '#mu' )
     base.GetYaxis().SetTitle( '2#DeltaNLL' )
@@ -1051,10 +1051,15 @@ def FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=False ):
 
     if iMin > 2:
         # Find left minimum
+        POIvalsLeft   = POIvals[:iMin+1]
+        deltaNLLsLeft = deltaNLLs[:iMin+1]
+        if min(deltaNLLsLeft) > 0.5 or max(deltaNLLsLeft) < 0.5:
+            wellDefinedLeftBound = False
+
         Tg_left = ROOT.TGraph(
             iMin+1,
-            array( 'd', deltaNLLs[:iMin+1] ),
-            array( 'd', POIvals[:iMin+1] )
+            array( 'd', deltaNLLsLeft[:iMin+1] ),
+            array( 'd', POIvalsLeft[:iMin+1] )
             )
         ROOT.SetOwnership( Tg_left, False )
 

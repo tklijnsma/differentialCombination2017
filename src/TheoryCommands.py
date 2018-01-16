@@ -122,7 +122,7 @@ def GetPlotBase(
 ########################################
 
 #____________________________________________________________________
-def RebinDerivedTheoryContainer( container, newBinBoundaries ):
+def RebinDerivedTheoryContainer( container, newBinBoundaries, lastBinIsOverflow=True, verbose=False ):
 
     newNBins = len(newBinBoundaries) - 1
 
@@ -130,14 +130,16 @@ def RebinDerivedTheoryContainer( container, newBinBoundaries ):
         theoryBinBoundaries = container.binBoundaries,
         theoryBinValues     = container.crosssection,
         expBinBoundaries    = newBinBoundaries,
-        lastBinIsOverflow   = True,
+        lastBinIsOverflow   = lastBinIsOverflow,
+        verbose             = verbose,
         )
 
     newRatios = Rebin(
         theoryBinBoundaries = container.binBoundaries,
         theoryBinValues     = container.ratios,
         expBinBoundaries    = newBinBoundaries,
-        lastBinIsOverflow   = True,
+        lastBinIsOverflow   = lastBinIsOverflow,
+        verbose             = verbose,
         )
 
     # newBinCenters = [ 0.5*(newBinBoundaries[i]+newBinBoundaries[i+1]) for i in xrange(newNBins) ]
@@ -437,16 +439,38 @@ def Rebin(
         lastBinIsOverflow = False,
         verbose = False,
         ):
+    Commands.Warning( 'Calling TheoryCommands.Rebin(); This code needs to be checked!!' )
+
+    nBinsExp = len(expBinBoundaries)-1
+
+    if verbose: print 'Rebinning to {0}; lastBinIsOverflow = {1}'.format( expBinBoundaries, lastBinIsOverflow )
+
     theoryIntegralFunction = GetIntegral( theoryBinBoundaries, theoryBinValues )
     expBinValues = []
-    for iBinExp in xrange(len(expBinBoundaries)-1):
+    for iBinExp in xrange(nBinsExp-1):
         expBinValues.append(
             theoryIntegralFunction( expBinBoundaries[iBinExp], expBinBoundaries[iBinExp+1] ) / ( expBinBoundaries[iBinExp+1] - expBinBoundaries[iBinExp] )
             )
-        if verbose: print 'Integral for {0:7.2f} to {1:7.2f}: {2}'.format( expBinValues[iBinExp], expBinValues[iBinExp+1], expBinValues[iBinExp] )
+        if verbose: print '  Doing integral({0:7.2f}, {1:7.2f}) / ({1:7.2f}-{0:7.2f}): {2} (/GeV)'.format( expBinBoundaries[iBinExp], expBinBoundaries[iBinExp+1], expBinValues[iBinExp] )
+
+
+    # ======================================
+    # Last bin needs some special care
 
     if lastBinIsOverflow:
-        expBinValues[-1] = theoryIntegralFunction( expBinBoundaries[-2], theoryBinBoundaries[-1] ) / ( theoryBinBoundaries[-1] - expBinBoundaries[-2] )
+        expBinValues.append( theoryIntegralFunction( expBinBoundaries[-2], theoryBinBoundaries[-1] ) )
+        Commands.Warning( 'Last bin uses the rightmost theory bin bound {0} instead of requested exp bin bound {1}'.format( theoryBinBoundaries[-1], expBinBoundaries[-1] ) )
+        if verbose: print '  Doing integral({0:7.2f}, {1:7.2f})                      : {2} (not per GeV!)'.format( expBinBoundaries[-2], theoryBinBoundaries[-1], expBinValues[-1] )
+
+    else:
+        if expBinBoundaries[-1] > theoryBinBoundaries[-1]:
+            right = theoryBinBoundaries[-1]
+            Commands.Warning( 'Last bin uses the rightmost theory bin bound {0} instead of requested exp bin bound {1}'.format( theoryBinBoundaries[-1], expBinBoundaries[-1] ) )
+        else:
+            right = expBinBoundaries[-1]
+        expBinBoundaries[-1] = right
+        expBinValues.append( theoryIntegralFunction( expBinBoundaries[-2], right ) / ( right - expBinBoundaries[-2] ) )
+        if verbose: print '  Doing integral({0:7.2f}, {1:7.2f}) / ({1:7.2f}-{0:7.2f}): {2} (/GeV)'.format( expBinBoundaries[-2], right, expBinValues[-1] )
 
     return expBinValues
 

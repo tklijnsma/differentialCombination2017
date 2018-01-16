@@ -99,7 +99,7 @@ def BasicT2WS(
         ):
 
     if outputDir is None:
-        outputDir = abspath( 'workspaces_{0}'.format(datestr) )
+        outputDir = abspath( 'out/workspaces_{0}'.format(datestr) )
     if not isdir( outputDir ): os.makedirs( outputDir )
     
     if not outputWS:
@@ -756,6 +756,7 @@ def ListProcesses( datacardFile ):
 def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
 
     if not isinstance( cmd, basestring ):
+        cmd = [ l for l in cmd if not len(l.strip()) == 0 ]
         cmdStr = '\n    '.join( cmd )
         cmdExec = ' '.join(cmd)
     else:
@@ -908,7 +909,7 @@ def MultiDimCombineTool(
 def BasicCombineTool(
         datacard,
         POIpattern    = '*',
-        POIRange      = [ -1.0, 4.0 ],
+        POIRange      = None,
         nPoints       = 100,
         nPointsPerJob = 3,
         queue         = '1nh',
@@ -916,6 +917,8 @@ def BasicCombineTool(
         jobDirectory  = None,
         asimov        = False,
         fastscan      = False,
+        extraOptions  = None,
+        disableFloatOtherPOIs = False,
         ):
 
     datacard = abspath( datacard )
@@ -923,6 +926,9 @@ def BasicCombineTool(
     scanName = basename(datacard).replace('.root','')
     scanName = re.sub( r'\W', '', scanName )
     scanName = 'SCAN_{{0}}_{0}_{1}'.format( datestr, scanName )
+
+    if POIRange is None:
+        POIRange = [ -1.0, 4.0 ]
 
     allPOIs = ListPOIs( datacard )
     if not POIpattern == '*':
@@ -963,7 +969,7 @@ def BasicCombineTool(
             '--cminDefaultMinimizerType Minuit2',
             '--cminDefaultMinimizerAlgo migrad',
             '--algo=grid',
-            '--floatOtherPOIs=1',
+            ( '--floatOtherPOIs=1' if not disableFloatOtherPOIs else '' ),
             '-P "{0}"'.format( POI ),
             '--setPhysicsModelParameterRanges "{0}"={1:.3f},{2:.3f} '.format( POI, POIRange[0], POIRange[1] ),
             '--setPhysicsModelParameters {0}'.format( ','.join([ iterPOI + '=1.0' for iterPOI in allPOIs ]) ),
@@ -978,6 +984,9 @@ def BasicCombineTool(
             cmd.append( '-t -1' )
         if fastscan:
             cmd.append( '--fastScan' )
+
+        if not extraOptions is None:
+            cmd.extend(extraOptions)
 
         if not notOnBatch:
             cmd.append(
@@ -1038,7 +1047,13 @@ def ConvertTChainToArray(
             if verbose: print '    Found tree in {0}'.format( rootFile )
             break
     else:
-        ThrowError( 'Not a single root file had a tree called \'{0}\'; Cannot extract any data', throwException=True )
+        ThrowError(
+            'Not a single root file had a tree called \'{0}\'; Cannot extract any data'.format(treeName)
+            + '\n  First root file:\n  {0}'.format( rootFileList[0] )
+            + '\n  Last root file:\n  {0}'.format( rootFileList[-1] )
+            ,
+            throwException=True
+            )
 
 
     # Get the variable list from this one file
