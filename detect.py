@@ -29,8 +29,10 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument( 'rootfile', type=str )
+    parser.add_argument( '--workspace', type=str )
     parser.add_argument( 'varsToPrint', type=str, nargs='*' )
     parser.add_argument( '--MultiDimFit', action='store_true', help='boolean')
+    parser.add_argument( '--loadSnapshot', action='store_true', help='boolean')
     parser.add_argument( '--list', action='store_true', help='boolean')
     parser.add_argument( '--printGetter', action='store_true', help='boolean')
     parser.add_argument( '--components', action='store_true', help='boolean')
@@ -39,6 +41,8 @@ def main():
 
     rootFp = ROOT.TFile.Open( args.rootfile )
     wNames = [ 'w', 'wsig_8TeV', 'wsig_13TeV', 'multipdf' ]
+    if args.workspace:
+        wNames.insert( 0, args.workspace )
     foundWorkspace = False
     for wName in wNames:
         w = rootFp.Get( wName )
@@ -59,7 +63,7 @@ def main():
         return
 
 
-    if args.MultiDimFit:
+    if args.MultiDimFit or args.loadSnapshot:
         w.loadSnapshot('MultiDimFit')
 
 
