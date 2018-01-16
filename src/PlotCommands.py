@@ -378,17 +378,6 @@ def PlotSpectraOnTwoPanel(
             unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
             container.uncs.append(unc)
 
-            # This is hacky and should not be necessary when the hbb card is fixed
-            # if container.name == 'combWithHbb' and 'GT600' in POI:
-            #     minDeltaNLL = min(deltaNLLs)
-            #     deltaNLLs = [ nll - minDeltaNLL for nll in deltaNLLs ]
-            #     print '\nPrinting unc for GT600'
-            #     unc.PrintAttributes()
-            #     print ''
-            #     print 'POIvals   =', POIvals
-            #     print 'deltaNLLs =', deltaNLLs
-            #     print '\n'
-
         # If last bin is indeed an overflow, and scaleLastBin is not set to False, scale the last bin
         if not lastBinIsNotOverflow and not scaleLastBin == False:
             if scaleLastBin == 'previousBin':
