@@ -21,6 +21,7 @@ import topCommands
 import onetimeplotsCommands
 # import highLumiStudyCommands
 import extrastudyCommands
+import crosscheckCommands
 import rapidityCommands
 import scanCommands
 
@@ -70,21 +71,23 @@ def main():
     extrastudyCommands.AppendParserOptions(parser)
     rapidityCommands.AppendParserOptions(parser)
     scanCommands.AppendParserOptions(parser)
+    crosscheckCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--latest', dest='latest', action='store_true', default=True )
     group.add_argument( '--older',  dest='latest', action='store_false' )
 
-    parser.add_argument( '--hzz',   action='store_true' )
-    parser.add_argument( '--hgg',   action='store_true' )
+    group_decay = parser.add_mutually_exclusive_group(required=False)
+    group_decay.add_argument( '--hzz',   action='store_true' )
+    group_decay.add_argument( '--hgg',   action='store_true' )
+    group_decay.add_argument( '--hbb',   action='store_true' )
+    group_decay.add_argument( '--combWithHbb',   action='store_true' )
 
     parser.add_argument( '--saveroot',   action='store_true' )
     parser.add_argument( '--savepng',   action='store_true' )
 
     args = parser.parse_args()
 
-    if args.hgg and args.hzz:
-        Commands.ThrowError( 'Both --hzz and --hgg were specified; these are exclusive options' )
 
     print args
     print ''
@@ -151,6 +154,9 @@ def main():
 
     if args.onetimeplotsCommands:
         onetimeplotsCommands.main(args)
+
+    if args.crosscheckCommands:
+        crosscheckCommands.main(args)
 
 
     # ########################################
