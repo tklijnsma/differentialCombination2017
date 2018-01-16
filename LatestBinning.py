@@ -6,7 +6,21 @@ from Observable import Observable
 # Physical quantities
 ########################################
 
-YR4_totalXS = 55.70628722 # pb
+YR4_ggF_n3lo        = 4.852E+01
+YR4_VBF             = 3.779E+00
+YR4_WH              = 1.369E+00
+YR4_ZH              = 8.824E-01
+YR4_ttH             = 5.065E-01
+YR4_bbH             = 4.863E-01
+YR4_tH_t_ch         = 7.426E-02
+YR4_tH_s_ch         = 2.875E-03
+YR4_tH_W_associated = 0.000E+00
+
+YR4_totalXS         = YR4_ggF_n3lo + YR4_VBF + YR4_WH + YR4_ZH + YR4_ttH + YR4_bbH + YR4_tH_t_ch + YR4_tH_s_ch + YR4_tH_W_associated
+YR4_xH              = YR4_totalXS - YR4_ggF_n3lo
+
+# YR4_totalXS = 55.70628722 # pb
+# YR4_ggHXS   = 48.58 # pb
 
 SM_BR_hgg = 2.270E-03
 SM_BR_hzz = 0.02641
@@ -46,3 +60,13 @@ hzz_binMerging_njets = [ 0, 1, 2, [3,4] ]
 obs_pth_hzzBinning = obs_pth.mergeBins(hzz_binMerging_pth)
 obs_ptjet_hzzBinning = obs_ptjet.mergeBins(hzz_binMerging_ptjet)
 obs_njets_hzzBinning = obs_njets.mergeBins(hzz_binMerging_njets)
+
+
+
+binning_pth_hbb = [ 350., 600., 10000. ]
+shape_pth_hbb   = [ 0.5*shape_pth[-1], 0.5*shape_pth[-1] ]
+obs_pth_hbbBinning = Observable( name = 'pth', title = 'p_{T}^{H}', shape = shape_pth_hbb, binning = binning_pth_hbb )
+
+binning_pth_combWithHbb = [ 0.0, 15.0, 30.0, 45.0, 85.0, 125.0, 200.0, 350.0, 600.0, 10000.0 ]
+shape_pth_combWithHbb   = shape_pth[:-1] + [ 0.9*shape_pth[-1], 0.1*shape_pth[-1] ]
+obs_pth_combWithHbbBinning = Observable( name = 'pth', title = 'p_{T}^{H}', shape = shape_pth_combWithHbb, binning = binning_pth_combWithHbb )
