@@ -378,6 +378,17 @@ def PlotSpectraOnTwoPanel(
             unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
             container.uncs.append(unc)
 
+            # This is hacky and should not be necessary when the hbb card is fixed
+            # if container.name == 'combWithHbb' and 'GT600' in POI:
+            #     minDeltaNLL = min(deltaNLLs)
+            #     deltaNLLs = [ nll - minDeltaNLL for nll in deltaNLLs ]
+            #     print '\nPrinting unc for GT600'
+            #     unc.PrintAttributes()
+            #     print ''
+            #     print 'POIvals   =', POIvals
+            #     print 'deltaNLLs =', deltaNLLs
+            #     print '\n'
+
         # If last bin is indeed an overflow, and scaleLastBin is not set to False, scale the last bin
         if not lastBinIsNotOverflow and not scaleLastBin == False:
             if scaleLastBin == 'previousBin':
@@ -396,7 +407,7 @@ def PlotSpectraOnTwoPanel(
         container.yMaxRatio = max([ unc.rightBound for unc in container.uncs ])
         if TOP_PANEL_LOGSCALE:
             container.yMinCrosssection = min([
-                min([ unc.leftBound  * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) if unc.leftBound > 0.0 ]),
+                min([ unc.leftBound  * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) if unc.leftBound > 0.0 ] + [0.01] ),
                 min([ unc.min        * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) if unc.min > 0.0 ]),
                 min([ unc.rightBound * xs for unc, xs in zip( container.uncs, container.SMcrosssections ) if unc.rightBound > 0.0 ]),
                 ]) 
@@ -478,7 +489,7 @@ def PlotSpectraOnTwoPanel(
     leg.SetFillStyle(0)
 
     colorCycle = Commands.newColorCycle()
-    fillStyleCycle = itertools.cycle([ 3245, 3254 ])
+    fillStyleCycle = itertools.cycle([ 3245, 3254, 3205 ])
 
     for container in containers:
         if not hasattr( container, 'color' ): container.color = next(colorCycle)
@@ -487,7 +498,7 @@ def PlotSpectraOnTwoPanel(
         # ---------------------
         # Construct objects for bottom panel
 
-        if not container.name == 'combination':
+        if not ( container.name == 'combination' or container.name == 'combWithHbb' ):
 
             Hratio = ROOT.TH1F(
                 GetUniqueRootName(), '',
@@ -573,6 +584,8 @@ def PlotSpectraOnTwoPanel(
             Tgratio.SetMarkerStyle(8)
             Tgratio.SetMarkerSize(1.2)
             # Tgratio.SetLineWidth(2)
+            Tgratio.SetMarkerColor(container.color)
+            Tgratio.SetLineColor(container.color)
             bottomPanelObjects.append( ( Tgratio, 'PSAME' ) )
 
             Tgcrosssection = ROOT.TGraphAsymmErrors(
@@ -588,6 +601,8 @@ def PlotSpectraOnTwoPanel(
             Tgcrosssection.SetName( GetUniqueRootName() )
             Tgcrosssection.SetMarkerStyle(8)
             Tgcrosssection.SetMarkerSize(1.2)
+            Tgcrosssection.SetMarkerColor(container.color)
+            Tgcrosssection.SetLineColor(container.color)
             # Tgcrosssection.SetLineWidth(2)
             topPanelObjects.append( ( Tgcrosssection, 'PSAME' ) )
 
