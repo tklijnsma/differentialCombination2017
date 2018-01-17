@@ -184,11 +184,11 @@ def main( args ):
         # INCLUDE_BR_COUPLING_DEPENDENCY    = True
         INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
-        PROFILE_TOTAL_XS                  = True
-        # PROFILE_TOTAL_XS                  = False
+        # PROFILE_TOTAL_XS                  = True
+        PROFILE_TOTAL_XS                  = False
 
-        FIT_ONLY_NORMALIZATION            = True
-        # FIT_ONLY_NORMALIZATION            = False
+        # FIT_ONLY_NORMALIZATION            = True
+        FIT_ONLY_NORMALIZATION            = False
 
         # DO_BR_UNCERTAINTIES               = True
         DO_BR_UNCERTAINTIES               = False
@@ -292,7 +292,7 @@ def main( args ):
 
         Commands.BasicT2WSwithModel(
             datacard,
-            'CouplingModel.py',
+            'physicsModels/CouplingModel.py',
             suffix = suffix,
             extraOptions = extraOptions,
             )

@@ -194,6 +194,24 @@ def BasicT2WS(
     executeCommand( cmd )
 
 #____________________________________________________________________
+def CopyPhysicsModels():
+    """
+    Copies models to compiled directory
+    (scram b takes unnecessarily long)
+    """
+
+    physicsModelsDir = 'physicsModels'
+    dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(physicsModelsDir) )
+
+    if IsTestMode():
+        print 'Would now copy {0} to {1}'.format( physicsModelsDir, dst )
+    else:
+        print 'Copying {0} to {1}'.format( physicsModelsDir, dst )
+        if isdir(dst):
+            shutil.rmtree(dst)
+        shutil.copytree( physicsModelsDir, dst )
+
+#____________________________________________________________________
 def BasicT2WSwithModel(
     datacard,
     pathToModel,
@@ -209,16 +227,17 @@ def BasicT2WSwithModel(
     # Copy model to compiled directory
     # (scram b takes unnecessarily long)
 
-    if not TESTMODE:
-        dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(pathToModel) )
-        print 'Copying\n    {0}\n    to\n    {1}'.format( pathToModel, dst )
-        shutil.copyfile( pathToModel, dst )
+    # if not TESTMODE:
+    #     dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(pathToModel) )
+    #     print 'Copying\n    {0}\n    to\n    {1}'.format( pathToModel, dst )
+    #     shutil.copyfile( pathToModel, dst )
+    CopyPhysicsModels()
 
 
     # ======================================
     # Build command
 
-    outputDir = abspath( 'workspaces_{0}'.format(datestr) )
+    outputDir = abspath( 'out/workspaces_{0}'.format(datestr) )
     if not isdir( outputDir ): os.makedirs( outputDir )
     outputWS = join( outputDir, basename(datacard).replace( '.txt', '_{0}.root'.format( basename(pathToModel).replace('.py','') ) ) )
     
@@ -228,6 +247,9 @@ def BasicT2WSwithModel(
     moduleName = basename(pathToModel).replace('.py','')
     if modelName == None:
         modelName = moduleName[0].lower() + moduleName[1:]
+
+    if basename(dirname(pathToModel)) == 'physicsModels':
+        moduleName = 'physicsModels.' + moduleName
 
     cmd = []
     cmd.append( 'text2workspace.py' )
