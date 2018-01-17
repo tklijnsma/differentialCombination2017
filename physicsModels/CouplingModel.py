@@ -1,0 +1,1 @@
+couplingModel = differentialModels.CouplingModel.CouplingModel()
