@@ -727,7 +727,7 @@ def GetTH2FromListOfRootFiles(
         zVariable = 'deltaNLL',
         # defaultHValue = None,
         defaultHValue = 999.,
-        forceBestfitAtZero = True,
+        refind_minimum_if_dnll_negative = False,
         ):
 
     # Read values from specified rootfiles
@@ -780,18 +780,29 @@ def GetTH2FromListOfRootFiles(
     yBinBoundaries = inferBinBoundaries( yBinCenters )
 
 
-    # If starting from pre-fit, sometimes something goes wrong... look for actual minimum:
-    dontSkipBestfit = False
-    if not forceBestfitAtZero:
-        minDeltaNLL = min(GetListFromScan('deltaNLL'))
-        if minDeltaNLL < 0.0:
-            Commands.Warning( 'There are <0 deltaNLL values - the start fit was NOT the best fit!!' )
+    # When looping over the points, don't consider the bestfit point a part of the histogram
+    skipBestfit = True
+    old_xBestfit = -99999.
+    old_yBestfit = -99999.
+
+    # Find actual minimum in all deltaNLL values
+    minDeltaNLL = min(GetListFromScan('deltaNLL'))
+    if minDeltaNLL < 0.0:
+        scandir_heuristicly = basename(dirname(abspath(rootfiles[0])))
+        Commands.Warning( '[dir={0}] min deltaNLL = {1} - the start fit was NOT the best fit!!'.format(scandir_heuristicly, minDeltaNLL) )
+        if refind_minimum_if_dnll_negative:
+            # Save old bestfit values so they can be skipped when making the histogram
+            old_xBestfit = xBestfit
+            old_yBestfit = yBestfit
             iBestfit = GetListFromScan('deltaNLL').index( minDeltaNLL )
-            for point in scan:
-                point['deltaNLL'] -= minDeltaNLL
             xBestfit = GetListFromScan(xCoupling)[iBestfit]
             yBestfit = GetListFromScan(yCoupling)[iBestfit]
-            dontSkipBestfit = True
+            Commands.Warning( 'Will take the ACTUAL minimum to be deltaNLL={0} ({1}={2}, {3}={4}), and will shift histogram UP by {0}'.format(
+                minDeltaNLL, xCoupling, xBestfit, yCoupling, yBestfit
+                ))
+            for point in scan:
+                point['deltaNLL'] -= minDeltaNLL
+
 
 
     H2name = GetUniqueRootName()
@@ -810,19 +821,25 @@ def GetTH2FromListOfRootFiles(
 
     for iPoint in xrange(nPoints):
 
-        if scan[iPoint][xCoupling] == xBestfit and scan[iPoint][yCoupling] == yBestfit and not dontSkipBestfit:
+        x = scan[iPoint][xCoupling]
+        y = scan[iPoint][yCoupling]
+
+        if skipBestfit:
+            if x == xBestfit and y == yBestfit:
+                continue
+            if x == old_xBestfit and y == old_yBestfit:
+                continue
+
+        try:
+            iBinX = xBinCenters.index(x)
+        except ValueError:
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, x )
             continue
 
         try:
-            iBinX = xBinCenters.index( scan[iPoint][xCoupling] )
+            iBinY = yBinCenters.index(y)
         except ValueError:
-            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][xCoupling] )
-            continue
-
-        try:
-            iBinY = yBinCenters.index( scan[iPoint][yCoupling] )
-        except ValueError:
-            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, scan[iPoint][yCoupling] )
+            print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, y )
             continue
 
         if multiplyByTwo:

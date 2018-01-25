@@ -15,6 +15,7 @@ from copy import deepcopy
 from array import array
 
 import LatestPaths
+import LatestBinning
 
 sys.path.append('src')
 import Commands
@@ -63,12 +64,14 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--couplingBestfit_Top',                           action=CustomAction )
     parser.add_argument( '--coupling2Dplot_Top',                            action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top',                       action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Top_reweighted',            action=CustomAction )
     parser.add_argument( '--checkWSParametrization_Top',                    action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_lumiStudy',             action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_BRdependencyComparison',  action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_BRdependencyComparison_bigRange',  action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_ProfiledTotalXS',       action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_FitOnlyNormalization',  action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Top_newBins',               action=CustomAction )
 
     parser.add_argument( '--couplingContourPlot_Top_onlyNormalization',     action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Top_skippedLastBin',        action=CustomAction )
@@ -164,14 +167,14 @@ def main( args ):
         # ======================================
         # Switches
 
-        INCLUDE_THEORY_UNCERTAINTIES   = True
-        # INCLUDE_THEORY_UNCERTAINTIES   = False
+        # INCLUDE_THEORY_UNCERTAINTIES   = True
+        INCLUDE_THEORY_UNCERTAINTIES   = False
 
         # MAKELUMISCALABLE               = True
         MAKELUMISCALABLE               = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY = False
+        # INCLUDE_BR_COUPLING_DEPENDENCY = True
+        INCLUDE_BR_COUPLING_DEPENDENCY = False
 
         # PROFILE_TOTAL_XS               = True
         PROFILE_TOTAL_XS               = False
@@ -179,14 +182,17 @@ def main( args ):
         # FIT_ONLY_NORMALIZATION         = True
         FIT_ONLY_NORMALIZATION         = False
 
-
         # EXCLUDE_LAST_BIN               = True
         EXCLUDE_LAST_BIN               = False
-
 
         USE_HIGHPT_PARAMETRIZATION     = True
         # USE_HIGHPT_PARAMETRIZATION     = False
         
+        # REWEIGHT_CROSS_SECTIONS        = True
+        REWEIGHT_CROSS_SECTIONS        = False
+
+        NEW_BINNING_TEST               = True
+        # NEW_BINNING_TEST               = False
 
 
         # ======================================
@@ -196,6 +202,15 @@ def main( args ):
             datacard = LatestPaths.card_hgg_ggHxH_PTH
         if args.hzz:
             datacard = LatestPaths.card_hzz_ggHxH_PTH
+        if args.hbb:
+            datacard = LatestPaths.card_hbb_ggHxH_PTH
+        if args.combWithHbb:
+            datacard = LatestPaths.card_combinedWithHbb_ggHxH_PTH
+
+        if NEW_BINNING_TEST:
+            datacard = LatestPaths.card_combined_ggHxH_PTH_newBins
+            if args.hzz:
+                datacard = LatestPaths.card_hzz_ggHxH_PTH_newBins
 
         if USE_HIGHPT_PARAMETRIZATION:
             TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_TopHighPt )
@@ -208,6 +223,8 @@ def main( args ):
             theoryUncertainties = LatestPaths.theoryUncertainties_Top
             # if UNCORRELATED_THEORY_UNCERTAINTIES:
             #     correlationMatrix = LatestPaths.correlationMatrix_Top_Uncorrelated
+        else:
+            Commands.Warning('Theory uncertainties are NOT included!')
 
 
         # ======================================
@@ -283,18 +300,32 @@ def main( args ):
             extraOptions.append( '--PO FitOnlyNormalization=True' )
             suffix += '_fitOnlyNormalization'
 
-
         if EXCLUDE_LAST_BIN:
             expBinBoundaries = expBinBoundaries[:-1]
             suffix += '_skippedLastBin'
 
-        extraOptions.append(
-            '--PO binBoundaries={0}'.format( ','.join([ str(b) for b in expBinBoundaries ]) )
-            )
+        if REWEIGHT_CROSS_SECTIONS:
+            crosssections = LatestBinning.obs_pth_ggH.crosssection()[:len(expBinBoundaries)-1]
+            extraOptions.append('--PO ReweightCrossSections={0}'.format( ','.join([str(v) for v in crosssections]) ))
+            suffix += '_reweighted'
+
+        if NEW_BINNING_TEST:
+            if args.hzz:
+                newBinBoundaries = [ 0., 15., 30., 80., 200., 10000. ]
+                extraOptions.append('--PO binBoundaries={0}'.format( ','.join([str(b) for b in newBinBoundaries]) ))
+                suffix += '_hzz_newBins'
+            else:
+                newBinBoundaries = [ 0., 15., 30., 80., 200., 350., 600., 10000. ]
+                extraOptions.append('--PO binBoundaries={0}'.format( ','.join([str(b) for b in newBinBoundaries]) ))
+                suffix += '_hzz_hbb_newBins'
+        else:
+            extraOptions.append(
+                '--PO binBoundaries={0}'.format( ','.join([ str(b) for b in expBinBoundaries ]) )
+                )
 
         Commands.BasicT2WSwithModel(
             datacard,
-            'CouplingModel.py',
+            'physicsModels/CouplingModel.py',
             suffix = suffix,
             extraOptions = extraOptions,
             )
@@ -569,6 +600,142 @@ def main( args ):
             y_SM      = 0.,
             plotIndividualH2s = True,
             filterContours = False,
+            )
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top_reweighted:
+
+        ASIMOV = ( True if args.asimov else False )
+
+        combined_rootfiles_asimov = glob( '{0}/*.root'.format(LatestPaths.scan_combined_TopHighPt_asimov) )
+        combined_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combined_TopHighPt) )
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            ( combined_rootfiles_asimov if ASIMOV else combined_rootfiles ),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'combined'
+        combined.title = 'w/o hbb'
+
+        combWithHbb_rootfiles_asimov = glob( '{0}/*.root'.format(LatestPaths.scan_combWithHbb_TopHighPt_asimov) )
+        combWithHbb_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_combWithHbb_TopHighPt) )
+        combWithHbb = TheoryCommands.GetTH2FromListOfRootFiles(
+            ( combWithHbb_rootfiles_asimov if ASIMOV else combWithHbb_rootfiles ),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            defaultHValue = 999.,
+            # refind_minimum_if_dnll_negative = True,
+            )
+        combWithHbb.color = 8
+        combWithHbb.name = 'combWithHbb'
+        combWithHbb.title = 'with hbb'
+
+        hzz_rootfiles_asimov = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_TopHighPt_asimov) )
+        hzz_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_hzz_TopHighPt) )
+        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
+            ( hzz_rootfiles_asimov if ASIMOV else hzz_rootfiles ),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            defaultHValue = 999.,
+            # refind_minimum_if_dnll_negative = True
+            )
+        hzz.color = 4
+        hzz.name = 'hzz'
+        hzz.title = 'hzz'
+
+        hgg_rootfiles_asimov = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_TopHighPt_asimov) )
+        hgg_rootfiles = glob( '{0}/*.root'.format(LatestPaths.scan_hgg_TopHighPt) )
+        hgg = TheoryCommands.GetTH2FromListOfRootFiles(
+            ( hgg_rootfiles_asimov if ASIMOV else hgg_rootfiles ),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            defaultHValue = 999.,
+            # refind_minimum_if_dnll_negative = True
+            )
+        hgg.color = 2
+        hgg.name = 'hgg'
+        hgg.title = 'hgg'
+
+        containers = [
+            combined,
+            combWithHbb,
+            hzz, hgg
+            ]
+
+        PlotCommands.BasicMixedContourPlot(
+            containers,
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
+            # 
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_Top_reweighted' + ( '_asimov' if ASIMOV else '' ),
+            x_SM      = 1.,
+            y_SM      = 0.,
+            plotIndividualH2s = True,
+            filterContours = False,
+            # only1sigmaContours = True
+            )
+
+
+    #____________________________________________________________________
+    if args.couplingContourPlot_Top_newBins:
+
+        hzz_dir = 'out/Scan_TopHighPt_Jan24_hzz_asimov'
+        hzz_rootfiles = glob('{0}/*.root'.format(hzz_dir))
+        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
+            hzz_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            defaultHValue = 999.,
+            # refind_minimum_if_dnll_negative = True
+            )
+        hzz.color = 4
+        hzz.name = 'hzz'
+        hzz.title = 'hzz'
+
+        hzzhbb_dir = 'out/Scan_TopHighPt_Jan24_combWithHbb_asimov_0'
+        hzzhbb_rootfiles = glob('{0}/*.root'.format(hzzhbb_dir))
+        hzzhbb = TheoryCommands.GetTH2FromListOfRootFiles(
+            hzzhbb_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            defaultHValue = 999.,
+            # refind_minimum_if_dnll_negative = True
+            )
+        hzzhbb.color = 1
+        hzzhbb.name = 'hzzhbb'
+        hzzhbb.title = 'hzzhbb'
+
+        containers = [
+            hzz, hzzhbb
+            ]
+
+        PlotCommands.BasicMixedContourPlot(
+            containers,
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
+            # 
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_Top_newBins' + ( '_asimov' if args.asimov else '' ),
+            x_SM      = 1.,
+            y_SM      = 0.,
+            plotIndividualH2s = True,
+            filterContours = False,
+            # only1sigmaContours = True
             )
 
 

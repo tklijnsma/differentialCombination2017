@@ -1,3 +1,6 @@
+import numpy, itertools, sys
+import RooFactoryInterface
+
 def makeParametrizationsFromTheory( self ):
 
     ########################################
@@ -32,8 +35,7 @@ def makeParametrizationsFromTheory( self ):
         nComponents += len(couplings) + 1
 
     if not len(couplingCombinations) == nComponents:
-        raise CouplingModelError( 'ERROR: amount of coupling combinations should be equal to number of expected parameters' )
-        sys.exit()
+        raise self.CouplingModelError( 'ERROR: amount of coupling combinations should be equal to number of expected parameters' )
 
     if len(self.theories) > nComponents:
         print '[FIXME!] Need to choose {0} theories with DIFFERENT COUPLINGS, otherwise matrix is singular!'.format( nComponents )
@@ -43,7 +45,7 @@ def makeParametrizationsFromTheory( self ):
         for theory in self.theories:
             print '    ' + ', '.join([ '{0:10} = {1:10}'.format( cName, cValue ) for cName, cValue in theory['couplings'].iteritems() ])
     elif len(self.theories) < nComponents:
-        raise CouplingModelError( 'ERROR: cannot parametrize because number of supplied theories is too small (need {0} theories, found {1})'.format(
+        raise self.CouplingModelError( 'ERROR: cannot parametrize because number of supplied theories is too small (need {0} theories, found {1})'.format(
             nComponents, len(self.theories) ) )
 
 
@@ -114,54 +116,34 @@ def makeParametrizationsFromTheory( self ):
             print '{0:4}: {1}'.format( i, parametrization )
         print
 
-    # Create a "@number" string per coupling
-    argCoupling = { coupling : '@{0}'.format(iCoupling) for iCoupling, coupling in enumerate(couplings) }
 
-    parametrizationNames = []
+    # ======================================
+    # Dumping parametrizations to workspace
+
+    rooParametrizations = []
     for iParametrization, parametrization in enumerate( parametrizations ):
 
-        # Also import it to the workspace
-        parametrizationName = 'parametrization{0}'.format( iParametrization )
-        parametrizationNames.append( parametrizationName )
+        rooParametrization = RooFactoryInterface.RooParametrization('parametrization{0}'.format(iParametrization), verbose=True)
+        rooParametrization.variables.extend(couplings)
+        for coefficient, couplingList in zip( parametrization, couplingCombinations ):
+            rooParametrization.add_term( coefficient, couplingList )
 
-        parametrizationString = ''
-        for parameter, couplingList in zip( parametrization, couplingCombinations ):
-            if len(couplingList) == 2:
-                coupling1, coupling2 = couplingList
-                parametrizationString += '+{0}*{1}*{2}'.format(
-                    parameter, argCoupling[coupling1], argCoupling[coupling2]
-                    )
-            elif len(couplingList) == 1:
-                parametrizationString += '+{0}*{1}'.format(
-                    parameter, argCoupling[couplingList[0]]
-                    )
-            elif len(couplingList) == 0:
-                parametrizationString += '+{0}'.format( parameter )
+        self.modelBuilder.factory_( rooParametrization.parse() )
 
-        # Strip off the '+' at the beginning
-        parametrizationString = parametrizationString[1:]
+        # Keep track of the full set of imported parametrizations in the workspace
+        rooParametrizations.append( rooParametrization )
 
-        parametrizationExpression = (
-            'expr::{name}('
-            '"({string})", '
-            '{arguments} )'
-            ).format(
-                name      = parametrizationName,
-                string    = parametrizationString,
-                arguments = ','.join(couplings),
-                )
 
-        if self.verbose > 1:
-            print 'Importing parametrization {0}:'.format( iParametrization )
-            print parametrizationExpression
 
-        self.modelBuilder.factory_( parametrizationExpression )
+    # ======================================
+    # Wrap up
 
-    self.modelBuilder.out.defineSet( 'parametrizations', ','.join(parametrizationNames) )
+    self.modelBuilder.out.defineSet( 'parametrizations', ','.join([ p.name for p in rooParametrizations ]) )
 
     # Attach to class
 
     self.parametrizations     = parametrizations
+    self.rooParametrizations  = rooParametrizations
 
     self.couplingCombinations = couplingCombinations
     self.nComponents          = nComponents
@@ -178,3 +160,5 @@ def makeParametrizationsFromTheory( self ):
         theoryBinBoundarySet.append( 'theoryBinBound{0}'.format(i) )
     self.modelBuilder.out.defineSet( 'theoryBinBoundaries', ','.join(theoryBinBoundarySet) )
 
+    self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
+    self.modelBuilder.out.defineSet( 'couplings', ','.join(self.couplings) )

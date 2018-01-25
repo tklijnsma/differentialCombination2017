@@ -40,7 +40,7 @@ binning_njets = [ -0.5, 0.5, 1.5, 2.5, 3.5, 100.0 ]
 
 shape_ptjet   = [ 78.53302819,  20.52882251,  13.40260032,   3.79521629, 4.44346963, 1.62691503]
 shape_yh      = [ 8.88641092, 8.86086463, 17.34621208, 16.38134718, 15.14497828, 51.87741436 ]
-shape_pth     = [ 27.46607434,  29.44961617,  19.6934684,   26.59903008,  10.46543842, 6.31602595,   2.0582112, 0.28218741 ]
+shape_pth     = [ 27.46607434,  29.44961617,  19.6934684,   26.59903008,  10.46543842, 6.31602595, 2.0582112, 0.28218741 ]
 shape_njets   = [ 78.53302819, 30.8512632, 9.1331588, 2.41446376, 1.39813801 ]
 
 # Normalize to 1.0
@@ -54,19 +54,63 @@ obs_njets = Observable( name = 'njets', title = 'N_{jets}', shape = shape_njets,
 obs_yh    = Observable( name = 'yh', title = '|y_{H}|', shape = shape_yh, binning = binning_yh, lastBinIsOverflow=False )
 obs_ptjet = Observable( name = 'ptjet', title = 'p_{T}^{jet}', shape = shape_ptjet, binning = binning_ptjet )
 
+# Split xH and ggH parts
+shape_pth_xH  = [ 0.46093135, 1.25292978, 1.72672486, 4.69269541, 3.0887882, 2.33949677, 0.86423866, 0.13488074 ]
+shape_pth_xH = [ i/sum(shape_pth_xH) for i in shape_pth_xH ]
+obs_pth_xH = Observable( name = 'pth_xH', title = 'p_{T}^{H} (xH)', shape = shape_pth_xH, binning = binning_pth )
+obs_pth_xH.YR4_totalXS = YR4_xH
+
+shape_pth_ggH = [ xs_total - xs_xH for xs_total, xs_xH in zip( obs_pth.crosssection(), obs_pth_xH.crosssection() ) ]
+shape_pth_ggH = [ i/sum(shape_pth_ggH) for i in shape_pth_ggH ]
+obs_pth_ggH = Observable( name = 'pth_ggH', title = 'p_{T}^{H} (ggH)', shape = shape_pth_ggH, binning = binning_pth )
+obs_pth_ggH.YR4_totalXS = YR4_ggF_n3lo
+
+# ======================================
+# Create different binnings for hzz and hbb
+
 hzz_binMerging_pth   = [ 0, 1, [2,3], [4,5], [6,7] ]
 hzz_binMerging_ptjet = [ 0, 1, 2, [3,4,5] ]
 hzz_binMerging_njets = [ 0, 1, 2, [3,4] ]
-obs_pth_hzzBinning = obs_pth.mergeBins(hzz_binMerging_pth)
+obs_pth_hzzBinning   = obs_pth.mergeBins(hzz_binMerging_pth)
+obs_pth_ggH_hzzBinning = obs_pth_ggH.mergeBins(hzz_binMerging_pth)
 obs_ptjet_hzzBinning = obs_ptjet.mergeBins(hzz_binMerging_ptjet)
 obs_njets_hzzBinning = obs_njets.mergeBins(hzz_binMerging_njets)
 
 
-
+# For now, create fake shapes
+# Wait for Vittorio to produce numbers in new binning
 binning_pth_hbb = [ 350., 600., 10000. ]
-shape_pth_hbb   = [ 0.5*shape_pth[-1], 0.5*shape_pth[-1] ]
-obs_pth_hbbBinning = Observable( name = 'pth', title = 'p_{T}^{H}', shape = shape_pth_hbb, binning = binning_pth_hbb )
-
 binning_pth_combWithHbb = [ 0.0, 15.0, 30.0, 45.0, 85.0, 125.0, 200.0, 350.0, 600.0, 10000.0 ]
-shape_pth_combWithHbb   = shape_pth[:-1] + [ 0.9*shape_pth[-1], 0.1*shape_pth[-1] ]
-obs_pth_combWithHbbBinning = Observable( name = 'pth', title = 'p_{T}^{H}', shape = shape_pth_combWithHbb, binning = binning_pth_combWithHbb )
+
+shape_pth_hbb             = [ 0.9*shape_pth[-1], 0.1*shape_pth[-1] ]
+shape_pth_combWithHbb     = shape_pth[:-1] + [ 0.9*shape_pth[-1], 0.1*shape_pth[-1] ]
+
+obs_pth_hbbBinning = Observable(
+    name = 'pth', title = 'p_{T}^{H}',
+    shape = shape_pth_hbb,
+    binning = binning_pth_hbb
+    )
+obs_pth_combWithHbbBinning = Observable(
+    name = 'pth', title = 'p_{T}^{H}',
+    shape = shape_pth_combWithHbb,
+    binning = binning_pth_combWithHbb
+    )
+
+shape_pth_ggH_hbb         = [ 0.9*shape_pth_ggH[-1], 0.1*shape_pth_ggH[-1] ]
+shape_pth_ggH_combWithHbb = shape_pth_ggH[:-1] + [ 0.9*shape_pth_ggH[-1], 0.1*shape_pth_ggH[-1] ]
+
+obs_pth_ggH_hbbBinning = Observable(
+    name = 'pth_ggH', title = 'p_{T}^{H} (ggH)',
+    shape = shape_pth_ggH_hbb,
+    binning = binning_pth_hbb
+    )
+obs_pth_ggH_hbbBinning.YR4_totalXS = YR4_ggF_n3lo
+
+obs_pth_ggH_combWithHbbBinning = Observable(
+    name = 'pth_ggH', title = 'p_{T}^{H} (ggH)',
+    shape = shape_pth_ggH_combWithHbb,
+    binning = binning_pth_combWithHbb
+    )
+obs_pth_ggH_combWithHbbBinning.YR4_totalXS = YR4_ggF_n3lo
+
+

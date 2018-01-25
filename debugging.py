@@ -158,8 +158,9 @@ def main():
 
         # ws = join( base, 'out/workspaces_Dec15/combinedCard_hgg_hzz_hbb_ggHxH_Dec15_xHfixed.root' )
         # ws = join( base, 'out/workspaces_Dec21/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root' )
-        ws = join( base, 'out/workspaces_Jan16/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root' )
-
+        # ws = join( base, 'out/workspaces_Jan16/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root' )
+        ws = join( base, 'out/workspaces_Jan19/combinedCard_hgg_hzz_hbb_ggHxH_Jan19_xHfixed.root' )
+        
         cmd = [            
             'combine',
             ws,
@@ -205,7 +206,7 @@ def main():
         cmd = [            
             'combine',
             postfit,
-            '-n _debugging_Jan15_hbb_scan02',
+            '-n _debugging_{0}_hbb_scan02'.format(datestr),
             '-M MultiDimFit',
             '--snapshotName MultiDimFit',
             '--skipInitialFit',
@@ -234,6 +235,8 @@ def main():
             # '--freezeNuisances qcdeff,r1p0,r2p0,r3p0,r0p1,r1p1,r2p1,r3p1',
             # '-v 10',
             ]
+            # --> Note floatOtherPOIs is missing, which really should be there for a scan
+            #     (otherwise all the r's not in -P are not profiled)
 
         Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
 

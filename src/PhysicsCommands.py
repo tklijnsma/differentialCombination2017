@@ -100,6 +100,7 @@ def GetScanResults(
     scanDirectory,
     pattern='*',
     verbose=False,
+    filterNegatives=False
     ):
 
     # POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
@@ -119,14 +120,22 @@ def GetScanResults(
             Commands.ThrowError( 'The pattern \'{0}\' yielded no results in directory {1}'.format( rootfilepattern, scanDirectory ) )
             return
 
-        scanResult = Commands.ConvertTChainToArray(
+        scanResultDict = Commands.ConvertTChainToArray(
             scanFiles,
             'limit',
             r'{0}|deltaNLL'.format( POI )
             )
 
-        scanResult = [ (POIval, deltaNLL) for (POIval, deltaNLL) in sorted(zip( scanResult[POI], scanResult['deltaNLL'] ))]
+        scanResult = []
+        for (POIval, deltaNLL) in sorted(zip( scanResultDict[POI], scanResultDict['deltaNLL'] )):
+            if deltaNLL < 0.0:
+                Commands.Warning('Found negative deltaNLL {0} while processing {1} in {2}'.format( deltaNLL, POI, scanDirectory ))
+                if filterNegatives and deltaNLL < -0.01:
+                    Commands.Warning('deltaNLL {0} is below threshold (-0.01), skipping'.format(deltaNLL))
+                    continue
+            scanResult.append( (POIval, deltaNLL) )
 
+        # scanResult = [ (POIval, deltaNLL) for (POIval, deltaNLL) in sorted(zip( scanResult[POI], scanResult['deltaNLL'] )) ]
 
         if verbose:
             print '\nPOI: {0}'.format(POI)

@@ -608,42 +608,39 @@ def main( args ):
         combinationPOIs, combinationscans = DrawScan(
             ws      = LatestPaths.ws_combined_ggH_xHfixed,
             scandir = combined_scanDir,
-            name    = 'combination',
+            name    = 'combination' + ('_asimov' if args.asimov else ''),
             )
 
         hggPOIs, hggscans = DrawScan(
             ws      = LatestPaths.ws_hgg_ggH_xHfixed,
             scandir = hgg_scanDir,
-            name    = 'hgg',
+            name    = 'hgg' + ('_asimov' if args.asimov else ''),
             )
 
         hzzPOIs, hzzscans = DrawScan(
             ws      = LatestPaths.ws_hzz_ggH_xHfixed,
             scandir = hzz_scanDir,
-            name    = 'hzz',
+            name    = 'hzz' + ('_asimov' if args.asimov else ''),
             )
 
         hbbPOIs, hbbscans = DrawScan(
             ws      = LatestPaths.ws_hbb_ggH_xHfixed,
-            # scandir = hbb_scanDir,
-            # scandir = 'out/Scan_PTH_Dec18_xHfixed_hbb_asimov',
-            scandir = 'out/Scan_PTH_Dec18_xHfixed_hbb_asimov_0', # With all Hbb options
-            # scandir = 'out/Scan_PTH_Dec18_xHfixed_hbb_asimov_1',
-            name    = 'hbb',
+            # scandir = 'out/Scan_PTH_Dec18_xHfixed_hbb_asimov_0', # With all Hbb options
+            scandir = hbb_scanDir,
+            name    = 'hbb' + ('_asimov' if args.asimov else ''),
             )
 
         combWithHbbPOIs, combWithHbbscans = DrawScan(
             ws      = LatestPaths.ws_combWithHbb_ggH_xHfixed,
-            # scandir = combWithHbb_scanDir,
-            # scandir = 'out/Scan_PTH_Dec18_xHfixed_combWithHbb_asimov_0',
-            scandir = 'out/Scan_PTH_Dec18_xHfixed_combWithHbb_asimov_1',
-            name    = 'combWithHbb',
+            # scandir = 'out/Scan_PTH_Dec18_xHfixed_combWithHbb_asimov_1',
+            scandir = combWithHbb_scanDir,
+            name    = 'combWithHbb' + ('_asimov' if args.asimov else ''),
             )
 
 
-        Commands.Warning( 'No ggH-only cross sections known yet! Using ggH+xH (smH) cross sections for now' )
-        LatestBinning.obs_pth.Print()
-        LatestBinning.obs_pth_hzzBinning.Print()
+        # Commands.Warning( 'No ggH-only cross sections known yet! Using ggH+xH (smH) cross sections for now' )
+        # LatestBinning.obs_pth.Print()
+        # LatestBinning.obs_pth_hzzBinning.Print()
 
         containers = []
 
@@ -653,7 +650,7 @@ def main( args ):
         hgg.color           = 2
         hgg.POIs            = hggPOIs
         hgg.Scans           = hggscans
-        hgg.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        hgg.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
         containers.append(hgg)
 
         hzz                 = Container()
@@ -662,7 +659,7 @@ def main( args ):
         hzz.color           = 4
         hzz.POIs            = hzzPOIs
         hzz.Scans           = hzzscans
-        hzz.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
+        hzz.SMcrosssections = LatestBinning.obs_pth_ggH_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
         hbb                 = Container()
@@ -671,7 +668,7 @@ def main( args ):
         hbb.color           = 8
         hbb.POIs            = hbbPOIs
         hbb.Scans           = hbbscans
-        hbb.SMcrosssections = LatestBinning.obs_pth_hbbBinning.crosssection_over_binwidth()
+        hbb.SMcrosssections = LatestBinning.obs_pth_ggH_hbbBinning.crosssection_over_binwidth()
         containers.append(hbb)
 
         combination                 = Container()
@@ -680,7 +677,7 @@ def main( args ):
         combination.color           = 1
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
-        combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        combination.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
         containers.append(combination)
 
         combWithHbb                 = Container()
@@ -689,7 +686,7 @@ def main( args ):
         combWithHbb.color           = 14
         combWithHbb.POIs            = combWithHbbPOIs
         combWithHbb.Scans           = combWithHbbscans
-        combWithHbb.SMcrosssections = LatestBinning.obs_pth_combWithHbbBinning.crosssection_over_binwidth()
+        combWithHbb.SMcrosssections = LatestBinning.obs_pth_ggH_combWithHbbBinning.crosssection_over_binwidth()
         containers.append(combWithHbb)
 
 
@@ -713,7 +710,7 @@ def main( args ):
         l.SetTextAlign(33)
 
         PlotCommands.PlotSpectraOnTwoPanel(
-            'twoPanel_pth_ggH_hbb_Spectrum',
+            'twoPanel_pth_ggH_hbb_Spectrum' + ( '_asimov' if args.asimov else '' ),
             containers,
             xTitle = 'p_{T}^{H} (GeV)',
             yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
@@ -740,7 +737,8 @@ def DrawScan(
     scans = PhysicsCommands.GetScanResults(
         POIs,
         scandir,
-        pattern = pattern
+        pattern = pattern,
+        filterNegatives = True
         )
     PhysicsCommands.BasicDrawScanResults( POIs, scans, name=name )
     # PhysicsCommands.BasicDrawSpectrum(    POIs, scans, name=name )

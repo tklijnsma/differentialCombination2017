@@ -8,6 +8,7 @@ Thomas Klijnsma
 ########################################
 
 import LatestPaths
+import LatestBinning
 
 import sys
 sys.path.append('src')
@@ -196,6 +197,9 @@ def main( args ):
         # FIT_RATIO_OF_BRS                  = True
         FIT_RATIO_OF_BRS                  = False
 
+        REWEIGHT_CROSS_SECTIONS           = True
+        # REWEIGHT_CROSS_SECTIONS           = False
+
 
         # ======================================
         # Specify needed input
@@ -205,6 +209,12 @@ def main( args ):
             datacard = LatestPaths.card_hgg_ggHxH_PTH
         if args.hzz:
             datacard = LatestPaths.card_hzz_ggHxH_PTH
+        if args.hbb:
+            Commands.Warning('This makes no sense, as Yukawa only goes up to 125!')
+            datacard = LatestPaths.card_hbb_ggHxH_PTH
+        if args.combWithHbb:
+            Commands.Warning('This makes no sense, as Yukawa only goes up to 125!')
+            datacard = LatestPaths.card_combinedWithHbb_ggHxH_PTH
 
         TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_YukawaSummed )
 
@@ -289,6 +299,11 @@ def main( args ):
         if FIT_ONLY_NORMALIZATION:
             extraOptions.append( '--PO FitOnlyNormalization=True' )
             suffix += '_fitOnlyNormalization'
+
+        if REWEIGHT_CROSS_SECTIONS:
+            crosssections = LatestBinning.obs_pth_ggH.crosssection()[:len(expBinBoundaries)-1]
+            extraOptions.append('--PO ReweightCrossSections={0}'.format( ','.join([str(v) for v in crosssections]) ))
+            suffix += '_reweighted'
 
         Commands.BasicT2WSwithModel(
             datacard,
@@ -659,6 +674,7 @@ def main( args ):
                 yMax     = 5.,
                 plotname = 'oneKappaScan_{0}_{1}'.format( kappa, basename(scanDir).replace('/','') ),
                 draw1sigmaline = True,
+                draw2sigmaline = True,
                 translateToChi2 = True,
                 printUncertainties = True,
                 )

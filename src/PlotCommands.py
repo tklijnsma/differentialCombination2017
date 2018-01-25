@@ -47,7 +47,7 @@ datestr = strftime( '%b%d' )
 ########################################
 
 #____________________________________________________________________
-def SetColorPalette():
+def SetColorPalette(option=None):
 
     # n_stops = 3
     # stops  = [ 0.0, 0.5, 1.0 ]
@@ -61,12 +61,18 @@ def SetColorPalette():
     # greens = [ 138./255., 1.0 ]
     # blues  = [ 221./255., 1.0 ]
 
-    n_stops = 3
-    stops  = [ 0.0, 0.3, 1.0 ]
-    reds   = [ 55./255.,  166./255., 1.0 ]
-    greens = [ 138./255., 203./255., 1.0 ]
-    blues  = [ 221./255., 238./255., 1.0 ]
-
+    if option == 'twocolor':
+        n_stops = 3
+        stops  = [ 0.0, 0.3, 1.0 ]
+        reds   = [ 55./255.,  1.0, 1.0 ]
+        greens = [ 138./255., 1.0, 26./255. ]
+        blues  = [ 221./255., 1.0, 26./255. ]
+    else:
+        n_stops = 3
+        stops  = [ 0.0, 0.3, 1.0 ]
+        reds   = [ 55./255.,  166./255., 1.0 ]
+        greens = [ 138./255., 203./255., 1.0 ]
+        blues  = [ 221./255., 238./255., 1.0 ]
 
     ROOT.TColor.CreateGradientColorTable(
         n_stops,
@@ -75,9 +81,6 @@ def SetColorPalette():
         array('d', greens ),
         array('d', blues ),
         255 )
-
-
-
 
 
 #____________________________________________________________________
@@ -420,8 +423,8 @@ def PlotSpectraOnTwoPanel(
 
 
     # Bottom plot base
-    yMinAbsBottom = min([ container.yMinRatio for container in containers ])
-    yMaxAbsBottom = max([ container.yMaxRatio for container in containers ])
+    yMinAbsBottom = min([ container.yMinRatio for container in containers if not abs(container.yMinRatio) == 999. ])
+    yMaxAbsBottom = max([ container.yMaxRatio for container in containers if not abs(container.yMaxRatio) == 999. ])
     yMinBottom = yMinAbsBottom - 0.1*(yMaxAbsBottom-yMinAbsBottom)
     yMaxBottom = yMaxAbsBottom + 0.1*(yMaxAbsBottom-yMinAbsBottom)
 
@@ -1089,8 +1092,10 @@ def PlotMultipleScans(
         yTitle    = 'y',
         plotname  = 'unnamedscans',
         draw1sigmaline = True,
+        draw2sigmaline = True,
         translateToChi2 = False,
         printUncertainties = False,
+        nonFancyPrint = True,
         ):
 
     if xMin is None: xMin = min([ min(container.x) for container in containers if not hasattr( container, 'line' ) ])
@@ -1184,48 +1189,83 @@ def PlotMultipleScans(
             bestfitLine.SetLineColor(container.color)
             bestfitLine.Draw()
 
-
             l = ROOT.TLatex()
-            l.SetTextColor(container.color)
+            # l.SetTextColor(container.color)
+            l.SetTextColor(1)
             l.SetTextSize(0.04)
 
-            if withPercentages:
-                l.SetTextAlign(31)
-                l.DrawLatex(
-                    container.unc.leftBound, 1.0 + 0.013*(yMax-yMin),
-                    '-{0:.2f} ({1:d}%)'.format(
+            if nonFancyPrint:
+
+                if withPercentages:
+                    text = '{0} = {0:.3f}_{{{1:+.2f} ({2:+d}%)}}^{{{3:+.2f} ({4:+d}%)}}'.format(
+                        titles.get( xTitle, xTitle ),
+                        container.unc.min, 
                         abs(container.unc.leftError),
-                        int( abs(container.unc.leftError) / container.unc.min * 100. )
-                        ))
-
-                l.SetTextAlign(11)
-                l.DrawLatex(
-                    container.unc.rightBound, 1.0 + 0.013*(yMax-yMin),
-                    '+{0:.2f} ({1:d}%)'.format(
+                        int( abs(container.unc.leftError) / container.unc.min * 100. ),
                         abs(container.unc.rightError),
-                        int( abs(container.unc.rightError) / container.unc.min * 100. )
-                        ))
-            else:
-                l.SetTextAlign(31)
-                l.DrawLatex(
-                    container.unc.leftBound - 0.013*(xMax-xMin), 1.0 + 0.013*(yMax-yMin),
-                    '{0:+.2f}'.format(
+                        int( abs(container.unc.rightError) / container.unc.min * 100. ),
+                        )
+                else:
+                    # text = '{0} = {1:.3f}_{{{2:+.2f}}}^{{{3:+.2f}}}'.format(
+                    #     titles.get( xTitle, xTitle ),
+                    #     container.unc.min, 
+                    #     abs(container.unc.leftError),
+                    #     abs(container.unc.rightError),
+                    #     )
+
+                    # Decent but try 'official'
+                    # text = '{1:+.2f} < {0} < {2:+.2f}'.format(
+                    #     titles.get( xTitle, xTitle ),
+                    #     container.unc.leftBound,
+                    #     container.unc.rightBound
+                    #     )
+                    text = '{0} #in ({1:+.2f}, {2:+.2f}) (68%)'.format(
+                        titles.get( xTitle, xTitle ),
                         container.unc.leftBound,
-                        ))
+                        container.unc.rightBound
+                        )
+
+
                 l.SetTextAlign(11)
+                l.SetNDC()
+                l.DrawLatex( 0.2, 0.8, text )
+
+            else:
+                if withPercentages:
+                    l.SetTextAlign(31)
+                    l.DrawLatex(
+                        container.unc.leftBound, 1.0 + 0.013*(yMax-yMin),
+                        '-{0:.2f} ({1:d}%)'.format(
+                            abs(container.unc.leftError),
+                            int( abs(container.unc.leftError) / container.unc.min * 100. )
+                            ))
+
+                    l.SetTextAlign(11)
+                    l.DrawLatex(
+                        container.unc.rightBound, 1.0 + 0.013*(yMax-yMin),
+                        '+{0:.2f} ({1:d}%)'.format(
+                            abs(container.unc.rightError),
+                            int( abs(container.unc.rightError) / container.unc.min * 100. )
+                            ))
+                else:
+                    l.SetTextAlign(31)
+                    l.DrawLatex(
+                        container.unc.leftBound - 0.013*(xMax-xMin), 1.0 + 0.013*(yMax-yMin),
+                        '{0:+.2f}'.format(
+                            container.unc.leftBound,
+                            ))
+                    l.SetTextAlign(11)
+                    l.DrawLatex(
+                        container.unc.rightBound + 0.013*(xMax-xMin), 1.0 + 0.013*(yMax-yMin),
+                        '{0:+.2f}'.format(
+                            container.unc.rightBound,
+                            ))
+
+                l.SetTextAlign(21)
                 l.DrawLatex(
-                    container.unc.rightBound + 0.013*(xMax-xMin), 1.0 + 0.013*(yMax-yMin),
-                    '{0:+.2f}'.format(
-                        container.unc.rightBound,
-                        ))
-
-
-            l.SetTextAlign(21)
-            l.DrawLatex(
-                container.unc.min, 1.0 + 0.013*(yMax-yMin),
-                '{0:.3f}'.format( container.unc.min )
-                )
-
+                    container.unc.min, 1.0 + 0.013*(yMax-yMin),
+                    '{0:.3f}'.format( container.unc.min )
+                    )
 
             TgPoints = ROOT.TGraph( 2,
                 array( 'f', [ container.unc.leftBound, container.unc.rightBound ] ),
@@ -1244,6 +1284,12 @@ def PlotMultipleScans(
         line1sigma.SetLineColor(14)
         line1sigma.Draw()
 
+    if draw2sigmaline:
+        y2sigma = 1.0
+        if translateToChi2: y2sigma = 2.0
+        line2sigma = ROOT.TLine( xMin, y2sigma, xMax, y2sigma )
+        line2sigma.SetLineColor(14)
+        line2sigma.Draw()
 
     Commands.GetCMSLabel()
     Commands.GetCMSLumi()
@@ -1476,10 +1522,13 @@ def PlotSingle2DHistogram(
         yMin, yMax,
         xTitle, yTitle,
         plotname,
-        doPNG=False, doROOT=False
+        doPNG=False, doROOT=False,
+        zMax = 7.0,
+        palette=None,
+        getCustomContour=None,
         ):
 
-    SetColorPalette()
+    SetColorPalette(palette)
 
     c.Clear()
     SetCMargins(
@@ -1489,7 +1538,7 @@ def PlotSingle2DHistogram(
         TopMargin    = 0.08,
         )
 
-    container.H2.SetMaximum( 7. )
+    container.H2.SetMaximum(zMax)
     container.H2.Draw('COLZ')
 
     # container.H2.GetXaxis().SetLimits( xMin, xMax )
@@ -1503,16 +1552,25 @@ def PlotSingle2DHistogram(
     container.H2.GetYaxis().SetTitleSize(0.06)
     container.H2.GetYaxis().SetLabelSize(0.05)
 
-    for Tg in container.contours_1sigma:
-        Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
-        Tg.Draw('CSAME')
-    for Tg in container.contours_2sigma:
-        Tg.SetName( 'contour_2sigma_' + GetUniqueRootName() )
-        Tg.Draw('CSAME')
+    if hasattr(container, 'contours_1sigma'):
+        for Tg in container.contours_1sigma:
+            Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
+            Tg.Draw('CSAME')
+    if hasattr(container, 'contours_2sigma'):
+        for Tg in container.contours_2sigma:
+            Tg.SetName( 'contour_2sigma_' + GetUniqueRootName() )
+            Tg.Draw('CSAME')
+    if not getCustomContour is None:
+        container.contours_custom = TheoryCommands.GetContoursFromTH2( container.H2, getCustomContour )
+        for Tg in container.contours_custom:
+            Tg.SetName( 'contour_custom_' + GetUniqueRootName() )
+            Tg.Draw('CSAME')
 
     if hasattr( container, 'color' ):
         container.bestfitPoint.SetMarkerColor(container.color)
-    container.bestfitPoint.Draw('PSAME')
+
+    if hasattr(container, 'bestfitPoint'):
+        container.bestfitPoint.Draw('PSAME')
 
     c.Update()
     c.RedrawAxis()

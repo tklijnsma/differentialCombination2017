@@ -58,6 +58,8 @@ def AppendParserOptions( parser ):
             # setattr( namespace, self.dest, values )
 
     parser.add_argument( '--couplingScan',                             action=CustomAction )
+    parser.add_argument( '--fastscanplotmock',                         action=CustomAction )
+
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument( '--yukawa',  action='store_true' )
@@ -69,6 +71,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--lumiStudy',                                action='store_true' )
     parser.add_argument( '--profiledTotalXS',                          action='store_true' )
     parser.add_argument( '--fitOnlyNormalization',                     action='store_true' )
+    parser.add_argument( '--oneKappa', type=str, default=None )
 
 
 
@@ -84,9 +87,28 @@ def main( args ):
     print ''
 
     TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+    if args.top:
+        TheoryCommands.SetPlotDir( 'plots_{0}_Top'.format(datestr) )
+    elif args.topctcb:
+        TheoryCommands.SetPlotDir( 'plots_{0}_TopCtCb'.format(datestr) )
 
     # ======================================
     # Scan
+
+    #____________________________________________________________________
+    if args.fastscanplotmock:
+
+        TheoryCommands.SetPlotDir( 'plots_{0}_Top'.format(datestr) )
+
+        print 'Running fastscanplotmock'
+
+        fastscanFile = 'out/Scan_TopHighPt_Jan22_hzz_asimov_0/postfit_and_fastscan/higgsCombine_FASTSCAN_POSTFIT_ASIMOV_hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopHighPt_withTheoryUncertainties.MultiDimFit.mH125.root'
+
+        mock = CombineToolWrapper.CombineScan()
+        mock.POIs = [ 'ct', 'cg' ]
+        mock.deltaNLLCutOff = 30.
+
+        mock.PlotFastScan(fastscanFile)
 
 
     #____________________________________________________________________
@@ -151,10 +173,10 @@ def main( args ):
                 'kappab={0},{1}'.format( kappab_ranges[0], kappab_ranges[1] ),
                 'kappac={0},{1}'.format( kappac_ranges[0], kappac_ranges[1] )
                 ]
-            baseContainer.subDirectory = 'Scan_Yukawa_{0}'.format(datestr)
+            baseContainer.subDirectory = 'out/Scan_Yukawa_{0}'.format(datestr)
 
         elif args.top:
-            baseContainer.deltaNLLCutOff = 30.
+            baseContainer.deltaNLLCutOff = 70.
             baseContainer.nPoints = 200**2
             # ct_ranges = [ -1., 2. ]
             # cg_ranges = [ -0.1, 0.2 ]
@@ -166,8 +188,8 @@ def main( args ):
                 'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
                 'cg={0},{1}'.format( cg_ranges[0], cg_ranges[1] )
                 ]
-            baseContainer.subDirectory = 'Scan_Top_{0}'.format(datestr)
-            if args.highpt: baseContainer.subDirectory = 'Scan_TopHighPt_{0}'.format(datestr)
+            baseContainer.subDirectory = 'out/Scan_Top_{0}'.format(datestr)
+            if args.highpt: baseContainer.subDirectory = 'out/Scan_TopHighPt_{0}'.format(datestr)
 
         elif args.topctcb:
             baseContainer.deltaNLLCutOff = 30.
@@ -179,8 +201,8 @@ def main( args ):
                 'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
                 'cb={0},{1}'.format( cb_ranges[0], cb_ranges[1] )
                 ]
-            baseContainer.subDirectory = 'Scan_TopCtCb_{0}'.format(datestr)
-            if args.highpt: baseContainer.subDirectory = 'Scan_TopCtCbHighPt_{0}'.format(datestr)
+            baseContainer.subDirectory = 'out/Scan_TopCtCb_{0}'.format(datestr)
+            if args.highpt: baseContainer.subDirectory = 'out/Scan_TopCtCbHighPt_{0}'.format(datestr)
 
 
         # Load settings into a scan baseContainer
@@ -202,17 +224,19 @@ def main( args ):
 
         if args.hgg: suffix += '_hgg'
         if args.hzz: suffix += '_hzz'
+        if args.combWithHbb: suffix += '_combWithHbb'
 
         # ----------------------
         if args.yukawa:
 
+            nominal_datacard = LatestPaths.ws_combined_Yukawa
+            if args.hgg:
+                nominal_datacard = LatestPaths.ws_hgg_Yukawa
+            if args.hzz:
+                nominal_datacard = LatestPaths.ws_hzz_Yukawa
+
             if args.nominal:
-                datacard = LatestPaths.ws_combined_Yukawa
-                if args.hgg:
-                    datacard = LatestPaths.ws_hgg_Yukawa
-                if args.hzz:
-                    datacard = LatestPaths.ws_hzz_Yukawa
-                scan.datacard = datacard
+                scan.datacard = nominal_datacard
 
             elif args.lumiStudy:
                 scan.datacard = LatestPaths.ws_combined_Yukawa_lumiScalable
@@ -223,6 +247,20 @@ def main( args ):
                 scan.datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization
                 suffix += '_fitOnlyNormalization'
 
+            elif args.oneKappa:
+                scan.fromPostfit = False
+                scan.APPLY_FASTSCAN_FILTER = False
+                scan.datacard = nominal_datacard
+                scan.nPoints       = 72
+                scan.nPointsPerJob = 3
+                scan.queue         = 'short.q'
+                scan.POIs          = [ args.oneKappa ]
+
+                otherKappa = { 'kappab' : 'kappac', 'kappac' : 'kappab' }[args.oneKappa]
+                scan.floatNuisances.append(otherKappa)
+
+                suffix += '_oneKappa_' + args.oneKappa
+
             else:
                 print 'Pass physics option'
                 return
@@ -230,10 +268,22 @@ def main( args ):
         # ----------------------
         if args.top:
 
+            # In case of hbb, the minimizer settings need to be altered
+            if args.combWithHbb or args.hbb:
+                scan.default_minimizer_settings = False
+                scan.extraOptions.extend([
+                    '--minimizerStrategy 2',
+                    '--minimizerTolerance 0.001',
+                    '--robustFit 1',
+                    '--minimizerAlgoForMinos Minuit2,Migrad',
+                    ])
+
+
             if args.highpt:
                 ws_nominal_combined = LatestPaths.ws_combined_TopHighPt
                 ws_nominal_hgg      = LatestPaths.ws_hgg_TopHighPt
                 ws_nominal_hzz      = LatestPaths.ws_hzz_TopHighPt
+                ws_nominal_combWithHbb = LatestPaths.ws_combWithHbb_TopHighPt
             else:
                 ws_nominal_combined = LatestPaths.ws_combined_Top
                 ws_nominal_hgg      = LatestPaths.ws_hgg_Top
@@ -243,10 +293,14 @@ def main( args ):
                 datacard = ws_nominal_combined
                 if args.hgg:
                     datacard = ws_nominal_hgg
-                    scan.deltaNLLCutOff = 50.
-                    Commands.Warning( 'Setting deltaNLLCutOff to 50 for hgg' )
                 if args.hzz:
-                    datacard = ws_nominal_hzz
+                    # datacard = ws_nominal_hzz
+                    datacard = 'out/workspaces_Jan24/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopHighPt_noTheoryUncertainties_hzz_newBins.root'
+                    Commands.Warning('Overwriting datacard with hard-coded path {0}'.format(datacard))
+                if args.combWithHbb:
+                    # datacard = ws_nominal_combWithHbb
+                    datacard = 'out/workspaces_Jan24/combinedCard_newBins_hzz_hbb_ggHxH_Jan24_CouplingModel_TopHighPt_noTheoryUncertainties_hzz_hbb_newBins.root'
+                    Commands.Warning('Overwriting datacard with hard-coded path {0}'.format(datacard))
                 scan.datacard = datacard
 
             elif args.lumiStudy:

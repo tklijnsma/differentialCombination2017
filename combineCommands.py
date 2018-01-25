@@ -61,6 +61,9 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--CombineCards_Aug21',            action=CustomAction )
     parser.add_argument( '--CombineCards_Dec15_hbb',        action=CustomAction )
 
+    parser.add_argument( '--RenumberHzzProcesses_Jan24',    action=CustomAction )
+    parser.add_argument( '--CombineCards_Jan24_hzz_hbb',    action=CustomAction )
+
     parser.add_argument( '--RenameHggProcesses_smHcard',    action=CustomAction )
     parser.add_argument( '--RenumberHzzProcesses_smHcard',  action=CustomAction )
     parser.add_argument( '--CombineCards_smHcard',          action=CustomAction )
@@ -147,7 +150,6 @@ def main( args ):
             'hzz=' + LatestPaths.card_hzz_ggHxH_PTH
             )
 
-
     if args.CombineCards_Dec15_hbb:
         Commands.BasicCombineCards(
             'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_{0}.txt'.format(datestr),
@@ -156,6 +158,21 @@ def main( args ):
             'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
             )
 
+
+    # Test of new bins for hzz and hbb
+
+    if args.RenumberHzzProcesses_Jan24:
+        MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+            LatestPaths.card_hzz_ggHxH_PTH_newBins_unprocessed,
+            )
+
+    if args.CombineCards_Jan24_hzz_hbb:
+        Commands.BasicCombineCards(
+            'suppliedInput/combinedCard_newBins_hzz_hbb_ggHxH_{0}.txt'.format(datestr),
+            # 'hgg=' + LatestPaths.card_hgg_ggHxH_PTH,
+            'hzz=' + LatestPaths.card_hzz_ggHxH_PTH_newBins,
+            'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
+            )
 
     #____________________________________________________________________
     # Renaming and combining of unsplit cards
@@ -459,9 +476,9 @@ def main( args ):
                 '--minimizerAlgoForMinos Minuit2,Migrad',
                 ]
         if args.combWithHbb:
-            POIRange = [ 0.0, 6.5 ]
-            # nPoints = 54
-            nPoints = 2
+            POIRange = [ 0.0, 8.5 ]
+            nPoints = 150
+            # nPoints = 2
             nPointsPerJob = 2
             extraOptions = [
                 '--minimizerStrategy 2',
@@ -473,11 +490,24 @@ def main( args ):
                 # '--saveSpecifiedNuis qcdeff',
                 # '--saveSpecifiedFunc qcdeff',
                 ]
+            physicsModelParameterRanges = [
+                [ 'qcdeff', 0.001, 8.0 ],
+                [ 'r1p0', 0.0, 8.0 ],
+                [ 'r2p0', 0.0, 8.0 ],
+                [ 'r3p0', 0.0, 8.0 ],
+                [ 'r0p1', 0.0, 8.0 ],
+                [ 'r1p1', 0.0, 8.0 ],
+                [ 'r2p1', 0.0, 8.0 ],
+                [ 'r3p1', 0.0, 8.0 ],
+                ]
+        else:
+            physicsModelParameterRanges = []
 
         Commands.BasicCombineTool(
             ws,
-            # POIpattern    = '*',
-            POIpattern    = '350_600',
+            POIpattern    = '*',
+            # POIpattern    = '350_600',
+            # POIpattern    = '45_85',
             # POIpattern    = 'GT600',
             POIRange      = POIRange,
             nPoints       = nPoints,
@@ -486,7 +516,9 @@ def main( args ):
             queue         = 'short.q',
             asimov        = ASIMOV,
             extraOptions  = extraOptions,
-            disableFloatOtherPOIs = ( True if args.combWithHbb else False )
+            # disableFloatOtherPOIs = ( True if args.combWithHbb else False ),
+            disableFloatOtherPOIs = False,
+            physicsModelParameterRanges = physicsModelParameterRanges
             )
 
 

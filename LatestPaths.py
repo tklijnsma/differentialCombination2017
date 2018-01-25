@@ -13,8 +13,10 @@ card_hzz_ggHxH_PTH_unprocessed = 'suppliedInput/fromDavid/PTH_NNLOPS_Nov01/ggH/h
 # card_hbb_ggHxH_PTH_debuggingTest = 'suppliedInput/combinedCard_hbb_debuggingTest_Dec19.txt'
 # card_combinedWithHbb_ggHxH_PTH = 'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_Dec15.txt'
 
-card_hbb_ggHxH_PTH             = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
-card_combinedWithHbb_ggHxH_PTH = 'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_Dec21.txt'
+# card_hbb_ggHxH_PTH             = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
+# card_combinedWithHbb_ggHxH_PTH = 'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_Dec21.txt'
+card_hbb_ggHxH_PTH             = 'suppliedInput/fromJavier/negativity_fixed_Jan19/comb_2017_ggHbb.txt'
+card_combinedWithHbb_ggHxH_PTH = 'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_Jan19.txt'
 card_hgg_ggHxH_PTH             = 'suppliedInput/fromVittorio/pT_NNLOPS_ggHxH_Nov03/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses.txt'
 card_hzz_ggHxH_PTH             = 'suppliedInput/fromDavid/PTH_NNLOPS_Nov01/ggH/hzz4l_comb_13TeV_xs_processesShifted.txt'
 card_combined_ggHxH_PTH        = 'suppliedInput/combinedCard_Nov03.txt'
@@ -45,6 +47,11 @@ card_combined_smH_PTJ          = 'suppliedInput/combinedCard_PTJ_smH_Nov28.txt'
 card_hgg_INC_unprocessed       = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt'
 card_hzz_INC_unprocessed       = 'suppliedInput/fromDavid/differential_Nov27/smH/hzz4l_comb_13TeV_xs.txt'
 card_combined_INC              = 'suppliedInput/combinedCard_smH_Nov27_INCLUSIVE.txt'
+
+# ----- Premature implementation of new binning -----
+card_hzz_ggHxH_PTH_newBins_unprocessed = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/hzz4l_comb_13TeV_xs.txt'
+card_hzz_ggHxH_PTH_newBins      = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/hzz4l_comb_13TeV_xs_processesShifted.txt'
+card_combined_ggHxH_PTH_newBins = 'suppliedInput/combinedCard_newBins_hzz_hbb_ggHxH_Jan24.txt'
 
 
 ########################################
@@ -105,8 +112,10 @@ ws_hzz_ggH_xHfixed           = 'out/workspaces_Nov29/hzz4l_comb_13TeV_xs_process
 
 # ws_hbb_ggH_xHfixed           = 'out/workspaces_Dec15/comb_2017_ggHbb_xHfixed.root'
 # ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Dec15/combinedCard_hgg_hzz_hbb_ggHxH_Dec15_xHfixed.root'
-ws_hbb_ggH_xHfixed           = 'out/workspaces_Dec21/comb_2017_ggHbb_xHfixed.root'
-ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Dec21/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root'
+# ws_hbb_ggH_xHfixed           = 'out/workspaces_Dec21/comb_2017_ggHbb_xHfixed.root'
+# ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Dec21/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root'
+ws_hbb_ggH_xHfixed           = 'out/workspaces_Jan19/comb_2017_ggHbb_xHfixed.root'
+ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Jan19/combinedCard_hgg_hzz_hbb_ggHxH_Jan19_xHfixed.root'
 
 ws_hgg_smH_NJ                = 'out/workspaces_Nov12/Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses.root'
 ws_hzz_smH_NJ                = 'out/workspaces_Nov12/hzz4l_comb_13TeV_xs.root'
@@ -117,7 +126,6 @@ ws_hzz_smH_YH                = 'out/workspaces_Nov28/hzz4l_comb_13TeV_xs.root'
 ws_combined_smH_YH           = 'out/workspaces_Nov28/combinedCard_YH_smH_Nov28.root'
 
 ws_hzz_smH_PTJ               = 'out/workspaces_Nov28/hzz4l_comb_13TeV_xs_ptjet.root'
-
 # Wrong variable name (causes problems with file-naming, although physics is correct)
 # ws_hgg_smH_PTJ               = 'out/workspaces_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
 # ws_combined_smH_PTJ          = 'out/workspaces_Nov28/combinedCard_PTJ_smH_Nov28.root'
@@ -143,9 +151,15 @@ ws_ratio_of_BRs_globalScales = 'out/workspaces_Dec20/combinedCard_smH_Nov27_INCL
 # ======================================
 # kappab kappac
 
-ws_combined_Yukawa = 'out/workspaces_Nov03/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
-ws_hgg_Yukawa      = 'out/workspaces_Nov03/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
-ws_hzz_Yukawa      = 'out/workspaces_Nov03/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# With old model, still valid though. Unreweighted.
+# ws_combined_Yukawa = 'out/workspaces_Nov03/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_hgg_Yukawa      = 'out/workspaces_Nov03/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_hzz_Yukawa      = 'out/workspaces_Nov03/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+
+# New model, reweighted
+ws_combined_Yukawa = 'out/workspaces_Jan19/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_hgg_Yukawa      = 'out/workspaces_Jan19/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_hzz_Yukawa      = 'out/workspaces_Jan19/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
 
 ws_combined_Yukawa_noTheoryUncertainties               = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_noTheoryUncertainties.root'
 ws_combined_Yukawa_withUncorrelatedTheoryUncertainties = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_withUncorrelatedTheoryUncertainties.root'
@@ -175,9 +189,15 @@ ws_combined_Top    = 'out/workspaces_Nov24/combinedCard_Nov03_CouplingModel_Top_
 ws_hgg_Top         = 'out/workspaces_Nov24/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
 ws_hzz_Top         = 'out/workspaces_Nov24/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
 
-ws_combined_TopHighPt = 'out/workspaces_Dec11/combinedCard_Nov03_CouplingModel_TopHighPt_withTheoryUncertainties.root'
-ws_hgg_TopHighPt      = 'out/workspaces_Dec11/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_TopHighPt_withTheoryUncertainties.root'
-ws_hzz_TopHighPt      = 'out/workspaces_Dec11/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+# ws_combined_TopHighPt = 'out/workspaces_Dec11/combinedCard_Nov03_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+# ws_hgg_TopHighPt      = 'out/workspaces_Dec11/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+# ws_hzz_TopHighPt      = 'out/workspaces_Dec11/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+
+# Reweighted
+ws_combined_TopHighPt = 'out/workspaces_Jan19/combinedCard_Nov03_CouplingModel_TopHighPt_withTheoryUncertainties_reweighted.root'
+ws_hgg_TopHighPt      = 'out/workspaces_Jan23/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_TopHighPt_withTheoryUncertainties_reweighted.root'
+ws_hzz_TopHighPt      = 'out/workspaces_Jan23/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_TopHighPt_withTheoryUncertainties_reweighted.root'
+ws_combWithHbb_TopHighPt = 'out/workspaces_Jan19/combinedCard_hgg_hzz_hbb_ggHxH_Jan19_CouplingModel_TopHighPt_withTheoryUncertainties_reweighted.root'
 
 # ws_combined_Top_lumiScalable           = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
 # ws_combined_Top_profiledTotalXS        = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS.root'
@@ -216,14 +236,20 @@ scan_hzz_PTH      = 'out/Scan_PTH_Nov08_hzz'
 scan_combined_PTH_ggH = 'out/Scan_PTH_Nov08_xHfixed'
 scan_hgg_PTH_ggH      = 'out/Scan_PTH_Nov29_xHfixed_hgg'
 scan_hzz_PTH_ggH      = 'out/Scan_PTH_Nov29_xHfixed_hzz'
-scan_hbb_PTH_ggH      = 'out/Scan_PTH_Dec15_xHfixed_hbb'
-scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb'
+# scan_hbb_PTH_ggH      = 'out/Scan_PTH_Dec15_xHfixed_hbb'
+# scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb'
+# scan_hbb_PTH_ggH         = 'out/Scan_PTH_Jan19_xHfixed_hbb_0'
+# scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Jan19_xHfixed_combWithHbb'
+scan_hbb_PTH_ggH         = 'out/Scan_PTH_Jan23_xHfixed_hbb'
+scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Jan23_xHfixed_combWithHbb_2'
 
 scan_combined_PTH_ggH_asimov    = 'out/Scan_PTH_Dec15_xHfixed_asimov_asimov'
 scan_hgg_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hgg_asimov_asimov'
 scan_hzz_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hzz_asimov_asimov'
-scan_hbb_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hbb_asimov_asimov'
-scan_combWithHbb_PTH_ggH_asimov = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb_asimov_asimov'
+# scan_hbb_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hbb_asimov_asimov'
+# scan_combWithHbb_PTH_ggH_asimov = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb_asimov_asimov'
+scan_hbb_PTH_ggH_asimov         = 'out/Scan_PTH_Jan23_xHfixed_hbb_asimov'
+scan_combWithHbb_PTH_ggH_asimov = 'out/Scan_PTH_Jan23_xHfixed_combWithHbb_asimov'
 
 
 scan_combined_NJ  = 'out/Scan_nJets_Nov12'
@@ -238,7 +264,7 @@ scan_combined_PTJ = 'out/Scan_PTJ_Nov28_1'
 scan_hgg_PTJ      = 'out/Scan_PTJ_Nov28_0'
 scan_hzz_PTJ      = 'out/Scan_PTJ_Nov28'
 
-scan_combined_PTH_ggH_asimov = 'out/Scan_PTH_Nov17_xHfixed_asimov'
+# scan_combined_PTH_ggH_asimov = 'out/Scan_PTH_Nov17_xHfixed_asimov'
 
 scan_combined_YH_asimov  = 'out/Scan_YH_Nov28_asimov'
 scan_hgg_YH_asimov       = 'out/Scan_YH_Nov28_asimov_0'
@@ -353,7 +379,30 @@ scan_combined_TopHighPt                                   = 'out/Scan_TopHighPt_
 scan_hgg_TopHighPt                                        = 'out/Scan_TopHighPt_Dec11_hgg'
 scan_hzz_TopHighPt                                        = 'out/Scan_TopHighPt_Dec11_hzz_0'
 
-scan_combined_TopHighPt_asimov                            = 'out/Scan_TopHighPt_Dec12_asimov_2'
+
+# Implementing reweighting and hbb
+
+scan_combWithHbb_TopHighPt                                = 'out/Scan_TopHighPt_Jan22_combWithHbb'
+scan_hgg_TopHighPt                                        = 'out/Scan_TopHighPt_Jan22_hgg'
+scan_hzz_TopHighPt                                        = 'out/Scan_TopHighPt_Jan22_hzz'
+
+# scan_combined_TopHighPt_asimov                            = 'out/Scan_TopHighPt_Dec12_asimov_2'
+# scan_combined_TopHighPt_asimov                            = 'out/Scan_TopHighPt_Jan19_asimov_2'
+# scan_hzz_TopHighPt_asimov                                 = 'out/Scan_TopHighPt_Jan22_hzz_asimov_1'
+# scan_combWithHbb_TopHighPt_asimov                         = 'out/Scan_TopHighPt_Jan19_asimov_0'
+# scan_hzz_TopHighPt_asimov                                 = 'out/Scan_TopHighPt_Jan22_hzz_asimov_0'
+# 
+# scan_combined_TopHighPt_asimov                            = 'out/Scan_TopHighPt_Jan22_asimov_0'
+# scan_combWithHbb_TopHighPt_asimov                         = 'out/Scan_TopHighPt_Jan22_combWithHbb_asimov_0'
+# scan_hgg_TopHighPt_asimov                                 = 'out/Scan_TopHighPt_Jan22_hgg_asimov'
+# scan_hzz_TopHighPt_asimov                                 = 'out/Scan_TopHighPt_Jan22_hzz_asimov_1'
+# 
+# combWithHbb not trustworthy! Last few bins are not processed correctly
+scan_combined_TopHighPt_asimov                            = 'out/Scan_TopHighPt_Jan23_asimov'
+scan_combWithHbb_TopHighPt_asimov                         = 'out/Scan_TopHighPt_Jan23_combWithHbb_asimov'
+scan_hgg_TopHighPt_asimov                                 = 'out/Scan_TopHighPt_Jan23_hgg_asimov'
+scan_hzz_TopHighPt_asimov                                 = 'out/Scan_TopHighPt_Jan23_hzz_asimov'
+
 
 # TODO:
 # Scan_TotalXS_Nov27

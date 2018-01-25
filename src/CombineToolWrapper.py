@@ -22,6 +22,17 @@ import ROOT
 
 import Commands
 
+import PlotCommands
+
+import TheoryCommands
+from TheoryCommands import c
+from TheoryCommands import SetCMargins
+from TheoryCommands import SetPlotDir
+from TheoryCommands import SaveAsRoot
+from TheoryCommands import SaveC
+from TheoryCommands import GetUniqueRootName
+from TheoryCommands import GetPlotBase
+
 
 
 ########################################
@@ -94,10 +105,13 @@ class CombineScan(Container):
     DEFAULT_MASS                      = 125.
     SAVE_NLL                          = True
     SAVE_INACTIVE_POI                 = True
+
+    default_minimizer_settings        = True
     cminDefaultMinimizerType          = 'Minuit2'
     cminDefaultMinimizerAlgo          = 'migrad'
 
     # Default settings for jobs
+    fromPostfit                       = True
     onBatch                           = True
     queue                             = 'all.q'
     jobPriority                       = 0
@@ -109,6 +123,8 @@ class CombineScan(Container):
     POIs                        = []
     PhysicsModelParameters      = []
     PhysicsModelParameterRanges = []
+    floatNuisances              = []
+    freezeNuisances             = []
 
 
     # ======================================
@@ -152,32 +168,38 @@ class CombineScan(Container):
 
 
     #____________________________________________________________________
-    def __init__( self, container ):
+    def __init__( self, container=None ):
         super( CombineScan, self ).__init__()
 
         # ======================================
         # Overwrite with attributes from the input container
 
-        for attribute in container.ListAttributes( onlyVariables=True ):
-            if attribute.startswith('get_') or attribute.startswith('set_'):
-                continue
-            elif callable(getattr( container, attribute )):
-                continue
-            elif attribute in [ 'datacard', 'fastscanRootFile', 'postfitWS' ]:
-                continue
-            # print 'Copying attribute \'{0}\''.format(attribute)
-            setattr( self, attribute, getattr( container, attribute ) )
+        if not container is None:
+            for attribute in container.ListAttributes( onlyVariables=True ):
+                if attribute.startswith('get_') or attribute.startswith('set_'):
+                    continue
+                elif callable(getattr( container, attribute )):
+                    continue
+                elif attribute in [ 'datacard', 'fastscanRootFile', 'postfitWS' ]:
+                    continue
+                # print 'Copying attribute \'{0}\''.format(attribute)
+                setattr( self, attribute, getattr( container, attribute ) )
+
+
+    #____________________________________________________________________
+    def MakeSubdirectory(self):
+        if isdir( self.subDirectory ):
+            self.subDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore(self.subDirectory)
+        if not Commands.IsTestMode():
+            os.makedirs(self.subDirectory)
 
 
     #____________________________________________________________________
     def Run( self ):
 
         # Make the subDirectory now, avoid race condition while waiting for the postfit
-        if isdir( self.subDirectory ):
-            self.subDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore(self.subDirectory)
-        os.makedirs(self.subDirectory)
-
-
+        self.MakeSubdirectory()
+        
         if self.APPLY_FASTSCAN_FILTER:
 
             # ======================================
@@ -200,16 +222,20 @@ class CombineScan(Container):
             # ======================================
             # Make sure there is a fastscan and determine accepted points
 
-            # Now remove any overwriting of PhysicsModelParameters
-            Commands.Warning( 'Deleting any previously PhysicsModelParameters (They will be read from the postfit)' )
-            self.PhysicsModelParameters = []
+            if not self.asimov:
+                # Now remove any overwriting of PhysicsModelParameters
+                Commands.Warning( 'Deleting any previously PhysicsModelParameters (They will be read from the postfit)' )
+                self.PhysicsModelParameters = []
 
             if self.fastscanRootFile is None:
                 self.Chapter( 'No fastscanRootFile was given - Creating fastscanRootFile' )
                 self.fastscanRootFile = self.DetermineRelevantPointsFromFastScan()
 
-            print '\nDetermining accepted points from fastscanRootFile:', self.fastscanRootFile
+            if not Commands.IsTestMode():
+                print '\nMaking basic plot of fast scan result'
+                self.PlotFastScan(self.fastscanRootFile)
 
+            print '\nDetermining accepted points from fastscanRootFile:', self.fastscanRootFile
             acceptedPoints = self.GetListOfAcceptedPoints( self.fastscanRootFile )
 
 
@@ -223,6 +249,38 @@ class CombineScan(Container):
         else:
             self.SubmitScan()
 
+
+    #____________________________________________________________________
+    def PlotFastScan( self, fastscanRootFile ):
+
+        print '\nAttempting to make a quick plot of {0}'.format(fastscanRootFile)
+
+        container = TheoryCommands.GetTH2FromListOfRootFiles(
+            [ fastscanRootFile ],
+            self.POIs[0],
+            self.POIs[1],
+            verbose = False,
+            defaultHValue = 999.,
+            )
+        container.name = basename(fastscanRootFile).replace('.root','')
+
+        if 'ct' in self.POIs and 'cg' in self.POIs:
+            x_ranges = [ -8.5, 8.5 ]
+            y_ranges = [ -0.65, 0.65 ]
+        else:
+            x_ranges = [ -8.5, 8.5 ]
+            y_ranges = [ -0.65, 0.65 ]
+
+        PlotCommands.PlotSingle2DHistogram(
+            container,
+            container.xBinBoundaries[0], container.xBinBoundaries[-1],
+            container.yBinBoundaries[0], container.yBinBoundaries[-1],
+            self.POIs[0], self.POIs[1],
+            'fastscan',
+            zMax = 100.,
+            palette = 'twocolor',
+            getCustomContour = self.deltaNLLCutOff
+            )
 
 
     #____________________________________________________________________
@@ -275,11 +333,9 @@ class CombineScan(Container):
 
         return fastscanRootFile
 
-
     #____________________________________________________________________
     def SubmitScan( self, acceptedPoints=None ):
         self.PrepareForCommandCompilation( mode = 'scan' )
-
 
         try:
             _extraOptions = deepcopy(self.extraOptions)
@@ -300,9 +356,6 @@ class CombineScan(Container):
         finally:
             self.extraOptions = _extraOptions
 
-
-
-
     #____________________________________________________________________
     def PrepareForCommandCompilation( self, mode ):
 
@@ -321,18 +374,25 @@ class CombineScan(Container):
                 Commands.Warning( 'No name given; Will fill \'{0}\''.format(self.name) )
 
         elif mode == 'scan':
-            if self.postfitWS is None:
+
+            if self.fromPostfit:
+                dc = self.postfitWS
+            else:
+                dc = self.datacard
+
+            if dc is None:
                 Commands.ThrowError( 'Set the \'postfitWS\' attribute to /path/to/postfitWS.root' )
             elif Commands.IsTestMode():
                 pass
-            elif not isfile(self.postfitWS):
-                Commands.ThrowError( '{0} does not exist'.format(self.postfitWS) )
+            elif not isfile(dc):
+                Commands.ThrowError( '{0} does not exist'.format(dc) )
             else:
-                self.postfitWS = abspath(self.postfitWS)
+                dc = abspath(dc)
 
             if self.name is None:
-                self.name = basename(self.postfitWS).replace('/','').replace('.root','')
+                self.name = basename(dc).replace('/','').replace('.root','')
                 Commands.Warning( 'No name given; Will fill \'{0}\''.format(self.name) )
+
 
             if self.nPoints is None:
                 Commands.ThrowError( 'Mode \'scan\' needs attribute \'nPoints\'' )
@@ -371,20 +431,39 @@ class CombineScan(Container):
         else:
             cmd.append( 'combine' )
 
+        if self.fromPostfit:
+            cmd.append(self.postfitWS)
+        else:
+            cmd.append(self.datacard)
+
         cmd.extend([
-            self.postfitWS,
             '-n _{0}'.format( taskName ),
             '--algo=grid',
             '--points={0}'.format(self.nPoints)
             ])
 
+        # Set all the common stuff in separate method
+        self.CommonCommandSettings(cmd, taskName)
+
         if self.doFastscan:
             cmd.append( '--fastScan' )
             output = abspath( 'higgsCombine_' + taskName + '.MultiDimFit.mH125.root' )
-        else:
+        elif self.fromPostfit:
             cmd.append( '--snapshotName MultiDimFit' )
             cmd.append( '--skipInitialFit' )
             
+
+        # ======================================
+        # Settings for grid
+
+        if self.doFastscan:
+            return output, cmd
+        else:
+            return cmd
+
+
+    #____________________________________________________________________
+    def CommonCommandSettings(self, cmd, taskName):
 
         if self.asimov:
             cmd.append( '-t -1' )
@@ -394,17 +473,21 @@ class CombineScan(Container):
             cmd.append( '--setPhysicsModelParameters '      + ','.join(self.PhysicsModelParameters) )
         if len(self.PhysicsModelParameterRanges) > 0:
             cmd.append( '--setPhysicsModelParameterRanges ' + ':'.join(self.PhysicsModelParameterRanges) )
-
-
-        # ======================================
-        # Very basic combine options
+        if len(self.floatNuisances) > 0:
+            cmd.append( '--floatNuisances ' + ','.join(self.floatNuisances) )
+        if len(self.freezeNuisances) > 0:
+            raise NotImplementedError('freezeNuisances still needs to be implemented')
 
         cmd.extend([
             '-M {0}'.format( self.METHOD ),
-            '--cminDefaultMinimizerType {0}'.format( self.cminDefaultMinimizerType ),
-            '--cminDefaultMinimizerAlgo {0}'.format( self.cminDefaultMinimizerAlgo ),
             '-m {0}'.format( self.DEFAULT_MASS ),
             ])
+
+        if self.default_minimizer_settings:
+            cmd.extend([
+                '--cminDefaultMinimizerType {0}'.format( self.cminDefaultMinimizerType ),
+                '--cminDefaultMinimizerAlgo {0}'.format( self.cminDefaultMinimizerAlgo ),            
+                ])
 
         if self.SAVE_NLL:
             cmd.append( '--saveNLL' )
@@ -425,15 +508,7 @@ class CombineScan(Container):
         if len(self.extraOptions) > 0:
             cmd.extend(self.extraOptions)
 
-        # if not self.doFastscan:
-        #     cmd.append( '--split-points {0}'.format(self.nPointsPerJob) )
-
-
-        # ======================================
-        # Settings for grid
-
         if self.onBatch:
-
             if 't3' in os.environ['HOSTNAME']:
 
                 if not self.queue in [ 'all.q', 'long.q', 'short.q' ]:
@@ -448,12 +523,6 @@ class CombineScan(Container):
                         )
             else:
                 Commands.ThrowError( 'Only jobs submitted from T3 are implemented now' )
-
-        if self.doFastscan:
-            return output, cmd
-        else:
-            return cmd
-
 
 
     #____________________________________________________________________

@@ -10,13 +10,15 @@ from array import array
 
 from time import sleep
 
-class CouplingModelError(Exception):
-    pass
 
 class CouplingModel( PhysicsModel ):
     ''' Model used to unfold differential distributions '''
 
-    from _CouplingModel_Parametrization import *
+    from _CouplingModel_Parametrization import makeParametrizationsFromTheory
+    from _CouplingModel_DefineYieldParameters import defineYieldParameters, make_parametrization_for_experimental_bin, distinguish_between_decay_channels, get_decay_channels, getYieldScale, get_binStr, commit_parseable_to_ws
+
+    class CouplingModelError(Exception):
+        pass
 
     def __init__(self):
         PhysicsModel.__init__(self)
@@ -43,6 +45,7 @@ class CouplingModel( PhysicsModel ):
         self.FitOnlyNormalization = False
         self.FitRatioOfBRs        = False
         self.DoBRUncertainties    = False
+        self.ReweightedXS         = None
 
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
@@ -74,6 +77,9 @@ class CouplingModel( PhysicsModel ):
 
             elif optionName == 'lumiScale':
                 self.MakeLumiScalable = eval(optionValue)
+
+            elif optionName == 'ReweightCrossSections':
+                self.ReweightedXS = [ float(v) for v in optionValue.split(',') ]
 
             elif optionName == 'FitBR':
                 self.FitBR = eval(optionValue)
@@ -193,7 +199,11 @@ class CouplingModel( PhysicsModel ):
 
 
         if self.FitBR and self.FitRatioOfBRs:
-            raise CouplingModelError( 'Options FitBR and FitRatioOfBRs are exclusive!' )
+            raise self.CouplingModelError( 'Options FitBR and FitRatioOfBRs are exclusive!' )
+
+        if not(self.ReweightedXS is None):
+            if not( len(self.ReweightedXS) == len(self.manualExpBinBoundaries)-1 ):
+                raise self.CouplingModelError('Dim mismatch: len(ReweightCrossSections)={0}, but len(binBoundaries)-1={1}'.format(len(self.ReweightedXS), len(self.manualExpBinBoundaries)-1 ))
 
 
     #____________________________________________________________________
@@ -233,84 +243,6 @@ class CouplingModel( PhysicsModel ):
             self.addTheoryUncertaintyNuisances()
 
         self.chapter( 'Starting model.getYieldScale()' )
-
-
-    #____________________________________________________________________
-    def getYieldScale( self, bin, process ):
-
-        if self.verbose:
-            print 'Getting scale for process = {0:21}, bin = {1}'.format( process, bin )
-
-        # 'hgg_xH_modifier',
-        # 'hzz_xH_modifier',
-        # 'hgg_OutsideAcceptance_modifier',
-        # 'hzz_OutsideAcceptance_modifier',
-        # 'bkg_modifier',
-
-        if not self.DC.isSignal[process]:
-            yieldParameter = 'bkg_modifier'
-
-        elif 'OutsideAcceptance' in process:
-            yieldParameter = 'hgg_OutsideAcceptance_modifier' if self.BinIsHgg(bin) else 'hzz_OutsideAcceptance_modifier'
-
-            if self.FitOnlyNormalization:
-                yieldParameter = 'globalTotalXSmodifier'
-
-        else:
-            if self.splitggH and 'xH' in process:
-                yieldParameter = 'hgg_xH_modifier' if self.BinIsHgg(bin) else 'hzz_xH_modifier'
-
-            elif self.FitOnlyNormalization:
-                yieldParameter = 'globalTotalXSmodifier'
-
-            elif ( self.splitggH and 'ggH' in process ) or ( 'smH' in process ):
-                # If it's a ggH process
-
-                isOverflowBin = False
-                isInsideUserBinBoundaries = False
-
-                matchRegularBin  = re.search( r'([\dmp]+)_([\dmp]+)', process )
-                matchOverflowBin = re.search( r'([GTLE]+)([\dmp]+)', process )
-
-                if matchRegularBin:
-                    leftBound  = float(matchRegularBin.group(1).replace('m','-').replace('p','.'))
-                    rightBound = float(matchRegularBin.group(2).replace('m','-').replace('p','.'))
-                    for iBin in xrange(self.nExpBins):
-                        if leftBound >= self.expBinBoundaries[iBin] and rightBound <= self.expBinBoundaries[iBin+1]:
-                            yieldParameter = self.hgg_yieldParameterNames[iBin] if self.BinIsHgg(bin) else self.hzz_yieldParameterNames[iBin]
-                            break
-                    else:
-                        yieldParameter = 'hgg_OutsideAcceptance_modifier' if self.BinIsHgg(bin) else 'hzz_OutsideAcceptance_modifier'
-
-                elif matchOverflowBin:
-                    # bound = float(matchOverflowBin.group(1).replace('m','-').replace('p','.'))
-                    lastYieldParameter = self.hgg_yieldParameterNames[-1] if self.BinIsHgg(bin) else self.hzz_yieldParameterNames[-1]
-                    if matchOverflowBin.group() in lastYieldParameter:
-                        yieldParameter = lastYieldParameter
-                    else:
-                        yieldParameter = 'hgg_OutsideAcceptance_modifier' if self.BinIsHgg(bin) else 'hzz_OutsideAcceptance_modifier'
-
-                else:
-                    raise CouplingModelError( 'Failure for process \'{0}\': Could not extract any bin boundary information'.format(process) )
-
-            else:
-                raise CouplingModelError( 'Failure for process \'{0}\': Production process is not \'xH\', \'ggH\' or \'smH\''.format(process) )
-
-
-        if self.verbose:
-            print '    --> Scaling with \'{0}\''.format( yieldParameter )
-            
-            # print '          test print:'
-            # try:
-            #     self.modelBuilder.out.var(yieldParameter).Print()
-            # except ReferenceError:
-            #     try:
-            #         self.modelBuilder.out.function(yieldParameter).Print()
-            #     except ReferenceError:
-            #         print '          yieldParameter \'{0}\' does not seem to be in the ws!!'.format(yieldParameter)
-
-        return yieldParameter
-
 
 
     ################################################################################
@@ -369,8 +301,9 @@ class CouplingModel( PhysicsModel ):
                 print 'Taking manually specified bin boundaries:', expBinBoundaries
 
         else:
-            raise CouplingModelError(
-                'Specify \'--PO binBoundaries=0,15,...\' on the command line. Automatic boundary determination no longer supported.'
+            raise self.CouplingModelError(
+                'Specify \'--PO binBoundaries=0,15,...\' on the command line.'
+                'Automatic boundary determination no longer supported.'
                 )
 
         self.allProcessBinBoundaries = []
@@ -397,401 +330,6 @@ class CouplingModel( PhysicsModel ):
         self.modelBuilder.out.defineSet( 'expBinBoundaries', ','.join(expBinBoundarySet) )
 
 
-
-    #____________________________________________________________________
-    def defineYieldParameters( self ):
-        self.chapter( 'Starting model.defineYieldParameters()' )
-
-        # Define some variables in local for convenience
-        nExpBins            = self.nExpBins
-        expBinBoundaries    = self.expBinBoundaries
-        nTheoryBins         = self.nTheoryBins
-        theoryBinBoundaries = self.theoryBinBoundaries
-        parametrizations    = self.parametrizations
-
-
-        # ======================================
-        # Extra variables for further studies
-
-        self.hgg_yieldParameterNames = []
-        self.hzz_yieldParameterNames = []
-
-        if self.MakeLumiScalable:
-            self.modelBuilder.doVar( 'lumiScale[1.0]' )
-            self.modelBuilder.out.var('lumiScale').setConstant()
-
-
-        # ======================================
-        # Start of loop over experimental bins
-
-        SMXSInsideExperimentalBins = []
-        self.yieldParameterNames = []
-        for iExpBin in xrange(nExpBins):
-
-            expBoundLeft  = expBinBoundaries[iExpBin]
-            expBoundRight = expBinBoundaries[iExpBin+1]
-
-            # Determine if bin is the overflow bin
-            isOverflowBin = False
-            if expBoundLeft == self.allProcessBinBoundaries[-1]:
-                isOverflowBin = True
-
-            # if iExpBin == nExpBins-1:
-            #     expBinStr     =  '{0}_{1}_GT{2}'.format(
-            #         self.productionMode, self.observableName,
-            #         expBoundLeft if not expBoundLeft.is_integer() else int(expBoundLeft)
-            #         )
-            if isOverflowBin:
-                expBinStr     = '{0}_{1}_GT{2}'.format(
-                    self.productionMode, self.observableName,
-                    expBoundLeft if not expBoundLeft.is_integer() else int(expBoundLeft)
-                    )
-            else:
-                expBinStr     =  '{0}_{1}_{2}_{3}'.format(
-                    self.productionMode, self.observableName,
-                    expBoundLeft  if not expBoundLeft.is_integer() else int(expBoundLeft),
-                    expBoundRight if not expBoundRight.is_integer() else int(expBoundRight)
-                    )
-
-
-            if self.verbose:
-                print '\n' + '='*80
-                print 'Processing bin {0}: {1}'.format( iExpBin, expBinStr )
-
-            theoryBinBoundariesInsideExperimentalBin = []
-            parametrizationIndices                   = []
-
-            # Extrapolation on left of theory spectrum
-            if expBoundLeft < theoryBinBoundaries[0]:
-                theoryBinBoundariesInsideExperimentalBin.append( expBoundLeft )
-                parametrizationIndices.append( 0 )
-
-
-            # ======================================
-            # Determine which parametrizations enter into the experimental bin
-
-            for iTheoryBin in xrange(nTheoryBins):
-
-                # Left-most bin
-                if (
-                    expBoundLeft >= theoryBinBoundaries[iTheoryBin] and
-                    expBoundLeft < theoryBinBoundaries[iTheoryBin+1]
-                    ):
-                    theoryBinBoundariesInsideExperimentalBin.append( expBoundLeft )
-                    parametrizationIndices.append( iTheoryBin+1 )
-
-                # Bins in between; only stricly 'between' (and not 'on') the left and right bounds
-                if (
-                    expBoundLeft < theoryBinBoundaries[iTheoryBin] and
-                    theoryBinBoundaries[iTheoryBin] < expBoundRight
-                    ):
-                    theoryBinBoundariesInsideExperimentalBin.append( theoryBinBoundaries[iTheoryBin] )
-                    parametrizationIndices.append( iTheoryBin+1 )
-
-                # Right-most bin
-                if (
-                    expBoundRight > theoryBinBoundaries[iTheoryBin] and
-                    expBoundRight <= theoryBinBoundaries[iTheoryBin+1]
-                    ):
-                    theoryBinBoundariesInsideExperimentalBin.append( expBoundRight )
-                    break
-
-            # Extrapolation on right of theory spectrum
-            # Sep28: Stop doing this
-            #        Use only the parametrizations defined by theorists
-            if expBoundRight > theoryBinBoundaries[-1]:
-                # theoryBinBoundariesInsideExperimentalBin.append( expBoundRight )
-                # parametrizationIndices.append( nTheoryBins+1 )
-                theoryBinBoundariesInsideExperimentalBin.append( theoryBinBoundaries[-1] )
-
-
-            nTheoryBinsInsideExperimentalBin = len(theoryBinBoundariesInsideExperimentalBin)-1
-            theoryBinWidthsInsideExperimentalBin = [
-                theoryBinBoundariesInsideExperimentalBin[i+1] - theoryBinBoundariesInsideExperimentalBin[i] for i in xrange(nTheoryBinsInsideExperimentalBin)
-                ]
-
-
-            if self.verbose:
-                # print '\nProcessing experimental bin {0}'.format(expBinStr)
-                print 'Found the following theory bin boundaries inside experimental bin {0} to {1}:'.format(
-                    expBoundLeft, expBoundRight )
-                print '  ', theoryBinBoundariesInsideExperimentalBin
-                print '   The following parametrizations will be used to evaluate the cross section:'
-                print '  ', parametrizationIndices
-
-
-            if self.verbose:
-                print '\n' + '-'*60
-                print 'Calculating cross section'
-
-            # Calculate total cross section (*not* /GeV) in experimental bin
-            SMXSInsideExperimentalBin = 0.
-            for iParametrization, binWidth in zip( parametrizationIndices, theoryBinWidthsInsideExperimentalBin ):
-                SMXSInsideExperimentalBin += self.SMXS[iParametrization] * binWidth
-
-                if self.verbose > 1:
-                    print '\n    Adding contribution of theory bin {0} to SM cross section in exp bin {1}'.format( iParametrization, expBinStr )
-                    print '    contribution = {2:+8.3f} ( self.SMXS[iParametrization] = {0:+8.3f} * binWidth = {1:+8.3f} )'.format(
-                        self.SMXS[iParametrization] ,
-                        binWidth ,
-                        self.SMXS[iParametrization] * binWidth ,
-                        )
-
-            if self.verbose:
-                print '\nTotal cross section in {1} is {0}'.format( SMXSInsideExperimentalBin, expBinStr )
-
-
-            if len(theoryBinWidthsInsideExperimentalBin) == 0:
-                print '  Did not find any theoretical bin boundaries inside this experimental bin'
-                print '   (i.e. can not do a parametrization here)'
-                print '   Yield parameter will be 1.0'
-                self.modelBuilder.doVar( 'r_{0}[1.0]'.format( expBinStr ))
-                continue
-
-            SMXSInsideExperimentalBins.append( SMXSInsideExperimentalBin )
-
-
-            if self.verbose:
-                print '\n' + '-'*60
-                print 'Creating expression for yield parameter'
-
-            componentWeights = []
-            for iComponent in xrange(self.nComponents):
-                parametrizationWeights = []
-                for iParametrization, binWidth in zip( parametrizationIndices, theoryBinWidthsInsideExperimentalBin ):
-                    weight = (
-                        ( binWidth * self.SMXS[iParametrization] )
-                        /
-                        SMXSInsideExperimentalBin
-                        )
-                    parametrizationWeights.append(weight)
-
-                    if self.verbose > 1:
-                        print '\n  Weight for component {0}, parametrization {1}'.format( iComponent, iParametrization )
-                        print '    weight = {0:+8.3f} ( ( binWidth[{1:+8.3f}] * SMXS/GeV[{2:+8.3f}] ) / SMXS_expBin[{3:+8.3f}] )'.format(
-                            weight, binWidth, self.SMXS[iParametrization], SMXSInsideExperimentalBin
-                            )
-
-                componentWeights.append( parametrizationWeights )
-
-
-            # ======================================
-            # Calculate the weighted average of components
-
-            if self.verbose:
-                print '\nCalculating weighted average components'
-
-            averageComponents = []
-            for iComponent in xrange(self.nComponents):
-
-                if self.verbose > 1:
-                    print '\n  Component {0} ('.format(iComponent), self.couplingCombinations[iComponent], '):'
-
-                averageComponent = 0.
-                parametrizationWeights = componentWeights[iComponent]
-                for iParametrization, weight in zip( parametrizationIndices, parametrizationWeights ):
-                    averageComponent += weight * parametrizations[iParametrization][iComponent]
-
-                    if self.verbose > 1:
-                        print '    Parametrization {0:3}: product = {1:+8.3f} ( weight[{2:+8.3f}] * parameterValue[{3:+8.3f}]'.format(
-                            iParametrization, 
-                            weight * parametrizations[iParametrization][iComponent],
-                            weight,
-                            parametrizations[iParametrization][iComponent]
-                            )
-
-                if self.verbose > 1:
-                    print '  average Component {0} = {1}'.format( iComponent, averageComponent )
-
-                averageComponents.append( averageComponent )
-
-
-            if self.verbose:
-                print '\nThe determined polynomial for bin {0} is:\n'.format(expBinStr)
-
-                line = 'r_{0} = '.format(expBinStr)
-                for iComponent in xrange(self.nComponents):
-
-                    line += '{0}*{1} + '.format(
-                        averageComponents[iComponent],
-                        '*'.join(self.couplingCombinations[iComponent])
-                        )
-                print line [:-2]
-
-
-            # ======================================
-            # Importing into WS is somewhat delicate
-
-            argumentIndices = { coupling : '@{0}'.format(iCoupling) for iCoupling, coupling in enumerate(self.couplings) }
-
-            averageComponentNames = []
-            productNames = []
-            yieldParameterFormula = []
-            for iAverageComponent, averageComponent in enumerate(averageComponents):
-
-                couplingList = self.couplingCombinations[iAverageComponent]
-                nCouplingsForThisParameter = len(couplingList)
-
-                averageComponentName = 'averageComponent_{signal}_{whichCouplings}'.format(
-                    signal = expBinStr,
-                    whichCouplings = ''.join(couplingList) if nCouplingsForThisParameter > 0 else 'CONSTANT',
-                    )
-
-                self.modelBuilder.doVar(
-                    '{0}[{1}]'.format(
-                        averageComponentName,
-                        averageComponent,
-                        )
-                    )
-                averageComponentNames.append( averageComponentName )
-
-
-                # First add a "@number" entry in the argumentIndices dict, then use that in the formula
-                argumentIndices[averageComponentName] = '@{0}'.format( len(argumentIndices) )
-
-                yieldParameterFormulaComponent = argumentIndices[averageComponentName]
-                for coupling in couplingList:
-                    yieldParameterFormulaComponent += '*{0}'.format( argumentIndices[coupling] )
-                yieldParameterFormula.append( yieldParameterFormulaComponent )
-
-            # Compile expression string for final yieldParameter
-            yieldParameterExpression = 'expr::r_{signal}( "({formulaString})", {commaSeparatedParameters} )'.format(
-                signal                   = expBinStr,
-                formulaString            = '+'.join(yieldParameterFormula),
-                commaSeparatedParameters = ','.join( self.couplings + averageComponentNames )
-                )
-
-            if self.verbose:
-                print '\nFinal yield parameter expression: {0}'.format(yieldParameterExpression)
-                print '  Overview:'
-                for key, value in argumentIndices.iteritems():
-                    print '    {0:4} = {1}'.format( value, key )
-
-            self.modelBuilder.factory_( yieldParameterExpression )
-
-            if self.verbose:
-                print '\nTest evaluation of yieldParameter:'
-                for coupling in self.couplings:
-                    self.modelBuilder.out.var(coupling).Print()
-                self.modelBuilder.out.function( 'r_{0}'.format(expBinStr) ).Print()
-                print ''
-
-            self.yieldParameterNames.append( 'r_{0}'.format(expBinStr) )
-
-
-            # ======================================
-            # Add other modifiers
-
-            hgg_modifiers = [ 'r_{0}'.format(expBinStr) ]
-            hzz_modifiers = [ 'r_{0}'.format(expBinStr) ]
-
-            if self.MakeLumiScalable:
-                hgg_modifiers.append( 'lumiScale' )
-                hzz_modifiers.append( 'lumiScale' )
-
-            if self.FitBR:
-                hgg_modifiers.append( 'hggBRmodifier' )
-                hzz_modifiers.append( 'hzzBRmodifier' )
-
-            if self.ProfileTotalXS:
-                hgg_modifiers.append( 'totalXSmodifier' )
-                hzz_modifiers.append( 'totalXSmodifier' )
-
-            if self.FitRatioOfBRs:
-                hgg_modifiers.append( 'hgg_ratioBRmodifier' )
-                hzz_modifiers.append( 'hzz_ratioBRmodifier' )
-
-            self.modelBuilder.factory_( 'prod::r_hgg_{0}({1})'.format( expBinStr, ','.join(hgg_modifiers) ) )
-            self.modelBuilder.factory_( 'prod::r_hzz_{0}({1})'.format( expBinStr, ','.join(hzz_modifiers) ) )
-
-            self.hgg_yieldParameterNames.append( 'r_hgg_{0}'.format(expBinStr) )
-            self.hzz_yieldParameterNames.append( 'r_hzz_{0}'.format(expBinStr) )
-
-
-        # ======================================
-        # Other yield parameters: xH, OutsideAcceptance, and background
-
-        self.modelBuilder.doVar( 'one[1]' )
-        self.modelBuilder.out.var('one').setConstant(True)
-
-        # xH
-        hgg_xH_modifier = [ 'one' ]
-        hzz_xH_modifier = [ 'one' ]
-
-        if self.MakeLumiScalable:
-            hgg_xH_modifier.append( 'lumiScale' )
-            hzz_xH_modifier.append( 'lumiScale' )
-        if self.FitBR:
-            hgg_xH_modifier.extend([ 'xH_modifier', 'hggBRmodifier' ])
-            hzz_xH_modifier.extend([ 'xH_modifier', 'hzzBRmodifier' ])
-
-        self.modelBuilder.factory_( 'prod::hgg_xH_modifier({0})'.format( ','.join(hgg_xH_modifier) ) )
-        self.modelBuilder.factory_( 'prod::hzz_xH_modifier({0})'.format( ','.join(hzz_xH_modifier) ) )
-
-        # OutsideAcceptance
-        hgg_OutsideAcceptance_modifier = [ 'one' ]
-        hzz_OutsideAcceptance_modifier = [ 'one' ]
-
-        if self.FitBR:
-            hgg_OutsideAcceptance_modifier.append( 'hggBRmodifier' )
-            hzz_OutsideAcceptance_modifier.append( 'hzzBRmodifier' )
-        if self.MakeLumiScalable:
-            hgg_OutsideAcceptance_modifier.append( 'lumiScale' )
-            hzz_OutsideAcceptance_modifier.append( 'lumiScale' )
-        
-        self.modelBuilder.factory_( 'prod::hgg_OutsideAcceptance_modifier({0})'.format( ','.join(hgg_OutsideAcceptance_modifier) ) )
-        self.modelBuilder.factory_( 'prod::hzz_OutsideAcceptance_modifier({0})'.format( ','.join(hzz_OutsideAcceptance_modifier) ) )
-
-        # bkg
-        bkg_modifier = [ 'one' ]
-        if self.MakeLumiScalable:
-            bkg_modifier.append( 'lumiScale' )
-        self.modelBuilder.factory_( 'prod::bkg_modifier({0})'.format( ','.join(bkg_modifier) ) )
-
-
-        # ======================================
-        # Save some sets to ws
-
-        self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
-        self.modelBuilder.out.defineSet( 'couplings', ','.join(self.couplings) )
-        self.modelBuilder.out.defineSet( 'yieldParameters', ','.join(self.yieldParameterNames) )
-        self.modelBuilder.out.defineSet( 'hgg_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
-        self.modelBuilder.out.defineSet( 'hzz_yieldParameters', ','.join(self.hgg_yieldParameterNames) )
-
-        self.modelBuilder.out.defineSet( 'modifiers', ','.join([
-            'hgg_xH_modifier',
-            'hzz_xH_modifier',
-            'hgg_OutsideAcceptance_modifier',
-            'hzz_OutsideAcceptance_modifier',
-            'bkg_modifier',
-            ]))
-
-        self.SMXSInsideExperimentalBins = SMXSInsideExperimentalBins
-
-        if self.FitRatioOfBRs:
-            self.modelBuilder.out.set('POI').add( self.modelBuilder.out.var('hgg_ratioBRmodifier') )
-            self.modelBuilder.out.set('POI').add( self.modelBuilder.out.var('ratio_BR_hgg_hzz') )
-
-
-        if self.verbose:
-
-            print '\n\n*** Done defining all yield parameters; control printout:'
-
-            allVarsToPrint = self.hgg_yieldParameterNames + self.hzz_yieldParameterNames + [
-                'hgg_xH_modifier',
-                'hzz_xH_modifier',
-                'hgg_OutsideAcceptance_modifier',
-                'hzz_OutsideAcceptance_modifier',
-                'bkg_modifier',
-                ]
-
-            for name in allVarsToPrint:
-                # print ''
-                self.modelBuilder.out.function(name).Print()
-
-            print '\n'
-
-
     #____________________________________________________________________
     def addTheoryUncertaintyNuisances( self ):
     
@@ -811,7 +349,7 @@ class CouplingModel( PhysicsModel ):
             and not self.covarianceMatrixPassed
             ):
             print 'No theory uncertainties are specified; Running without theory uncertainties'
-            pass
+            return
 
         elif (
             self.theoryUncertaintiesPassed
@@ -822,7 +360,7 @@ class CouplingModel( PhysicsModel ):
                 print '[ERROR] Cannot build a covariance matrix out of given input'
                 print '        len(self.theoryUncertainties) = {0}'.format( len(self.theoryUncertainties) )
                 print '        len(self.correlationMatrix)   = {0}'.format( len(self.correlationMatrix) )
-                raise CouplingModelError()
+                raise self.CouplingModelError()
 
             self.covarianceMatrix = []
             self.nTheoryUncertainties = len(self.theoryUncertainties)
@@ -856,7 +394,7 @@ class CouplingModel( PhysicsModel ):
             print '        self.theoryUncertaintiesPassed = ', self.theoryUncertaintiesPassed
             print '        self.correlationMatrixPassed   = ', self.correlationMatrixPassed
             print '        self.covarianceMatrixPassed    = ', self.covarianceMatrixPassed
-            raise CouplingModelError()
+            raise self.CouplingModelError()
 
 
         # ======================================
@@ -1419,7 +957,7 @@ class CouplingModel( PhysicsModel ):
         # Check if it is square
         if not all([ len(row) == len(corrMat) for row in corrMat ]):
             print corrMat
-            raise CouplingModelError( '[ERROR] inputted matrix is not square - Found ^ ' )
+            raise self.CouplingModelError( '[ERROR] inputted matrix is not square - Found ^ ' )
 
         return corrMat
 
@@ -1438,7 +976,7 @@ class CouplingModel( PhysicsModel ):
             elif len(line) == 2:
                 symmErrors.append( 0.5*( abs(float(line[0])) + abs(float(line[1])) ) )
             else:
-                raise CouplingModelError(
+                raise self.CouplingModelError(
                     '[ERROR] Found {0} elements on line in \'{1}\''.format( len(line), errorFile )
                     )
                 return
@@ -1486,5 +1024,5 @@ class CouplingModel( PhysicsModel ):
             # if self.verbose: print '    Bin \'{0}\' is classified as a hzz bin!'.format( bin )
             return False
         else:
-            raise CouplingModelError( 'Bin \'{0}\' can not be classified as either a hgg or hzz bin'.format(bin) )
+            raise self.CouplingModelError( 'Bin \'{0}\' can not be classified as either a hgg or hzz bin'.format(bin) )
 
