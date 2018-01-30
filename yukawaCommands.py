@@ -65,6 +65,7 @@ def AppendParserOptions( parser ):
 
     parser.add_argument( '--mergeGluonInducedWithQuarkInduced',                   action=CustomAction )
     parser.add_argument( '--CorrelationMatrices_Yukawa',                          action=CustomAction )
+    parser.add_argument( '--CorrelationMatrices_minmax_Yukawa',                   action=CustomAction )
     parser.add_argument( '--couplingT2WS_Yukawa',                                 action=CustomAction )
     parser.add_argument( '--couplingBestfit_Yukawa',                              action=CustomAction )
 
@@ -136,36 +137,109 @@ def main( args ):
     # ======================================
     # Dealing with theory uncertainties
 
+    def process_variations(variations):
+        scaleCorrelation = CorrelationMatrices.ScaleCorrelation()
+        scaleCorrelation.set_bin_boundaries(variations[0].binBoundaries)
+        for variation in variations:
+            par_dict = {}
+            for par in [ 'muR', 'muF', 'Q' ]:
+                if hasattr(variation, par):
+                    par_dict[par] = getattr(variation, par)
+            scaleCorrelation.add_variation(variation.crosssection, par_dict)
+        return scaleCorrelation
+
     if args.CorrelationMatrices_Yukawa:
+        CorrelationMatrices.SetPlotDir('correlationMatrices_Yukawa_{0}'.format(datestr))
+
 
         variationFiles = TheoryFileInterface.FileFinder(
             directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             kappab = 1, kappac = 1
             )
-
         variations = [
             TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
                 for variationFile in variationFiles ]
-
-        CorrelationMatrices.GetCorrelationMatrix(
-            variations,
-            makeScatterPlots          = False,
-            makeCorrelationMatrixPlot = True,
-            outname                   = 'corrMat_theory',
-            verbose                   = True,
-            )
+        scaleCorrelation = process_variations(variations)
+        # scaleCorrelation.make_scatter_plots(subdir='theory')
+        scaleCorrelation.plot_correlation_matrix('theory')
+        scaleCorrelation.write_correlation_matrix_to_file('theory')
+        scaleCorrelation.write_errors_to_file('theory')
 
         variations_expbinning = deepcopy(variations)
         for variation in variations_expbinning:
-            TheoryCommands.RebinDerivedTheoryContainer( variation, expBinBoundaries )
+            TheoryCommands.RebinDerivedTheoryContainer(variation, expBinBoundaries)
+        scaleCorrelation_exp = process_variations(variations_expbinning)
+        scaleCorrelation_exp.make_scatter_plots(subdir='exp')
+        scaleCorrelation_exp.plot_correlation_matrix('exp')
+        scaleCorrelation_exp.write_correlation_matrix_to_file('exp')
+        scaleCorrelation_exp.write_errors_to_file('exp')
 
-        CorrelationMatrices.GetCorrelationMatrix(
-            variations_expbinning,
-            makeScatterPlots          = True,
-            makeCorrelationMatrixPlot = True,
-            outname                   = 'corrMat_exp',
-            verbose                   = True,
-            )
+    if args.CorrelationMatrices_minmax_Yukawa:
+        CorrelationMatrices.SetPlotDir('correlationMatrices_Yukawa_{0}'.format(datestr))
+
+        kappabs = [ -2, -1, 0, 1, 2 ]
+        kappacs = [ -10, -5, 0, 1, 5, 10 ]
+
+        scaleCorrelations = []
+        scaleCorrelations_exp = []
+        for kappab, kappac in itertools.product( kappabs, kappacs ):
+            print 'Processing kappab = {0}, kappac = {1}'.format( kappab, kappac )
+            variationFiles = TheoryFileInterface.FileFinder(
+                directory = LatestPaths.derivedTheoryFiles_YukawaGluonInduced, # Not summed, only for gluon induced we have scale variations per kappa variation
+                kappab = kappab, kappac = kappac
+                )
+            variations = [
+                TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+                    for variationFile in variationFiles ]
+
+            scaleCorrelation = process_variations(variations)
+            scaleCorrelation.kappab = kappab
+            scaleCorrelation.kappac = kappac
+            scaleCorrelations.append(scaleCorrelation)
+
+            # Same for exp, variations need to be rebinned
+            variations_expbinning = deepcopy(variations)
+            for variation in variations_expbinning:
+                TheoryCommands.RebinDerivedTheoryContainer(variation, expBinBoundaries, lastBinIsOverflow=False)
+            scaleCorrelation_exp = process_variations(variations_expbinning)
+            scaleCorrelation_exp.kappab = kappab
+            scaleCorrelation_exp.kappac = kappac
+            scaleCorrelations_exp.append(scaleCorrelation_exp)
+
+        CorrelationMatrices.MinMaxMatrix(scaleCorrelations, tag='theory')
+        CorrelationMatrices.MinMaxMatrix(scaleCorrelations_exp, tag='exp')
+
+
+    # if args.CorrelationMatrices_Yukawa:
+
+    #     variationFiles = TheoryFileInterface.FileFinder(
+    #         directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
+    #         kappab = 1, kappac = 1
+    #         )
+
+    #     variations = [
+    #         TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+    #             for variationFile in variationFiles ]
+
+    #     CorrelationMatrices.GetCorrelationMatrix(
+    #         variations,
+    #         makeScatterPlots          = False,
+    #         makeCorrelationMatrixPlot = True,
+    #         outname                   = 'corrMat_theory',
+    #         verbose                   = True,
+    #         )
+
+    #     variations_expbinning = deepcopy(variations)
+    #     for variation in variations_expbinning:
+    #         TheoryCommands.RebinDerivedTheoryContainer( variation, expBinBoundaries )
+
+    #     CorrelationMatrices.GetCorrelationMatrix(
+    #         variations_expbinning,
+    #         makeScatterPlots          = True,
+    #         makeCorrelationMatrixPlot = True,
+    #         outname                   = 'corrMat_exp',
+    #         verbose                   = True,
+    #         )
 
 
     if args.couplingT2WS_Yukawa:
@@ -182,8 +256,8 @@ def main( args ):
         # MAKELUMISCALABLE                  = True
         MAKELUMISCALABLE                  = False
 
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        INCLUDE_BR_COUPLING_DEPENDENCY    = False
+        INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
         # PROFILE_TOTAL_XS                  = True
         PROFILE_TOTAL_XS                  = False

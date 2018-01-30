@@ -635,6 +635,31 @@ def ListPOIs( datacardRootFile, nofilter=False ):
     return parNames
 
 #____________________________________________________________________
+def getRangeFromStr(text):
+    regular_match = re.search(r'([\dpm\.\-]+)_([\dpm\.\-]+)', text)
+    overflow_match = re.search(r'(GE|GT)([\dpm\.\-]+)', text)
+
+    if regular_match:
+        left = ConvertStrToFloat(regular_match.group(1))
+        right = ConvertStrToFloat(regular_match.group(2))
+    elif overflow_match:
+        left = ConvertStrToFloat(overflow_match.group(2))
+        right = 'INF'
+    else:
+        left = 'UNDEFINED'
+        right = 'UNDEFINED'
+
+    return left, right
+
+def rangeSorter(text):
+    left, right = getRangeFromStr(text)
+    if left == 'UNDEFINED':
+        return 900000
+    elif right == 'INF':
+        return 800000
+    else:
+        return left
+
 def POIsorter( POI ):
     _1, _2, Range = InterpretPOI(POI)
     if Range[0] == '-INF':

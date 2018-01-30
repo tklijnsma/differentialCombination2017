@@ -439,7 +439,7 @@ def Rebin(
         lastBinIsOverflow = False,
         verbose = False,
         ):
-    Commands.Warning( 'Calling TheoryCommands.Rebin(); This code needs to be checked!!' )
+    # Commands.Warning( 'Calling TheoryCommands.Rebin(); This code needs to be checked!!' )
 
     nBinsExp = len(expBinBoundaries)-1
 
@@ -468,7 +468,7 @@ def Rebin(
             Commands.Warning( 'Last bin uses the rightmost theory bin bound {0} instead of requested exp bin bound {1}'.format( theoryBinBoundaries[-1], expBinBoundaries[-1] ) )
         else:
             right = expBinBoundaries[-1]
-        expBinBoundaries[-1] = right
+        # expBinBoundaries[-1] = right
         expBinValues.append( theoryIntegralFunction( expBinBoundaries[-2], right ) / ( right - expBinBoundaries[-2] ) )
         if verbose: print '  Doing integral({0:7.2f}, {1:7.2f}) / ({1:7.2f}-{0:7.2f}): {2} (/GeV)'.format( expBinBoundaries[-2], right, expBinValues[-1] )
 

@@ -13,6 +13,7 @@ class YieldParameterContainer(Container):
     """docstring for YieldParameterContainer"""
     instances = []
     bkg_yieldParameter = None
+    debug = True
 
     @staticmethod
     def all_ggH_yieldParameters():
@@ -62,6 +63,8 @@ class YieldParameterContainer(Container):
                 right = None
             else:
                 raise RuntimeError( 'Process {0} has no clearly defined range'.format(process) )
+        if self.debug:
+            print 'get_range_from_process called with process = {0}; left = {1}, right = {2}'.format(process, left, right)
         return ( left, right )
 
     def search_yieldParameter_in_left_right(self, left, right, some_list):
@@ -78,10 +81,16 @@ class YieldParameterContainer(Container):
             else:
                 return yp.name
 
+        if self.debug:
+            print 'search_yieldParameter_in_left_right called with left={0}, right = {1}'.format(left, right)
+            for e in some_list:
+                print '   ',e.name
+
         for yp in some_list:
             if left >= yp.left and right <= yp.right:
                 return yp.name
         else:
+            if self.debug: print '    Could not find a match in this list'
             return 1
 
     def str_to_num(self, s):
@@ -193,10 +202,16 @@ def defineYieldParameters(self):
             reweightor_name = parametrization_name.replace('parametrization', 'reweightor')
             ggH_yieldParameter.add_variable(reweightor_name)
 
-
     if self.FitBR:
-        print 'FitBR not yet implemented!'
-        sys.exit(1)
+        # Add a previously defined scale parameter to the ggH yieldParameters
+        scaleParameter = { 'hgg' : 'scalingBR_hggModifier', 'hzz' : 'scalingBR_hzzModifier' }
+        for decayChannel in decayChannels:
+            yieldParameterContainer = self.yieldParameters_per_decay_channel[decayChannel]
+            for ggH_yieldParameter in yieldParameterContainer.ggH_yieldParameters:
+                ggH_yieldParameter.add_variable(scaleParameter[decayChannel])
+
+        for xH_yieldParameter in YieldParameterContainer.all_xH_yieldParameters():
+            xH_yieldParameter.add_variable('scalingBR_xHModifier')
 
 
     # ======================================
@@ -217,6 +232,16 @@ def defineYieldParameters(self):
     self.modelBuilder.out.defineSet( 'all_ggH_yieldParameters', ','.join([ p.name for p in YieldParameterContainer.all_ggH_yieldParameters() ]) )
     self.modelBuilder.out.defineSet( 'all_xH_yieldParameters', ','.join([ p.name for p in YieldParameterContainer.all_xH_yieldParameters() ]) )
     self.modelBuilder.out.defineSet( 'all_OutsideAcceptance_yieldParameters', ','.join([ p.name for p in YieldParameterContainer.all_OutsideAcceptance_yieldParameters() ]) )
+
+    SMXSset = []
+    for iExpBin in xrange(self.nExpBins):
+        SMXS          = self.SMXSInsideExperimentalBins[iExpBin]
+        expBoundLeft  = self.expBinBoundaries[iExpBin]
+        expBoundRight = self.expBinBoundaries[iExpBin+1]
+        name = 'SMXS_{0}_{1}'.format(expBoundLeft, expBoundRight)
+        self.modelBuilder.doVar('{0}[{1}]'.format(name, SMXS))
+        SMXSset.append(name)
+    self.modelBuilder.out.defineSet('SMXS', ','.join([p for p in SMXSset]))
 
 
 #____________________________________________________________________
@@ -372,10 +397,6 @@ def get_binStr(self, leftBound, rightBound):
 
 #____________________________________________________________________
 def distinguish_between_decay_channels(self):
-
-    # # Overwrite for development
-    # return True
-
     if self.FitBR:
         return True
     return False

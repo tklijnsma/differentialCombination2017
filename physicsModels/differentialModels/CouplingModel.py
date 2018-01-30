@@ -837,72 +837,29 @@ class CouplingModel( PhysicsModel ):
 
 
         # ======================================
-        # The final scaling parameters used will be called 'hggBRmodifier' and 'hzzBRmodifier'
+        # Create the final scaling parameters
 
         self.modelBuilder.factory_(
-            'expr::hggBRmodifier('
+            'expr::scalingBR_hggModifier('
             '"@0", c7_BRscal_hgg )'
             )
 
         self.modelBuilder.factory_(
-            'expr::hzzBRmodifier('
+            'expr::scalingBR_hzzModifier('
             '"@0", c7_BRscal_hzz )'
             )
 
         # xH modifier
         self.modelBuilder.factory_(
-            'expr::xH_modifier('
+            'expr::scalingBR_xHModifier('
             '"@0*@0", {0} )'.format( kappa_V.GetName() )
             )
 
-
-        # self.modelBuilder.factory_(
-        #     'expr::hggBRmodifier_times_xH_modifier('
-        #     '"@0*@1", hggBRmodifier, xH_modifier )'
-        #     )
-        # self.modelBuilder.factory_(
-        #     'expr::hzzBRmodifier_times_xH_modifier('
-        #     '"@0*@1", hzzBRmodifier, xH_modifier )'
-        #     )
-
-
-        # if self.MakeLumiScalable:
-
-        #     self.modelBuilder.factory_(
-        #         'expr::lumiScale_times_hggBRmodifier('
-        #         '"@0*@1", lumiScale, hggBRmodifier )'
-        #         )
-
-        #     self.modelBuilder.factory_(
-        #         'expr::lumiScale_times_hzzBRmodifier('
-        #         '"@0*@1", lumiScale, hzzBRmodifier )'
-        #         )
-
-        #     # xH
-        #     self.modelBuilder.factory_(
-        #         'expr::lumiScale_times_hggBRmodifier_times_xH_modifier('
-        #         '"@0*@1*@2", lumiScale, hggBRmodifier, xH_modifier )'
-        #         )
-        #     self.modelBuilder.factory_(
-        #         'expr::lumiScale_times_hzzBRmodifier_times_xH_modifier('
-        #         '"@0*@1*@2", lumiScale, hzzBRmodifier, xH_modifier )'
-        #         )
-
+        # Set for convenient access in the ws
         self.modelBuilder.out.defineSet( 'BRvariables', ','.join([
-            kappa_t.GetName(),
-            kappa_b.GetName(),
-            kappa_c.GetName(),
-            kappa_W.GetName(),
-            kappa_Z.GetName(),
-            kappa_tau.GetName(),
-            kappa_mu.GetName(),
-            'hggBRmodifier',
-            'hzzBRmodifier',
-            'xH_modifier',
-            'Scaling_hgg',
-            'Scaling_hzg',
-            'Scaling_hgluglu',
-            ] ) )
+            kappa_t.GetName(), kappa_b.GetName(), kappa_c.GetName(), kappa_W.GetName(), kappa_Z.GetName(), kappa_tau.GetName(), kappa_mu.GetName(),
+            'scalingBR_hggModifier', 'scalingBR_hzzModifier', 'scalingBR_xHModifier', 'Scaling_hgg', 'Scaling_hzg', 'Scaling_hgluglu',
+            ]))
 
 
     #____________________________________________________________________

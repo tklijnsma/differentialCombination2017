@@ -153,7 +153,7 @@ class CombineScan(Container):
         return self._datacard
     def set_datacard( self, datacard ):
         print '\nSetting datacard to \'{0}\''.format(datacard)
-        self._datacard = datacard
+        self._datacard = abspath(datacard)
     datacard = property( get_datacard, set_datacard )
 
 
@@ -476,7 +476,7 @@ class CombineScan(Container):
         if len(self.floatNuisances) > 0:
             cmd.append( '--floatNuisances ' + ','.join(self.floatNuisances) )
         if len(self.freezeNuisances) > 0:
-            raise NotImplementedError('freezeNuisances still needs to be implemented')
+            cmd.append( '--freezeNuisances ' + ','.join(self.freezeNuisances) )
 
         cmd.extend([
             '-M {0}'.format( self.METHOD ),
@@ -591,6 +591,37 @@ class CombineScan(Container):
 
     #____________________________________________________________________
     def ParseBestfitCommand( self ):
+
+        self.PrepareForCommandCompilation( mode = 'postfit' )
+
+        cmd = []
+
+        if self.onBatch:
+            cmd.append( 'combineTool.py' )
+        else:
+            cmd.append( 'combine' )
+
+        taskName = 'POSTFIT_' + ( 'ASIMOV_' if self.asimov else '' ) + self.name
+
+        cmd.extend([
+            self.datacard,
+            '-n _{0}'.format(taskName),
+            # '--algo=grid',
+            # '--points={0}'.format(self.nPoints)
+            ])
+
+        self.CommonCommandSettings(cmd, taskName)
+
+        # For the postfit: Hard-coded saving the workspace
+        cmd.append( '--saveWorkspace' )
+
+        self.postfitRootFileBasename = 'higgsCombine_{0}.MultiDimFit.mH125.root'.format( taskName )
+
+        return cmd
+
+
+    #____________________________________________________________________
+    def ParseBestfitCommand_old( self ):
         self.PrepareForCommandCompilation( mode = 'postfit' )
 
         cmd = []

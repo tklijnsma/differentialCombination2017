@@ -71,6 +71,7 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--lumiStudy',                                action='store_true' )
     parser.add_argument( '--profiledTotalXS',                          action='store_true' )
     parser.add_argument( '--fitOnlyNormalization',                     action='store_true' )
+    parser.add_argument( '--BRdependent',                              action='store_true' )
     parser.add_argument( '--oneKappa', type=str, default=None )
 
 
@@ -260,6 +261,16 @@ def main( args ):
                 scan.floatNuisances.append(otherKappa)
 
                 suffix += '_oneKappa_' + args.oneKappa
+
+            elif args.BRdependent:
+                scan.datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR
+                suffix += '_couplingDependentBR'
+
+                # scan.PhysicsModelParameters.append('kappa_V=0.99')
+                # scan.PhysicsModelParameterRanges.append('kappa_V=-100.0,1.0')
+                
+                scan.PhysicsModelParameters.append('kappa_V=0.999')
+                scan.freezeNuisances.append('kappa_V')
 
             else:
                 print 'Pass physics option'

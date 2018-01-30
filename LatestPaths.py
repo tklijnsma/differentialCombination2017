@@ -165,11 +165,13 @@ ws_combined_Yukawa_noTheoryUncertainties               = 'out/workspaces_Nov06/c
 ws_combined_Yukawa_withUncorrelatedTheoryUncertainties = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_withUncorrelatedTheoryUncertainties.root'
 ws_combined_Yukawa_lumiScalable                        = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
 ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS.root'
-ws_combined_Yukawa_couplingDependentBR                 = 'out/workspaces_Nov10/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
+# ws_combined_Yukawa_couplingDependentBR                 = 'out/workspaces_Nov10/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
 # ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov17/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
 # ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov20/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
 ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov28/combinedCard_smH_Nov27_INCLUSIVE_CouplingModel_Yukawa_profiledTotalXS_fitOnlyNormalization.root'
 
+# Reweighted and using the new model
+ws_combined_Yukawa_couplingDependentBR = 'out/workspaces_Jan25/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR_reweighted.root'
 
 # ======================================
 # kappat kappag
@@ -184,7 +186,7 @@ ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov28/
 # ws_combined_Top    = 'out/workspaces_Nov08/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root'
 # ws_hzz_Top         = 'out/workspaces_Nov08/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'
 
-# Problem with SM file resolved, last theory bin still skipped
+# Problem with SM file resolved
 ws_combined_Top    = 'out/workspaces_Nov24/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties.root'
 ws_hgg_Top         = 'out/workspaces_Nov24/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Top_withTheoryUncertainties.root'
 ws_hzz_Top         = 'out/workspaces_Nov24/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Top_withTheoryUncertainties.root'

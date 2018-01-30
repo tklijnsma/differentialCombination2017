@@ -59,7 +59,10 @@ def AppendParserOptions( parser ):
 
     parser.add_argument( '--createDerivedTheoryFiles_Top',                  action=CustomAction )
     parser.add_argument( '--createDerivedTheoryFiles_Top_highPt',           action=CustomAction )
+
     parser.add_argument( '--CorrelationMatrices_Top',                       action=CustomAction )
+    parser.add_argument( '--CorrelationMatrices_TopHighPt',                 action=CustomAction )
+
     parser.add_argument( '--couplingT2WS_Top',                              action=CustomAction )
     parser.add_argument( '--couplingBestfit_Top',                           action=CustomAction )
     parser.add_argument( '--coupling2Dplot_Top',                            action=CustomAction )
@@ -160,6 +163,63 @@ def main( args ):
             outname                   = 'corrMat_exp',
             verbose                   = True,
             )
+
+
+    #____________________________________________________________________
+    if args.CorrelationMatrices_TopHighPt:
+        CorrelationMatrices.SetPlotDir('correlationMatrices_TopHighPt_{0}'.format(datestr))
+
+        NEW_BINNING = True
+        new_bin_boundaries = [ 0., 15., 30., 45., 80., 120., 200., 350., 600. ]
+
+        def process_variations(variations):
+            scaleCorrelation = CorrelationMatrices.ScaleCorrelation()
+            for variation in variations:
+                par_dict = {}
+                for par in [ 'muR', 'muF', 'Q' ]:
+                    if hasattr(variation, par):
+                        par_dict[par] = getattr(variation, par)
+                scaleCorrelation.add_variation(variation.crosssection, par_dict)
+            return scaleCorrelation
+
+        variationFiles = TheoryFileInterface.FileFinder(
+            directory = LatestPaths.derivedTheoryFiles_Top,
+            ct = 1.0, cg = 0.0, cb = 1.0
+            )
+        variations = [
+            TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+                for variationFile in variationFiles ]
+        scaleCorrelation = process_variations(variations)
+        scaleCorrelation.set_bin_boundaries(variations[0].binBoundaries)
+
+        # scaleCorrelation.make_scatter_plots(subdir='theory')
+        scaleCorrelation.plot_correlation_matrix('theory')
+        scaleCorrelation.write_correlation_matrix_to_file('theory')
+        scaleCorrelation.write_errors_to_file('theory')
+
+        variations_expbinning = deepcopy(variations)
+        for variation in variations_expbinning:
+            if NEW_BINNING:
+                TheoryCommands.RebinDerivedTheoryContainer(variation, new_bin_boundaries + [ 10000. ] )
+            else:
+                TheoryCommands.RebinDerivedTheoryContainer(variation, expBinBoundaries)
+        scaleCorrelation_exp = process_variations(variations_expbinning)
+
+        if NEW_BINNING:
+            tag = 'exp_newbins'
+            scaleCorrelation_exp.set_bin_boundaries(new_bin_boundaries, add_overflow=True)
+            scaleCorrelation_exp.make_scatter_plots(tag)
+            scaleCorrelation_exp.plot_correlation_matrix(tag)
+            scaleCorrelation_exp.write_correlation_matrix_to_file(tag)
+            scaleCorrelation_exp.write_errors_to_file(tag)
+        else:
+            tag = 'exp'
+            scaleCorrelation_exp.set_bin_boundaries(expBinBoundaries[:-1], add_overflow=True)
+            scaleCorrelation_exp.make_scatter_plots(tag)
+            scaleCorrelation_exp.plot_correlation_matrix(tag)
+            scaleCorrelation_exp.write_correlation_matrix_to_file(tag)
+            scaleCorrelation_exp.write_errors_to_file(tag)
+
 
     #____________________________________________________________________
     if args.couplingT2WS_Top:
