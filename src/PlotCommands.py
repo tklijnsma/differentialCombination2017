@@ -371,6 +371,16 @@ def PlotSpectraOnTwoPanel(
     # ---------------------
     # Determine extrema of plot
 
+    # Filter out passed containers that have hardcoded cross sections
+    hardcoded_numbers_containers = []
+    _containers = []
+    for container in containers:
+        if hasattr(container, 'crosssection'):
+            hardcoded_numbers_containers.append(container)
+        else:
+            _containers.append(container)
+    containers = _containers
+
     for container in containers:
         container.binBoundaries = PhysicsCommands.FigureOutBinning( container.POIs )
         
@@ -472,16 +482,46 @@ def PlotSpectraOnTwoPanel(
 
     leg = TLegendMultiPanel(
         lambda c: c.GetLeftMargin() + 0.01,
-        lambda c: 1 - c.GetTopMargin() - 0.12,
+        lambda c: 1 - c.GetTopMargin() - 0.10,
         lambda c: 1 - c.GetRightMargin() - 0.01,
         lambda c: 1 - c.GetTopMargin()
         )
-    leg.SetNColumns( min( len(containers), 3 ) )
+    leg.SetNColumns( min( len(containers)+len(hardcoded_numbers_containers), 4 ) )
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
     colorCycle = Commands.newColorCycle()
     fillStyleCycle = itertools.cycle([ 3245, 3254, 3205 ])
+
+
+    for container in hardcoded_numbers_containers:
+        if not hasattr( container, 'color' ): container.color = next(colorCycle)
+        container.nBins = getattr(container, 'nBins', len(container.binBoundaries)-1)
+
+        Hratio = ROOT.TH1F(
+            GetUniqueRootName(), '',
+            len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
+            )
+        ROOT.SetOwnership( Hratio, False )
+        Hratio.SetLineColor(container.color)
+        Hratio.SetLineWidth(2)
+        for iBin in xrange(container.nBins):
+            Hratio.SetBinContent( iBin+1, container.ratios[iBin] )
+        bottomPanelObjects.append( ( Hratio, 'HISTSAME' ) )
+
+        Hcrosssection = ROOT.TH1F(
+            GetUniqueRootName(), '',
+            len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
+            )
+        ROOT.SetOwnership( Hcrosssection, False )
+        Hcrosssection.SetLineColor(container.color)
+        Hcrosssection.SetLineWidth(2)
+        for iBin in xrange(container.nBins):
+            Hcrosssection.SetBinContent( iBin+1, container.crosssection[iBin] )
+        topPanelObjects.append( ( Hcrosssection, 'HISTSAME' ) )
+
+        leg.AddEntry(Hcrosssection.GetName(), container.title, 'l')
+
 
     for container in containers:
         if not hasattr( container, 'color' ): container.color = next(colorCycle)
@@ -677,7 +717,122 @@ def PlotSpectraOnTwoPanel(
     ROOT.gStyle.SetEndErrorSize(1)
 
 
+#____________________________________________________________________
+def WriteScansToTable(
+        container,
+        tag,
+        xTitle       = 'p_{T}^{H}',
+        yTitle       = '#Delta#sigma (pb/GeV)',
+        lastBinIsOverflow = True,
+        verbose = True,
+        scaleLastBin = False,
+        ):
 
+    container.binBoundaries = PhysicsCommands.FigureOutBinning( container.POIs )
+    container.nBins = len(container.binBoundaries)-1
+    
+    # Determine uncertainties from scan
+    container.uncs = []
+    for POI, scan in zip( container.POIs, container.Scans ):
+        POIvals, deltaNLLs = PhysicsCommands.FilterScan( scan )
+        unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
+        container.uncs.append(unc)
+
+    # If last bin is indeed an overflow, and scaleLastBin is not set to False, scale the last bin
+    if lastBinIsOverflow and not scaleLastBin == False:
+        if scaleLastBin == 'previousBin':
+            container.scale = container.binBoundaries[-1] - container.binBoundaries[-2]
+        else:
+            container.scale = scaleLastBin
+        container.SMcrosssections[-1] /= container.scale
+
+    # ======================================
+    # Print table of uncertainties and cross sections
+
+    strList = lambda L: ', '.join([ '{0:<9.3f}'.format(f) for f in L ])
+    print '\nSignal strengths and cross sections in {0}:'.format( container.name )
+    print 'binBoundaries : ' + strList( container.binBoundaries )
+    print 'mu            : ' + strList( [ container.uncs[i].min for i in xrange(container.nBins) ] )
+    print 'mu_error_down : ' + strList( [ container.uncs[i].leftError for i in xrange(container.nBins) ] )
+    print 'mu_error_up   : ' + strList( [ container.uncs[i].rightError for i in xrange(container.nBins) ] )
+    print 'mu_bound_down : ' + strList( [ container.uncs[i].leftBound for i in xrange(container.nBins) ] )
+    print 'mu_bound_up   : ' + strList( [ container.uncs[i].rightBound for i in xrange(container.nBins) ] )
+    print 'xs            : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].min for i in xrange(container.nBins) ] )
+    print 'xs_error_down : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].leftError for i in xrange(container.nBins) ] )
+    print 'xs_error_up   : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].rightError for i in xrange(container.nBins) ] )
+    print 'xs_bound_down : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].leftBound for i in xrange(container.nBins) ] )
+    print 'xs_bound_up   : ' + strList( [ container.SMcrosssections[i] * container.uncs[i].rightBound for i in xrange(container.nBins) ] )
+
+    # ======================================
+    # Construct table
+
+    def f(number, decimals=2, force_sign=False):
+        sign = '+' if force_sign else ''
+        if isinstance(number, int) or number.is_integer():
+            ret =  str(int(number))
+        else:
+            basic_float_str = '{0:{sign}.{decimals}f}'.format(number, decimals=decimals, sign=sign)
+            float_str = "{0:{sign}.{decimals}E}".format(number, decimals=decimals, sign=sign)
+            if "E" in float_str:
+                base, exponent = float_str.split("E")
+                exponent = int(exponent)
+                if exponent <= -3:
+                    ret = "{{{0} \\times 10^{{{1}}}}}".format(base, exponent)
+                else:
+                    ret = basic_float_str
+            else:
+                ret = basic_float_str
+        return ret
+
+    table = []
+
+    binBoundariesLine = ['$' + xTitle.replace('#','\\') + '$']
+    crosssectionLine  = ['$' + yTitle.replace('#','\\') + '$']
+    ratiosLine        = ['$' + '\\mu' + '$']
+
+    for iBin in xrange(container.nBins):
+
+        if iBin < container.nBins-1 or not(lastBinIsOverflow):
+            left  = f(container.binBoundaries[iBin])
+            right = f(container.binBoundaries[iBin+1])
+            binBoundariesLine.append('${0}-{1}$'.format(left, right))
+        else:
+            left  = f(container.binBoundaries[iBin])
+            binBoundariesLine.append('${0}-\\infty$'.format(left))
+
+        xs      = container.SMcrosssections[iBin] * container.uncs[iBin].min
+        xs_down = -abs(container.SMcrosssections[iBin] * container.uncs[iBin].leftError)
+        xs_up   = container.SMcrosssections[iBin] * container.uncs[iBin].rightError
+
+        # xs_down_perc = xs_down / xs * 100. if not xs==0.0 else 0.0
+        # xs_up_perc   = xs_up   / xs * 100. if not xs==0.0 else 0.0
+        # xsStr = '{0:.1f}_{{{1:+.1f} ({2:.1f}\\%)}}^{{{3:+.1f} ({4:.1f}\\%)}}'.format(
+        #     xs, xs_down, xs_down_perc, xs_up, xs_up_perc
+        #     )
+        xsStr = '${0}_{{{1}}}^{{{2}}}$'.format(
+            f(xs), f(xs_down), f(xs_up, force_sign=True)
+            )
+
+        crosssectionLine.append(xsStr)
+
+        mu      = container.uncs[iBin].min
+        mu_down = -abs(container.uncs[iBin].leftError)
+        mu_up   = container.uncs[iBin].rightError
+        muStr = '${0}_{{{1}}}^{{{2}}}$'.format(
+            f(mu), f(mu_down), f(mu_up, force_sign=True)
+            )
+        ratiosLine.append(muStr)
+
+    table.append(binBoundariesLine)
+    table.append(crosssectionLine)
+    table.append(ratiosLine)
+
+    tableText = '% ' + Commands.TagGitCommitAndModule() + '\n'
+    tableText += Commands.PrintTable(table, maxColWidth=100, sep=' & ', newline_sep=' \\\\\n' )
+
+    outname = join(TheoryCommands.PLOTDIR, 'mutable_{0}_{1}.tex'.format(tag, container.name))
+    with open(outname, 'w') as outFp:
+        outFp.write(tableText)
 
 
 #____________________________________________________________________

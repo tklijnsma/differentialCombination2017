@@ -353,14 +353,14 @@ class ScaleCorrelation(object):
 
         T.GetXaxis().SetTitle( 'p_{T} [GeV]' )
         T.GetXaxis().SetTitleOffset( 1.7 )
-        T.GetXaxis().SetTitleSize(0.045)
+        T.GetXaxis().SetTitleSize(0.055)
 
         T.GetYaxis().SetTitle( 'p_{T} [GeV]' )
-        T.GetYaxis().SetTitleOffset( 2.45 )
-        T.GetYaxis().SetTitleSize(0.045)
+        T.GetYaxis().SetTitleOffset( 1.65 )
+        T.GetYaxis().SetTitleSize(0.055)
 
-        T.GetXaxis().SetLabelSize(0.045)
-        T.GetYaxis().SetLabelSize(0.045)
+        T.GetXaxis().SetLabelSize(0.055)
+        T.GetYaxis().SetLabelSize(0.055)
 
         ROOT.gStyle.SetHistMinimumZero() # To draw the "0", otherwise ROOT leaves it empty
         ROOT.gStyle.SetPaintTextFormat('1.2g')

@@ -32,6 +32,7 @@ from TheoryCommands import c
 from TheoryCommands import SaveC
 from TheoryCommands import GetPlotBase
 from TheoryCommands import SetCMargins
+from Commands import GlobRootFiles as globr
 
 import os, itertools, operator, re, argparse, random
 from math import isnan, isinf, sqrt
@@ -74,6 +75,8 @@ def AppendParserOptions( parser ):
     parser.add_argument( '--plot_onedimTotalXS_Yukawa',                           action=CustomAction )
     parser.add_argument( '--OneKappaScanPlot_Yukawa',                             action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa',                          action=CustomAction )
+    parser.add_argument( '--couplingContourPlot_Yukawa_compareCombinations',      action=CustomAction )
+
     parser.add_argument( '--couplingContourPlot_Yukawa_TheoryCrossCheck',         action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_BRdependencyComparison',   action=CustomAction )
     parser.add_argument( '--couplingContourPlot_Yukawa_highLumiStudy',            action=CustomAction )
@@ -148,6 +151,7 @@ def main( args ):
             scaleCorrelation.add_variation(variation.crosssection, par_dict)
         return scaleCorrelation
 
+    #____________________________________________________________________
     if args.CorrelationMatrices_Yukawa:
         CorrelationMatrices.SetPlotDir('correlationMatrices_Yukawa_{0}'.format(datestr))
 
@@ -174,6 +178,7 @@ def main( args ):
         scaleCorrelation_exp.write_correlation_matrix_to_file('exp')
         scaleCorrelation_exp.write_errors_to_file('exp')
 
+    #____________________________________________________________________
     if args.CorrelationMatrices_minmax_Yukawa:
         CorrelationMatrices.SetPlotDir('correlationMatrices_Yukawa_{0}'.format(datestr))
 
@@ -209,39 +214,7 @@ def main( args ):
         CorrelationMatrices.MinMaxMatrix(scaleCorrelations, tag='theory')
         CorrelationMatrices.MinMaxMatrix(scaleCorrelations_exp, tag='exp')
 
-
-    # if args.CorrelationMatrices_Yukawa:
-
-    #     variationFiles = TheoryFileInterface.FileFinder(
-    #         directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
-    #         kappab = 1, kappac = 1
-    #         )
-
-    #     variations = [
-    #         TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
-    #             for variationFile in variationFiles ]
-
-    #     CorrelationMatrices.GetCorrelationMatrix(
-    #         variations,
-    #         makeScatterPlots          = False,
-    #         makeCorrelationMatrixPlot = True,
-    #         outname                   = 'corrMat_theory',
-    #         verbose                   = True,
-    #         )
-
-    #     variations_expbinning = deepcopy(variations)
-    #     for variation in variations_expbinning:
-    #         TheoryCommands.RebinDerivedTheoryContainer( variation, expBinBoundaries )
-
-    #     CorrelationMatrices.GetCorrelationMatrix(
-    #         variations_expbinning,
-    #         makeScatterPlots          = True,
-    #         makeCorrelationMatrixPlot = True,
-    #         outname                   = 'corrMat_exp',
-    #         verbose                   = True,
-    #         )
-
-
+    #____________________________________________________________________
     if args.couplingT2WS_Yukawa:
 
         # ======================================
@@ -256,11 +229,11 @@ def main( args ):
         # MAKELUMISCALABLE                  = True
         MAKELUMISCALABLE                  = False
 
-        INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = False
+        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
+        INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
-        # PROFILE_TOTAL_XS                  = True
-        PROFILE_TOTAL_XS                  = False
+        PROFILE_TOTAL_XS                  = True
+        # PROFILE_TOTAL_XS                  = False
 
         # FIT_ONLY_NORMALIZATION            = True
         FIT_ONLY_NORMALIZATION            = False
@@ -385,334 +358,6 @@ def main( args ):
             suffix = suffix,
             extraOptions = extraOptions,
             )
-
-
-    # ======================================
-    # Scan
-
-    if args.couplingBestfit_Yukawa:
-
-        # doFastscan = True
-        # if args.notFastscan: doFastscan = False
-
-        doFastscan = False
-        if args.notFastscan: doFastscan = False
-        if args.fastscan:    doFastscan = True
-
-        ASIMOV = False
-        if args.notAsimov: ASIMOV = False
-        if args.asimov:    ASIMOV = True
-
-
-        # ======================================
-        # Flags
-
-        SQUARE_DIST_POI_STEP              = True
-        # SQUARE_DIST_POI_STEP              = False
-
-        # LUMISTUDY = True
-        LUMISTUDY = False
-
-        # UNCORRELATED_THEORY_UNCERTAINTIES = True
-        UNCORRELATED_THEORY_UNCERTAINTIES = False
-
-        # NO_THEORY_UNCERTAINTIES           = True
-        NO_THEORY_UNCERTAINTIES           = False
-
-
-        PROFILE_TOTAL_XS                  = True
-        # PROFILE_TOTAL_XS                  = False
-
-        # ONEDIM_SCAN_TOTALXS               = True
-        ONEDIM_SCAN_TOTALXS               = False
-
-        FIT_ONLY_NORMALIZATION            = True
-        # FIT_ONLY_NORMALIZATION            = False
-
-
-        # INCLUDE_BR_COUPLING_DEPENDENCY    = True
-        INCLUDE_BR_COUPLING_DEPENDENCY    = False
-
-        # FIX_KAPPAV                        = True
-        FIX_KAPPAV                        = False
-
-        # MAX_KAPPAV_ONE                    = True
-        MAX_KAPPAV_ONE                    = False
-
-
-        # DO_BR_UNCERTAINTIES               = True
-        DO_BR_UNCERTAINTIES               = False
-
-        # FIT_RATIO_OF_BRS                  = True
-        FIT_RATIO_OF_BRS                  = False
-
-        # ONEDIM_SCAN_RATIO_OF_BRS          = True
-        ONEDIM_SCAN_RATIO_OF_BRS          = False
-
-        # DO_ONLY_ONE_KAPPA                 = True
-        DO_ONLY_ONE_KAPPA                 = False
-
-        # theKappa = 'kappab'
-        theKappa = 'kappac'
-        theOtherKappa = { 'kappab' : 'kappac', 'kappac' : 'kappab' }[theKappa]
-
-
-        print
-        print '(!) {0} asimov'.format( 'DOING' if ASIMOV else 'NOT DOING' )
-        print '(!) {0} fastscan'.format( 'DOING' if doFastscan else 'NOT DOING' )
-        print 'UNCORRELATED_THEORY_UNCERTAINTIES = ', UNCORRELATED_THEORY_UNCERTAINTIES
-        print 'NO_THEORY_UNCERTAINTIES           = ', NO_THEORY_UNCERTAINTIES
-        print
-        print 'PROFILE_TOTAL_XS                  = ', PROFILE_TOTAL_XS
-        print 'ONEDIM_SCAN_TOTALXS               = ', ONEDIM_SCAN_TOTALXS
-        print 'FIT_ONLY_NORMALIZATION            = ', FIT_ONLY_NORMALIZATION
-        print
-        print 'INCLUDE_BR_COUPLING_DEPENDENCY    = ', INCLUDE_BR_COUPLING_DEPENDENCY
-        print 'FIX_KAPPAV                        = ', FIX_KAPPAV
-        print 'MAX_KAPPAV_ONE                    = ', MAX_KAPPAV_ONE
-        print 'DO_BR_UNCERTAINTIES               = ', DO_BR_UNCERTAINTIES
-        print
-        print 'FIT_RATIO_OF_BRS                  = ', FIT_RATIO_OF_BRS
-        print 'ONEDIM_SCAN_RATIO_OF_BRS          = ', ONEDIM_SCAN_RATIO_OF_BRS
-        print
-        print 'DO_ONLY_ONE_KAPPA                 = ', DO_ONLY_ONE_KAPPA
-        if DO_ONLY_ONE_KAPPA:
-            print '  Chosen kappa                      = {0}'.format(theKappa )
-            print '  Other kappa                       = {0}'.format(theOtherKappa )
-
-        if not INCLUDE_BR_COUPLING_DEPENDENCY and FIX_KAPPAV:
-            Commands.ThrowError( 'INCLUDE_BR_COUPLING_DEPENDENCY == False and FIX_KAPPAV == True is not allowed' )
-        if FIX_KAPPAV and MAX_KAPPAV_ONE:
-            Commands.ThrowError( 'FIX_KAPPAV == True and MAX_KAPPAV_ONE == True is not allowed' )
-        if not FIT_RATIO_OF_BRS and ONEDIM_SCAN_RATIO_OF_BRS:
-            Commands.ThrowError( 'FIT_RATIO_OF_BRS == False and ONEDIM_SCAN_RATIO_OF_BRS == True is not allowed' )
-
-
-        # ======================================
-        # Set correct input
-
-        datacard = LatestPaths.ws_combined_Yukawa
-        if args.hgg:
-            datacard = LatestPaths.ws_hgg_Yukawa
-        if args.hzz:
-            datacard = LatestPaths.ws_hzz_Yukawa
-
-        if ( LUMISTUDY or UNCORRELATED_THEORY_UNCERTAINTIES or NO_THEORY_UNCERTAINTIES or PROFILE_TOTAL_XS ) and ( args.hzz or args.hgg ):
-            print '[fixme] These studies not implemented for hgg or hzz'
-            sys.exit()
-        if LUMISTUDY:
-            datacard = LatestPaths.ws_combined_Yukawa_lumiScalable
-        if UNCORRELATED_THEORY_UNCERTAINTIES:
-            datacard = LatestPaths.ws_combined_Yukawa_withUncorrelatedTheoryUncertainties
-        if NO_THEORY_UNCERTAINTIES:
-            datacard = LatestPaths.ws_combined_Yukawa_noTheoryUncertainties
-        if PROFILE_TOTAL_XS:
-            datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR
-        if FIT_RATIO_OF_BRS:
-            datacard = LatestPaths.ws_combined_ratioOfBRs
-        if FIT_ONLY_NORMALIZATION:
-            datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization
-
-        # ======================================
-        # Set some job specifics (ranges, number of points)
-
-        jobDirectory = 'Scan_Yukawa_{0}'.format( datestr )
-        if args.hgg: jobDirectory += '_hgg'
-        if args.hzz: jobDirectory += '_hzz'
-
-        kappab_ranges = [ -15., 15. ]
-        kappac_ranges = [ -35., 35. ]
-
-
-        if doFastscan:
-            jobDirectory += '_fastscan'
-            nPoints = 6400
-            nPointsPerJob = 800
-            queue = 'short.q'
-        else:
-            nPoints = 6400
-            nPointsPerJob = 20
-            queue = 'all.q'
-            if args.hzz:
-                nPointsPerJob = 320
-                queue = 'short.q'
-
-
-        # print '\n' + 'WARNING ' * 7
-        # print 'TEMPORARY SETTINGS  - REMOVE THESE'
-        # kappab_ranges = [ -8., 8. ]
-        # kappac_ranges = [ -20., 20. ]
-        # nPoints = 60*60
-        # SQUARE_DIST_POI_STEP = False
-
-
-        if DO_ONLY_ONE_KAPPA:
-            nPoints       = 39
-            nPointsPerJob = 3
-            queue         = 'short.q'
-
-        if ONEDIM_SCAN_RATIO_OF_BRS or ONEDIM_SCAN_TOTALXS:
-            nPoints       = 50
-            nPointsPerJob = 5
-            queue         = 'short.q'
-
-
-        # ======================================
-        # Construct the fit command and process flags
-
-        # --------------------
-        # Setting POIs
-
-        POIs = [ 'kappab', 'kappac' ]
-        if DO_ONLY_ONE_KAPPA:
-            POIs = [ theKappa ]
-        if ONEDIM_SCAN_RATIO_OF_BRS:
-            POIs = [ 'ratio_BR_hgg_hzz' ]
-        if ONEDIM_SCAN_TOTALXS:
-            POIs = [ 'r_totalXS' ]
-        # if FIT_ONLY_NORMALIZATION:
-        #     POIs = [ 'globalTotalXSmodifier' ]
-            
-
-        # --------------------
-        # Setting physicsModelParameters
-
-        physicsModelParameters = [ 'kappab=1.0', 'kappac=1.0' ]
-        if LUMISTUDY:
-            physicsModelParameters.append( 'lumiScale=8.356546' )
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            physicsModelParameters.append( 'kappa_V=0.99' )
-        if PROFILE_TOTAL_XS:
-            physicsModelParameters.append( 'r_totalXS=1.0' )
-
-
-        # --------------------
-        # Setting physicsModelParameterRanges
-
-        physicsModelParameterRanges = [
-            'kappab={0},{1}'.format( kappab_ranges[0], kappab_ranges[1] ),
-            'kappac={0},{1}'.format( kappac_ranges[0], kappac_ranges[1] )
-            ]
-        if INCLUDE_BR_COUPLING_DEPENDENCY and not FIX_KAPPAV:
-            if MAX_KAPPAV_ONE:
-                physicsModelParameterRanges.append( 'kappa_V=-100.0,1.0' )
-            else:
-                physicsModelParameterRanges.append( 'kappa_V=-100.0,100.0' )
-
-        if ONEDIM_SCAN_RATIO_OF_BRS:
-            # Actually overwrite list contents
-            physicsModelParameterRanges = [ 'ratio_BR_hgg_hzz=0.0,0.25' ]
-
-        if ONEDIM_SCAN_TOTALXS:
-            # Actually overwrite list contents
-            physicsModelParameterRanges = [ 'r_totalXS=0.0,2.0' ]
-
-        # if FIT_ONLY_NORMALIZATION:
-        #     physicsModelParameterRanges = [ 'globalTotalXSmodifier=0.0,2.0' ]
-
-
-        # --------------------
-        # Specify floating and frozen nuisances
-
-        floatNuisances  = []
-        freezeNuisances = []
-
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            if FIX_KAPPAV:
-                freezeNuisances.append( 'kappa_V' )
-            else:
-                floatNuisances.append( 'kappa_V' )
-
-        if DO_ONLY_ONE_KAPPA:
-            floatNuisances.append( theOtherKappa )
-
-
-        # --------------------
-        # Construct extraOptions
-
-        extraOptions = [
-            '-P ' + ' -P '.join(POIs),
-            '--setPhysicsModelParameters '      + ','.join(physicsModelParameters),
-            '--setPhysicsModelParameterRanges ' + ':'.join(physicsModelParameterRanges),
-            ]
-
-        if SQUARE_DIST_POI_STEP:
-            extraOptions.append( '--squareDistPoiStep' )
-
-        if len(floatNuisances) > 0:
-            extraOptions.append( '--floatNuisances ' + ','.join(floatNuisances) )
-        if len(freezeNuisances) > 0:
-            extraOptions.append( '--freezeNuisances ' + ','.join(freezeNuisances) )
-
-        
-        # --------------------
-        # Compile list of variables to save
-
-        variablesToSave = []
-        variablesToSave.extend( Commands.ListSet( datacard, 'yieldParameters' ) )
-        variablesToSave.extend( [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ] )
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            variablesToSave.extend( Commands.ListSet( datacard, 'hgg_yieldParameters' ) )
-            variablesToSave.extend( Commands.ListSet( datacard, 'hzz_yieldParameters' ) )
-            variablesToSave.extend( Commands.ListSet( datacard, 'BRvariables' ) )
-        if PROFILE_TOTAL_XS:
-            variablesToSave.extend([ 'r_totalXS', 'totalXSmodifier', 'totalXS_SM', 'totalXS' ])
-        if FIT_RATIO_OF_BRS:
-            variablesToSave.extend([ 'hgg_ratioBRmodifier', 'hzz_ratioBRmodifier', 'ratio_BR_hgg_hzz' ])
-        extraOptions.append( '--saveSpecifiedFunc ' + ','.join(variablesToSave) )
-
-
-        # ======================================
-        # Appropriately name scan, create jobDirectoy and submit command
-
-        if DO_ONLY_ONE_KAPPA:
-            jobDirectory += '_oneKappa_{0}'.format(theKappa)
-        if LUMISTUDY:
-            jobDirectory += '_lumiStudy'
-        if PROFILE_TOTAL_XS:
-            jobDirectory += '_profiledTotalXS'
-            if ONEDIM_SCAN_TOTALXS:
-                jobDirectory += '_onedimTotalXSScan'
-            if FIT_ONLY_NORMALIZATION:
-                jobDirectory += '_fitOnlyNormalization'
-        if UNCORRELATED_THEORY_UNCERTAINTIES:
-            jobDirectory += '_uncorrelatedTheoryUncertainties'
-        if NO_THEORY_UNCERTAINTIES:
-            jobDirectory += '_noTheoryUncertainties'
-        if INCLUDE_BR_COUPLING_DEPENDENCY:
-            jobDirectory += '_couplingDependentBR'
-            if FIX_KAPPAV:
-                jobDirectory += '_fixedKappaV'
-            elif MAX_KAPPAV_ONE:
-                jobDirectory += '_kappaVMaxOne'
-        if FIT_RATIO_OF_BRS:
-            jobDirectory += '_ratioOfBRs'
-            if ONEDIM_SCAN_RATIO_OF_BRS:
-                jobDirectory += '_onedimRatioScan'  
-
-        if ASIMOV:
-            jobDirectory += '_asimov'
-
-        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
-        if Commands.IsTestMode(): print '\nWould now create new directory: {0}'.format( basename(jobDirectory) )
-
-        Commands.MultiDimCombineTool(
-            datacard,
-            nPoints       = nPoints,
-            nPointsPerJob = nPointsPerJob,
-            queue         = queue,
-            notOnBatch    = False,
-            jobDirectory  = jobDirectory,
-            fastscan      = doFastscan,
-            asimov        = ASIMOV,
-            jobPriority   = 0,
-            extraOptions  = extraOptions
-            )
-
-
-
 
     # 
     # 
@@ -873,7 +518,81 @@ def main( args ):
         print res.yCoupling, '=', res.yBestfit
 
 
+    #____________________________________________________________________
+    if args.couplingContourPlot_Yukawa_compareCombinations:
 
+        xCoupling = 'kappac'
+        yCoupling = 'kappab'
+        titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
+        TH2FsToPlot = []
+
+        combined_rew_dir = LatestPaths.scan_combined_Yukawa_reweighted
+        if args.asimov: combined_rew_dir = LatestPaths.scan_combined_Yukawa_reweighted_asimov
+        combined_rew = TheoryCommands.GetTH2FromListOfRootFiles(
+            globr(combined_rew_dir),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined_rew.color = 2
+        combined_rew.name = 'combined_rew'
+        combined_rew.title = 'Combination Rew.'
+        TH2FsToPlot.append(combined_rew)
+
+        combined_rew_inv_dir = 'out/Scan_Yukawa_Feb02'
+        if args.asimov: combined_rew_inv_dir = 'out/Scan_Yukawa_Feb02_asimov'
+        combined_rew_inv = TheoryCommands.GetTH2FromListOfRootFiles(
+            globr(combined_rew_inv_dir),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined_rew_inv.color = 6
+        combined_rew_inv.name = 'combined_rew_inv'
+        combined_rew_inv.title = 'Combination Rew. Properly'
+        TH2FsToPlot.append(combined_rew_inv)
+
+        combined_dir = LatestPaths.scan_combined_Yukawa
+        if args.asimov: combined_dir = LatestPaths.scan_combined_Yukawa_asimov
+        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+            globr(combined_dir),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined.color = 1
+        combined.name = 'combined'
+        combined.title = 'Combination Unr.'
+        TH2FsToPlot.append(combined)
+
+        combined_old_dir = LatestPaths.scan_combined_Yukawa_old
+        if args.asimov: combined_old_dir = LatestPaths.scan_combined_Yukawa_asimov_old
+        combined_old = TheoryCommands.GetTH2FromListOfRootFiles(
+            globr(combined_old_dir),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        combined_old.color = 4
+        combined_old.name = 'combined_old'
+        combined_old.title = 'Combination Old'
+        TH2FsToPlot.append(combined_old)
+
+        PlotCommands.BasicMixedContourPlot(
+            TH2FsToPlot,
+            xMin = kappacMin_global,
+            xMax = kappacMax_global,
+            yMin = kappabMin_global,
+            yMax = kappabMax_global,
+            xTitle    = titles.get( xCoupling, xCoupling ),
+            yTitle    = titles.get( yCoupling, yCoupling ),
+            plotname  = 'contours_combinationComp' + ( '_asimov' if args.asimov else '' ),
+            x_SM      = 1.,
+            y_SM      = 1.,
+            plotIndividualH2s = True,
+            )
+
+    #____________________________________________________________________
     if args.couplingContourPlot_Yukawa:
 
         ASIMOV = False
@@ -889,6 +608,7 @@ def main( args ):
         TH2FsToPlot = []
 
         combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa ))
+        # combined_rootfiles = glob('out/Scan_Yukawa_Jan31/*.root')
         if ASIMOV: combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov))
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
@@ -901,31 +621,31 @@ def main( args ):
         combined.title = 'Combination'
         TH2FsToPlot.append(combined)
 
-        hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa ))
-        if ASIMOV: hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa_asimov))
-        hgg = TheoryCommands.GetTH2FromListOfRootFiles(
-            hgg_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        hgg.color = 2
-        hgg.name = 'hgg'
-        hgg.title = 'H #rightarrow #gamma#gamma'
-        TH2FsToPlot.append(hgg)
+        # hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa ))
+        # if ASIMOV: hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa_asimov))
+        # hgg = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     hgg_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # hgg.color = 2
+        # hgg.name = 'hgg'
+        # hgg.title = 'H #rightarrow #gamma#gamma'
+        # TH2FsToPlot.append(hgg)
 
-        hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa ))
-        if ASIMOV: hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa_asimov))
-        hzz = TheoryCommands.GetTH2FromListOfRootFiles(
-            hzz_rootfiles,
-            xCoupling,
-            yCoupling,
-            verbose   = False,
-            )
-        hzz.color = 4
-        hzz.name = 'hzz'
-        hzz.title = 'H #rightarrow ZZ'
-        TH2FsToPlot.append(hzz)
+        # hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa ))
+        # if ASIMOV: hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa_asimov))
+        # hzz = TheoryCommands.GetTH2FromListOfRootFiles(
+        #     hzz_rootfiles,
+        #     xCoupling,
+        #     yCoupling,
+        #     verbose   = False,
+        #     )
+        # hzz.color = 4
+        # hzz.name = 'hzz'
+        # hzz.title = 'H #rightarrow ZZ'
+        # TH2FsToPlot.append(hzz)
 
 
         PlotCommands.BasicMixedContourPlot(
@@ -1575,6 +1295,20 @@ def main( args ):
 
         container.MaximaOfContour     = True
         container.BestFit             = True
+
+        container.ManualPoints = [
+            (  0., 1. ),
+            (  1., 0. ),
+            # ( lambda xBestfit, xSM: xSM, lambda yBestfit, ySM: ySM ),
+            # ( lambda xBestfit, xSM: xBestfit + 1.0*(xBestfit-xSM) -0.05 , lambda yBestfit, ySM: yBestfit  + 1.0*(yBestfit-ySM) ),
+            # ( lambda xBestfit, xSM: xBestfit + 2.0*(xBestfit-xSM) -0.10 , lambda yBestfit, ySM: yBestfit  + 2.0*(yBestfit-ySM) ),
+            # 
+            # ( lambda xBestfit, xSM: xSM + 0.5*(xBestfit-xSM) , lambda yBestfit, ySM: ySM ),
+            # ( lambda xBestfit, xSM: xSM + 0.5*(xBestfit-xSM) , lambda yBestfit, ySM: ySM  + 0.01 ),
+            # ( lambda xBestfit, xSM: xBestfit + 0.5 , lambda yBestfit, ySM: yBestfit ),
+            # ( lambda xBestfit, xSM: xBestfit - 0.5 , lambda yBestfit, ySM: yBestfit )
+            ]
+
 
         PlotCommands.PlotParametrizationsOnCombination( container, OnOneCanvas=True )
 

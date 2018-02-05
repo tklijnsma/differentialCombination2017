@@ -93,6 +93,7 @@ class CombineScan(Container):
     # ======================================
     # Combine options
 
+    tags                              = []
     subDirectory                      = None
 
     SQUARE_DIST_POI_STEP              = True
@@ -198,6 +199,11 @@ class CombineScan(Container):
     def Run( self ):
 
         # Make the subDirectory now, avoid race condition while waiting for the postfit
+        if self.asimov:
+            self.tags.append('asimov')
+        if len(self.tags) > 0:
+            self.subDirectory += '_' + '_'.join(self.tags)
+        self.subDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore(self.subDirectory)
         self.MakeSubdirectory()
         
         if self.APPLY_FASTSCAN_FILTER:

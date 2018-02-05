@@ -48,6 +48,46 @@ def GetTempJobDir():
     return TEMPJOBDIR
 
 #____________________________________________________________________
+def FormatStrToWidth(text, width):
+    if len(text) > width:
+        text = text[:width-3] + '...'
+    ret = '{0:{width}}'.format( text, width=width )
+    return ret
+
+def PrintTable(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n'):
+    nRows = len(table)
+    nCols = len(table[0])
+
+    maxColWidths = []
+    for iCol in xrange(nCols):
+        maxWidth = 0
+        for iRow in xrange(nRows):
+            entry = table[iRow][iCol]
+            if not isinstance( entry, basestring ):
+                ThrowError( 'Entry of a table is not a string' )
+            # entry = escape_ansi( entry )
+            if len(entry) > maxWidth:
+                maxWidth = len(entry)
+        maxColWidths.append( min( maxWidth, maxColWidth ) )
+
+    out = []
+    for iRow in xrange(nRows):
+        line = []
+        for iCol in xrange(nCols):
+            entry = table[iRow][iCol]
+            line.append( FormatStrToWidth( entry, maxColWidths[iCol] ) )
+        out.append( sep.join(line) )
+    return newline_sep.join(out)
+
+#____________________________________________________________________
+def GlobRootFiles(path):
+    if path.endswith('/'):
+        path += '*.root'
+    else:
+        path += '/*.root'
+    return glob(path)
+
+#____________________________________________________________________
 def AppendNumberToDirNameUntilItDoesNotExistAnymore(
         dirName,
         nAttempts = 100,

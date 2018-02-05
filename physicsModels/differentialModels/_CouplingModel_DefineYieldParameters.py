@@ -193,10 +193,10 @@ def defineYieldParameters(self):
         # Reweighting only ggH now
         for expectedXS, rooParametrization in zip( self.ReweightedXS, expRooParametrizations ):
             reweightor = RooFactoryInterface.RooFormulaVar( rooParametrization.name.replace('parametrization','reweightor') )
-            reweightor.formula = '{0}/{1}'.format(expectedXS, rooParametrization.SMXS)
+            # reweightor.formula = '{0}/{1}'.format(expectedXS, rooParametrization.SMXS)
+            reweightor.formula = '{0}/{1}'.format(rooParametrization.SMXS, expectedXS)
             rooParametrization.reweightor = reweightor
             self.commit_parseable_to_ws(reweightor)
-
         for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
             parametrization_name = [ v for v in ggH_yieldParameter.variables if 'parametrization' in v ][0]
             reweightor_name = parametrization_name.replace('parametrization', 'reweightor')
@@ -209,9 +209,12 @@ def defineYieldParameters(self):
             yieldParameterContainer = self.yieldParameters_per_decay_channel[decayChannel]
             for ggH_yieldParameter in yieldParameterContainer.ggH_yieldParameters:
                 ggH_yieldParameter.add_variable(scaleParameter[decayChannel])
-
         for xH_yieldParameter in YieldParameterContainer.all_xH_yieldParameters():
             xH_yieldParameter.add_variable('scalingBR_xHModifier')
+
+    if self.ProfileTotalXS:
+        for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
+            ggH_yieldParameter.add_variable('totalXSmodifier')
 
 
     # ======================================

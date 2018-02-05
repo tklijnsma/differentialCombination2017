@@ -157,18 +157,30 @@ ws_ratio_of_BRs_globalScales = 'out/workspaces_Dec20/combinedCard_smH_Nov27_INCL
 # ws_hzz_Yukawa      = 'out/workspaces_Nov03/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
 
 # New model, reweighted
-ws_combined_Yukawa = 'out/workspaces_Jan19/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
-ws_hgg_Yukawa      = 'out/workspaces_Jan19/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
-ws_hzz_Yukawa      = 'out/workspaces_Jan19/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_combined_Yukawa = 'out/workspaces_Jan19/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_combined_Yukawa = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_reweighted.root'
+# ws_hgg_Yukawa      = 'out/workspaces_Jan19/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
+# ws_hzz_Yukawa      = 'out/workspaces_Jan19/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+
+# Redid t2ws to be sure; unreweighted:
+ws_combined_Yukawa = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_hgg_Yukawa      = 'out/workspaces_Feb01/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_CouplingModel_Yukawa_withTheoryUncertainties.root'
+ws_hzz_Yukawa      = 'out/workspaces_Feb01/hzz4l_comb_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
+
+# Reweighted:
+ws_combined_Yukawa_reweighted = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_reweighted.root'
+
+# ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS.root'
+ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Feb05/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_reweighted.root'
 
 ws_combined_Yukawa_noTheoryUncertainties               = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_noTheoryUncertainties.root'
 ws_combined_Yukawa_withUncorrelatedTheoryUncertainties = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_withUncorrelatedTheoryUncertainties.root'
 ws_combined_Yukawa_lumiScalable                        = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
-ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS.root'
 # ws_combined_Yukawa_couplingDependentBR                 = 'out/workspaces_Nov10/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
 # ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov17/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
 # ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov20/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
 ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov28/combinedCard_smH_Nov27_INCLUSIVE_CouplingModel_Yukawa_profiledTotalXS_fitOnlyNormalization.root'
+
 
 # Reweighted and using the new model
 ws_combined_Yukawa_couplingDependentBR = 'out/workspaces_Jan25/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR_reweighted.root'
@@ -308,13 +320,23 @@ scan_ratioOfBRs_INC_asimov  = 'out/Scan_ratioOfBRs_Dec20_asimov_3'
 # ======================================
 # kappab kappac scans
 
-scan_combined_Yukawa                                        = 'out/Scan_Yukawa_Nov03_0'
-scan_hgg_Yukawa                                             = 'out/Scan_Yukawa_Nov03_hgg'
-scan_hzz_Yukawa                                             = 'out/Scan_Yukawa_Nov03_hzz'
+scan_combined_Yukawa_old                                        = 'out/Scan_Yukawa_Nov03_0'
+scan_hgg_Yukawa_old                                             = 'out/Scan_Yukawa_Nov03_hgg'
+scan_hzz_Yukawa_old                                             = 'out/Scan_Yukawa_Nov03_hzz'
+scan_combined_Yukawa_asimov_old                                 = 'out/Scan_Yukawa_Nov03_asimov'
+scan_hgg_Yukawa_asimov_old                                      = 'out/Scan_Yukawa_Nov03_hgg_asimov'
+scan_hzz_Yukawa_asimov_old                                      = 'out/Scan_Yukawa_Nov03_hzz_asimov'
 
-scan_combined_Yukawa_asimov                                 = 'out/Scan_Yukawa_Nov03_asimov'
-scan_hgg_Yukawa_asimov                                      = 'out/Scan_Yukawa_Nov03_hgg_asimov'
-scan_hzz_Yukawa_asimov                                      = 'out/Scan_Yukawa_Nov03_hzz_asimov'
+scan_combined_Yukawa                                            = 'out/Scan_Yukawa_Feb01_0'
+scan_hgg_Yukawa                                                 = 'out/Scan_Yukawa_Feb01_hgg'
+scan_hzz_Yukawa                                                 = 'out/Scan_Yukawa_Feb01_hzz'
+scan_combined_Yukawa_asimov                                     = 'out/Scan_Yukawa_Feb01_asimov_0'
+scan_hgg_Yukawa_asimov                                          = 'out/Scan_Yukawa_Feb01_hgg_asimov'
+scan_hzz_Yukawa_asimov                                          = 'out/Scan_Yukawa_Feb01_hzz_asimov'
+
+scan_combined_Yukawa_reweighted                                 = 'out/Scan_Yukawa_Feb01'
+scan_combined_Yukawa_reweighted_asimov                          = 'out/Scan_Yukawa_Feb01_asimov'
+
 
 # scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'out/Scan_Yukawa_Nov17_profiledTotalXS_fitOnlyNormalization_asimov'
 scan_combined_Yukawa_fitOnlyNormalization                   = 'out/Scan_Yukawa_Nov20_profiledTotalXS_fitOnlyNormalization'
@@ -328,7 +350,8 @@ scan_combined_Yukawa_profiledTotalXS_asimov                 = 'out/Scan_Yukawa_N
 
 scan_combined_Yukawa_oneKappa_kappac                        = 'out/Scan_Yukawa_Nov06_oneKappa_kappac'
 scan_combined_Yukawa_oneKappa_kappac_asimov                 = 'out/Scan_Yukawa_Nov06_oneKappa_kappac_asimov'
-scan_combined_Yukawa_oneKappa_kappab                        = 'out/Scan_Yukawa_Nov06_oneKappa_kappab'
+# scan_combined_Yukawa_oneKappa_kappab                        = 'out/Scan_Yukawa_Nov06_oneKappa_kappab'
+scan_combined_Yukawa_oneKappa_kappab                        = 'out/Scan_Yukawa_Jan30_oneKappa_kappab_0'
 scan_combined_Yukawa_oneKappa_kappab_asimov                 = 'out/Scan_Yukawa_Nov06_oneKappa_kappab_asimov'
 
 scan_combined_Yukawa_couplingDependentBR_asimov              = 'out/Scan_Yukawa_Nov10_couplingDependentBR_asimov'
@@ -440,6 +463,41 @@ scan_combined_TopCtCb_asimov                             = 'out/Scan_TopCtCb_Nov
 scan_hgg_TopCtCb_asimov                                  = 'out/Scan_TopCtCb_Nov15_hgg_asimov'
 scan_hzz_TopCtCb_asimov                                  = 'out/Scan_TopCtCb_Nov15_hzz_asimov'
 
+
+########################################
+# Postfits
+########################################
+
+postfit_hgg_pth_ggH                 = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed_pth_ggH.MultiDimFit.mH125.root'
+postfit_hgg_pth_smH                 = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_PtNNLOPS_systs_renamedProcesses_pth_smH.MultiDimFit.mH125.root'
+postfit_hgg_ptjet                   = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses_ptjet.MultiDimFit.mH125.root'
+postfit_hgg_njets                   = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses_njets.MultiDimFit.mH125.root'
+postfit_hgg_rapidity                = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses_rapidity.MultiDimFit.mH125.root'
+postfit_hgg_pth_ggH_asimov          = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed_pth_ggH_asimov.MultiDimFit.mH125.root'
+postfit_hgg_pth_smH_asimov          = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_PtNNLOPS_systs_renamedProcesses_pth_smH_asimov.MultiDimFit.mH125.root'
+postfit_hgg_ptjet_asimov            = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses_ptjet_asimov.MultiDimFit.mH125.root'
+postfit_hgg_njets_asimov            = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses_njets_asimov.MultiDimFit.mH125.root'
+postfit_hgg_rapidity_asimov         = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses_rapidity_asimov.MultiDimFit.mH125.root'
+postfit_hzz_pth_ggH                 = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_processesShifted_xHfixed_pth_ggH.MultiDimFit.mH125.root'
+postfit_hzz_pth_smH                 = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_processesShifted_pth_smH.MultiDimFit.mH125.root'
+postfit_hzz_ptjet                   = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_ptjet_ptjet.MultiDimFit.mH125.root'
+postfit_hzz_njets                   = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_njets.MultiDimFit.mH125.root'
+postfit_hzz_rapidity                = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_rapidity.MultiDimFit.mH125.root'
+postfit_hzz_pth_ggH_asimov          = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_processesShifted_xHfixed_pth_ggH_asimov.MultiDimFit.mH125.root'
+postfit_hzz_pth_smH_asimov          = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_processesShifted_pth_smH_asimov.MultiDimFit.mH125.root'
+postfit_hzz_ptjet_asimov            = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_ptjet_ptjet_asimov.MultiDimFit.mH125.root'
+postfit_hzz_njets_asimov            = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_njets_asimov.MultiDimFit.mH125.root'
+postfit_hzz_rapidity_asimov         = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_hzz4l_comb_13TeV_xs_rapidity_asimov.MultiDimFit.mH125.root'
+postfit_combination_pth_ggH         = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_Nov03_xHfixed_pth_ggH.MultiDimFit.mH125.root'
+postfit_combination_pth_smH         = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_smH_Nov07_pth_smH.MultiDimFit.mH125.root'
+postfit_combination_ptjet           = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_PTJ_smH_Nov28_ptjet.MultiDimFit.mH125.root'
+postfit_combination_njets           = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_NJ_smH_Nov12_njets.MultiDimFit.mH125.root'
+postfit_combination_rapidity        = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_YH_smH_Nov28_rapidity.MultiDimFit.mH125.root'
+postfit_combination_pth_ggH_asimov  = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_Nov03_xHfixed_pth_ggH_asimov.MultiDimFit.mH125.root'
+postfit_combination_pth_smH_asimov  = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_smH_Nov07_pth_smH_asimov.MultiDimFit.mH125.root'
+postfit_combination_ptjet_asimov    = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_PTJ_smH_Nov28_ptjet_asimov.MultiDimFit.mH125.root'
+postfit_combination_njets_asimov    = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_NJ_smH_Nov12_njets_asimov.MultiDimFit.mH125.root'
+postfit_combination_rapidity_asimov = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_YH_smH_Nov28_rapidity_asimov.MultiDimFit.mH125.root'
 
 
 ########################################

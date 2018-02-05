@@ -802,8 +802,8 @@ def GetTH2FromListOfRootFiles(
                 ))
             for point in scan:
                 point['deltaNLL'] -= minDeltaNLL
-
-
+        elif minDeltaNLL < -0.01:
+            Commands.ThrowError('The minimum deltaNLL threshold is -0.01, but minDeltaNLL = {0}'.format(minDeltaNLL))
 
     H2name = GetUniqueRootName()
     H2 = ROOT.TH2D(

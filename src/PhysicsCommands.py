@@ -130,9 +130,16 @@ def GetScanResults(
         for (POIval, deltaNLL) in sorted(zip( scanResultDict[POI], scanResultDict['deltaNLL'] )):
             if deltaNLL < 0.0:
                 Commands.Warning('Found negative deltaNLL {0} while processing {1} in {2}'.format( deltaNLL, POI, scanDirectory ))
-                if filterNegatives and deltaNLL < -0.01:
-                    Commands.Warning('deltaNLL {0} is below threshold (-0.01), skipping'.format(deltaNLL))
-                    continue
+                if deltaNLL < -0.01:
+                    if filterNegatives:
+                        Commands.Warning('deltaNLL {0} is below threshold (-0.01), skipping'.format(deltaNLL))
+                        continue
+                    else:
+                        raise ValueError(
+                            'Found deltaNLL = {0} which is below the threshold of -0.01.\n'
+                            '   scanDirectory = {1}\n    POI = {2}'.format(
+                                scanDirectory, POI
+                                ))
             scanResult.append( (POIval, deltaNLL) )
 
         # scanResult = [ (POIval, deltaNLL) for (POIval, deltaNLL) in sorted(zip( scanResult[POI], scanResult['deltaNLL'] )) ]

@@ -78,6 +78,8 @@ def main():
     parser.add_argument( '--hbbOnly_t2ws',      action='store_true' )
     parser.add_argument( '--hbbOnly_scan',      action='store_true' )
 
+    parser.add_argument( '--statonly_test',      action='store_true' )
+
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
 
@@ -103,6 +105,35 @@ def main():
     Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
 
     base = abspath( join( os.environ['CMSSW_BASE'], 'src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/' ))
+
+
+    if args.statonly_test:
+
+        ws = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v3_Approval/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_smH_Nov07_pth_smH.MultiDimFit.mH125.root'
+
+        cmd = [
+            'combine',
+            ws,
+            '-n debugging_statonly_test_01',
+            '-M MultiDimFit',
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            '--algo=grid',
+            '--floatOtherPOIs=1',
+            '-P "r_smH_PTH_45_85"',
+            '--setPhysicsModelParameters r_smH_PTH_200_350=1.0,r_smH_PTH_125_200=1.0,r_smH_PTH_30_45=1.0,r_smH_PTH_0_15=1.0,r_smH_PTH_GT350=1.0,r_smH_PTH_85_125=1.0,r_smH_PTH_15_30=1.0,r_smH_PTH_45_85=1.0',
+            '-m 125.00',
+            '--squareDistPoi',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '--points=45 ',
+            '--setPhysicsModelParameterRanges "r_smH_PTH_45_85"=-1.000,4.000:"r_smH_PTH_15_30"=-1.000,4.000:"r_smH_PTH_85_125"=-1.000,4.000:"r_smH_PTH_GT350"=-1.000,4.000:"r_smH_PTH_0_15"=-1.000,4.000:"r_smH_PTH_30_45"=-1.000,4.000:"r_smH_PTH_125_200"=-1.000,4.000:"r_smH_PTH_200_350"=-1.000,4.000',
+            '--snapshotName MultiDimFit',
+            '--skipInitialFit',
+            '--freezeNuisances rgx{r_.*}',
+            ]
+
+        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
 
 
     #____________________________________________________________________

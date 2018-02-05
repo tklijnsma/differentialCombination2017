@@ -30,12 +30,16 @@ class Observable(object):
         return [ s * self.YR4_totalXS for s in self.shape ]
 
     #____________________________________________________________________
-    def crosssection_over_binwidth(self):
+    def crosssection_over_binwidth(self, normalize_by_second_to_last_bin_width=False):
         xs = self.crosssection()
         if self.lastBinIsOverflow:
             xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins-1) ] + [ xs[-1] ]
         else:
             xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins) ]
+
+        if normalize_by_second_to_last_bin_width:
+            xs_o_binwidth[-1] /= ( self.binning[-2]-self.binning[-3] )
+
         return xs_o_binwidth
 
     #____________________________________________________________________

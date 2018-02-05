@@ -529,51 +529,34 @@ class CouplingModel( PhysicsModel ):
         self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,3.0]' )
 
         thingsToSum = []
-
         for iTheoryBin in xrange( self.nTheoryBins ):
-
             binWidth = self.theoryBinBoundaries[iTheoryBin+1] - self.theoryBinBoundaries[iTheoryBin]
-
             self.modelBuilder.factory_(
                 'expr::IncXS{0}( "{1}*{2}*@0", parametrization{0} )'.format(
                     iTheoryBin, binWidth, self.SMXS[iTheoryBin]
                     )
                 )
-
             thingsToSum.append( 'IncXS{0}'.format(iTheoryBin) )
-
-        self.modelBuilder.factory_(
-            'sum::totalXS( {0} )'.format(
-                ','.join(thingsToSum)
-                )
-            )
-
-        # Get the SM xs by evaluating the parametrization at SM
+        self.modelBuilder.factory_('sum::totalXS( {0} )'.format(','.join(thingsToSum)))
 
         # Make sure couplings are at SM
         for coupling in self.couplings:
-            self.modelBuilder.out.var(coupling).setVal( self.SMDict['couplings'][coupling] )
+            self.modelBuilder.out.var(coupling).setVal(self.SMDict['couplings'][coupling])
 
-        # self.modelBuilder.doVar( 'totalXS_SM[55.70628722]' )
         # Set SM spectrum integral to the SM xs
-        self.modelBuilder.doVar( 'totalXS_SM[{0}]'.format(
-            self.modelBuilder.out.function('totalXS').getVal()
-            ))
+        self.modelBuilder.doVar( 'totalXS_SM[{0}]'.format(self.modelBuilder.out.function('totalXS').getVal()))
         self.modelBuilder.out.var('totalXS_SM').setConstant(True)
 
-
+        # Build the modifier
         self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS_SM, totalXS )' )
-
 
         if self.FitOnlyNormalization:
             # Make also modifier if only fitting normalization
             self.modelBuilder.out.var('r_totalXS').setVal(1.0)
             self.modelBuilder.out.var('r_totalXS').setConstant(True)
             self.modelBuilder.factory_( 'expr::globalTotalXSmodifier( "@0/@1", totalXS, totalXS_SM )' )
-
             if self.verbose:
                 self.modelBuilder.out.function('globalTotalXSmodifier').Print()
-
 
 
     #____________________________________________________________________

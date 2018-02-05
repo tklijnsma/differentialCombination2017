@@ -138,7 +138,6 @@ def main( args ):
 
 
     # Test of new bins for hzz and hbb
-
     if args.RenumberHzzProcesses_Jan24:
         MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
             LatestPaths.card_hzz_ggHxH_PTH_newBins_unprocessed,

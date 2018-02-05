@@ -306,10 +306,29 @@ def main( args ):
         combination               = Container()
         combination.name          = 'combination'
         combination.title         = 'Combination'
+        combination.color         = 1
         combination.POIs          = combinationPOIs
         combination.Scans         = combinationscans
         combination.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
         containers.append(combination)
+
+        for container in containers:
+            PlotCommands.WriteScansToTable(
+                container,
+                'rapidity',
+                xTitle = '|y_{H}|',
+                yTitle = '#Delta#sigma/#Delta|y_{H}| (pb)',
+                lastBinIsOverflow = False,
+                )
+
+        SM = Container()
+        SM.name = 'SM'
+        SM.title = 'SM'
+        SM.color = 14
+        SM.crosssection = LatestBinning.obs_yh.crosssection_over_binwidth()
+        SM.ratios = [ 1.0 for i in xrange(LatestBinning.obs_yh.nBins) ]
+        SM.binBoundaries = LatestBinning.obs_yh.binning
+        containers.append(SM)
 
         PlotCommands.PlotSpectraOnTwoPanel(
             'twoPanel_rapiditySpectrum',
@@ -372,6 +391,7 @@ def main( args ):
         combination                 = Container()
         combination.name            = 'combination'
         combination.title           = 'Combination'
+        combination.color           = 1
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
         combination.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
@@ -382,6 +402,24 @@ def main( args ):
             container.POIs = container.POIs[1:]
             container.Scans = container.Scans[1:]
             container.SMcrosssections = container.SMcrosssections[1:]
+
+        for container in containers:
+            PlotCommands.WriteScansToTable(
+                container,
+                'ptjet',
+                xTitle = 'p_{T}^{jet} (GeV)',
+                yTitle = '#Delta#sigma/#Delta p_{T}^{jet} (pb/GeV)',
+                lastBinIsOverflow = True,
+                )
+
+        SM = Container()
+        SM.name = 'SM'
+        SM.title = 'SM'
+        SM.color = 14
+        SM.crosssection = LatestBinning.obs_ptjet.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)
+        SM.ratios = [ 1.0 for i in xrange(LatestBinning.obs_ptjet.nBins) ]
+        SM.binBoundaries = LatestBinning.obs_ptjet.binning
+        containers.append(SM)
 
         PlotCommands.PlotSpectraOnTwoPanel(
             'twoPanel_ptjetSpectrum',
@@ -442,10 +480,29 @@ def main( args ):
         combination                 = Container()
         combination.name            = 'combination'
         combination.title           = 'Combination'
+        combination.color           = 1
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
         combination.SMcrosssections = LatestBinning.obs_njets.crosssection_over_binwidth()
         containers.append(combination)
+
+        for container in containers:
+            PlotCommands.WriteScansToTable(
+                container,
+                'njets',
+                xTitle = 'N_{jets}',
+                yTitle = '#Delta#sigma/#Delta N_{jets} (pb)',
+                lastBinIsOverflow = False,
+                )
+
+        SM = Container()
+        SM.name = 'SM'
+        SM.title = 'SM'
+        SM.color = 14
+        SM.crosssection = LatestBinning.obs_njets.crosssection_over_binwidth()
+        SM.ratios = [ 1.0 for i in xrange(LatestBinning.obs_njets.nBins) ]
+        SM.binBoundaries = LatestBinning.obs_njets.binning
+        containers.append(SM)
 
         PlotCommands.PlotSpectraOnTwoPanel(
             'twoPanel_nJetsSpectrum',
@@ -504,10 +561,29 @@ def main( args ):
         combination                 = Container()
         combination.name            = 'combination'
         combination.title           = 'Combination'
+        combination.color           = 1
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
         combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
         containers.append(combination)
+
+        for container in containers:
+            PlotCommands.WriteScansToTable(
+                container,
+                'pth',
+                xTitle = 'p_{T}^{H} (GeV)',
+                yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
+                lastBinIsOverflow = True,
+                )
+
+        SM = Container()
+        SM.name = 'SM'
+        SM.title = 'SM'
+        SM.color = 14
+        SM.crosssection = LatestBinning.obs_pth.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)
+        SM.ratios = [ 1.0 for i in xrange(LatestBinning.obs_pth.nBins) ]
+        SM.binBoundaries = LatestBinning.obs_pth.binning
+        containers.append(SM)
 
         PlotCommands.PlotSpectraOnTwoPanel(
             'twoPanel_pthSpectrum',
@@ -567,10 +643,29 @@ def main( args ):
         combination                 = Container()
         combination.name            = 'combination'
         combination.title           = 'Combination'
+        combination.color           = 1
         combination.POIs            = combinationPOIs
         combination.Scans           = combinationscans
         combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
         containers.append(combination)
+
+        for container in containers:
+            PlotCommands.WriteScansToTable(
+                container,
+                'pth_ggh',
+                xTitle = 'p_{T}^{H} (GeV)',
+                yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
+                lastBinIsOverflow = True,
+                )
+
+        SM = Container()
+        SM.name = 'SM'
+        SM.title = 'SM'
+        SM.color = 14
+        SM.crosssection = LatestBinning.obs_pth.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)
+        SM.ratios = [ 1.0 for i in xrange(LatestBinning.obs_pth.nBins) ]
+        SM.binBoundaries = LatestBinning.obs_pth.binning
+        containers.append(SM)
 
         l = PlotCommands.TLatexMultiPanel(
             lambda c: 1.0 - c.GetRightMargin() - 0.01,
@@ -689,6 +784,14 @@ def main( args ):
         combWithHbb.SMcrosssections = LatestBinning.obs_pth_ggH_combWithHbbBinning.crosssection_over_binwidth()
         containers.append(combWithHbb)
 
+        SM = Container()
+        SM.name = 'SM'
+        SM.title = 'SM'
+        SM.color = 14
+        SM.crosssection = LatestBinning.obs_pth_ggH_combWithHbbBinning.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)
+        SM.ratios = [ 1.0 for i in xrange(LatestBinning.obs_pth_ggH_combWithHbbBinning.nBins) ]
+        SM.binBoundaries = LatestBinning.obs_pth_ggH_combWithHbbBinning.binning
+        containers.append(SM)
 
         for container in containers:
             if not len(container.POIs) == len(container.SMcrosssections):
