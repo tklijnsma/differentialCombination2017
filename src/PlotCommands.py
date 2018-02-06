@@ -530,7 +530,7 @@ def PlotSpectraOnTwoPanel(
         # ---------------------
         # Construct objects for bottom panel
 
-        if not ( container.name == 'combination' or container.name == 'combWithHbb' ):
+        if not(container.name == 'combination' or container.name == 'combWithHbb') and not(getattr(container, 'error_line', False)):
 
             Hratio = ROOT.TH1F(
                 GetUniqueRootName(), '',
@@ -596,7 +596,8 @@ def PlotSpectraOnTwoPanel(
             Tgcrosssection.SetLineWidth(2)
             topPanelObjects.append( ( Tgcrosssection, 'E2PSAME' ) )
 
-            leg.AddEntry( Tgcrosssection.GetName(), container.title, 'LF' )
+            if not getattr(container, 'suppress_text', False):
+                leg.AddEntry( Tgcrosssection.GetName(), container.title, 'LF' )
 
 
         else:
@@ -638,7 +639,8 @@ def PlotSpectraOnTwoPanel(
             # Tgcrosssection.SetLineWidth(2)
             topPanelObjects.append( ( Tgcrosssection, 'PSAME' ) )
 
-            leg.AddEntry( Tgcrosssection.GetName(), container.title, 'PE' )
+            if not getattr(container, 'suppress_text', False):
+                leg.AddEntry( Tgcrosssection.GetName(), container.title, 'PE' )
 
 
         # ======================================
@@ -670,6 +672,7 @@ def PlotSpectraOnTwoPanel(
 
         # Add a label per scaled spectrum
         for i, container in enumerate([ con for con in containers if not con.name == 'combination']):
+            if getattr(container, 'suppress_text', False): continue
 
             yOverflowInNDC = lambda c, i_lambda=i: (
                 c.GetBottomMargin()

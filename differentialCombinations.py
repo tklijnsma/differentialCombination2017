@@ -7,7 +7,7 @@ Thomas Klijnsma
 # Imports
 ########################################
 
-import os, sys
+import os, sys, re
 from os.path import *
 from glob import glob
 from copy import deepcopy
@@ -19,9 +19,11 @@ import Commands
 import PhysicsCommands
 import TheoryCommands
 import LatestPaths
+import LatestPathsGetters
 import LatestBinning
 from Container import Container
 import PlotCommands
+from differentialTools import *
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -45,17 +47,158 @@ def CombineCards_Jan24_hzz_hbb(args):
         'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
         )
 
+#____________________________________________________________________
+# Helpers
+
+def get_all_vars_except_POIs_and_envelop(args, postfit, verbose=False):
+    with Commands.OpenRootFile(postfit) as postfit_fp:
+        w = postfit_fp.Get('w')
+
+    floating_regexps = [
+        r'env_pdf_\d+_13TeV_',
+        r'n_exp_binhgg_.*_bkg_mass',
+        r'shapeBkg_bkg_mass_.*_norm',
+        r'CMS_.*_mass',
+        ]
+
+    nuisances = Commands.ListSet(w, 'nuisances')
+    POIs = Commands.ListSet(w)
+
+    freezing_variables = []
+    floating_variables = []
+    constant_variables = []
+
+    var_set = w.allVars()
+    var_iterable = var_set.createIterator()
+    for i_var in xrange(var_set.getSize()):
+        variable = var_iterable.Next()
+        var_name = variable.GetName()
+        if variable.isConstant():
+            # No need to freeze
+            constant_variables.append(var_name)
+            continue
+        elif var_name in nuisances or var_name in POIs:
+            # Should be handled by 'rgx{.*}'
+            continue
+        else:
+            for pat in floating_regexps:
+                if re.match(pat, var_name):
+                    floating_variables.append(var_name)
+                    break
+            else:
+                freezing_variables.append(var_name)
+
+    freezing_variables = ['rgx{.*}'] + freezing_variables
+    floating_variables.extend(POIs)
+    
+    if verbose:
+        print '\nList of variables to freeze:'
+        print ','.join(freezing_variables)
+        print '\nList of variables to float:'
+        print ','.join(floating_variables)
+        print '\nList of variables that are constant:'
+        print ','.join(constant_variables)
+
+    if len(','.join(freezing_variables)) > 10000:
+        raise ValueError(
+            'The string length for the list of frozen variables exceeds 10000, '
+            'which will crash when loaded into combine.'
+            )
+    return freezing_variables
+
+def make_postfit(args, ws, observable_tag=None):
+    tag = 'POSTFIT_' + basename(ws).replace('.root','')
+    if not(observable_tag is None):
+        tag += '_' + observable_tag
+    if args.asimov:
+        tag += '_asimov'
+    cmd = [
+        'combineTool.py',
+        abspath(ws),
+        '-n _{0}'.format(tag),
+        '-M MultiDimFit',
+        '--cminDefaultMinimizerType Minuit2',
+        '--cminDefaultMinimizerAlgo migrad',
+        '--floatOtherPOIs=1',
+        # '-P "{0}"'.format( POI ),
+        # '--setPhysicsModelParameterRanges "{0}"={1:.3f},{2:.3f} '.format( POI, POIRange[0], POIRange[1] ),
+        # '--setPhysicsModelParameters {0}'.format( ','.join([ iterPOI + '=1.0' for iterPOI in allPOIs ]) ),
+        '-m 125.00',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--saveWorkspace',
+        '--job-mode psi --task-name {0} --sub-opts=\'-q short.q\' '.format(tag),
+        ]
+    if args.asimov:
+        cmd.append( '-t -1' )
+
+    if not 't3' in os.environ['HOSTNAME']:
+        raise NotImplementedError('\'t3\' not in $HOSTNAME; Is this executed from the T3?')
+
+    with Commands.EnterDirectory('out/postfitWss_{0}'.format(datestr)):
+        Commands.executeCommand(cmd)
+
+class GenericDifferentialObservableScan(object):
+    """docstring for GenericDifferentialObservableScan"""
+
+    setPhysicsModelParameters = True
+    nPoints = 45
+    nPointsPerJob = 3
+    POIRange = [ -1.0, 4.0 ]
+
+    def __init__(self, args, obs_name, ws=None):
+        self.args = args
+        self.obs_name = obs_name
+        self.decay_channel = get_decay_channel_tag(args)
+        if not(ws is None):
+            self.set_ws(ws)
+
+        self.extraOptions = []
+        self.physicsModelParameterRanges = []
+
+        self.jobDirectory = 'out/Scan_{0}_{1}_{2}'.format(self.obs_name, datestr, self.decay_channel)
+        if args.statonly:
+            self.nPointsPerJob = 6
+            self.jobDirectory += '_statonly'
+            variables_to_freeze = get_all_vars_except_POIs_and_envelop(self.args, self.ws)
+            self.extraOptions.extend([
+                '--snapshotName MultiDimFit',
+                '--skipInitialFit',
+                '--freezeNuisances {0}'.format(','.join(variables_to_freeze))
+                ])
+            self.setPhysicsModelParameters = False
+
+        if args.hzz or args.hbb:
+            self.nPointsPerJob = self.nPoints
+
+    def set_ws(self, ws):
+        self.ws = ws
+
+    def run(self):
+        Commands.BasicCombineTool(
+            self.ws,
+            POIpattern    = '*',
+            POIRange      = self.POIRange,
+            nPoints       = self.nPoints,
+            nPointsPerJob = self.nPointsPerJob,
+            jobDirectory  = self.jobDirectory,
+            queue         = 'short.q',
+            asimov        = self.args.asimov,
+            extraOptions  = self.extraOptions,
+            setPhysicsModelParameters = self.setPhysicsModelParameters,
+            physicsModelParameterRanges = self.physicsModelParameterRanges
+            )
+
+def set_all_false(args):
+    args.hgg = False
+    args.hzz = False
+    args.hbb = False
+    args.combWithHbb = False
 
 #____________________________________________________________________
-
 @flag_as_option
 def postfit_all(real_args):
     args = deepcopy(real_args)
-    def set_all_false(args):
-        args.hgg = False
-        args.hzz = False
-        args.hbb = False
-        args.combWithHbb = False
 
     for decay_channel in [
             'hgg',
@@ -94,6 +237,47 @@ def postfit_all(real_args):
         except NotImplementedError:
             pass
 
+@flag_as_option
+def scan_all(real_args):
+    args = deepcopy(real_args)
+
+    for decay_channel in [
+            'hgg',
+            'hzz',
+            # Workspaces are not working yet; Wait for Vs input
+            # 'hbb',
+            # 'combWithHbb',
+            'combination'
+            ]:
+        set_all_false(args)
+        setattr(args, decay_channel, True)
+        print '\nSubmitting scans for {0}'.format(decay_channel)
+
+        try:
+            pth_smH_scan(args)
+        except NotImplementedError:
+            pass
+
+        try:
+            pth_ggH_scan(args)
+        except NotImplementedError:
+            pass
+
+        try:
+            ptjet_scan(args)
+        except NotImplementedError:
+            pass
+
+        try:
+            rapidity_scan(args)
+        except NotImplementedError:
+            pass
+
+        try:
+            njets_scan(args)
+        except NotImplementedError:
+            pass
+
 
 #____________________________________________________________________
 # pth_smH
@@ -117,47 +301,9 @@ def CombineCards_smHcard(args):
         'hzz=' + LatestPaths.card_hzz_smH_PTH
         )
 
-def pth_smH_get_card(args):
-    if args.combination:
-        card = LatestPaths.card_combined_smH_PTH
-    elif args.hgg:
-        card = LatestPaths.card_hgg_smH_PTH
-    elif args.hzz:
-        card = LatestPaths.card_hzz_smH_PTH
-    elif args.hbb:
-        raise NotImplementedError('Case --hbb in pth_smH_get_card is not yet implemented')
-    elif args.combWithHbb:
-        raise NotImplementedError('Case --combWithHbb in pth_smH_get_card is not yet implemented')
-    else:
-        raise DecayChannelNotFoundError()
-    return card
-
-def pth_smH_get_ws(args):
-    if args.combination:
-        ws = LatestPaths.ws_combined_smH
-    elif args.hgg:
-        ws = LatestPaths.ws_hgg_smH
-    elif args.hzz:
-        ws = LatestPaths.ws_hzz_smH
-    elif args.hbb:
-        raise NotImplementedError('Case --hbb in pth_smH_get_ws is not yet implemented')
-    elif args.combWithHbb:
-        raise NotImplementedError('Case --combWithHbb in pth_smH_get_ws is not yet implemented')
-    else:
-        raise DecayChannelNotFoundError()
-    return ws
-
-def pth_smH_get_postfit(args):
-    decay_channel = get_decay_channel_tag(args)
-    postfit_key = 'postfit_{0}_pth_smH'.format(decay_channel)
-    try:
-        return getattr(LatestPaths, postfit_key)
-    except AttributeError:
-        raise NotImplementedError('Postfit key \'{0}\' is not implemented in LatestPaths.py'.format(postfit_key))
-
 @flag_as_option
 def pth_smH_t2ws(args):
-    card = pth_smH_get_card(args)
+    card = LatestPathsGetters.get_card('pth_smH', args)
     if args.hzz:
         Commands.BasicT2WS(
             card,
@@ -186,45 +332,14 @@ def pth_smH_t2ws(args):
 
 @flag_as_option
 def pth_smH_scan(args):
-    ws = pth_smH_get_ws(args)
-    jobDirectory = 'out/Scan_pth_smH_{0}_{1}'.format(datestr, get_decay_channel_tag(args))
-
-    nPoints = 45
-    nPointsPerJob = 3
-    extraOptions = None
-    
-    if args.statonly:
-        nPointsPerJob = 6
-        jobDirectory += '_statonly'
-        ws = pth_smH_get_postfit(args)
-        # variables_to_freeze = get_all_vars_except_POIs(args, ws)
-        # extraOptions = [
-        #     '--snapshotName MultiDimFit',
-        #     '--skipInitialFit',
-        #     '--freezeNuisances {0}'.format(','.join(variables_to_freeze))
-        #     ]
-        extraOptions = [
-            '--snapshotName MultiDimFit',
-            '--skipInitialFit',
-            '--freezeNuisancances=rgx{r_.*}'
-            ]
-    if args.hzz or args.hbb:
-        nPointsPerJob = nPoints
-
-    Commands.BasicCombineTool(
-        ws,
-        POIpattern    = '*',
-        nPoints       = nPoints,
-        nPointsPerJob = nPointsPerJob,
-        jobDirectory  = jobDirectory,
-        queue         = 'short.q',
-        asimov        = args.asimov,
-        extraOptions  = extraOptions
-        )
+    ws = LatestPathsGetters.get_ws('pth_smH', args) if not args.statonly else LatestPathsGetters.get_postfit(pth_smH, args)
+    scan = GenericDifferentialObservableScan(args, 'pth_smH', ws)
+    scan.run()
 
 @flag_as_option
 def pth_smH_postfit(args):
-    make_postfit(args, pth_smH_get_ws(args), 'pth_smH')
+    make_postfit(args, LatestPathsGetters.get_ws('pth_smH', args), 'pth_smH')
+
 
 #____________________________________________________________________
 # pth_ggH
@@ -255,44 +370,6 @@ def CombineCards_Dec15_hbb(args):
         'hzz=' + LatestPaths.card_hzz_ggHxH_PTH,
         'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
         )
-
-def pth_ggH_get_card(args):
-    if args.combination:
-        datacard = LatestPaths.card_combined_ggHxH_PTH
-    elif args.hgg:
-        datacard = LatestPaths.card_hgg_ggHxH_PTH
-    elif args.hzz:
-        datacard = LatestPaths.card_hzz_ggHxH_PTH
-    elif args.hbb:
-        datacard = LatestPaths.card_hbb_ggHxH_PTH
-    elif args.combWithHbb:
-        datacard = LatestPaths.card_combinedWithHbb_ggHxH_PTH
-    else:
-        raise DecayChannelNotFoundError()
-    return datacard
-
-def pth_ggH_get_ws(args):
-    if args.combination:
-        ws = LatestPaths.ws_combined_ggH_xHfixed
-    elif args.hgg:
-        ws = LatestPaths.ws_hgg_ggH_xHfixed
-    elif args.hzz:
-        ws = LatestPaths.ws_hzz_ggH_xHfixed
-    elif args.hbb:
-        ws = LatestPaths.ws_hbb_ggH_xHfixed
-    elif args.combWithHbb:
-        ws = LatestPaths.ws_combWithHbb_ggH_xHfixed
-    else:
-        raise DecayChannelNotFoundError()
-    return ws
-
-def pth_ggH_get_postfit(args):
-    decay_channel = get_decay_channel_tag(args)
-    postfit_key = 'postfit_{0}_pth_ggH'.format(decay_channel)
-    try:
-        return getattr(LatestPaths, postfit_key)
-    except AttributeError:
-        raise NotImplementedError('Postfit key \'{0}\' is not implemented in LatestPaths.py'.format(postfit_key))
 
 @flag_as_option
 def pth_ggH_t2ws(args):
@@ -347,51 +424,31 @@ def pth_ggH_t2ws(args):
 
 @flag_as_option
 def pth_ggH_scan(args):
-    ws = pth_ggH_get_ws(args)
-    jobDirectory  = 'out/Scan_pth_ggH_{0}_{1}'.format(datestr, get_decay_channel_tag(args))
-
-    nPoints = 45
-    nPointsPerJob = 3
-
-    extraOptions = []
-    physicsModelParameterRanges = []
-    POIRange = None
-
-    if args.statonly:
-        nPointsPerJob = 6
-        jobDirectory += '_statonly'
-        ws = pth_ggH_get_postfit(args)
-        variables_to_freeze = get_all_vars_except_POIs(args, ws)
-        extraOptions.extend([
-            '--snapshotName MultiDimFit',
-            '--skipInitialFit',
-            '--freezeNuisances {0}'.format(','.join(variables_to_freeze))
-            ])
+    ws = LatestPathsGetters.get_ws('pth_ggH', args) if not args.statonly else LatestPathsGetters.get_postfit(pth_ggH, args)
+    scan = GenericDifferentialObservableScan(args, 'pth_ggH', ws)
 
     if args.hzz:
-        nPointsPerJob = nPoints
-        POIRange = [ 0.0, 4.0 ]
+        scan.POIRange = [ 0.0, 4.0 ]
     elif args.hbb:
-        nPointsPerJob = nPoints
-        POIRange = [ -10.0, 10.0 ]
-        extraOptions.extend([
+        scan.POIRange = [ -10.0, 10.0 ]
+        scan.extraOptions.extend([
             '--minimizerStrategy 2',
             '--minimizerTolerance 0.001',
             '--robustFit 1',
             '--minimizerAlgoForMinos Minuit2,Migrad',
             ])
     elif args.combWithHbb:
-        POIRange = [ 0.0, 8.5 ]
-        nPoints = 150
-        nPointsPerJob = 2
-        extraOptions.extend([
+        scan.POIRange = [ 0.0, 8.5 ]
+        scan.nPoints = 150
+        scan.nPointsPerJob = 2
+        scan.extraOptions.extend([
             '--minimizerStrategy 2',
             '--minimizerTolerance 0.001',
             '--robustFit 1',
             '--minimizerAlgoForMinos Minuit2,Migrad',
             ])
         if not args.statonly:
-            physicsModelParameterRanges = [
+            scan.physicsModelParameterRanges = [
                 [ 'qcdeff', 0.001, 8.0 ],
                 [ 'r1p0', 0.0, 8.0 ],
                 [ 'r2p0', 0.0, 8.0 ],
@@ -401,23 +458,11 @@ def pth_ggH_scan(args):
                 [ 'r2p1', 0.0, 8.0 ],
                 [ 'r3p1', 0.0, 8.0 ],
                 ]
-
-    Commands.BasicCombineTool(
-        ws,
-        POIpattern    = '*',
-        POIRange      = POIRange,
-        nPoints       = nPoints,
-        nPointsPerJob = nPointsPerJob,
-        jobDirectory  = jobDirectory,
-        queue         = 'short.q',
-        asimov        = args.asimov,
-        extraOptions  = extraOptions,
-        physicsModelParameterRanges = physicsModelParameterRanges
-        )
+    scan.run()
 
 @flag_as_option
 def pth_ggH_postfit(args):
-    make_postfit(args, pth_ggH_get_ws(args), 'pth_ggH')
+    make_postfit(args, LatestPathsGetters.get_ws('pth_ggH', args), 'pth_ggH')
 
 #____________________________________________________________________
 # njets
@@ -439,35 +484,9 @@ def njets_combineCards(args):
         'hzz=' + LatestPaths.card_hzz_smH_NJ
         )
 
-def njets_get_ws(args):
-    if args.combination:
-        ws = LatestPaths.ws_combined_smH_NJ
-    elif args.hgg:
-        ws = LatestPaths.ws_hgg_smH_NJ
-    elif args.hzz:
-        ws = LatestPaths.ws_hzz_smH_NJ
-    elif args.hbb or args.combWithHbb:
-        raise NotImplementedError()
-    else:
-        raise DecayChannelNotFoundError()
-    return ws    
-
-def njets_get_card(args):
-    if args.combination:
-        datacard = LatestPaths.card_combined_smH_NJ
-    if args.hzz:
-        datacard = LatestPaths.card_hzz_smH_NJ
-    elif args.hgg:
-        datacard = LatestPaths.card_hgg_smH_NJ
-    elif args.hbb or args.combWithHbb:
-        raise NotImplementedError()
-    else:
-        raise DecayChannelNotFoundError()
-    return datacard
-
 @flag_as_option
 def njets_t2ws(args):
-    datacard = njets_get_card(args)
+    datacard = LatestPathsGetters.get_card('njets', args)
     if args.hzz:
         Commands.BasicT2WS(
             datacard,
@@ -489,25 +508,18 @@ def njets_t2ws(args):
 
 @flag_as_option
 def njets_scan(args):
-    nPoints       = 39
-    nPointsPerJob = 3
-    ws = njets_get_ws(args)
+    ws = LatestPathsGetters.get_ws('njets', args) if not args.statonly else LatestPathsGetters.get_postfit(njets, args)
+    scan = GenericDifferentialObservableScan(args, 'njets', ws)
+    scan.nPoints = 55
+    scan.nPointsPerJob = 5
     if args.hzz:
-        nPoints       = 39
-        nPointsPerJob = 39
-    Commands.BasicCombineTool(
-        ws,
-        POIpattern    = '*',
-        nPoints       = nPoints,
-        nPointsPerJob = nPointsPerJob,
-        jobDirectory  = 'Scan_njets_{0}'.format(datestr),
-        queue         = 'short.q',
-        asimov        = args.asimov,
-        )
+        scan.POIRange = [ 0.0, 4.0 ]
+        scan.nPointsPerJob = scan.nPoints
+    scan.run()
 
 @flag_as_option
 def njets_postfit(args):
-    make_postfit(args, njets_get_ws(args), 'njets')
+    make_postfit(args, LatestPathsGetters.get_ws('njets', args), 'njets')
 
 #____________________________________________________________________
 # ptjet
@@ -526,35 +538,9 @@ def ptjet_combineCards(args):
         'hzz=' + LatestPaths.card_hzz_smH_PTJ
         )
 
-def ptjet_get_card(args):
-    if args.combination:
-        datacard = LatestPaths.card_combined_smH_PTJ
-    elif args.hgg:
-        datacard = LatestPaths.card_hgg_smH_PTJ
-    elif args.hzz:
-        datacard = LatestPaths.card_hzz_smH_PTJ
-    elif args.hbb or args.combWithHbb:
-        raise NotImplementedError()
-    else:
-        raise DecayChannelNotFoundError()
-    return card
-
-def ptjet_get_ws(args):
-    if args.combination:
-        ws = LatestPaths.ws_combined_smH_PTJ
-    elif args.hgg:
-        ws = LatestPaths.ws_hgg_smH_PTJ
-    elif args.hzz:
-        ws = LatestPaths.ws_hzz_smH_PTJ
-    elif args.hbb or args.combWithHbb:
-        raise NotImplementedError()
-    else:
-        raise DecayChannelNotFoundError()
-    return ws
-
 @flag_as_option
 def ptjet_t2ws(args):
-    datacard = ptjet_get_card(args)
+    datacard = LatestPathsGetters.get_card('ptjet', args)
     if args.hzz:
         Commands.BasicT2WS(
             datacard,
@@ -579,23 +565,18 @@ def ptjet_t2ws(args):
 
 @flag_as_option
 def ptjet_scan(args):
-    nPoints       = 55
-    nPointsPerJob = 5
+    ws = LatestPathsGetters.get_ws('ptjet', args) if not args.statonly else LatestPathsGetters.get_postfit(ptjet, args)
+    scan = GenericDifferentialObservableScan(args, 'ptjet', ws)
+    scan.nPoints = 55
+    scan.nPointsPerJob = 5
     if args.hzz:
-        nPointsPerJob = nPoints
-    Commands.BasicCombineTool(
-        ptjet_get_ws(args),
-        POIpattern    = '*',
-        nPoints       = nPoints,
-        nPointsPerJob = nPointsPerJob,
-        jobDirectory  = 'Scan_PTJ_{0}'.format(datestr),
-        queue         = 'short.q',
-        asimov        = args.asimov,
-        )
+        scan.POIRange = [ 0.0, 4.0 ]
+        scan.nPointsPerJob = scan.nPoints
+    scan.run()
 
 @flag_as_option
 def ptjet_postfit(args):
-    make_postfit(args, ptjet_get_ws(args), 'ptjet')
+    make_postfit(args, LatestPathsGetters.get_ws('ptjet', args), 'ptjet')
 
 #____________________________________________________________________
 # rapidity
@@ -614,36 +595,10 @@ def rapidity_combineCards(args):
         'hzz=' + LatestPaths.card_hzz_smH_YH
         )
 
-def rapidity_get_card(args):
-    if args.combination:
-        datacard = LatestPaths.card_combined_smH_YH
-    elif args.hgg:
-        datacard = LatestPaths.card_hgg_smH_YH
-    elif args.hzz:
-        datacard = LatestPaths.card_hzz_smH_YH
-    elif args.hbb or args.combWithHbb:
-        raise NotImplementedError()
-    else:
-        raise DecayChannelNotFoundError()
-    return datacard
-
-def rapidity_get_ws(args):
-    if args.combination:
-        ws = LatestPaths.ws_combined_smH_YH
-    elif args.hgg:
-        ws = LatestPaths.ws_hgg_smH_YH
-    elif args.hzz:
-        ws = LatestPaths.ws_hzz_smH_YH
-    elif args.hbb or args.combWithHbb:
-        raise NotImplementedError()
-    else:
-        raise DecayChannelNotFoundError()
-    return ws    
-
 @flag_as_option
 def rapidity_t2ws(args):
     Commands.BasicT2WS(
-        rapidity_get_card(args),
+        LatestPathsGetters.get_card('rapidity', args),
         smartMaps = [
             ( r'.*/smH_YH_([pm\d\_GE]+)', r'r_smH_YH_\1[1.0,-1.0,4.0]' )
             ],
@@ -651,480 +606,15 @@ def rapidity_t2ws(args):
 
 @flag_as_option
 def rapidity_scan(args):
-    nPoints       = 55
-    nPointsPerJob = 5
+    ws = LatestPathsGetters.get_ws('rapidity', args) if not args.statonly else LatestPathsGetters.get_postfit('rapidity', args)
+    scan = GenericDifferentialObservableScan(args, 'rapidity', ws)
+    scan.nPoints = 55
+    scan.nPointsPerJob = 5
     if args.hzz:
-        nPointsPerJob = nPoints
-    Commands.BasicCombineTool(
-        rapidity_get_ws(args),
-        POIpattern    = '*',
-        nPoints       = nPoints,
-        nPointsPerJob = nPointsPerJob,
-        jobDirectory  = 'Scan_YH_{0}'.format(datestr),
-        queue         = 'short.q',
-        asimov        = args.asimov,
-        )
+        scan.POIRange = [ 0.0, 4.0 ]
+        scan.nPointsPerJob = scan.nPoints
+    scan.run()
 
 @flag_as_option
 def rapidity_postfit(args):
-    make_postfit(args, rapidity_get_ws(args), 'rapidity')
-
-
-########################################
-# Plotting
-########################################
-
-@flag_as_option
-def plot_all_differentials(args):
-    pth_plot(args)
-    pth_ggH_plot(args)
-    pth_ggH_hbb_plot(args)
-    njets_plot(args)
-    ptjet_plot(args)
-    rapidity_plot(args)
-
-#____________________________________________________________________
-@flag_as_option
-def pth_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    containers = []
-
-    # hgg = prepare_container('hgg', LatestPaths.ws_hgg_smH, LatestPaths.scan_hgg_PTH)
-    # hgg.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-    # containers.append(hgg)
-
-    # hzz = prepare_container('hzz', LatestPaths.ws_hzz_smH, LatestPaths.scan_hzz_PTH)
-    # hzz.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
-    # containers.append(hzz)
-
-    combination = prepare_container('combination', LatestPaths.ws_combined_smH, LatestPaths.scan_combined_PTH)
-    combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-    containers.append(combination)
-
-    combination_statonly = prepare_container('combination_statonly', LatestPaths.postfit_combination_pth_smH, 'out/Scan_pth_smH_Feb05_combination_statonly')
-    combination_statonly.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-    combination_statonly.color = 2
-    containers.append(combination_statonly)
-
-    for container in containers:
-        PlotCommands.WriteScansToTable(
-            container,
-            'pth',
-            xTitle = 'p_{T}^{H} (GeV)',
-            yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
-            lastBinIsOverflow = True,
-            )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_pth.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
-        LatestBinning.obs_pth.binning
-        )
-    containers.append(SM)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_pthSpectrum',
-        containers,
-        xTitle = 'p_{T}^{H} (GeV)',
-        yTitleTop = '#Delta#sigma/#Deltap_{T}^{H} (pb/GeV)',
-        # 
-        # yMinExternalTop = 0.0005,
-        # yMaxExternalTop = 110.,
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def pth_ggH_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    containers = []
-
-    hgg = prepare_container( 'hgg', LatestPaths.ws_hgg_ggH_xHfixed, LatestPaths.scan_hgg_PTH_ggH )
-    hgg.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
-    containers.append(hgg)
-
-    hzz         = prepare_container( 'hzz', LatestPaths.ws_hzz_ggH_xHfixed, LatestPaths.scan_hzz_PTH_ggH )
-    hzz.SMcrosssections = LatestBinning.obs_pth_ggH_hzzBinning.crosssection_over_binwidth()
-    containers.append(hzz)
-
-    combination = prepare_container( 'combination', LatestPaths.ws_combined_ggH_xHfixed, LatestPaths.scan_combined_PTH_ggH )
-    combination.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
-    containers.append(combination)
-
-    for container in containers:
-        PlotCommands.WriteScansToTable(
-            container,
-            'pth_ggh',
-            xTitle = 'p_{T}^{H} (GeV)',
-            yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
-            lastBinIsOverflow = True,
-            )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_pth_ggH.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
-        LatestBinning.obs_pth_ggH.binning
-        )
-    containers.append(SM)
-
-    l = PlotCommands.TLatexMultiPanel(
-        lambda c: 1.0 - c.GetRightMargin() - 0.01,
-        lambda c: 1.0 - c.GetTopMargin() - 0.14,
-        '(non-ggH fixed to SM)'
-        )
-    l.SetTextSize(0.05)
-    l.SetTextAlign(33)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_pth_ggH_Spectrum',
-        containers,
-        xTitle = 'p_{T}^{H} (GeV)',
-        yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
-        topPanelObjects = [ ( l, '' ) ],
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def pth_ggH_hbb_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    containers = []
-
-    if args.asimov:
-        combined_scanDir    = LatestPaths.scan_combined_PTH_ggH_asimov
-        hgg_scanDir         = LatestPaths.scan_hgg_PTH_ggH_asimov
-        hzz_scanDir         = LatestPaths.scan_hzz_PTH_ggH_asimov
-        hbb_scanDir         = LatestPaths.scan_hbb_PTH_ggH_asimov
-        combWithHbb_scanDir = LatestPaths.scan_combWithHbb_PTH_ggH_asimov
-    else:
-        combined_scanDir    = LatestPaths.scan_combined_PTH_ggH
-        hgg_scanDir         = LatestPaths.scan_hgg_PTH_ggH
-        hzz_scanDir         = LatestPaths.scan_hzz_PTH_ggH
-        hbb_scanDir         = LatestPaths.scan_hbb_PTH_ggH
-        combWithHbb_scanDir = LatestPaths.scan_combWithHbb_PTH_ggH
-
-
-    hgg = prepare_container( 'hgg', LatestPaths.ws_hgg_ggH_xHfixed, hgg_scanDir )
-    hgg.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
-    containers.append(hgg)
-
-    hzz = prepare_container( 'hzz', LatestPaths.ws_hzz_ggH_xHfixed, hzz_scanDir )
-    hzz.SMcrosssections = LatestBinning.obs_pth_ggH_hzzBinning.crosssection_over_binwidth()
-    containers.append(hzz)
-
-    combination = prepare_container( 'combination', LatestPaths.ws_combined_ggH_xHfixed, combined_scanDir )
-    combination.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
-    containers.append(combination)
-
-    hbb = prepare_container( 'hbb', LatestPaths.ws_hbb_ggH_xHfixed, hbb_scanDir )
-    hbb.SMcrosssections = LatestBinning.obs_pth_ggH_hbbBinning.crosssection_over_binwidth()
-    containers.append(hbb)
-
-    combWithHbb = prepare_container( 'combWithHbb', LatestPaths.ws_combWithHbb_ggH_xHfixed, combWithHbb_scanDir )
-    combWithHbb.SMcrosssections = LatestBinning.obs_pth_ggH_combWithHbbBinning.crosssection_over_binwidth()
-    containers.append(combWithHbb)
-
-    check_containers(containers)
-    for container in containers:
-        PlotCommands.WriteScansToTable(
-            container,
-            'pth_ggh_whbb',
-            xTitle = 'p_{T}^{H} (GeV)',
-            yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
-            lastBinIsOverflow = True,
-            )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_pth_ggH_combWithHbbBinning.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
-        LatestBinning.obs_pth_ggH_combWithHbbBinning.binning
-        )
-    containers.append(SM)
-
-    l = PlotCommands.TLatexMultiPanel(
-        lambda c: 1.0 - c.GetRightMargin() - 0.01,
-        lambda c: 1.0 - c.GetTopMargin() - 0.14,
-        '(non-ggH fixed to SM)'
-        )
-    l.SetTextSize(0.05)
-    l.SetTextAlign(33)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_pth_ggH_hbb_Spectrum' + ( '_asimov' if args.asimov else '' ),
-        containers,
-        xTitle = 'p_{T}^{H} (GeV)',
-        yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
-        # topPanelObjects = [ ( l, '' ) ],
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def njets_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    containers = []
-
-    hgg = prepare_container( 'hgg', LatestPaths.ws_hgg_smH_NJ,LatestPaths.scan_hgg_NJ )
-    hgg.SMcrosssections = LatestBinning.obs_njets.crosssection_over_binwidth()
-    containers.append(hgg)
-
-    hzz = prepare_container( 'hzz', LatestPaths.ws_hzz_smH_NJ,LatestPaths.scan_hzz_NJ )
-    hzz.SMcrosssections = LatestBinning.obs_njets_hzzBinning.crosssection_over_binwidth()
-    containers.append(hzz)
-
-    combination = prepare_container( 'combination', LatestPaths.ws_combined_smH_NJ,LatestPaths.scan_combined_NJ )
-    combination.SMcrosssections = LatestBinning.obs_njets.crosssection_over_binwidth()
-    containers.append(combination)
-
-    check_containers(containers)
-    for container in containers:
-        PlotCommands.WriteScansToTable(
-            container,
-            'njets',
-            xTitle = 'N_{jets}',
-            yTitle = '#Delta#sigma/#Delta N_{jets} (pb)',
-            lastBinIsOverflow = False,
-            )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_njets.crosssection_over_binwidth(),
-        LatestBinning.obs_njets.binning
-        )
-    containers.append(SM)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_nJetsSpectrum',
-        containers,
-        xTitle = 'N_{jets}',
-        # yMinLimit = 0.07,
-        # yMaxExternalTop = 500,
-        yTitleTop = '#Delta#sigma/#DeltaN_{jets} (pb)',
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def ptjet_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    containers = []
-
-    hgg = prepare_container('hgg', LatestPaths.ws_hgg_smH_PTJ, LatestPaths.scan_hgg_PTJ_asimov)
-    hgg.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
-    containers.append(hgg)
-
-    hzz = prepare_container('hzz', LatestPaths.ws_hzz_smH_PTJ, LatestPaths.scan_hzz_PTJ_asimov)
-    hzz.SMcrosssections = LatestBinning.obs_ptjet_hzzBinning.crosssection_over_binwidth()
-    containers.append(hzz)
-
-    combination = prepare_container('combination', LatestPaths.ws_combined_smH_PTJ, LatestPaths.scan_combined_PTJ_asimov)
-    combination.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
-    containers.append(combination)
-
-    Commands.Warning( 'Skipping first bin for ptjet (should be the underflow)' )
-    for container in containers:
-        container.POIs = container.POIs[1:]
-        container.Scans = container.Scans[1:]
-        container.SMcrosssections = container.SMcrosssections[1:]
-
-    check_containers(containers)
-    for container in containers:
-        PlotCommands.WriteScansToTable(
-            container,
-            'ptjet',
-            xTitle = 'p_{T}^{jet} (GeV)',
-            yTitle = '#Delta#sigma/#Delta p_{T}^{jet} (pb/GeV)',
-            lastBinIsOverflow = True,
-            )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_ptjet.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
-        LatestBinning.obs_ptjet.binning
-        )
-    containers.append(SM)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_ptjetSpectrum',
-        containers,
-        xTitle = 'p_{T}^{jet} (GeV)',
-        yTitleTop = '#Delta#sigma/#Deltap_{T}^{jet} (pb/GeV)',
-        # yMinLimit = 0.07,
-        yMaxExternalTop = 10,
-        xMinExternal = 30.0,
-        # yMinLimit    = 0.1
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def rapidity_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    containers = []
-
-    hgg = prepare_container('hgg', LatestPaths.ws_hgg_smH_YH, LatestPaths.scan_hgg_YH_asimov)
-    hgg.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
-    containers.append(hgg)
-
-    hzz = prepare_container('hzz', LatestPaths.ws_hzz_smH_YH, LatestPaths.scan_hzz_YH_asimov)
-    hzz.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
-    containers.append(hzz)
-
-    combination = prepare_container('combination', LatestPaths.ws_combined_smH_YH, LatestPaths.scan_combined_YH_asimov)
-    combination.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
-    containers.append(combination)
-
-    check_containers(containers)
-    for container in containers:
-        PlotCommands.WriteScansToTable(
-            container,
-            'rapidity',
-            xTitle = '|y_{H}|',
-            yTitle = '#Delta#sigma/#Delta|y_{H}| (pb)',
-            lastBinIsOverflow = False,
-            )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_yh.crosssection_over_binwidth(),
-        LatestBinning.obs_yh.binning
-        )
-    containers.append(SM)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_rapiditySpectrum',
-        containers,
-        xTitle = '|y_{H}|',
-        yTitleTop = '#Delta#sigma/#Delta|y_{H}| (pb)',
-        # yMinLimit = 0.07,
-        # yMaxExternalTop = 500
-        lastBinIsNotOverflow=True,
-        )
-
-#____________________________________________________________________
-# Helpers
-
-def get_decay_channel_tag(args):
-    if args.combination:
-        tag = 'combination'
-    elif args.hgg:
-        tag = 'hgg'
-    elif args.hzz:
-        tag = 'hzz'
-    elif args.hbb:
-        tag = 'hbb'
-    elif args.combWithHbb:
-        tag = 'combWithHbb'
-    else:
-        raise DecayChannelNotFoundError()
-    return tag
-
-def get_all_vars_except_POIs(args, postfit):
-    with Commands.OpenRootFile(postfit) as postfit_fp:
-        w = postfit_fp.Get('w')
-
-    variables = []
-    var_set = w.allVars()
-    var_iterable = var_set.createIterator()
-    for i_var in xrange(var_set.getSize()):
-        variables.append(var_iterable.Next().GetName())
-    
-    POIs = Commands.ListSet(w)
-
-    variables = list(set(variables) - set(POIs))
-    variables.sort()
-    return variables
-
-def make_postfit(args, ws, observable_tag=None):
-    tag = 'POSTFIT_' + basename(ws).replace('.root','')
-    if not(observable_tag is None):
-        tag += '_' + observable_tag
-    if args.asimov:
-        tag += '_asimov'
-    cmd = [
-        'combineTool.py',
-        abspath(ws),
-        '-n _{0}'.format(tag),
-        '-M MultiDimFit',
-        '--cminDefaultMinimizerType Minuit2',
-        '--cminDefaultMinimizerAlgo migrad',
-        '--floatOtherPOIs=1',
-        # '-P "{0}"'.format( POI ),
-        # '--setPhysicsModelParameterRanges "{0}"={1:.3f},{2:.3f} '.format( POI, POIRange[0], POIRange[1] ),
-        # '--setPhysicsModelParameters {0}'.format( ','.join([ iterPOI + '=1.0' for iterPOI in allPOIs ]) ),
-        '-m 125.00',
-        '--saveNLL',
-        '--saveInactivePOI 1',
-        '--saveWorkspace',
-        '--job-mode psi --task-name {0} --sub-opts=\'-q short.q\' '.format(tag),
-        ]
-    if args.asimov:
-        cmd.append( '-t -1' )
-
-    if not 't3' in os.environ['HOSTNAME']:
-        raise NotImplementedError('\'t3\' not in $HOSTNAME; Is this executed from the T3?')
-
-    with Commands.EnterDirectory('out/postfitWss_{0}'.format(datestr)):
-        Commands.executeCommand(cmd)
-
-
-def check_containers(containers):
-    for container in containers:
-        if not len(container.POIs) == len(container.SMcrosssections):
-            Commands.ThrowError(
-                'For container {2}, found {0} POIs, but {1} SM cross sections; something is misaligned.'.format(
-                    len(container.POIs), len(container.SMcrosssections), container.name )
-                + '\n  POIs:  {0}'.format(container.POIs)
-                + '\n  SM xs: {0}'.format(container.SMcrosssections)
-                )
-
-def prepare_container(
-        name,
-        ws, scandir,
-        title=None,
-        verbose=False,
-        draw_parabolas=True,
-        ):
-
-    POIs = Commands.ListPOIs( ws )
-    POIs.sort( key=Commands.POIsorter )
-    if verbose: print 'Sorted POIs:', POIs
-
-    scans = PhysicsCommands.GetScanResults(
-        POIs,
-        scandir,
-        # pattern = pattern,
-        filterNegatives = True
-        )
-
-    if draw_parabolas:
-        PhysicsCommands.BasicDrawScanResults( POIs, scans, name=name )
-
-    container = Container(name=name)
-    if title is None:
-        title = name
-    container.title = title
-
-    container.POIs = POIs
-    container.Scans = scans
-
-    if name == 'hgg':
-        container.color = 2
-        container.title = 'H#rightarrow#gamma#gamma'
-    if name == 'hzz':
-        container.color = 4
-        container.title = 'H#rightarrowZZ'
-    if name == 'combination':
-        container.color = 1
-        container.title = 'Combination'
-    if name == 'hbb':
-        container.color = 8
-        container.title = 'H#rightarrowbb'
-    if name == 'combWithHbb':
-        container.color = 14
-        container.title = 'Comb. with H#rightarrowbb'
-
-    return container
-
-def prepare_SM_container(crosssection, binBoundaries):
-    SM = Container()
-    SM.name = 'SM'
-    SM.title = 'SM'
-    SM.color = 14
-    SM.crosssection = crosssection
-    SM.binBoundaries = binBoundaries
-    SM.ratios = [ 1.0 for i in xrange(len(crosssection)) ]
-    return SM
-
-class DecayChannelNotFoundError(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'Could not determine the decay channel') 
+    make_postfit(args, LatestPathsGetters.get_ws('rapidity', args), 'rapidity')

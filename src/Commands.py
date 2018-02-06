@@ -1006,7 +1006,8 @@ def BasicCombineTool(
         fastscan      = False,
         extraOptions  = None,
         disableFloatOtherPOIs = False,
-        physicsModelParameterRanges = []
+        physicsModelParameterRanges = [],
+        setPhysicsModelParameters = True
         ):
 
     datacard = abspath( datacard )
@@ -1060,13 +1061,15 @@ def BasicCombineTool(
             ( '--floatOtherPOIs=1' if not disableFloatOtherPOIs else '' ),
             '-P "{0}"'.format( POI ),
             # '--setPhysicsModelParameterRanges "{0}"={1:.3f},{2:.3f} '.format( POI, POIRange[0], POIRange[1] ),
-            '--setPhysicsModelParameters {0}'.format( ','.join([ iterPOI + '=1.0' for iterPOI in allPOIs ]) ),
             '-m 125.00',
             '--squareDistPoi',
             '--saveNLL',
             '--saveInactivePOI 1',
             '--points={0} '.format(nPoints),
             ]
+
+        if setPhysicsModelParameters:
+            cmd.append('--setPhysicsModelParameters {0}'.format( ','.join([ iterPOI + '=1.0' for iterPOI in allPOIs ]) ))
 
         physicsModelParameterRanges.insert( 0, [ POI, POIRange[0], POIRange[1] ] )
         physicsModelParameterRangesStr = ':'.join([ '"{0}"={1:.3f},{2:.3f}'.format(parName, left, right) for parName, left, right in physicsModelParameterRanges ])

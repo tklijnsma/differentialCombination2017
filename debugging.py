@@ -121,16 +121,18 @@ def main():
             '--algo=grid',
             '--floatOtherPOIs=1',
             '-P "r_smH_PTH_45_85"',
-            '--setPhysicsModelParameters r_smH_PTH_200_350=1.0,r_smH_PTH_125_200=1.0,r_smH_PTH_30_45=1.0,r_smH_PTH_0_15=1.0,r_smH_PTH_GT350=1.0,r_smH_PTH_85_125=1.0,r_smH_PTH_15_30=1.0,r_smH_PTH_45_85=1.0',
+            # '--setPhysicsModelParameters r_smH_PTH_200_350=1.0,r_smH_PTH_125_200=1.0,r_smH_PTH_30_45=1.0,r_smH_PTH_0_15=1.0,r_smH_PTH_GT350=1.0,r_smH_PTH_85_125=1.0,r_smH_PTH_15_30=1.0,r_smH_PTH_45_85=1.0',
             '-m 125.00',
             '--squareDistPoi',
             '--saveNLL',
             '--saveInactivePOI 1',
-            '--points=45 ',
-            '--setPhysicsModelParameterRanges "r_smH_PTH_45_85"=-1.000,4.000:"r_smH_PTH_15_30"=-1.000,4.000:"r_smH_PTH_85_125"=-1.000,4.000:"r_smH_PTH_GT350"=-1.000,4.000:"r_smH_PTH_0_15"=-1.000,4.000:"r_smH_PTH_30_45"=-1.000,4.000:"r_smH_PTH_125_200"=-1.000,4.000:"r_smH_PTH_200_350"=-1.000,4.000',
+            '--points=10 ',
+            # '--setPhysicsModelParameterRanges "r_smH_PTH_45_85"=-1.000,4.000:"r_smH_PTH_15_30"=-1.000,4.000:"r_smH_PTH_85_125"=-1.000,4.000:"r_smH_PTH_GT350"=-1.000,4.000:"r_smH_PTH_0_15"=-1.000,4.000:"r_smH_PTH_30_45"=-1.000,4.000:"r_smH_PTH_125_200"=-1.000,4.000:"r_smH_PTH_200_350"=-1.000,4.000',
+            '--setPhysicsModelParameterRanges "r_smH_PTH_45_85"=0.5000,1.500',
             '--snapshotName MultiDimFit',
             '--skipInitialFit',
-            '--freezeNuisances rgx{r_.*}',
+            '--freezeNuisances rgx{.*},CMS_zz4l_mass,CMS_hgg_mass,CMS_fakeH_p1_1_8,CMS_fakeH_p3_1_8,CMS_fakeH_p1_2_8,CMS_fakeH_p3_2_8,CMS_fakeH_p1_3_8,CMS_fakeH_p3_3_8',
+            # ,K1Bin0,K1Bin1,K1Bin2,K1Bin3,K1Bin4,K1Bin5,K1Bin6,K1Bin7,K2Bin0,K2Bin1,K2Bin2,K2Bin3,K2Bin4,K2Bin5,K2Bin6,K2Bin7
             ]
 
         Commands.BasicGenericCombineCommand( cmd, onBatch = False, )

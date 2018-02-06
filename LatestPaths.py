@@ -102,36 +102,6 @@ correlationMatrix_PTJ                   = 'out/corrMat_Nov30_combinedCard_PTJ_sm
 # ======================================
 # Unsplit workspaces for non-coupling combinations
 
-ws_hgg_smH                   = 'out/workspaces_Nov07/Datacard_13TeV_differential_PtNNLOPS_systs_renamedProcesses.root'
-ws_hzz_smH                   = 'out/workspaces_Nov08/hzz4l_comb_13TeV_xs_processesShifted.root'
-ws_combined_smH              = 'out/workspaces_Nov07/combinedCard_smH_Nov07.root'
-
-ws_combined_ggH_xHfixed      = 'out/workspaces_Nov08/combinedCard_Nov03_xHfixed.root'
-ws_hgg_ggH_xHfixed           = 'out/workspaces_Nov29/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed.root'
-ws_hzz_ggH_xHfixed           = 'out/workspaces_Nov29/hzz4l_comb_13TeV_xs_processesShifted_xHfixed.root'
-
-# ws_hbb_ggH_xHfixed           = 'out/workspaces_Dec15/comb_2017_ggHbb_xHfixed.root'
-# ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Dec15/combinedCard_hgg_hzz_hbb_ggHxH_Dec15_xHfixed.root'
-# ws_hbb_ggH_xHfixed           = 'out/workspaces_Dec21/comb_2017_ggHbb_xHfixed.root'
-# ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Dec21/combinedCard_hgg_hzz_hbb_ggHxH_Dec21_xHfixed.root'
-ws_hbb_ggH_xHfixed           = 'out/workspaces_Jan19/comb_2017_ggHbb_xHfixed.root'
-ws_combWithHbb_ggH_xHfixed   = 'out/workspaces_Jan19/combinedCard_hgg_hzz_hbb_ggHxH_Jan19_xHfixed.root'
-
-ws_hgg_smH_NJ                = 'out/workspaces_Nov12/Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses.root'
-ws_hzz_smH_NJ                = 'out/workspaces_Nov12/hzz4l_comb_13TeV_xs.root'
-ws_combined_smH_NJ           = 'out/workspaces_Nov12/combinedCard_NJ_smH_Nov12.root'
-
-ws_hgg_smH_YH                = 'out/workspaces_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses.root'
-ws_hzz_smH_YH                = 'out/workspaces_Nov28/hzz4l_comb_13TeV_xs.root'
-ws_combined_smH_YH           = 'out/workspaces_Nov28/combinedCard_YH_smH_Nov28.root'
-
-ws_hzz_smH_PTJ               = 'out/workspaces_Nov28/hzz4l_comb_13TeV_xs_ptjet.root'
-# Wrong variable name (causes problems with file-naming, although physics is correct)
-# ws_hgg_smH_PTJ               = 'out/workspaces_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
-# ws_combined_smH_PTJ          = 'out/workspaces_Nov28/combinedCard_PTJ_smH_Nov28.root'
-ws_hgg_smH_PTJ               = 'out/workspaces_Nov30/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
-ws_combined_smH_PTJ          = 'out/workspaces_Nov30/combinedCard_PTJ_smH_Nov28.root'
-
 # ---------------------
 # Workspaces for extra studies
 
@@ -240,56 +210,7 @@ ws_hzz_TopCtCbHighPt      = 'out/workspaces_Dec12/hzz4l_comb_13TeV_xs_processesS
 # Scans
 ########################################
 
-# ======================================
-# Non-coupling combinations
-
-scan_combined_PTH = 'out/Scan_PTH_Nov07'
-scan_hgg_PTH      = 'out/Scan_PTH_Nov07_hgg'
-scan_hzz_PTH      = 'out/Scan_PTH_Nov08_hzz'
-
-scan_combined_PTH_ggH = 'out/Scan_PTH_Nov08_xHfixed'
-scan_hgg_PTH_ggH      = 'out/Scan_PTH_Nov29_xHfixed_hgg'
-scan_hzz_PTH_ggH      = 'out/Scan_PTH_Nov29_xHfixed_hzz'
-# scan_hbb_PTH_ggH      = 'out/Scan_PTH_Dec15_xHfixed_hbb'
-# scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb'
-# scan_hbb_PTH_ggH         = 'out/Scan_PTH_Jan19_xHfixed_hbb_0'
-# scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Jan19_xHfixed_combWithHbb'
-scan_hbb_PTH_ggH         = 'out/Scan_PTH_Jan23_xHfixed_hbb'
-scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Jan23_xHfixed_combWithHbb_2'
-
-scan_combined_PTH_ggH_asimov    = 'out/Scan_PTH_Dec15_xHfixed_asimov_asimov'
-scan_hgg_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hgg_asimov_asimov'
-scan_hzz_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hzz_asimov_asimov'
-# scan_hbb_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hbb_asimov_asimov'
-# scan_combWithHbb_PTH_ggH_asimov = 'out/Scan_PTH_Dec15_xHfixed_combWithHbb_asimov_asimov'
-scan_hbb_PTH_ggH_asimov         = 'out/Scan_PTH_Jan23_xHfixed_hbb_asimov'
-scan_combWithHbb_PTH_ggH_asimov = 'out/Scan_PTH_Jan23_xHfixed_combWithHbb_asimov'
-
-
-scan_combined_NJ  = 'out/Scan_nJets_Nov12'
-scan_hgg_NJ       = 'out/Scan_nJets_Nov12_0'
-scan_hzz_NJ       = 'out/Scan_nJets_Nov12_1'
-
-scan_combined_YH  = 'out/Scan_YH_Nov28'
-scan_hgg_YH       = 'out/Scan_YH_Nov28_0'
-scan_hzz_YH       = 'out/Scan_YH_Nov28_1'
-
-scan_combined_PTJ = 'out/Scan_PTJ_Nov28_1'
-scan_hgg_PTJ      = 'out/Scan_PTJ_Nov28_0'
-scan_hzz_PTJ      = 'out/Scan_PTJ_Nov28'
-
-# scan_combined_PTH_ggH_asimov = 'out/Scan_PTH_Nov17_xHfixed_asimov'
-
-scan_combined_YH_asimov  = 'out/Scan_YH_Nov28_asimov'
-scan_hgg_YH_asimov       = 'out/Scan_YH_Nov28_asimov_0'
-scan_hzz_YH_asimov       = 'out/Scan_YH_Nov28_asimov_1'
-
-# scan_combined_PTJ_asimov = 'out/Scan_PTJ_Nov28_asimov'
-# scan_hgg_PTJ_asimov      = 'out/Scan_PTJ_Nov28_asimov_0'
-scan_combined_PTJ_asimov = 'out/Scan_PTJ_Nov30_asimov'
-scan_hgg_PTJ_asimov      = 'out/Scan_PTJ_Nov30_asimov_0'
-scan_hzz_PTJ_asimov      = 'out/Scan_PTJ_Nov28_asimov_1'
-
+# Non-coupling combinations Moved to EOF
 
 # ======================================
 # Extra studies
@@ -465,8 +386,58 @@ scan_hzz_TopCtCb_asimov                                  = 'out/Scan_TopCtCb_Nov
 
 
 ########################################
-# Postfits
+# Differential combination
 ########################################
+
+# The up-to-date naming shouldn't be the legacy naming... but fix later
+card_hgg_pth_ggH           = card_hgg_ggHxH_PTH
+card_hzz_pth_ggH           = card_hzz_ggHxH_PTH
+card_combination_pth_ggH   = card_combined_ggHxH_PTH
+card_hgg_pth_smH           = card_hgg_smH_PTH
+card_hzz_pth_smH           = card_hzz_smH_PTH
+card_combination_pth_smH   = card_combined_smH_PTH
+card_hgg_ptjet             = card_hzz_smH_PTJ
+card_hzz_ptjet             = card_hgg_smH_PTJ
+card_combination_ptjet     = card_combined_smH_PTJ
+card_hgg_njets             = card_hzz_smH_NJ
+card_hzz_njets             = card_hgg_smH_NJ
+card_combination_njets     = card_combined_smH_NJ
+card_hgg_rapidity          = card_hgg_smH_YH
+card_hzz_rapidity          = card_hzz_smH_YH
+card_combination_rapidity  = card_combined_smH_YH
+
+ws_hgg_pth_ggH           = 'out/workspaces_Nov29/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed.root'
+ws_hgg_pth_smH           = 'out/workspaces_Nov07/Datacard_13TeV_differential_PtNNLOPS_systs_renamedProcesses.root'
+ws_hgg_ptjet             = 'out/workspaces_Nov30/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins_renamedProcesses.root'
+ws_hgg_njets             = 'out/workspaces_Nov12/Datacard_13TeV_differential_Njets2p5NNLOPS_renamedProcesses.root'
+ws_hgg_rapidity          = 'out/workspaces_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination_renamedProcesses.root'
+ws_hzz_pth_ggH           = 'out/workspaces_Nov29/hzz4l_comb_13TeV_xs_processesShifted_xHfixed.root'
+ws_hzz_pth_smH           = 'out/workspaces_Nov08/hzz4l_comb_13TeV_xs_processesShifted.root'
+ws_hzz_ptjet             = 'out/workspaces_Nov28/hzz4l_comb_13TeV_xs_ptjet.root'
+ws_hzz_njets             = 'out/workspaces_Nov12/hzz4l_comb_13TeV_xs.root'
+ws_hzz_rapidity          = 'out/workspaces_Nov28/hzz4l_comb_13TeV_xs.root'
+ws_combination_pth_ggH   = 'out/workspaces_Nov08/combinedCard_Nov03_xHfixed.root'
+ws_combination_pth_smH   = 'out/workspaces_Nov07/combinedCard_smH_Nov07.root'
+ws_combination_ptjet     = 'out/workspaces_Nov30/combinedCard_PTJ_smH_Nov28.root'
+ws_combination_njets     = 'out/workspaces_Nov12/combinedCard_NJ_smH_Nov12.root'
+ws_combination_rapidity  = 'out/workspaces_Nov28/combinedCard_YH_smH_Nov28.root'
+
+# Legacy in order not to break old code
+ws_hgg_ggH_xHfixed       = ws_hgg_pth_ggH
+ws_hgg_smH               = ws_hgg_pth_smH
+ws_hgg_smH_PTJ           = ws_hgg_ptjet
+ws_hgg_smH_NJ            = ws_hgg_njets
+ws_hgg_smH_YH            = ws_hgg_rapidity
+ws_hzz_ggH_xHfixed       = ws_hzz_pth_ggH
+ws_hzz_smH               = ws_hzz_pth_smH
+ws_hzz_smH_PTJ           = ws_hzz_ptjet
+ws_hzz_smH_NJ            = ws_hzz_njets
+ws_hzz_smH_YH            = ws_hzz_rapidity
+ws_combined_ggH_xHfixed  = ws_combination_pth_ggH
+ws_combined_smH          = ws_combination_pth_smH
+ws_combined_smH_PTJ      = ws_combination_ptjet
+ws_combined_smH_NJ       = ws_combination_njets
+ws_combined_smH_YH       = ws_combination_rapidity
 
 postfit_hgg_pth_ggH                 = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_PtGghPlusHxNNLOPS_renamedProcesses_xHfixed_pth_ggH.MultiDimFit.mH125.root'
 postfit_hgg_pth_smH                 = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_Datacard_13TeV_differential_PtNNLOPS_systs_renamedProcesses_pth_smH.MultiDimFit.mH125.root'
@@ -499,12 +470,142 @@ postfit_combination_ptjet_asimov    = 'out/postfitWss_Feb05/higgsCombine_POSTFIT
 postfit_combination_njets_asimov    = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_NJ_smH_Nov12_njets_asimov.MultiDimFit.mH125.root'
 postfit_combination_rapidity_asimov = 'out/postfitWss_Feb05/higgsCombine_POSTFIT_combinedCard_YH_smH_Nov28_rapidity_asimov.MultiDimFit.mH125.root'
 
+# scan_combination_njets_statonly     = 'out/Scan_njets_Feb06_combination_statonly'
+# scan_hgg_njets_statonly             = 'out/Scan_njets_Feb06_hgg_statonly'
+# scan_hzz_njets_statonly             = 'out/Scan_njets_Feb06_hzz_statonly'
+# scan_combination_pth_ggH_statonly   = 'out/Scan_pth_ggH_Feb06_combination_statonly'
+# scan_hgg_pth_ggH_statonly           = 'out/Scan_pth_ggH_Feb06_hgg_statonly'
+# scan_hzz_pth_ggH_statonly           = 'out/Scan_pth_ggH_Feb06_hzz_statonly'
+# scan_combination_pth_smH_statonly   = 'out/Scan_pth_smH_Feb06_combination_statonly'
+# scan_hgg_pth_smH_statonly           = 'out/Scan_pth_smH_Feb06_hgg_statonly'
+# scan_hzz_pth_smH_statonly           = 'out/Scan_pth_smH_Feb06_hzz_statonly'
+# scan_combination_ptjet_statonly     = 'out/Scan_ptjet_Feb06_combination_statonly'
+# scan_hgg_ptjet_statonly             = 'out/Scan_ptjet_Feb06_hgg_statonly'
+# scan_hzz_ptjet_statonly             = 'out/Scan_ptjet_Feb06_hzz_statonly'
+# scan_combination_rapidity_statonly  = 'out/Scan_rapidity_Feb06_combination_statonly'
+# scan_hgg_rapidity_statonly          = 'out/Scan_rapidity_Feb06_hgg_statonly'
+# scan_hzz_rapidity_statonly          = 'out/Scan_rapidity_Feb06_hzz_statonly'
+
+# scan_combination_njets    = 'out/Scan_nJets_Nov12'
+# scan_hgg_njets            = 'out/Scan_nJets_Nov12_0'
+# scan_hzz_njets            = 'out/Scan_nJets_Nov12_1'
+# scan_combination_pth_ggH  = 'out/Scan_PTH_Nov08_xHfixed'
+# scan_hgg_pth_ggH          = 'out/Scan_PTH_Nov29_xHfixed_hgg'
+# scan_hzz_pth_ggH          = 'out/Scan_PTH_Nov29_xHfixed_hzz'
+# scan_combination_pth_smH  = 'out/Scan_PTH_Nov07'
+# scan_hgg_pth_smH          = 'out/Scan_PTH_Nov07_hgg'
+# scan_hzz_pth_smH          = 'out/Scan_PTH_Nov08_hzz'
+# scan_combination_ptjet    = 'out/Scan_PTJ_Nov28_1'
+# scan_hgg_ptjet            = 'out/Scan_PTJ_Nov28_0'
+# scan_hzz_ptjet            = 'out/Scan_PTJ_Nov28'
+# scan_combination_rapidity = 'out/Scan_YH_Nov28'
+# scan_hgg_rapidity         = 'out/Scan_YH_Nov28_0'
+# scan_hzz_rapidity         = 'out/Scan_YH_Nov28_1'
+
+scan_combination_njets                    = 'out/Scan_njets_Feb06_combination'
+scan_combination_njets_asimov             = 'out/Scan_njets_Feb06_combination_asimov'
+scan_combination_njets_statonly           = 'out/Scan_njets_Feb06_combination_statonly'
+scan_combination_njets_statonly_asimov    = 'out/Scan_njets_Feb06_combination_statonly_asimov'
+scan_hgg_njets                            = 'out/Scan_njets_Feb06_hgg'
+scan_hgg_njets_asimov                     = 'out/Scan_njets_Feb06_hgg_asimov'
+scan_hgg_njets_statonly                   = 'out/Scan_njets_Feb06_hgg_statonly'
+scan_hgg_njets_statonly_asimov            = 'out/Scan_njets_Feb06_hgg_statonly_asimov'
+scan_hzz_njets                            = 'out/Scan_njets_Feb06_hzz'
+scan_hzz_njets_asimov                     = 'out/Scan_njets_Feb06_hzz_asimov'
+scan_hzz_njets_statonly                   = 'out/Scan_njets_Feb06_hzz_statonly'
+scan_hzz_njets_statonly_asimov            = 'out/Scan_njets_Feb06_hzz_statonly_asimov'
+scan_combination_pth_ggH                  = 'out/Scan_pth_ggH_Feb06_combination'
+scan_combination_pth_ggH_asimov           = 'out/Scan_pth_ggH_Feb06_combination_asimov'
+scan_combination_pth_ggH_statonly         = 'out/Scan_pth_ggH_Feb06_combination_statonly'
+scan_combination_pth_ggH_statonly_asimov  = 'out/Scan_pth_ggH_Feb06_combination_statonly_asimov'
+scan_hgg_pth_ggH                          = 'out/Scan_pth_ggH_Feb06_hgg'
+scan_hgg_pth_ggH_asimov                   = 'out/Scan_pth_ggH_Feb06_hgg_asimov'
+scan_hgg_pth_ggH_statonly                 = 'out/Scan_pth_ggH_Feb06_hgg_statonly'
+scan_hgg_pth_ggH_statonly_asimov          = 'out/Scan_pth_ggH_Feb06_hgg_statonly_asimov'
+scan_hzz_pth_ggH                          = 'out/Scan_pth_ggH_Feb06_hzz'
+scan_hzz_pth_ggH_asimov                   = 'out/Scan_pth_ggH_Feb06_hzz_asimov'
+scan_hzz_pth_ggH_statonly                 = 'out/Scan_pth_ggH_Feb06_hzz_statonly'
+scan_hzz_pth_ggH_statonly_asimov          = 'out/Scan_pth_ggH_Feb06_hzz_statonly_asimov'
+scan_combination_pth_smH                  = 'out/Scan_pth_smH_Feb06_combination'
+scan_combination_pth_smH_asimov           = 'out/Scan_pth_smH_Feb06_combination_asimov'
+scan_combination_pth_smH_statonly         = 'out/Scan_pth_smH_Feb06_combination_statonly'
+scan_combination_pth_smH_statonly_asimov  = 'out/Scan_pth_smH_Feb06_combination_statonly_asimov'
+scan_hgg_pth_smH                          = 'out/Scan_pth_smH_Feb06_hgg'
+scan_hgg_pth_smH_asimov                   = 'out/Scan_pth_smH_Feb06_hgg_asimov'
+scan_hgg_pth_smH_statonly                 = 'out/Scan_pth_smH_Feb06_hgg_statonly'
+scan_hgg_pth_smH_statonly_asimov          = 'out/Scan_pth_smH_Feb06_hgg_statonly_asimov'
+scan_hzz_pth_smH                          = 'out/Scan_pth_smH_Feb06_hzz'
+scan_hzz_pth_smH_asimov                   = 'out/Scan_pth_smH_Feb06_hzz_asimov'
+scan_hzz_pth_smH_statonly                 = 'out/Scan_pth_smH_Feb06_hzz_statonly'
+scan_hzz_pth_smH_statonly_asimov          = 'out/Scan_pth_smH_Feb06_hzz_statonly_asimov'
+scan_combination_ptjet                    = 'out/Scan_ptjet_Feb06_combination'
+scan_combination_ptjet_asimov             = 'out/Scan_ptjet_Feb06_combination_asimov'
+scan_combination_ptjet_statonly           = 'out/Scan_ptjet_Feb06_combination_statonly'
+scan_combination_ptjet_statonly_asimov    = 'out/Scan_ptjet_Feb06_combination_statonly_asimov'
+scan_hgg_ptjet                            = 'out/Scan_ptjet_Feb06_hgg'
+scan_hgg_ptjet_asimov                     = 'out/Scan_ptjet_Feb06_hgg_asimov'
+scan_hgg_ptjet_statonly                   = 'out/Scan_ptjet_Feb06_hgg_statonly'
+scan_hgg_ptjet_statonly_asimov            = 'out/Scan_ptjet_Feb06_hgg_statonly_asimov'
+scan_hzz_ptjet                            = 'out/Scan_ptjet_Feb06_hzz'
+scan_hzz_ptjet_asimov                     = 'out/Scan_ptjet_Feb06_hzz_asimov'
+scan_hzz_ptjet_statonly                   = 'out/Scan_ptjet_Feb06_hzz_statonly'
+scan_hzz_ptjet_statonly_asimov            = 'out/Scan_ptjet_Feb06_hzz_statonly_asimov'
+scan_combination_rapidity                 = 'out/Scan_rapidity_Feb06_combination'
+scan_combination_rapidity_asimov          = 'out/Scan_rapidity_Feb06_combination_asimov'
+scan_combination_rapidity_statonly        = 'out/Scan_rapidity_Feb06_combination_statonly'
+scan_combination_rapidity_statonly_asimov = 'out/Scan_rapidity_Feb06_combination_statonly_asimov'
+scan_hgg_rapidity                         = 'out/Scan_rapidity_Feb06_hgg'
+scan_hgg_rapidity_asimov                  = 'out/Scan_rapidity_Feb06_hgg_asimov'
+scan_hgg_rapidity_statonly                = 'out/Scan_rapidity_Feb06_hgg_statonly'
+scan_hgg_rapidity_statonly_asimov         = 'out/Scan_rapidity_Feb06_hgg_statonly_asimov'
+scan_hzz_rapidity                         = 'out/Scan_rapidity_Feb06_hzz'
+scan_hzz_rapidity_asimov                  = 'out/Scan_rapidity_Feb06_hzz_asimov'
+scan_hzz_rapidity_statonly                = 'out/Scan_rapidity_Feb06_hzz_statonly'
+scan_hzz_rapidity_statonly_asimov         = 'out/Scan_rapidity_Feb06_hzz_statonly_asimov'
+
+# Legacy keys, so old code doesn't break
+scan_combined_NJ      = scan_combination_njets
+scan_hgg_NJ           = scan_hgg_njets
+scan_hzz_NJ           = scan_hzz_njets
+scan_combined_PTH_ggH = scan_combination_pth_ggH
+scan_hgg_PTH_ggH      = scan_hgg_pth_ggH
+scan_hzz_PTH_ggH      = scan_hzz_pth_ggH
+scan_combined_PTH     = scan_combination_pth_smH
+scan_hgg_PTH          = scan_hgg_pth_smH
+scan_hzz_PTH          = scan_hzz_pth_smH
+scan_combined_PTJ     = scan_combination_ptjet
+scan_hgg_PTJ          = scan_hgg_ptjet
+scan_hzz_PTJ          = scan_hzz_ptjet
+scan_combined_YH      = scan_combination_rapidity
+scan_hgg_YH           = scan_hgg_rapidity
+scan_hzz_YH           = scan_hzz_rapidity
+
+#____________________________________________________________________
+# To implement
+scan_hbb_PTH_ggH         = 'out/Scan_PTH_Jan23_xHfixed_hbb'
+scan_combWithHbb_PTH_ggH = 'out/Scan_PTH_Jan23_xHfixed_combWithHbb_2'
+
+# Asimovs
+scan_combined_PTH_ggH_asimov    = 'out/Scan_PTH_Dec15_xHfixed_asimov_asimov'
+scan_hgg_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hgg_asimov_asimov'
+scan_hzz_PTH_ggH_asimov         = 'out/Scan_PTH_Dec15_xHfixed_hzz_asimov_asimov'
+scan_hbb_PTH_ggH_asimov         = 'out/Scan_PTH_Jan23_xHfixed_hbb_asimov'
+scan_combWithHbb_PTH_ggH_asimov = 'out/Scan_PTH_Jan23_xHfixed_combWithHbb_asimov'
+
+scan_combined_YH_asimov  = 'out/Scan_YH_Nov28_asimov'
+scan_hgg_YH_asimov       = 'out/Scan_YH_Nov28_asimov_0'
+scan_hzz_YH_asimov       = 'out/Scan_YH_Nov28_asimov_1'
+
+scan_combined_PTJ_asimov = 'out/Scan_PTJ_Nov30_asimov'
+scan_hgg_PTJ_asimov      = 'out/Scan_PTJ_Nov30_asimov_0'
+scan_hzz_PTJ_asimov      = 'out/Scan_PTJ_Nov28_asimov_1'
+
 
 ########################################
 # End
 ########################################
 if __name__ == "__main__":
-    keys = [ k for k in vars().keys() ]
-    for key in keys:
+    vardict = vars().keys()
+    for key in vardict.keys():
         if key.startswith('__'): continue
-        print '{0}: {1}'.format( key, vars()[key] )
+        print '{0}: {1}'.format( key, vardict[key] )

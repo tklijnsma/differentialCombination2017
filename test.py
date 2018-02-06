@@ -95,10 +95,12 @@ def main():
     optionHandler.set_parser(parser)
     optionHandler.process_modules([
         'scanCommands',
-        'differentialCombinations'
+        'differentialCombinations',
+        'differentialPlots'
         ])
 
     parser.add_argument( '--statonly', action='store_true' )
+    parser.add_argument( '--statsyst', action='store_true' )
 
 
     args = parser.parse_args()
