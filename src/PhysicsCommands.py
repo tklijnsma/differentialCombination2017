@@ -21,19 +21,28 @@ datestr = strftime( '%b%d' )
 
 import ROOT
 
-ROOT.gROOT.SetBatch(True)
-ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kError;")
-ROOT.gStyle.SetOptStat(0)
-c = ROOT.TCanvas( 'cpc', 'cpc', 1000, 800 )
+# ROOT.gROOT.SetBatch(True)
+# ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kError;")
+# ROOT.gStyle.SetOptStat(0)
+# c = ROOT.TCanvas( 'cpc', 'cpc', 1000, 800 )
 
-LeftMargin   = 0.15
-RightMargin  = 0.03
-BottomMargin = 0.15
-TopMargin    = 0.03
-c.SetLeftMargin( LeftMargin )
-c.SetRightMargin( RightMargin )
-c.SetBottomMargin( BottomMargin )
-c.SetTopMargin( TopMargin )
+# LeftMargin   = 0.15
+# RightMargin  = 0.03
+# BottomMargin = 0.15
+# TopMargin    = 0.03
+# c.SetLeftMargin( LeftMargin )
+# c.SetRightMargin( RightMargin )
+# c.SetBottomMargin( BottomMargin )
+# c.SetTopMargin( TopMargin )
+
+import TheoryCommands
+from TheoryCommands import c
+from TheoryCommands import SetCMargins
+from TheoryCommands import SetPlotDir
+from TheoryCommands import SaveAsRoot
+from TheoryCommands import SaveC
+from TheoryCommands import GetUniqueRootName
+from TheoryCommands import GetPlotBase
 
 
 ########################################
@@ -41,23 +50,23 @@ c.SetTopMargin( TopMargin )
 ########################################
 
 
-PLOTDIR = 'plots_{0}'.format(datestr)
+# PLOTDIR = 'plots_{0}'.format(datestr)
 
-def SaveC( outname, PNG=False, asROOT=False ):
-    global PLOTDIR
-    if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
+# def SaveC( outname, PNG=False, asROOT=False ):
+#     global PLOTDIR
+#     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
 
-    subdir = ''
-    if len(outname.split('/')) == 2:
-        subdir = outname.split('/')[0]
-        if not isdir( join( PLOTDIR, subdir ) ): os.makedirs( join( PLOTDIR, subdir ) )
+#     subdir = ''
+#     if len(outname.split('/')) == 2:
+#         subdir = outname.split('/')[0]
+#         if not isdir( join( PLOTDIR, subdir ) ): os.makedirs( join( PLOTDIR, subdir ) )
 
-    outname = join( PLOTDIR, subdir, basename(outname).replace('.pdf','').replace('.png','') )
-    c.SaveAs( outname + '.pdf' )
-    if PNG:
-        c.SaveAs( outname + '.png' )
-    if asROOT or TheoryCommands.SAVEROOT:
-        c.SaveAs( outname + '.root' )
+#     outname = join( PLOTDIR, subdir, basename(outname).replace('.pdf','').replace('.png','') )
+#     c.SaveAs( outname + '.pdf' )
+#     if PNG:
+#         c.SaveAs( outname + '.png' )
+#     if asROOT or TheoryCommands.SAVEROOT:
+#         c.SaveAs( outname + '.root' )
 
 
 ########################################
@@ -214,7 +223,7 @@ def BasicDrawScanResults(
     base.GetXaxis().SetTitleSize( 0.06 )
     base.GetYaxis().SetTitleSize( 0.06 )
 
-    leg = ROOT.TLegend( 0.5, 0.5, 1-RightMargin, 1-c.GetTopMargin() )
+    leg = ROOT.TLegend( 0.5, 0.5, 1-c.GetRightMargin(), 1-c.GetTopMargin() )
     leg.SetFillStyle(0)
     leg.SetBorderSize(0)
 

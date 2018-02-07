@@ -724,13 +724,13 @@ def main( args ):
 
         containers = []
 
-        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
+        combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_reweighted_asimov ) )
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
-            forceBestfitAtZero = True
+            # forceBestfitAtZero = True
             )
         combined.color = 1
         combined.name  = 'regular'
@@ -743,7 +743,7 @@ def main( args ):
             xCoupling,
             yCoupling,
             verbose   = False,
-            forceBestfitAtZero = True
+            # forceBestfitAtZero = True
             )
         profiledTotalXS.color = 4
         profiledTotalXS.name = 'profiledTotalXS'

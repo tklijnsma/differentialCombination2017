@@ -159,7 +159,9 @@ def couplingScan_Yukawa(args):
     elif args.hzz:
         nominal_datacard = LatestPaths.ws_hzz_Yukawa
     else:
-        nominal_datacard = LatestPaths.ws_combined_Yukawa
+        # nominal_datacard = LatestPaths.ws_combined_Yukawa
+        Commands.Warning('Picking the reweighted ws')
+        nominal_datacard = LatestPaths.ws_combined_Yukawa_reweighted
 
     if args.nominal:
         # scan.datacard = nominal_datacard

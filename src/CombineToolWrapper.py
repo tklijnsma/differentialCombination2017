@@ -40,6 +40,9 @@ from TheoryCommands import GetPlotBase
 ########################################
 
 
+# class TwoStageCombineScan(CombineScan):
+#     pass
+
 
 class CombineScan(Container):
     """Class that parses a CombineTool.py command for a scan"""

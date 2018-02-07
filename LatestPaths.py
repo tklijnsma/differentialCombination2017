@@ -267,7 +267,10 @@ scan_combined_Yukawa_fitOnlyNormalization_asimov            = 'out/Scan_Yukawa_N
 scan_combined_Yukawa_lumiStudy_asimov                       = 'out/Scan_Yukawa_Nov06_lumiStudy_asimov'
 scan_combined_Yukawa_noTheoryUncertainties_asimov           = 'out/Scan_Yukawa_Nov06_noTheoryUncertainties_asimov'
 scan_combined_Yukawa_uncorrelatedTheoryUncertainties_asimov = 'out/Scan_Yukawa_Nov06_uncorrelatedTheoryUncertainties_asimov'
-scan_combined_Yukawa_profiledTotalXS_asimov                 = 'out/Scan_Yukawa_Nov09_profiledTotalXS_asimov'
+
+# Now reweighted
+# scan_combined_Yukawa_profiledTotalXS_asimov                 = 'out/Scan_Yukawa_Nov09_profiledTotalXS_asimov'
+scan_combined_Yukawa_profiledTotalXS_asimov                 = 'out/Scan_Yukawa_Feb05_combined_profiledTotalXS_asimov'
 
 scan_combined_Yukawa_oneKappa_kappac                        = 'out/Scan_Yukawa_Nov06_oneKappa_kappac'
 scan_combined_Yukawa_oneKappa_kappac_asimov                 = 'out/Scan_Yukawa_Nov06_oneKappa_kappac_asimov'
