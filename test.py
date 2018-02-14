@@ -60,7 +60,6 @@ def main():
     # Old style imports
     yukawaCommands.AppendParserOptions(parser)
     topCommands.AppendParserOptions(parser)
-    onetimeplotsCommands.AppendParserOptions(parser)
     extrastudyCommands.AppendParserOptions(parser)
     crosscheckCommands.AppendParserOptions(parser)
 
@@ -74,7 +73,8 @@ def main():
         'scans_other',
         'differentialCombinations',
         'differentialPlots',
-        'lumiStudyPlots'
+        'lumiStudyPlots',
+        'onetimeplotsCommands',
         ])
 
     args = parser.parse_args()
@@ -111,9 +111,6 @@ def main():
 
     if args.extrastudyCommands:
         extrastudyCommands.main(args)
-
-    if args.onetimeplotsCommands:
-        onetimeplotsCommands.main(args)
 
     if args.crosscheckCommands:
         crosscheckCommands.main(args)
