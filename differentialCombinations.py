@@ -33,23 +33,82 @@ datestr = strftime( '%b%d' )
 ########################################
 # Main
 ########################################
+        
+@flag_as_option
+def pth_smH_scan(args):
+    ws = LatestPathsGetters.get_ws('pth_smH', args)
+    config = differential_config(args, ws, 'pth_smH')
+    scan_directly(args, config)
 
-# Test of new bins for hzz and hbb
 @flag_as_option
-def RenumberHzzProcesses_Jan24(args):
-    MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
-        LatestPaths.card_hzz_ggHxH_PTH_newBins_unprocessed,
-        )
+def pth_ggH_scan(args):
+    ws = LatestPathsGetters.get_ws('pth_ggH', args)
+    config = differential_config(args, ws, 'pth_ggH')
+    scan_directly(args, config)
+
 @flag_as_option
-def CombineCards_Jan24_hzz_hbb(args):
-    Commands.BasicCombineCards(
-        'suppliedInput/combinedCard_newBins_hzz_hbb_ggHxH_{0}.txt'.format(datestr),
-        'hzz=' + LatestPaths.card_hzz_ggHxH_PTH_newBins,
-        'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
-        )
+def njets_scan(args):
+    ws = LatestPathsGetters.get_ws('njets', args)
+    config = differential_config(args, ws, 'njets')
+    scan_directly(args, config)
+
+@flag_as_option
+def ptjet_scan(args):
+    ws = LatestPathsGetters.get_ws('ptjet', args)
+    config = differential_config(args, ws, 'ptjet')
+    scan_directly(args, config)
+
+@flag_as_option
+def rapidity_scan(args):
+    ws = LatestPathsGetters.get_ws('rapidity', args)
+    config = differential_config(args, ws, 'rapidity')
+    scan_directly(args, config)
+
+@flag_as_option
+def scan_all(real_args):
+    args = deepcopy(real_args)
+    decay_channels = [
+            'hgg',
+            'hzz',
+            # Workspaces are not working yet; Wait for Vs input
+            # 'hbb',
+            # 'combWithHbb',
+            'combination'
+            ]
+    try:
+        decay_channel = get_decay_channel_tag(args)
+        Commands.Warning('Decay channel {0} was specified, so only scans relating to it are submitted'.format(decay_channel))
+        decay_channels = [decay_channel]
+    except DecayChannelNotFoundError:
+        pass
+
+    scan_functions = [
+        pth_smH_scan,
+        pth_ggH_scan,
+        ptjet_scan,
+        rapidity_scan,
+        njets_scan,
+        ]
+
+    for decay_channel in decay_channels:
+        set_all_false(args)
+        setattr(args, decay_channel, True)
+        print '\nSubmitting scans for {0}'.format(decay_channel)
+        for function in scan_functions:
+            try:
+                function(args)
+            except NotImplementedError:
+                pass
+
 
 #____________________________________________________________________
 # Helpers
+
+def set_all_false(args):
+    args.hgg = False
+    args.hzz = False
+    args.hbb = False
+    args.combWithHbb = False
 
 lumiMultiplier300 = 8.356546
 lumiMultiplier3000 = 83.56546
@@ -124,9 +183,7 @@ def differential_config(args, ws, obs_name):
                 [ 'r2p1', 0.0, 8.0 ],
                 [ 'r3p1', 0.0, 8.0 ],
                 ])
-
     return base_config
-
 
 def differential_configs_for_scanning(args, original_base_config):
     base_config = deepcopy(original_base_config)
@@ -144,9 +201,7 @@ def differential_configs_for_scanning(args, original_base_config):
         config = deepcopy(base_config)
         config.POIs = [POI]
         configs_per_POI.append(config)
-
     return configs_per_POI
-
 
 def postfit_and_scan(args, postfit_config):
     # Make sure no previous run directory is overwritten
@@ -168,115 +223,10 @@ def scan_directly(args, base_config):
         scan = CombineToolWrapper.CombineScan(config)
         scan.run()
 
-        
-@flag_as_option
-def pth_smH_scan(args):
-    ws = LatestPathsGetters.get_ws('pth_smH', args)
-    config = differential_config(args, ws, 'pth_smH')
-    scan_directly(args, config)
 
-@flag_as_option
-def pth_ggH_scan(args):
-    ws = LatestPathsGetters.get_ws('pth_ggH', args)
-    config = differential_config(args, ws, 'pth_ggH')
-    scan_directly(args, config)
-
-@flag_as_option
-def njets_scan(args):
-    ws = LatestPathsGetters.get_ws('njets', args)
-    config = differential_config(args, ws, 'njets')
-    scan_directly(args, config)
-
-@flag_as_option
-def ptjet_scan(args):
-    ws = LatestPathsGetters.get_ws('ptjet', args)
-    config = differential_config(args, ws, 'ptjet')
-    scan_directly(args, config)
-
-@flag_as_option
-def rapidity_scan(args):
-    ws = LatestPathsGetters.get_ws('rapidity', args)
-    config = differential_config(args, ws, 'rapidity')
-    scan_directly(args, config)
-
-
-
-def set_all_false(args):
-    args.hgg = False
-    args.hzz = False
-    args.hbb = False
-    args.combWithHbb = False
-
-@flag_as_option
-def scan_all(real_args):
-    args = deepcopy(real_args)
-
-    decay_channels = [
-            'hgg',
-            'hzz',
-            # Workspaces are not working yet; Wait for Vs input
-            # 'hbb',
-            # 'combWithHbb',
-            'combination'
-            ]
-    try:
-        decay_channel = get_decay_channel_tag(args)
-        Commands.Warning('Decay channel {0} was specified, so only scans relating to it are submitted'.format(decay_channel))
-        decay_channels = [decay_channel]
-    except DecayChannelNotFoundError:
-        pass
-
-    scan_functions = [
-        pth_smH_scan,
-        pth_ggH_scan,
-        ptjet_scan,
-        rapidity_scan,
-        njets_scan,
-        ]
-
-    for decay_channel in decay_channels:
-        set_all_false(args)
-        setattr(args, decay_channel, True)
-        print '\nSubmitting scans for {0}'.format(decay_channel)
-        for function in scan_functions:
-            try:
-                function(args)
-            except NotImplementedError:
-                pass
-
-
-#____________________________________________________________________
-# pth_smH
-
-# Preprocessing
-@flag_as_option
-def RenameHggProcesses_smHcard(args):
-    MergeHGGWDatacards.RenameProcesses_Aug21(
-        LatestPaths.card_hgg_smH_PTH_unprocessed,
-        )
-@flag_as_option
-def RenumberHzzProcesses_smHcard(args):
-    MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
-        LatestPaths.card_hzz_smH_PTH_unprocessed,
-        )
-@flag_as_option
-def CombineCards_smHcard(args):
-    Commands.BasicCombineCards(
-        'suppliedInput/combinedCard_smH_{0}.txt'.format(datestr),
-        'hgg=' + LatestPaths.card_hgg_smH_PTH,
-        'hzz=' + LatestPaths.card_hzz_smH_PTH
-        )
-
-
-
-@flag_as_option
-def t2ws_all(args):
-    # pth_smH_t2ws(args)
-    pth_ggH_t2ws(args)
-    njets_t2ws(args)
-    rapidity_t2ws(args)
-    ptjet_t2ws(args)    
-
+########################################
+# t2ws
+########################################
 
 def t2ws(args, card, extraOptions=None):
     modelName = None
@@ -293,6 +243,14 @@ def t2ws(args, card, extraOptions=None):
         suffix = suffix,
         extraOptions = extraOptions
         )
+
+@flag_as_option
+def t2ws_all(args):
+    pth_smH_t2ws(args)
+    pth_ggH_t2ws(args)
+    njets_t2ws(args)
+    rapidity_t2ws(args)
+    ptjet_t2ws(args)    
 
 @flag_as_option
 def pth_smH_t2ws(args):
@@ -338,10 +296,50 @@ def ptjet_t2ws(args):
     t2ws(args, card, extraOptions)
 
 
+########################################
+# Preprocessing
+########################################
+
+#____________________________________________________________________
+# Test of new bins for hzz and hbb
+
+@flag_as_option
+def RenumberHzzProcesses_Jan24(args):
+    MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+        LatestPaths.card_hzz_ggHxH_PTH_newBins_unprocessed,
+        )
+@flag_as_option
+def CombineCards_Jan24_hzz_hbb(args):
+    Commands.BasicCombineCards(
+        'suppliedInput/combinedCard_newBins_hzz_hbb_ggHxH_{0}.txt'.format(datestr),
+        'hzz=' + LatestPaths.card_hzz_ggHxH_PTH_newBins,
+        'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
+        )
+
+#____________________________________________________________________
+# pth_smH
+
+@flag_as_option
+def RenameHggProcesses_smHcard(args):
+    MergeHGGWDatacards.RenameProcesses_Aug21(
+        LatestPaths.card_hgg_smH_PTH_unprocessed,
+        )
+@flag_as_option
+def RenumberHzzProcesses_smHcard(args):
+    MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+        LatestPaths.card_hzz_smH_PTH_unprocessed,
+        )
+@flag_as_option
+def CombineCards_smHcard(args):
+    Commands.BasicCombineCards(
+        'suppliedInput/combinedCard_smH_{0}.txt'.format(datestr),
+        'hgg=' + LatestPaths.card_hgg_smH_PTH,
+        'hzz=' + LatestPaths.card_hzz_smH_PTH
+        )
+
 #____________________________________________________________________
 # pth_ggH
 
-# Preprocessing
 @flag_as_option
 def RenameHggProcesses_Aug21(args):
     MergeHGGWDatacards.RenameProcesses_Aug21(
@@ -368,57 +366,6 @@ def CombineCards_Dec15_hbb(args):
         'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
         )
 
-@flag_as_option
-def pth_ggH_t2ws_OLD(args):
-    datacard = pth_ggH_get_card(args)
-    outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
-    if args.hzz:
-        Commands.BasicT2WS(
-            datacard,
-            manualMaps=[
-                '--PO \'map=.*/ggH_PTH_0_15:r_ggH_PTH_0_15[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_15_30:r_ggH_PTH_15_30[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_30_45:r_ggH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_45_85:r_ggH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_85_125:r_ggH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_125_200:r_ggH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_200_350:r_ggH_PTH_GT200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_GT350:r_ggH_PTH_GT200[1.0,0.0,3.0]\'',
-                ],
-            outputWS=outputWS
-            )
-    elif args.hbb:
-        Commands.BasicT2WS(
-            datacard,
-            manualMaps=[
-                # '--PO \'map=.*/ggH_PTH_200_350:r_ggH_PTH_200_350[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/ggH_PTH_350_600:r_ggH_PTH_350_600[1.0,0.0,10.0]\'',
-                '--PO \'map=.*/ggH_PTH_GT600:r_ggH_PTH_GT600[1.0,0.0,10.0]\'',
-                ],
-            outputWS=outputWS
-            )
-    elif args.combWithHbb:
-        Commands.BasicT2WS(
-            datacard,
-            manualMaps=[
-                '--PO \'map=.*/ggH_PTH_GT350:r_ggH_PTH_350_600[1.0,0.0,10.0]\'',
-                '--PO \'map=.*/ggH_PTH_350_600:r_ggH_PTH_350_600[1.0,0.0,10.0]\'',
-                '--PO \'map=.*/ggH_PTH_GT600:r_ggH_PTH_GT600[1.0,0.0,10.0]\'',
-                ],
-            smartMaps = [
-                ( r'.*/ggH_PTH_([\d\_GT]+)', r'r_ggH_PTH_\1[1.0,-1.0,4.0]' )
-                ],
-            outputWS=outputWS
-            )
-    else:
-        Commands.BasicT2WS(
-            datacard,
-            smartMaps = [
-                ( r'.*/ggH_PTH_([\d\_GT]+)', r'r_ggH_PTH_\1[1.0,-1.0,4.0]' )
-                ],
-            outputWS=outputWS
-            )
-
 #____________________________________________________________________
 # njets
 
@@ -439,28 +386,6 @@ def njets_combineCards(args):
         'hzz=' + LatestPaths.card_hzz_smH_NJ
         )
 
-@flag_as_option
-def njets_t2ws_OLD(args):
-    datacard = LatestPathsGetters.get_card('njets', args)
-    if args.hzz:
-        Commands.BasicT2WS(
-            datacard,
-            manualMaps=[
-                '--PO \'map=.*/smH_NJ_0:r_smH_NJ_0[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_NJ_1:r_smH_NJ_1[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_NJ_2:r_smH_NJ_2[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_NJ_3:r_smH_NJ_GE3[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_NJ_GE4:r_smH_NJ_GE3[1.0,-1.0,4.0]\'',
-                ],
-            )
-    else:
-        Commands.BasicT2WS(
-            datacard,
-            smartMaps = [
-                ( r'.*/smH_NJ_([\d\_GE]+)', r'r_smH_NJ_\1[1.0,-1.0,4.0]' )
-                ],
-            )
-
 #____________________________________________________________________
 # ptjet
 
@@ -477,31 +402,6 @@ def ptjet_combineCards(args):
         'hgg=' + LatestPaths.card_hgg_smH_PTJ,
         'hzz=' + LatestPaths.card_hzz_smH_PTJ
         )
-
-@flag_as_option
-def ptjet_t2ws_OLD(args):
-    datacard = LatestPathsGetters.get_card('ptjet', args)
-    if args.hzz:
-        Commands.BasicT2WS(
-            datacard,
-            manualMaps=[
-                '--PO \'map=.*/smH_PTJ_LT30:r_smH_PTJ_LT30[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTJ_30_55:r_smH_PTJ_30_55[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTJ_55_95:r_smH_PTJ_55_95[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTJ_95_120:r_smH_PTJ_GT95[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTJ_120_200:r_smH_PTJ_GT95[1.0,-1.0,4.0]\'',
-                '--PO \'map=.*/smH_PTJ_GT200:r_smH_PTJ_GT95[1.0,-1.0,4.0]\'',
-                ],
-            suffix = '_ptjet'
-            )
-    else:
-        Commands.BasicT2WS(
-            datacard,
-            smartMaps = [
-                ( r'.*/smH_PTJ_([pm\d\_GELT]+)', r'r_smH_PTJ_\1[1.0,-1.0,4.0]' )
-                ],
-            # suffix = '_ptjet'
-            )
 
 #____________________________________________________________________
 # rapidity
@@ -520,11 +420,79 @@ def rapidity_combineCards(args):
         'hzz=' + LatestPaths.card_hzz_smH_YH
         )
 
+
+########################################
+# Correlation matrices
+########################################
+
 @flag_as_option
-def rapidity_t2ws_OLD(args):
-    Commands.BasicT2WS(
-        LatestPathsGetters.get_card('rapidity', args),
-        smartMaps = [
-            ( r'.*/smH_YH_([pm\d\_GE]+)', r'r_smH_YH_\1[1.0,-1.0,4.0]' )
-            ],
-        )
+def all_corrMats(args):
+    corrMat_pth_smH(args)
+    corrMat_pth_ggH(args)
+    corrMat_njets(args)
+    corrMat_ptjet(args)
+    corrMat_rapidity(args)
+
+@flag_as_option
+def corrMat_pth_smH(args):
+    ws = LatestPathsGetters.get_ws('pth_smH', args)
+    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+
+@flag_as_option
+def corrMat_pth_ggH(args):
+    ws = LatestPathsGetters.get_ws('pth_ggH', args)
+    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+
+@flag_as_option
+def corrMat_njets(args):
+    ws = LatestPathsGetters.get_ws('njets', args)
+    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+
+@flag_as_option
+def corrMat_ptjet(args):
+    ws = LatestPathsGetters.get_ws('ptjet', args)
+    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+
+@flag_as_option
+def corrMat_rapidity(args):
+    ws = LatestPathsGetters.get_ws('rapidity', args)
+    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+
+@flag_as_option
+def plotCorrelationMatrices(args):
+
+    pth_smH = Container()
+    # pth_smH.ws           = LatestPaths.ws_combined_smH
+    pth_smH.ws           = LatestPathsGetters.get_ws('pth_smH', args)
+    pth_smH.corrRootFile = LatestPaths.correlationMatrix_PTH
+    pth_smH.xTitle       = 'p_{T}^{H} (GeV)'
+    PlotCommands.PlotCorrelationMatrix( pth_smH )
+
+    pth_ggH = Container()
+    # pth_ggH.ws           = LatestPaths.ws_combined_ggH_xHfixed
+    pth_ggH.ws           = LatestPathsGetters.get_ws('pth_ggH', args)
+    pth_ggH.corrRootFile = LatestPaths.correlationMatrix_PTH_ggH
+    pth_ggH.xTitle       = 'p_{T}^{H} (GeV) (non-ggH fixed to SM)'
+    PlotCommands.PlotCorrelationMatrix( pth_ggH )
+
+    njets = Container()
+    # njets.ws           = LatestPaths.ws_combined_smH_NJ
+    njets.ws           = LatestPathsGetters.get_ws('njets', args)
+    njets.corrRootFile = LatestPaths.correlationMatrix_NJ
+    njets.xTitle       = 'N_{jets}'
+    PlotCommands.PlotCorrelationMatrix( njets )
+
+    rapidity = Container()
+    # rapidity.ws           = LatestPaths.ws_combined_smH_YH
+    rapidity.ws           = LatestPathsGetters.get_ws('rapidity', args)
+    rapidity.corrRootFile = LatestPaths.correlationMatrix_YH
+    rapidity.xTitle       = '|y_{H}|'
+    PlotCommands.PlotCorrelationMatrix( rapidity )
+
+    ptjet = Container()
+    # ptjet.ws           = LatestPaths.ws_combined_smH_PTJ
+    ptjet.ws           = LatestPathsGetters.get_ws('ptjet', args)
+    ptjet.corrRootFile = LatestPaths.correlationMatrix_PTJ
+    ptjet.xTitle       = 'p_{T}^{j1}'
+    PlotCommands.PlotCorrelationMatrix( ptjet )
+
