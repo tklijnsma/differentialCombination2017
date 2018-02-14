@@ -41,9 +41,11 @@ def get_generic(prefix, obs_name, args=None, decay_channel=None, asimov=None, st
         else:
             statonly = args.statonly
 
+    if args.lumiScale and not(prefix == 'card'):
+        key += '_lumiScale'
     if statonly:
         key += '_statonly'
-    if asimov:
+    if asimov and not(prefix == 'ws' or prefix == 'card'):
         key += '_asimov'
     if not key in vardict:
         raise NotImplementedError(

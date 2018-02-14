@@ -24,6 +24,7 @@ import LatestBinning
 from Container import Container
 import PlotCommands
 from differentialTools import *
+import CombineToolWrapper
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -50,144 +51,155 @@ def CombineCards_Jan24_hzz_hbb(args):
 #____________________________________________________________________
 # Helpers
 
-def get_all_vars_except_POIs_and_envelop(args, postfit, verbose=False):
-    with Commands.OpenRootFile(postfit) as postfit_fp:
-        w = postfit_fp.Get('w')
+lumiMultiplier300 = 8.356546
+lumiMultiplier3000 = 83.56546
+lumiMultiplier = lumiMultiplier300
 
-    floating_regexps = [
-        r'env_pdf_\d+_13TeV_',
-        r'n_exp_binhgg_.*_bkg_mass',
-        r'shapeBkg_bkg_mass_.*_norm',
-        r'CMS_.*_mass',
-        ]
+def differential_config(args, ws, obs_name):
+    base_config = CombineToolWrapper.CombineConfig(args)
+    base_config.onBatch       = True
+    base_config.nPoints       = 55
+    base_config.nPointsPerJob = 5
+    base_config.queue         = 'short.q'
 
-    nuisances = Commands.ListSet(w, 'nuisances')
-    POIs = Commands.ListSet(w)
+    if args.asimov:
+        base_config.asimov = True
+    else:
+        base_config.asimov = False
 
-    freezing_variables = []
-    floating_variables = []
-    constant_variables = []
+    base_config.decay_channel = get_decay_channel_tag(args)    
+    if args.hzz or args.hbb:
+        base_config.nPointsPerJob = base_config.nPoints
+    if args.combWithHbb:
+        base_config.nPoints = 150
+        base_config.nPointsPerJob = 2
+    if args.hbb or args.combWithHbb:
+        base_config.minimizer_settings = [
+            '--minimizerStrategy 2',
+            '--minimizerTolerance 0.001',
+            '--robustFit 1',
+            '--minimizerAlgoForMinos Minuit2,Migrad',
+            ]
 
-    var_set = w.allVars()
-    var_iterable = var_set.createIterator()
-    for i_var in xrange(var_set.getSize()):
-        variable = var_iterable.Next()
-        var_name = variable.GetName()
-        if variable.isConstant():
-            # No need to freeze
-            constant_variables.append(var_name)
-            continue
-        elif var_name in nuisances or var_name in POIs:
-            # Should be handled by 'rgx{.*}'
-            continue
-        else:
-            for pat in floating_regexps:
-                if re.match(pat, var_name):
-                    floating_variables.append(var_name)
-                    break
-            else:
-                freezing_variables.append(var_name)
+    base_config.datacard = ws
+    base_config.subDirectory = 'out/Scan_{0}_{1}_{2}'.format(obs_name, datestr, base_config.decay_channel)
+    if args.lumiScale:
+        base_config.hardPhysicsModelParameters.append('lumiScale={0}'.format(lumiMultiplier))
+        base_config.freezeNuisances.append('lumiScale')
+        base_config.subDirectory += '_lumiScale{0}'.format(str(lumiMultiplier).replace('.','p'))
+    if args.statonly:
+        base_config.subDirectory += '_statonly'
+    if args.asimov:
+        base_config.subDirectory += '_asimov'
 
-    freezing_variables = ['rgx{.*}'] + freezing_variables
-    floating_variables.extend(POIs)
-    
-    if verbose:
-        print '\nList of variables to freeze:'
-        print ','.join(freezing_variables)
-        print '\nList of variables to float:'
-        print ','.join(floating_variables)
-        print '\nList of variables that are constant:'
-        print ','.join(constant_variables)
+    POIs = Commands.ListPOIs(ws)
+    POIrange = [ -1.0, 4.0 ]
+    if args.hzz:
+        POIrange[0] = 0.0
+    if args.hbb:
+        POIrange = [ -10.0, 10.0 ]
+    if args.combWithHbb:
+        POIrange = [ 0.0, 8.5 ]
+    if args.lumiScale:
+        POIrange = [ 0.7, 1.3 ]
+        base_config.nPoints = 35
+        if lumiMultiplier > 10.:
+            POIrange = [ 0.9, 1.1 ]
 
-    if len(','.join(freezing_variables)) > 10000:
-        raise ValueError(
-            'The string length for the list of frozen variables exceeds 10000, '
-            'which will crash when loaded into combine.'
+    base_config.POIs = POIs
+    base_config.PhysicsModelParameters = [ '{0}=1.0'.format(p) for p in POIs ]
+    base_config.PhysicsModelParameterRanges = [ '{0}={1},{2}'.format(p, *POIrange) for p in POIs ]
+    if args.hbb or args.combWithHbb:
+        Commands.Warning(
+            'For hbb: qcdeff and r*p* parameters are given ranges! '
+            'Should decide on (freezing) behaviour during postfit/scan'
             )
-    return freezing_variables
-
-def make_postfit(args, ws, observable_tag=None):
-    tag = 'POSTFIT_' + basename(ws).replace('.root','')
-    if not(observable_tag is None):
-        tag += '_' + observable_tag
-    if args.asimov:
-        tag += '_asimov'
-    cmd = [
-        'combineTool.py',
-        abspath(ws),
-        '-n _{0}'.format(tag),
-        '-M MultiDimFit',
-        '--cminDefaultMinimizerType Minuit2',
-        '--cminDefaultMinimizerAlgo migrad',
-        '--floatOtherPOIs=1',
-        # '-P "{0}"'.format( POI ),
-        # '--setPhysicsModelParameterRanges "{0}"={1:.3f},{2:.3f} '.format( POI, POIRange[0], POIRange[1] ),
-        # '--setPhysicsModelParameters {0}'.format( ','.join([ iterPOI + '=1.0' for iterPOI in allPOIs ]) ),
-        '-m 125.00',
-        '--saveNLL',
-        '--saveInactivePOI 1',
-        '--saveWorkspace',
-        '--job-mode psi --task-name {0} --sub-opts=\'-q short.q\' '.format(tag),
-        ]
-    if args.asimov:
-        cmd.append( '-t -1' )
-
-    if not 't3' in os.environ['HOSTNAME']:
-        raise NotImplementedError('\'t3\' not in $HOSTNAME; Is this executed from the T3?')
-
-    with Commands.EnterDirectory('out/postfitWss_{0}'.format(datestr)):
-        Commands.executeCommand(cmd)
-
-class GenericDifferentialObservableScan(object):
-    """docstring for GenericDifferentialObservableScan"""
-
-    setPhysicsModelParameters = True
-    nPoints = 45
-    nPointsPerJob = 3
-    POIRange = [ -1.0, 4.0 ]
-
-    def __init__(self, args, obs_name, ws=None):
-        self.args = args
-        self.obs_name = obs_name
-        self.decay_channel = get_decay_channel_tag(args)
-        if not(ws is None):
-            self.set_ws(ws)
-
-        self.extraOptions = []
-        self.physicsModelParameterRanges = []
-
-        self.jobDirectory = 'out/Scan_{0}_{1}_{2}'.format(self.obs_name, datestr, self.decay_channel)
-        if args.statonly:
-            self.nPointsPerJob = 6
-            self.jobDirectory += '_statonly'
-            variables_to_freeze = get_all_vars_except_POIs_and_envelop(self.args, self.ws)
-            self.extraOptions.extend([
-                '--snapshotName MultiDimFit',
-                '--skipInitialFit',
-                '--freezeNuisances {0}'.format(','.join(variables_to_freeze))
+        base_config.PhysicsModelParameterRanges.extend([
+                [ 'qcdeff', 0.001, 8.0 ],
+                [ 'r1p0', 0.0, 8.0 ],
+                [ 'r2p0', 0.0, 8.0 ],
+                [ 'r3p0', 0.0, 8.0 ],
+                [ 'r0p1', 0.0, 8.0 ],
+                [ 'r1p1', 0.0, 8.0 ],
+                [ 'r2p1', 0.0, 8.0 ],
+                [ 'r3p1', 0.0, 8.0 ],
                 ])
-            self.setPhysicsModelParameters = False
 
-        if args.hzz or args.hbb:
-            self.nPointsPerJob = self.nPoints
+    return base_config
 
-    def set_ws(self, ws):
-        self.ws = ws
 
-    def run(self):
-        Commands.BasicCombineTool(
-            self.ws,
-            POIpattern    = '*',
-            POIRange      = self.POIRange,
-            nPoints       = self.nPoints,
-            nPointsPerJob = self.nPointsPerJob,
-            jobDirectory  = self.jobDirectory,
-            queue         = 'short.q',
-            asimov        = self.args.asimov,
-            extraOptions  = self.extraOptions,
-            setPhysicsModelParameters = self.setPhysicsModelParameters,
-            physicsModelParameterRanges = self.physicsModelParameterRanges
-            )
+def differential_configs_for_scanning(args, original_base_config):
+    base_config = deepcopy(original_base_config)
+
+    if args.statonly:
+        base_config.freezeNuisances.append('rgx{.*}')
+
+    # Overwrite get_name function to include the POI name
+    def new_get_name(self):
+        return 'bPOI_{0}_ePOI_{1}'.format(self.POIs[0], basename(self.datacard).replace('.root',''))
+    base_config.get_name = new_get_name.__get__(base_config, type(base_config))
+
+    configs_per_POI = []
+    for POI in base_config.POIs:
+        config = deepcopy(base_config)
+        config.POIs = [POI]
+        configs_per_POI.append(config)
+
+    return configs_per_POI
+
+
+def postfit_and_scan(args, postfit_config):
+    # Make sure no previous run directory is overwritten
+    postfit_config.make_unique_directory()
+
+    postfit = CombineToolWrapper.CombinePostfit(postfit_config)
+    postfit.run()
+    postfit_ws = postfit.get_output()
+
+    scan_configs = differential_configs_for_scanning(args, postfit_config)
+    for config in scan_configs:
+        scan = CombineToolWrapper.CombineScanFromPostFit(config)
+        scan.run(postfit_ws)
+
+def scan_directly(args, base_config):
+    base_config.make_unique_directory()
+    scan_configs = differential_configs_for_scanning(args, base_config)
+    for config in scan_configs:
+        scan = CombineToolWrapper.CombineScan(config)
+        scan.run()
+
+        
+@flag_as_option
+def pth_smH_scan(args):
+    ws = LatestPathsGetters.get_ws('pth_smH', args)
+    config = differential_config(args, ws, 'pth_smH')
+    scan_directly(args, config)
+
+@flag_as_option
+def pth_ggH_scan(args):
+    ws = LatestPathsGetters.get_ws('pth_ggH', args)
+    config = differential_config(args, ws, 'pth_ggH')
+    scan_directly(args, config)
+
+@flag_as_option
+def njets_scan(args):
+    ws = LatestPathsGetters.get_ws('njets', args)
+    config = differential_config(args, ws, 'njets')
+    scan_directly(args, config)
+
+@flag_as_option
+def ptjet_scan(args):
+    ws = LatestPathsGetters.get_ws('ptjet', args)
+    config = differential_config(args, ws, 'ptjet')
+    scan_directly(args, config)
+
+@flag_as_option
+def rapidity_scan(args):
+    ws = LatestPathsGetters.get_ws('rapidity', args)
+    config = differential_config(args, ws, 'rapidity')
+    scan_directly(args, config)
+
+
 
 def set_all_false(args):
     args.hgg = False
@@ -195,88 +207,42 @@ def set_all_false(args):
     args.hbb = False
     args.combWithHbb = False
 
-#____________________________________________________________________
-@flag_as_option
-def postfit_all(real_args):
-    args = deepcopy(real_args)
-
-    for decay_channel in [
-            'hgg',
-            'hzz',
-            # Workspaces are not working yet; Wait for Vs input
-            # 'hbb',
-            # 'combWithHbb',
-            'combination'
-            ]:
-        set_all_false(args)
-        setattr(args, decay_channel, True)
-        print '\nMaking postfits for {0}'.format(decay_channel)
-
-        try:
-            pth_smH_postfit(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            pth_ggH_postfit(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            ptjet_postfit(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            rapidity_postfit(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            njets_postfit(args)
-        except NotImplementedError:
-            pass
-
 @flag_as_option
 def scan_all(real_args):
     args = deepcopy(real_args)
 
-    for decay_channel in [
+    decay_channels = [
             'hgg',
             'hzz',
             # Workspaces are not working yet; Wait for Vs input
             # 'hbb',
             # 'combWithHbb',
             'combination'
-            ]:
+            ]
+    try:
+        decay_channel = get_decay_channel_tag(args)
+        Commands.Warning('Decay channel {0} was specified, so only scans relating to it are submitted'.format(decay_channel))
+        decay_channels = [decay_channel]
+    except DecayChannelNotFoundError:
+        pass
+
+    scan_functions = [
+        pth_smH_scan,
+        pth_ggH_scan,
+        ptjet_scan,
+        rapidity_scan,
+        njets_scan,
+        ]
+
+    for decay_channel in decay_channels:
         set_all_false(args)
         setattr(args, decay_channel, True)
         print '\nSubmitting scans for {0}'.format(decay_channel)
-
-        try:
-            pth_smH_scan(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            pth_ggH_scan(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            ptjet_scan(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            rapidity_scan(args)
-        except NotImplementedError:
-            pass
-
-        try:
-            njets_scan(args)
-        except NotImplementedError:
-            pass
+        for function in scan_functions:
+            try:
+                function(args)
+            except NotImplementedError:
+                pass
 
 
 #____________________________________________________________________
@@ -301,44 +267,75 @@ def CombineCards_smHcard(args):
         'hzz=' + LatestPaths.card_hzz_smH_PTH
         )
 
+
+
+@flag_as_option
+def t2ws_all(args):
+    # pth_smH_t2ws(args)
+    pth_ggH_t2ws(args)
+    njets_t2ws(args)
+    rapidity_t2ws(args)
+    ptjet_t2ws(args)    
+
+
+def t2ws(args, card, extraOptions=None):
+    modelName = None
+    suffix = None
+    
+    if args.lumiScale:
+        modelName = 'lumiScaleDifferentialModel'
+        suffix = 'lumiScale'
+    
+    Commands.BasicT2WSwithModel(
+        card,
+        pathToModel = 'physicsModels/DifferentialModel.py',
+        modelName = modelName,
+        suffix = suffix,
+        extraOptions = extraOptions
+        )
+
 @flag_as_option
 def pth_smH_t2ws(args):
     card = LatestPathsGetters.get_card('pth_smH', args)
+    extraOptions = []
     if args.hzz:
-        Commands.BasicT2WS(
-            card,
-            manualMaps = [
-                '--PO \'map=.*/smH_PTH_0_15:r_smH_PTH_0_15[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_15_30:r_smH_PTH_15_30[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_30_45:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_45_85:r_smH_PTH_30_85[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_85_125:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_125_200:r_smH_PTH_85_200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_200_350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-                '--PO \'map=.*/smH_PTH_GT350:r_smH_PTH_GT200[1.0,0.0,3.0]\'',
-                ],
-            )
-    elif args.hbb:
-        raise NotImplementedError('Case --hbb in t2ws_smH is not yet implemented')
-    elif args.combWithHbb:
-        raise NotImplementedError('Case --combWithHbb in t2ws_smH is not yet implemented')
-    else:
-        Commands.BasicT2WS(
-            LatestPaths.card_combined_smH_PTH,
-            smartMaps = [
-                ( r'.*/smH_PTH_([\d\_GT]+)', r'r_smH_PTH_\1[1.0,-1.0,4.0]' )
-                ],
-            )
+        extraOptions.append('--PO \'binning=0,15,30,85,200\'')
+    t2ws(args, card, extraOptions)
 
 @flag_as_option
-def pth_smH_scan(args):
-    ws = LatestPathsGetters.get_ws('pth_smH', args) if not args.statonly else LatestPathsGetters.get_postfit(pth_smH, args)
-    scan = GenericDifferentialObservableScan(args, 'pth_smH', ws)
-    scan.run()
+def pth_ggH_t2ws(args):
+    card = LatestPathsGetters.get_card('pth_ggH', args)
+    extraOptions = []
+    if args.hzz:
+        extraOptions.append('--PO \'binning=0,15,30,85,200\'')
+    t2ws(args, card, extraOptions)
 
 @flag_as_option
-def pth_smH_postfit(args):
-    make_postfit(args, LatestPathsGetters.get_ws('pth_smH', args), 'pth_smH')
+def njets_t2ws(args):
+    card = LatestPathsGetters.get_card('njets', args)
+    extraOptions = []
+    if args.hzz:
+        extraOptions.append('--PO \'binning=0,1,2,3\'')
+    t2ws(args, card, extraOptions)
+
+@flag_as_option
+def rapidity_t2ws(args):
+    card = LatestPathsGetters.get_card('rapidity', args)
+    t2ws(args, card, extraOptions=None)
+
+@flag_as_option
+def ptjet_t2ws(args):
+    card = LatestPathsGetters.get_card('ptjet', args)
+    extraOptions = []
+    if args.hzz:
+        raise NotImplementedError(
+            '--hzz for ptjet does not work yet!!'
+            )
+        extraOptions.extend([
+            '--PO \'binning=30,55,95\'',
+            '--PO \'make_underflow\''
+            ])
+    t2ws(args, card, extraOptions)
 
 
 #____________________________________________________________________
@@ -372,7 +369,7 @@ def CombineCards_Dec15_hbb(args):
         )
 
 @flag_as_option
-def pth_ggH_t2ws(args):
+def pth_ggH_t2ws_OLD(args):
     datacard = pth_ggH_get_card(args)
     outputWS = basename(datacard).replace( '.txt', '_xHfixed.root' )
     if args.hzz:
@@ -422,48 +419,6 @@ def pth_ggH_t2ws(args):
             outputWS=outputWS
             )
 
-@flag_as_option
-def pth_ggH_scan(args):
-    ws = LatestPathsGetters.get_ws('pth_ggH', args) if not args.statonly else LatestPathsGetters.get_postfit(pth_ggH, args)
-    scan = GenericDifferentialObservableScan(args, 'pth_ggH', ws)
-
-    if args.hzz:
-        scan.POIRange = [ 0.0, 4.0 ]
-    elif args.hbb:
-        scan.POIRange = [ -10.0, 10.0 ]
-        scan.extraOptions.extend([
-            '--minimizerStrategy 2',
-            '--minimizerTolerance 0.001',
-            '--robustFit 1',
-            '--minimizerAlgoForMinos Minuit2,Migrad',
-            ])
-    elif args.combWithHbb:
-        scan.POIRange = [ 0.0, 8.5 ]
-        scan.nPoints = 150
-        scan.nPointsPerJob = 2
-        scan.extraOptions.extend([
-            '--minimizerStrategy 2',
-            '--minimizerTolerance 0.001',
-            '--robustFit 1',
-            '--minimizerAlgoForMinos Minuit2,Migrad',
-            ])
-        if not args.statonly:
-            scan.physicsModelParameterRanges = [
-                [ 'qcdeff', 0.001, 8.0 ],
-                [ 'r1p0', 0.0, 8.0 ],
-                [ 'r2p0', 0.0, 8.0 ],
-                [ 'r3p0', 0.0, 8.0 ],
-                [ 'r0p1', 0.0, 8.0 ],
-                [ 'r1p1', 0.0, 8.0 ],
-                [ 'r2p1', 0.0, 8.0 ],
-                [ 'r3p1', 0.0, 8.0 ],
-                ]
-    scan.run()
-
-@flag_as_option
-def pth_ggH_postfit(args):
-    make_postfit(args, LatestPathsGetters.get_ws('pth_ggH', args), 'pth_ggH')
-
 #____________________________________________________________________
 # njets
 
@@ -485,7 +440,7 @@ def njets_combineCards(args):
         )
 
 @flag_as_option
-def njets_t2ws(args):
+def njets_t2ws_OLD(args):
     datacard = LatestPathsGetters.get_card('njets', args)
     if args.hzz:
         Commands.BasicT2WS(
@@ -506,21 +461,6 @@ def njets_t2ws(args):
                 ],
             )
 
-@flag_as_option
-def njets_scan(args):
-    ws = LatestPathsGetters.get_ws('njets', args) if not args.statonly else LatestPathsGetters.get_postfit(njets, args)
-    scan = GenericDifferentialObservableScan(args, 'njets', ws)
-    scan.nPoints = 55
-    scan.nPointsPerJob = 5
-    if args.hzz:
-        scan.POIRange = [ 0.0, 4.0 ]
-        scan.nPointsPerJob = scan.nPoints
-    scan.run()
-
-@flag_as_option
-def njets_postfit(args):
-    make_postfit(args, LatestPathsGetters.get_ws('njets', args), 'njets')
-
 #____________________________________________________________________
 # ptjet
 
@@ -539,7 +479,7 @@ def ptjet_combineCards(args):
         )
 
 @flag_as_option
-def ptjet_t2ws(args):
+def ptjet_t2ws_OLD(args):
     datacard = LatestPathsGetters.get_card('ptjet', args)
     if args.hzz:
         Commands.BasicT2WS(
@@ -563,21 +503,6 @@ def ptjet_t2ws(args):
             # suffix = '_ptjet'
             )
 
-@flag_as_option
-def ptjet_scan(args):
-    ws = LatestPathsGetters.get_ws('ptjet', args) if not args.statonly else LatestPathsGetters.get_postfit(ptjet, args)
-    scan = GenericDifferentialObservableScan(args, 'ptjet', ws)
-    scan.nPoints = 55
-    scan.nPointsPerJob = 5
-    if args.hzz:
-        scan.POIRange = [ 0.0, 4.0 ]
-        scan.nPointsPerJob = scan.nPoints
-    scan.run()
-
-@flag_as_option
-def ptjet_postfit(args):
-    make_postfit(args, LatestPathsGetters.get_ws('ptjet', args), 'ptjet')
-
 #____________________________________________________________________
 # rapidity
 
@@ -596,25 +521,10 @@ def rapidity_combineCards(args):
         )
 
 @flag_as_option
-def rapidity_t2ws(args):
+def rapidity_t2ws_OLD(args):
     Commands.BasicT2WS(
         LatestPathsGetters.get_card('rapidity', args),
         smartMaps = [
             ( r'.*/smH_YH_([pm\d\_GE]+)', r'r_smH_YH_\1[1.0,-1.0,4.0]' )
             ],
         )
-
-@flag_as_option
-def rapidity_scan(args):
-    ws = LatestPathsGetters.get_ws('rapidity', args) if not args.statonly else LatestPathsGetters.get_postfit('rapidity', args)
-    scan = GenericDifferentialObservableScan(args, 'rapidity', ws)
-    scan.nPoints = 55
-    scan.nPointsPerJob = 5
-    if args.hzz:
-        scan.POIRange = [ 0.0, 4.0 ]
-        scan.nPointsPerJob = scan.nPoints
-    scan.run()
-
-@flag_as_option
-def rapidity_postfit(args):
-    make_postfit(args, LatestPathsGetters.get_ws('rapidity', args), 'rapidity')

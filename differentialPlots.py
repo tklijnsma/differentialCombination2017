@@ -23,6 +23,7 @@ import LatestPathsGetters
 import LatestBinning
 from Container import Container
 import PlotCommands
+import DifferentialTable
 from differentialTools import *
 
 from time import strftime
@@ -52,8 +53,8 @@ def prepare_container(
         title=None,
         verbose=False,
         draw_parabolas=False,
+        scale_scans=None
         ):
-
     POIs = Commands.ListPOIs( ws )
     POIs.sort( key=Commands.POIsorter )
     if verbose: print 'Sorted POIs:', POIs
@@ -64,6 +65,10 @@ def prepare_container(
         # pattern = pattern,
         filterNegatives = True
         )
+    if scale_scans:
+        for scan in scans:
+            for i in xrange(len(scan)):
+                scan[i] = ( scan[i][0], scale_scans*scan[i][1] )
 
     if draw_parabolas:
         draw_parabolas(container)
@@ -98,7 +103,7 @@ def prepare_SM_container(crosssection, binBoundaries):
     SM = Container()
     SM.name = 'SM'
     SM.title = 'SM'
-    SM.color = 14
+    SM.color = 16
     SM.crosssection = crosssection
     SM.binBoundaries = binBoundaries
     SM.ratios = [ 1.0 for i in xrange(len(crosssection)) ]
@@ -113,32 +118,168 @@ def get_scan_dir(args, obs_name):
         key += '_asimov'
     return getattr(LatestPaths, key)
 
+def read_container_base(args, obs_name, SMcrosssections, decay_channel, statonly=False):
+    ws = LatestPathsGetters.get_ws(obs_name, args, decay_channel=decay_channel)
+    scan = LatestPathsGetters.get_scan(obs_name, args, decay_channel=decay_channel, statonly=statonly)
+    container = prepare_container(decay_channel, ws, scan)
+    container.name += '_statonly' if statonly else ''
+    container.SMcrosssections = SMcrosssections
+    container.statonly = statonly
+    container.suppress_text = statonly
+    container.error_line = not(statonly)
+    return container
 
-def read_containers(args, obs_name, SMcrosssections, decay_channels=['combination', 'hgg', 'hzz']):
-    containers = {}
-    for statonly in [True, False]:
-        containers[statonly] = []
+def read_container(args, obs_name, decay_channel=['combination']):
+    SMcrosssections = get_obs(obs_name, decay_channel).crosssection_over_binwidth()
+    container = read_container_base(args, obs_name, SMcrosssections, decay_channel)
+    return container
+
+def read_containers_statsyst(args, obs_name, decay_channels=['combination']):
+    containers = []
+    for statonly in [False, True]:
         for decay_channel in decay_channels:
-            ws = LatestPathsGetters.get_ws(obs_name, args, decay_channel=decay_channel)
-            scan = LatestPathsGetters.get_scan(obs_name, args, decay_channel=decay_channel, statonly=statonly)
-            container = prepare_container(decay_channel, ws, scan)
-            container.name += '_statonly' if statonly else ''
-            container.SMcrosssections = SMcrosssections[decay_channel]
-            container.statonly = statonly
-            container.suppress_text = statonly
-            container.error_line = not(statonly)
-            containers[statonly].append(container)
-    # Sort to full first, statonly second
-    containers = containers[False] + containers[True]
-
-    for container in containers:
-        draw_parabolas(container)
+            container = read_container_base(
+                args,
+                obs_name,
+                get_obs(obs_name, decay_channel).crosssection_over_binwidth(),
+                decay_channel,
+                statonly
+                )
+            container.suppress_text = False
+            container.title = 'stat.' + ( ' #oplus syst.' if not statonly else '' )
+            containers.append(container)
+    # for container in containers:
+    #     draw_parabolas(container)
     return containers
+
 
 ########################################
 # Plotting
 ########################################
 
+def get_obs(obs_name, decay_channel):
+    return {
+        'pth_smH'  : pth_smH_obs,
+        'pth_ggH'  : pth_ggH_obs,
+        'njets'    : njets_obs,
+        'ptjet'    : ptjet_obs,
+        'rapidity' : rapidity_obs,
+        }[obs_name](decay_channel)
+
+def pth_smH_obs(decay_channel):
+    return {
+        'hgg' : LatestBinning.obs_pth,
+        'hzz' : LatestBinning.obs_pth_hzzBinning,
+        'combination' : LatestBinning.obs_pth,
+        }[decay_channel]
+
+def pth_ggH_obs(decay_channel):
+    return {
+        'hgg' : LatestBinning.obs_pth_ggH,
+        'hzz' : LatestBinning.obs_pth_ggH_hzzBinning,
+        'combination' : LatestBinning.obs_pth_ggH,
+        }[decay_channel]
+
+def njets_obs(decay_channel):
+    return {
+        'hgg' : LatestBinning.obs_njets,
+        'hzz' : LatestBinning.obs_njets_hzzBinning,
+        'combination' : LatestBinning.obs_njets,
+        }[decay_channel]
+
+def ptjet_obs(decay_channel):
+    return {
+        'hgg' : LatestBinning.obs_ptjet,
+        'hzz' : LatestBinning.obs_ptjet_hzzBinning,
+        'combination' : LatestBinning.obs_ptjet,
+        }[decay_channel]
+
+def rapidity_obs(decay_channel):
+    return {
+        'hgg' : LatestBinning.obs_yh,
+        'hzz' : LatestBinning.obs_yh,
+        'combination' : LatestBinning.obs_yh,
+        }[decay_channel]
+
+
+#____________________________________________________________________
+@flag_as_option
+def all_tables(args):
+    Commands.DisableWarnings()
+    pth_smH_tables(args)
+    pth_ggH_tables(args)
+    ptjet_tables(args)
+    njets_tables(args)
+    rapidity_tables(args)
+    Commands.DisableWarnings(False)
+
+@flag_as_option
+def pth_smH_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='pth_smH', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def pth_ggH_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='pth_ggH', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def ptjet_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='ptjet', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def njets_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='njets', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def rapidity_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='rapidity', last_bin_is_overflow=False)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+
+#____________________________________________________________________
 @flag_as_option
 def plot_all_differentials(args):
     pth_smH_plot(args)
@@ -148,19 +289,50 @@ def plot_all_differentials(args):
     ptjet_plot(args)
     rapidity_plot(args)
 
+
 #____________________________________________________________________
 @flag_as_option
 def pth_smH_plot(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
 
-    if args.statsyst:
-        SMcrosssections = {
-            'hgg' : LatestBinning.obs_pth.crosssection_over_binwidth(),
-            'hzz' : LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth(),
-            'combination' : LatestBinning.obs_pth.crosssection_over_binwidth(),
-            }
-        containers = read_containers(args, 'pth_smH', SMcrosssections)
+    if args.lumiScale:
+        containers = []
 
+        lumi35 = prepare_container('lumi35', LatestPaths.ws_combined_smH, LatestPaths.scan_combination_pth_smH_asimov)
+        lumi35.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        lumi35.color = 1
+        containers.append(lumi35)
+
+        # lumi35_new = prepare_container('lumi35_new', LatestPaths.ws_combined_smH, 'out/Scan_pth_smH_Feb12_combination_asimov')
+        # lumi35_new.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        # lumi35_new.color = 4
+        # containers.append(lumi35_new)
+
+        lumi300 = prepare_container('lumi300', LatestPaths.ws_hgg_smH, 'out/Scan_pth_smH_Feb12_combination_lumiScale_asimov_1')
+        lumi300.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        lumi300.color = 2
+        containers.append(lumi300)
+
+        lumi3000 = prepare_container(
+            'lumi3000', LatestPaths.ws_hgg_smH, 'out/Scan_pth_smH_Feb12_combination_lumiScale_asimov_1',
+            scale_scans = 10.
+            )
+        lumi3000.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        lumi3000.color = 4
+        containers.append(lumi3000)
+
+
+        # lumi35 = prepare_container('lumi35', LatestPaths.ws_hgg_smH, LatestPaths.scan_hgg_PTH)
+        # lumi35.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+        # lumi35.color = 1
+        # containers.append(lumi35)
+
+        for container in containers:
+            draw_parabolas(container)
+
+    elif args.statsyst:
+        containers = read_containers_statsyst(args, 'pth_smH', decay_channels=['combination'])
+        for container in containers: container.color = 9
     else:
         containers = []
 
@@ -172,18 +344,24 @@ def pth_smH_plot(args):
         hzz.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
         containers.append(hzz)
 
+        # Cross check to see if new scanning mechanism worked
+        # hzzNew = prepare_container('hzzNew', LatestPaths.ws_hzz_smH, 'out/Scan_pth_smH_Feb12_hzz_1')
+        # hzzNew.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
+        # hzzNew.color = 9
+        # containers.append(hzzNew)
+
         combination = prepare_container('combination', LatestPaths.ws_combined_smH, LatestPaths.scan_combined_PTH)
         combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
         containers.append(combination)
 
-        for container in containers:
-            PlotCommands.WriteScansToTable(
-                container,
-                'pth',
-                xTitle = 'p_{T}^{H} (GeV)',
-                yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
-                lastBinIsOverflow = True,
-                )
+        # for container in containers:
+        #     PlotCommands.WriteScansToTable(
+        #         container,
+        #         'pth',
+        #         xTitle = 'p_{T}^{H} (GeV)',
+        #         yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
+        #         lastBinIsOverflow = True,
+        #         )
 
     SM = prepare_SM_container(
         LatestBinning.obs_pth.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
@@ -192,7 +370,7 @@ def pth_smH_plot(args):
     containers.append(SM)
 
     PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_pthSpectrum',
+        'twoPanel_pthSpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{H} (GeV)',
         yTitleTop = '#Delta#sigma/#Deltap_{T}^{H} (pb/GeV)',
@@ -207,12 +385,8 @@ def pth_ggH_plot(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
-        SMcrosssections = {
-            'hgg' : LatestBinning.obs_pth_ggH.crosssection_over_binwidth(),
-            'hzz' : LatestBinning.obs_pth_ggH_hzzBinning.crosssection_over_binwidth(),
-            'combination' : LatestBinning.obs_pth_ggH.crosssection_over_binwidth(),
-            }
-        containers = read_containers(args, 'pth_ggH', SMcrosssections)
+        containers = read_containers_statsyst(args, 'pth_ggH', decay_channels=['combination'])
+        for container in containers: container.color = 9
 
     else:
         containers = []
@@ -253,7 +427,7 @@ def pth_ggH_plot(args):
     l.SetTextAlign(33)
 
     PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_pth_ggH_Spectrum',
+        'twoPanel_pth_ggH_Spectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{H} (GeV)',
         yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
@@ -325,7 +499,7 @@ def pth_ggH_hbb_plot(args):
     l.SetTextAlign(33)
 
     PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_pth_ggH_hbb_Spectrum' + ( '_asimov' if args.asimov else '' ),
+        'twoPanel_pth_ggH_hbb_Spectrum' + ( '_asimov' if args.asimov else '' ) + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{H} (GeV)',
         yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
@@ -338,12 +512,8 @@ def njets_plot(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
-        SMcrosssections = {
-            'hgg' : LatestBinning.obs_njets.crosssection_over_binwidth(),
-            'hzz' : LatestBinning.obs_njets_hzzBinning.crosssection_over_binwidth(),
-            'combination' : LatestBinning.obs_njets.crosssection_over_binwidth(),
-            }
-        containers = read_containers(args, 'njets', SMcrosssections)
+        containers = read_containers_statsyst(args, 'njets', decay_channels=['combination'])
+        for container in containers: container.color = 9
 
     else:
         containers = []
@@ -376,7 +546,7 @@ def njets_plot(args):
     containers.append(SM)
 
     PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_nJetsSpectrum',
+        'twoPanel_nJetsSpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'N_{jets}',
         # yMinLimit = 0.07,
@@ -390,12 +560,8 @@ def ptjet_plot(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
-        SMcrosssections = {
-            'hgg' : LatestBinning.obs_ptjet.crosssection_over_binwidth(),
-            'hzz' : LatestBinning.obs_ptjet_hzzBinning.crosssection_over_binwidth(),
-            'combination' : LatestBinning.obs_ptjet.crosssection_over_binwidth(),
-            }
-        containers = read_containers(args, 'ptjet', SMcrosssections)
+        containers = read_containers_statsyst(args, 'ptjet', decay_channels=['combination'])
+        for container in containers: container.color = 9
 
     else:
         containers = []
@@ -435,7 +601,7 @@ def ptjet_plot(args):
     containers.append(SM)
 
     PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_ptjetSpectrum',
+        'twoPanel_ptjetSpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{jet} (GeV)',
         yTitleTop = '#Delta#sigma/#Deltap_{T}^{jet} (pb/GeV)',
@@ -451,12 +617,8 @@ def rapidity_plot(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
-        SMcrosssections = {
-            'hgg' : LatestBinning.obs_yh.crosssection_over_binwidth(),
-            'hzz' : LatestBinning.obs_yh.crosssection_over_binwidth(),
-            'combination' : LatestBinning.obs_yh.crosssection_over_binwidth(),
-            }
-        containers = read_containers(args, 'rapidity', SMcrosssections)
+        containers = read_containers_statsyst(args, 'rapidity', decay_channels=['combination'])
+        for container in containers: container.color = 9
 
     else:
         containers = []
@@ -489,11 +651,11 @@ def rapidity_plot(args):
     containers.append(SM)
 
     PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_rapiditySpectrum',
+        'twoPanel_rapiditySpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = '|y_{H}|',
         yTitleTop = '#Delta#sigma/#Delta|y_{H}| (pb)',
-        # yMinLimit = 0.07,
+        yMinExternalTop = 1.,
         # yMaxExternalTop = 500
         lastBinIsNotOverflow=True,
         )

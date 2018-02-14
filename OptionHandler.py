@@ -20,6 +20,11 @@ def flag_as_option(function):
     function.is_option = True
     return function
 
+def flag_as_parser_options(function):
+    function.is_parser_options = True
+    return function
+
+
 class OptionHandler(object):
     """docstring for OptionHandler"""
 
@@ -41,6 +46,8 @@ class OptionHandler(object):
         for attr in dir(mod):
             if hasattr( getattr(mod, attr), 'is_option' ):
                 self.make_option( getattr(mod, attr) )
+            elif hasattr( getattr(mod, attr), 'is_parser_options' ):
+                getattr(mod, attr)(self.parser)
 
     def make_option(self, function):
         self.parser.add_argument('--{0}'.format(function.__name__), action='store_true')

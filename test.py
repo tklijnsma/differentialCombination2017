@@ -74,7 +74,7 @@ def main():
     onetimeplotsCommands.AppendParserOptions(parser)
     extrastudyCommands.AppendParserOptions(parser)
     # rapidityCommands.AppendParserOptions(parser)
-    scanCommands.AppendParserOptions(parser)
+    # scanCommands.AppendParserOptions(parser)
     crosscheckCommands.AppendParserOptions(parser)
 
     group = parser.add_mutually_exclusive_group(required=False)
@@ -90,17 +90,23 @@ def main():
 
     parser.add_argument( '--saveroot',   action='store_true' )
     parser.add_argument( '--savepng',   action='store_true' )
+    parser.add_argument( '--savepng_convert',   action='store_true' )
 
     optionHandler = OptionHandler()
     optionHandler.set_parser(parser)
     optionHandler.process_modules([
-        'scanCommands',
+        # 'scanCommands',
+        'scans_yukawa',
+        'scans_top',
+        'scans_other',
         'differentialCombinations',
-        'differentialPlots'
+        'differentialPlots',
+        'lumiStudyPlots'
         ])
 
     parser.add_argument( '--statonly', action='store_true' )
     parser.add_argument( '--statsyst', action='store_true' )
+    parser.add_argument( '--lumiScale', action='store_true' )
 
 
     args = parser.parse_args()
@@ -116,6 +122,8 @@ def main():
         TheoryCommands.SaveAsRoot()
     if args.savepng:
         TheoryCommands.SaveAsPng()
+    if args.savepng_convert:
+        TheoryCommands.SaveAsPngThroughConvert()
 
 
     ########################################

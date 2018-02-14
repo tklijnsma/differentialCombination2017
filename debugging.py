@@ -80,6 +80,8 @@ def main():
 
     parser.add_argument( '--statonly_test',      action='store_true' )
 
+    parser.add_argument( '--new_model_implementation', action='store_true' )
+
     combineCommands.AppendParserOptions(parser)
     plotCommands.AppendParserOptions(parser)
 
@@ -105,6 +107,35 @@ def main():
     Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
 
     base = abspath( join( os.environ['CMSSW_BASE'], 'src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/' ))
+
+
+
+    if args.new_model_implementation:
+
+        ws = '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v3_Approval/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/workspaces_Feb12/combinedCard_smH_Nov07_DifferentialModel_lumiScale.root'
+
+        cmd = [
+            'combine',
+            ws,
+            '-n _debugging_new_model_implementation_{0}'.format(datestr),
+            '-M MultiDimFit',
+            '-m 125.0',
+            '-t -1',
+            '--cminDefaultMinimizerType Minuit2',
+            '--cminDefaultMinimizerAlgo migrad',
+            '--saveNLL',
+            '--saveInactivePOI 1',
+            '--floatOtherPOIs=1',
+            # '--job-mode psi --task-name _SCAN_ASIMOV_bPOI_r_smH_PTH_GT350_ePOI_combinedCard_smH_Nov07_DifferentialModel_lumiScale --sub-opts='-q short.q' ',
+            '--algo=grid',
+            '--points=4',
+            # '--split-points 5',
+            '-P r_smH_PTH_GT350',
+            '--setPhysicsModelParameterRanges r_smH_PTH_0_15=0.2,1.8:r_smH_PTH_15_30=0.2,1.8:r_smH_PTH_30_45=0.2,1.8:r_smH_PTH_45_85=0.2,1.8:r_smH_PTH_85_125=0.2,1.8:r_smH_PTH_125_200=0.2,1.8:r_smH_PTH_200_350=0.2,1.8:r_smH_PTH_GT350=0.2,1.8',
+            '--setPhysicsModelParameters r_smH_PTH_0_15=1.0,r_smH_PTH_15_30=1.0,r_smH_PTH_30_45=1.0,r_smH_PTH_45_85=1.0,r_smH_PTH_85_125=1.0,r_smH_PTH_125_200=1.0,r_smH_PTH_200_350=1.0,r_smH_PTH_GT350=1.0',
+            ]
+
+        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
 
 
     if args.statonly_test:

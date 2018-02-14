@@ -28,6 +28,8 @@ import TheoryFileInterface
 from Container import Container
 from Parametrization import Parametrization, WSParametrization
 import PlotCommands
+from Commands import GlobRootFiles as globr
+
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -227,17 +229,17 @@ def main( args ):
         # ======================================
         # Switches
 
-        # INCLUDE_THEORY_UNCERTAINTIES   = True
-        INCLUDE_THEORY_UNCERTAINTIES   = False
+        INCLUDE_THEORY_UNCERTAINTIES   = True
+        # INCLUDE_THEORY_UNCERTAINTIES   = False
 
         # MAKELUMISCALABLE               = True
         MAKELUMISCALABLE               = False
 
-        # INCLUDE_BR_COUPLING_DEPENDENCY = True
-        INCLUDE_BR_COUPLING_DEPENDENCY = False
+        INCLUDE_BR_COUPLING_DEPENDENCY = True
+        # INCLUDE_BR_COUPLING_DEPENDENCY = False
 
-        # PROFILE_TOTAL_XS               = True
-        PROFILE_TOTAL_XS               = False
+        PROFILE_TOTAL_XS               = True
+        # PROFILE_TOTAL_XS               = False
 
         # FIT_ONLY_NORMALIZATION         = True
         FIT_ONLY_NORMALIZATION         = False
@@ -251,8 +253,8 @@ def main( args ):
         # REWEIGHT_CROSS_SECTIONS        = True
         REWEIGHT_CROSS_SECTIONS        = False
 
-        NEW_BINNING_TEST               = True
-        # NEW_BINNING_TEST               = False
+        # NEW_BINNING_TEST               = True
+        NEW_BINNING_TEST               = False
 
 
         # ======================================
@@ -968,7 +970,8 @@ def main( args ):
         cgMin = -0.65
         cgMax = 0.65
 
-        combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_asimov ) )
+        # combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_asimov ) )
+        combined_rootfiles = globr(LatestPaths.scan_combined_TopHighPt_asimov)
         combined = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_rootfiles,
             xCoupling,
@@ -981,12 +984,17 @@ def main( args ):
         containers.append(combined)
 
 
-        combined_lum8_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_lumiStudy_asimov ) )
+        combined_lum8_rootfiles = globr(
+            'out/Scan_TopHighPt_Feb12_combination_lumiStudy'
+            # LatestPaths.scan_combined_Top_lumiStudy_asimov
+            )
         combined_lum8 = TheoryCommands.GetTH2FromListOfRootFiles(
             combined_lum8_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
+            # refind_minimum_if_dnll_negative = True,
+            ignore_deltaNLL_negativity = True
             )
         combined_lum8.color = 2
         combined_lum8.name  = 'highLumi'
@@ -1031,10 +1039,12 @@ def main( args ):
 
         profiledTotalXS_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_profiledTotalXS_asimov ) )
         profiledTotalXS = TheoryCommands.GetTH2FromListOfRootFiles(
+            # globr('out/Scan_Yukawa_Feb07_combination_profiledTotalXS'),
             profiledTotalXS_rootfiles,
             xCoupling,
             yCoupling,
             verbose   = False,
+            refind_minimum_if_dnll_negative = True
             )
         profiledTotalXS.color = 2
         profiledTotalXS.name = 'profiledTotalXS'
@@ -1141,8 +1151,21 @@ def main( args ):
             )
         scalingBRfixedKappaV.color = 4
         scalingBRfixedKappaV.name = 'scalingBRfixedKappaV'
-        scalingBRfixedKappaV.title = 'BR(#kappa_{t}, #kappa_{g}) (#kappa_{V} fixed)'
+        scalingBRfixedKappaV.title = 'BR(#kappa_{t}, #kappa_{g})' #+ ' (#kappa_{V} fixed)'
         containers.append( scalingBRfixedKappaV )
+
+
+        scalingBR_profTotalXS = TheoryCommands.GetTH2FromListOfRootFiles(
+            globr('out/Scan_TopHighPt_Feb07_combination_couplingDependentBR_profiledTotalXS'),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBR_profTotalXS.color = 2
+        scalingBR_profTotalXS.name = 'scalingBR_profTotalXS'
+        scalingBR_profTotalXS.title = 'BR(#kappa_{t}, #kappa_{g}, #sigma_{tot})' #+ ' (#kappa_{V} fixed)'
+        containers.append( scalingBR_profTotalXS )
+
 
         # scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Top_couplingDependentBR_kappaVMaxOne_asimov ) )
         # scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
@@ -1159,10 +1182,14 @@ def main( args ):
 
         PlotCommands.BasicMixedContourPlot(
             containers,
-            xMin = -0.1,
-            xMax = 2.0,
-            yMin = -0.10,
-            yMax = 0.16,
+            xMin = ctMin_global,
+            xMax = ctMax_global,
+            yMin = cgMin_global,
+            yMax = cgMax_global,
+            # xMin = -0.1,
+            # xMax = 2.0,
+            # yMin = -0.10,
+            # yMax = 0.16,
             xTitle    = titles.get( xCoupling, xCoupling ),
             yTitle    = titles.get( yCoupling, yCoupling ),
             plotname  = 'contours_BRcouplingDependency',

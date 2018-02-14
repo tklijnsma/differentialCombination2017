@@ -77,7 +77,7 @@ class YieldParameterContainer(Container):
                 #     'where as the process left bound is {3}'
                 #         ).format(process, yp.left, yp.right, left)
                 #     )
-                return 1
+                return self.one_yieldParameter.name
             else:
                 return yp.name
 
@@ -91,7 +91,7 @@ class YieldParameterContainer(Container):
                 return yp.name
         else:
             if self.debug: print '    Could not find a match in this list'
-            return 1
+            return self.one_yieldParameter.name
 
     def str_to_num(self, s):
         num = s.replace('p','.').replace('m','-')
@@ -105,8 +105,8 @@ def defineYieldParameters(self):
     self.SMXSInsideExperimentalBins = []
 
     # Define a constant 1.0
-    self.modelBuilder.doVar('one[1]')
-    self.modelBuilder.out.var('one').setConstant(True)
+    # self.modelBuilder.doVar('one[1]')
+    # self.modelBuilder.out.var('one').setConstant(True)
 
 
     # ======================================
@@ -172,16 +172,20 @@ def defineYieldParameters(self):
         self.yieldParameters = c
 
     # bkg modifier is the same for all
+    one_yieldParameter = RooFactoryInterface.RooProduct('one')
     bkg_yieldParameter = RooFactoryInterface.RooProduct('r_bkg')
     YieldParameterContainer.bkg_yieldParameter = bkg_yieldParameter
+    YieldParameterContainer.one_yieldParameter = one_yieldParameter
 
 
     # ======================================
     # Add modifiers to these yield parameters
 
     if self.MakeLumiScalable:
+        self.modelBuilder.doVar('lumiScale[8.356546]')
         # Luminosity modifier works on all parameters
         bkg_yieldParameter.add_variable('lumiScale')
+        one_yieldParameter.add_variable('lumiScale')
         for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
             ggH_yieldParameter.add_variable('lumiScale')
         for xH_yieldParameter in YieldParameterContainer.all_xH_yieldParameters():
@@ -225,6 +229,7 @@ def defineYieldParameters(self):
         print 'Importing in ws and checking\n'
 
     self.commit_parseable_to_ws(bkg_yieldParameter)
+    self.commit_parseable_to_ws(one_yieldParameter)
     for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
         self.commit_parseable_to_ws(ggH_yieldParameter)
     for xH_yieldParameter in YieldParameterContainer.all_xH_yieldParameters():

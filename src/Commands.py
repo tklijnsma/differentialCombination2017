@@ -38,6 +38,10 @@ def IsTestMode():
     global TESTMODE
     return TESTMODE
 
+DISABLE_WARNINGS = False
+def DisableWarnings(flag=True):
+    global DISABLE_WARNINGS
+    DISABLE_WARNINGS = flag
 
 TEMPJOBDIR = abspath( 'tmp' )
 def SetTempJobDir( newdirname='tmp' ):
@@ -126,6 +130,62 @@ def BasicCombineCards(
 
 
 #____________________________________________________________________
+def ProcessMaps(datacard, smartMaps=None, manualMaps=None, verbose=True):
+
+    if smartMaps is None and manualMaps is None:
+        # raise ValueError('Supply smartMaps and/or manualMaps')
+        return []
+
+    signalprocesses, processes, bins = ListProcesses( datacard )
+
+    maps = []
+
+    if smartMaps:
+        # Example procPat:
+        # '--PO \'map=.*/InsideAcceptance_genPt_200p0_350p0:r_xH_PTH_200_350[1.0,-1.0,4.0]\'',
+        # Want to replace this by:
+        # '--PO \'map=.*/InsideAcceptance_genPt_([\dpm]+)p0_([\dpm]+)p0:r_xH_PTH_\1_\2[1.0,-1.0,4.0]\'',
+        # in smartMap form: ( r'.*/InsideAcceptance_genPt_([\dm]+)p0_([\dm]+)p0', r'r_xH_PTH_\1_\2[1.0,-1.0,4.0]' )
+
+        # Manual maps should have priority over smart maps;
+        # gather all the patterns that are already in a manualMap
+        if manualMaps:
+            manualMapPats = []
+            for manualMap in manualMaps:
+                match = re.search( r'map=(.*):', manualMap )
+                if not match: continue
+                manualMapPats.append( match.group(1) )
+
+        for binprocPat, yieldParPat in smartMaps:
+            for proc in signalprocesses:
+                for bin in bins:
+                    binprocStr = '{0}/{1}'.format( bin, proc )
+
+                    # Check if there are manual patterns that also match this string
+                    manualMapAvailable = False
+                    if manualMaps:
+                        for manualMapPat in manualMapPats:
+                            if re.match( manualMapPat, binprocStr ):
+                                manualMapAvailable = True
+
+                    if manualMapAvailable:
+                        continue
+                    elif not re.match( binprocPat, binprocStr ):
+                        continue
+
+                    if verbose: print 'Pattern \"{0}\" matches with \"{1}\"'.format( binprocPat, binprocStr )
+                    yieldPar = re.sub( binprocPat, yieldParPat, binprocStr )
+                    maps.append( '--PO \'map={0}:{1}\''.format( binprocStr, yieldPar ))
+
+    # Add manual maps after (the last matching pattern is applied in MultiSignalModel)
+    if manualMaps:
+        for manualMap in manualMaps:
+            maps.append( manualMap )
+
+    return maps
+
+
+#____________________________________________________________________
 def BasicT2WS(
         datacard,
         extraOptions=None,
@@ -147,8 +207,6 @@ def BasicT2WS(
     outputWS = outputWS.replace( '.root', suffix + '.root' )
     outputWS = join( outputDir, outputWS )
 
-    signalprocesses, processes, bins = ListProcesses( datacard )
-
     cmd = []
     cmd.append( 'text2workspace.py' )
     cmd.append( datacard )
@@ -157,72 +215,9 @@ def BasicT2WS(
     cmd.append( '--PO verbose' )
     cmd.append( '--PO \'higgsMassRange=123,127\'' )
 
-
-    if not manualMaps and not smartMaps: autoMaps = True
-
-    if smartMaps:
-
-        # Example procPat:
-        # '--PO \'map=.*/InsideAcceptance_genPt_200p0_350p0:r_xH_PTH_200_350[1.0,-1.0,4.0]\'',
-        # Want to replace this by:
-        # '--PO \'map=.*/InsideAcceptance_genPt_([\dpm]+)p0_([\dpm]+)p0:r_xH_PTH_\1_\2[1.0,-1.0,4.0]\'',
-
-        # in smartMap form: ( r'.*/InsideAcceptance_genPt_([\dm]+)p0_([\dm]+)p0', r'r_xH_PTH_\1_\2[1.0,-1.0,4.0]' )
-
-        # Manual maps should override smart maps; gather all the patters that are already in a manualMap
-        if manualMaps:
-            manualMapPats = []
-            for manualMap in manualMaps:
-                match = re.search( r'map=(.*):', manualMap )
-                if not match: continue
-                manualMapPats.append( match.group(1) )
-
-        newMaps = []
-        for binprocPat, yieldParPat in smartMaps:
-
-            for proc in signalprocesses:
-                for bin in bins:
-
-                    binprocStr = '{0}/{1}'.format( bin, proc )
-
-                    manualMapAvailable = False
-                    if manualMaps:
-                        for manualMapPat in manualMapPats:
-                            if re.match( manualMapPat, binprocStr ):
-                                manualMapAvailable = True
-
-                    if manualMapAvailable:
-                        continue
-                    elif not re.match( binprocPat, binprocStr ):
-                        continue
-
-                    if verbose: print 'Pattern \"{0}\" matches with \"{1}\"'.format( binprocPat, binprocStr )
-
-                    yieldPar = re.sub( binprocPat, yieldParPat, binprocStr )
-                    newMap = '--PO \'map={0}:{1}\''.format( binprocStr, yieldPar )
-
-                    newMaps.append( newMap )
-
-
-        for newMap in newMaps:
-            cmd.append(newMap)
-
-    if manualMaps:
-        for manualMap in manualMaps:
-            cmd.append( manualMap )
-
-    # Default option
-    if autoMaps:
-        parRange = [ -1.0, 3.0 ]
-        parName = lambda process: 'r_' + process
-
-        for process in signalprocesses:
-            cmd.append( '--PO \'map=.*/{0}:{1}[1.0,{2},{3}]\''.format(
-                process,
-                parName( process ),
-                parRange[0], parRange[1],
-                ))
-
+    maps = ProcessMaps(datacard, smartMaps, manualMaps, verbose)
+    for _map in maps:
+        cmd.append( _map )
 
     if not extraOptions:
         pass
@@ -304,57 +299,10 @@ def BasicT2WSwithModel(
     else:
         cmd.extend( extraOptions )
 
-
-    # ======================================
     # Possibility to use maps here as well
-
-    if smartMaps:
-
-        signalprocesses, processes, bins = ListProcesses( datacard )
-
-        # Manual maps should override smart maps; gather all the patters that are already in a manualMap
-        if manualMaps:
-            manualMapPats = []
-            for manualMap in manualMaps:
-                match = re.search( r'map=(.*):', manualMap )
-                if not match: continue
-                manualMapPats.append( match.group(1) )
-
-        newMaps = []
-        for binprocPat, yieldParPat in smartMaps:
-
-            for proc in signalprocesses:
-                for bin in bins:
-
-                    binprocStr = '{0}/{1}'.format( bin, proc )
-
-                    manualMapAvailable = False
-                    if manualMaps:
-                        for manualMapPat in manualMapPats:
-                            if re.match( manualMapPat, binprocStr ):
-                                manualMapAvailable = True
-
-                    if manualMapAvailable:
-                        continue
-                    elif not re.match( binprocPat, binprocStr ):
-                        continue
-
-                    if verbose: print 'Pattern \"{0}\" matches with \"{1}\"'.format( binprocPat, binprocStr )
-
-                    yieldPar = re.sub( binprocPat, yieldParPat, binprocStr )
-                    newMap = '--PO \'map={0}:{1}\''.format( binprocStr, yieldPar )
-
-                    newMaps.append( newMap )
-
-
-        for newMap in newMaps:
-            cmd.append(newMap)
-
-    if manualMaps:
-        for manualMap in manualMaps:
-            cmd.append( manualMap )
-
-
+    maps = ProcessMaps(datacard, smartMaps, manualMaps, verbose)
+    for _map in maps:
+        cmd.append( _map )
 
     executeCommand( cmd )
 
@@ -1292,6 +1240,9 @@ def Warning(
         warningStr,
         ):
 
+    if DISABLE_WARNINGS:
+        return
+
     stack = traceback.extract_stack(None, 2)[0]
     linenumber = stack[1]
     funcname = stack[2]
@@ -1321,7 +1272,8 @@ def TagGitCommitAndModule():
 class EnterDirectory():
     """Context manager to (create and) go into and out of a directory"""
 
-    def __init__(self, subDirectory=None ):
+    def __init__(self, subDirectory=None, verbose=True ):
+        self.verbose = verbose
         self._active = False
         if not subDirectory is None and not subDirectory == '':
             self._active = True
@@ -1331,13 +1283,13 @@ class EnterDirectory():
     def __enter__(self):
         if self._active:
             if IsTestMode():
-                print '\n[TESTMODE] Would now create/go into \'{0}\''.format(self.subDirectory)
+                if self.verbose: print '\n[TESTMODE] Would now create/go into \'{0}\''.format(self.subDirectory)
             else:
-                print ''
+                if self.verbose: print ''
                 if not isdir( self.subDirectory ):
-                    print 'Creating \'{0}\''.format( relpath( self.subDirectory, self.backDir ) )
+                    if self.verbose: print 'Creating \'{0}\''.format( relpath( self.subDirectory, self.backDir ) )
                     os.makedirs( self.subDirectory )
-                print 'Entering \'{0}\''.format( relpath( self.subDirectory, self.backDir ) )
+                if self.verbose: print 'Entering \'{0}\''.format( relpath( self.subDirectory, self.backDir ) )
                 os.chdir( self.subDirectory )
         return self
 

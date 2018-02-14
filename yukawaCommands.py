@@ -87,7 +87,7 @@ def AppendParserOptions( parser ):
 
     parser.add_argument( '--coupling2Dplot_Yukawa',                               action=CustomAction )
     parser.add_argument( '--checkWSParametrization_Yukawa',                       action=CustomAction )
-    parser.add_argument( '--combinationAndContour_Yukawa',                       action=CustomAction )
+    parser.add_argument( '--combinationAndContour_Yukawa',                        action=CustomAction )
 
 
 ########################################
@@ -214,6 +214,7 @@ def main( args ):
         CorrelationMatrices.MinMaxMatrix(scaleCorrelations, tag='theory')
         CorrelationMatrices.MinMaxMatrix(scaleCorrelations_exp, tag='exp')
 
+
     #____________________________________________________________________
     if args.couplingT2WS_Yukawa:
 
@@ -226,14 +227,14 @@ def main( args ):
         # UNCORRELATED_THEORY_UNCERTAINTIES = True
         UNCORRELATED_THEORY_UNCERTAINTIES = False
 
-        # MAKELUMISCALABLE                  = True
-        MAKELUMISCALABLE                  = False
+        MAKELUMISCALABLE                  = True
+        # MAKELUMISCALABLE                  = False
 
         # INCLUDE_BR_COUPLING_DEPENDENCY    = True
         INCLUDE_BR_COUPLING_DEPENDENCY    = False
 
-        PROFILE_TOTAL_XS                  = True
-        # PROFILE_TOTAL_XS                  = False
+        # PROFILE_TOTAL_XS                  = True
+        PROFILE_TOTAL_XS                  = False
 
         # FIT_ONLY_NORMALIZATION            = True
         FIT_ONLY_NORMALIZATION            = False
@@ -244,8 +245,8 @@ def main( args ):
         # FIT_RATIO_OF_BRS                  = True
         FIT_RATIO_OF_BRS                  = False
 
-        REWEIGHT_CROSS_SECTIONS           = True
-        # REWEIGHT_CROSS_SECTIONS           = False
+        # REWEIGHT_CROSS_SECTIONS           = True
+        REWEIGHT_CROSS_SECTIONS           = False
 
 
         # ======================================
@@ -491,21 +492,10 @@ def main( args ):
     #____________________________________________________________________
     if args.coupling2Dplot_Yukawa:
 
-        # datacard  = combinedDatacard
-        # rootfiles = combinedScanFiles
-        # if args.hgg:
-        #     datacard  = hggDatacard
-        #     rootfiles = hggScanFiles
-        # if args.hzz:
-        #     datacard  = hzzDatacard
-        #     rootfiles = hzzScanFiles
-
-        rootfiles = glob( LatestPaths.scan_combined_Yukawa + '/*.root' )
-        # # rootfiles = glob( 'testscan_Nov22' + '/*.root' )
-        # rootfiles = glob( 'Scan_Yukawa_Nov23_0' + '/*.root' )
+        scanDir = 'out/Scan_Yukawa_Feb07_hzz_2'
 
         res = TheoryCommands.PlotCouplingScan2D(
-            rootfiles,
+            globr(scanDir),
             xCoupling = 'kappac',
             yCoupling = 'kappab',
             xMin = -35., xMax = 35.,
@@ -917,6 +907,18 @@ def main( args ):
         containers.append( scalingBRfixedKappaV )
 
 
+        scalingBR_profTotalXS = TheoryCommands.GetTH2FromListOfRootFiles(
+            globr('out/Scan_Yukawa_Feb07_combination_couplingDependentBR_profiledTotalXS'),
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            )
+        scalingBR_profTotalXS.color = 2
+        scalingBR_profTotalXS.name = 'scalingBR_profTotalXS'
+        scalingBR_profTotalXS.title = 'BR(#kappa_{b}, #kappa_{c}, #sigma_{tot})' # + ' (#kappa_{V} fixed)'
+        containers.append( scalingBR_profTotalXS )
+
+
         # scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_kappaVMaxOne_asimov ) )
         # scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
         #     scalingBRkappaVMaxOne_rootfiles,
@@ -977,6 +979,18 @@ def main( args ):
         highLumi.title = '300 fb^{-1}'
         containers.append(highLumi)
 
+        highLumi3000_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_lumiStudy_asimov ) )
+        highLumi3000 = TheoryCommands.GetTH2FromListOfRootFiles(
+            highLumi3000_rootfiles,
+            xCoupling,
+            yCoupling,
+            verbose   = False,
+            multiplier = 10.
+            )
+        highLumi3000.color = 2
+        highLumi3000.name = 'highLumi3000'
+        highLumi3000.title = '3000 fb^{-1}'
+        containers.append(highLumi3000)
 
         PlotCommands.BasicMixedContourPlot(
             containers,
@@ -1296,10 +1310,12 @@ def main( args ):
         container.MaximaOfContour     = True
         container.BestFit             = True
 
+        container.newStyleCoupling    = True
+
         container.ManualPoints = [
-            (  0., 1. ),
-            (  1., 0. ),
-            # ( lambda xBestfit, xSM: xSM, lambda yBestfit, ySM: ySM ),
+            (  0., 0. ),
+            (  1., 1. ),
+            # ( lambda xBestfit, xSM: 0., lambda yBestfit, ySM: 0. ),
             # ( lambda xBestfit, xSM: xBestfit + 1.0*(xBestfit-xSM) -0.05 , lambda yBestfit, ySM: yBestfit  + 1.0*(yBestfit-ySM) ),
             # ( lambda xBestfit, xSM: xBestfit + 2.0*(xBestfit-xSM) -0.10 , lambda yBestfit, ySM: yBestfit  + 2.0*(yBestfit-ySM) ),
             # 

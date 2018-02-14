@@ -333,6 +333,213 @@ def PlotWithBottomPanel(
     SaveC(plotName)
     c.SetCanvasSize( _width, _height )
 
+#____________________________________________________________________
+def get_uncs_from_scans(container):
+    container.binBoundaries = PhysicsCommands.FigureOutBinning( container.POIs )
+    container.uncs = []
+    for POI, scan in zip( container.POIs, container.Scans ):
+        POIvals, deltaNLLs = PhysicsCommands.FilterScan( scan )
+        unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
+        container.uncs.append(unc)
+
+    container.nBins         = len(container.binBoundaries)-1
+    container.binCenters    = [ 0.5*(left+right) for left, right in zip( container.binBoundaries[:-1], container.binBoundaries[1:] ) ]
+    container.binWidths     = [ right-left for left, right in zip( container.binBoundaries[:-1], container.binBoundaries[1:] ) ]
+    container.halfBinWidths = [ 0.5*(right-left) for left, right in zip( container.binBoundaries[:-1], container.binBoundaries[1:] ) ]
+
+
+
+
+
+#____________________________________________________________________
+class GenericHistogram(object):
+    """docstring for GenericHistogram"""
+
+    colorCycle = Commands.newColorCycle()
+    fillStyleCycle = itertools.cycle([ 3245, 3254, 3205 ])
+
+    def __init__(self, name, title, bin_boundaries, bin_values, color=None):
+        super(GenericHistogram, self).__init__()
+        self.name = name
+        self.title = title
+        self.bin_boundaries = bin_boundaries
+        self.n_bins = len(bin_boundaries)-1
+        self.bin_values = bin_values
+        self.bins = []
+        self._expecting_asymm_unc = False
+        if color is None:
+            self.color = self.colorCycle.next()
+        else:
+            self.color = color
+        
+    def set_err_up(self, errs_up):
+        self.errs_up = [ abs(i) for i in errs_up ]
+        self.bounds_up = [ c+e for c, e in zip(self.bin_values, self.errs_up) ]
+        self._expecting_asymm_err = True
+
+    def set_err_down(self, errs_down):
+        self.errs_down = [ abs(i) for i in errs_down ]
+        self.bounds_down = [ c+e for c, e in zip(self.bin_values, self.errs_down) ]
+        self._expecting_asymm_err = True
+
+    def get_bin_centers(self):
+        return [ 0.5*(left+right) for left, right in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:]) ]
+
+    def get_bin_widths(self):
+        return [ right-left for left, right in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:]) ]
+
+    def get_half_bin_widths(self):
+        return [ 0.5*i for i in self.get_bin_widths() ]
+
+    def get_zeroes(self):
+        return [0.0 for i in xrange(self.n_bins)]
+
+
+    def repr_basic_histogram(self, leg=None):
+        H = ROOT.TH1F(
+            GetUniqueRootName(), '',
+            len(self.bin_boundaries)-1, array( 'f', self.bin_boundaries)
+            )
+        ROOT.SetOwnership( H, False )
+        H.SetLineColor(self.color)
+        H.SetLineWidth(2)
+        for i_bin in xrange(self.n_bins):
+            H.SetBinContent( i_bin+1, self.bin_values[i_bin] )
+
+        if not(leg is None):
+            leg.AddEntry(H.GetName(), self.title, 'l')
+
+        return [ (H, 'HISTSAME') ]
+
+
+    def repr_horizontal_bars(self):
+        Tg = ROOT.TGraphErrors(
+            self.n_bins,
+            array( 'f', self.get_bin_centers() ),
+            array( 'f', self.bin_values ),
+            array( 'f', self.get_half_bin_widths() ),
+            array( 'f', self.get_zeroes() ),
+            )
+        ROOT.SetOwnership( Tg, False )
+        Tg.SetName( GetUniqueRootName() )
+
+        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
+        # Tg.SetLineWidth(   getattr(self, 'setLineWidth',   2 ) )
+
+        return [ (Tg, 'EPSAME') ]
+
+
+    def repr_uncertainties_filled_area(self, leg=None):
+        Tg = ROOT.TGraphAsymmErrors(
+            self.n_bins,
+            array( 'f', self.get_bin_centers() ),
+            array( 'f', self.bin_values ),
+            array( 'f', [ 0.45*w for w in self.get_bin_widths() ] ),
+            array( 'f', [ 0.45*w for w in self.get_bin_widths() ] ),
+            array( 'f', self.errs_down ),
+            array( 'f', self.errs_up ),
+            )
+        ROOT.SetOwnership( Tg, False )
+        Tg.SetName( GetUniqueRootName() )
+    
+        Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
+        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
+        Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
+        Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
+        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
+        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
+
+        if not(leg is None):
+            leg.AddEntry( Tg.GetName(), self.title, 'LF' )
+
+        return [ (Tg, 'E2PSAME') ]
+
+
+    def repr_uncertainties_narrow_filled_area(self, leg=None):
+        Tg = ROOT.TGraphAsymmErrors(
+            self.n_bins,
+            array( 'f', self.get_bin_centers() ),
+            array( 'f', self.bin_values ),
+            array( 'f', [ 0.1*w for w in self.get_bin_widths() ] ),
+            array( 'f', [ 0.1*w for w in self.get_bin_widths() ] ),
+            array( 'f', self.errs_down ),
+            array( 'f', self.errs_up ),
+            )
+        ROOT.SetOwnership( Tg, False )
+        Tg.SetName( GetUniqueRootName() )
+    
+        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
+        Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
+        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
+        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
+
+        # Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
+        # Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
+        Tg.SetFillColorAlpha(self.color, 0.30)
+
+        if not(leg is None):
+            leg.AddEntry( Tg.GetName(), self.title, 'LF' )
+
+        return [ (Tg, 'E2PSAME') ]
+
+
+    def repr_uncertainties_fully_filled_area(self, leg=None):
+        Tg = ROOT.TGraphAsymmErrors(
+            self.n_bins,
+            array( 'f', self.get_bin_centers() ),
+            array( 'f', self.bin_values ),
+            array( 'f', self.get_half_bin_widths() ),
+            array( 'f', self.get_half_bin_widths() ),
+            array( 'f', self.errs_down ),
+            array( 'f', self.errs_up ),
+            )
+        ROOT.SetOwnership( Tg, False )
+        Tg.SetName( GetUniqueRootName() )
+    
+        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
+        Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
+        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
+        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
+
+        # Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
+        # Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
+        Tg.SetFillColorAlpha(self.color, 0.30)
+
+        if not(leg is None):
+            leg.AddEntry( Tg.GetName(), self.title, 'LF' )
+
+        return [ (Tg, 'E2PSAME') ]
+
+
+    def repr_point_with_vertical_bar(self, leg=None):
+
+        Tg = ROOT.TGraphAsymmErrors(
+            self.n_bins,
+            array( 'f', self.get_bin_centers() ),
+            array( 'f', self.bin_values ),
+            array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
+            array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
+            array( 'f', self.errs_down ),
+            array( 'f', self.errs_up ),
+            )
+        ROOT.SetOwnership( Tg, False )
+        Tg.SetName( GetUniqueRootName() )
+
+        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
+        Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
+        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
+        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
+
+        if not(leg is None):
+            leg.AddEntry( Tg.GetName(), self.title, 'PE' )
+
+        return [(Tg, 'PSAME')]
+
+
+    def Draw(self, draw_style):
+        for obj, draw_str in getattr(self, draw_style):
+            obj.Draw(draw_str)
+
 
 #____________________________________________________________________
 def PlotSpectraOnTwoPanel(
@@ -382,14 +589,7 @@ def PlotSpectraOnTwoPanel(
     containers = _containers
 
     for container in containers:
-        container.binBoundaries = PhysicsCommands.FigureOutBinning( container.POIs )
-        
-        # Determine uncertainties from scan
-        container.uncs = []
-        for POI, scan in zip( container.POIs, container.Scans ):
-            POIvals, deltaNLLs = PhysicsCommands.FilterScan( scan )
-            unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
-            container.uncs.append(unc)
+        get_uncs_from_scans(container)
 
         # If last bin is indeed an overflow, and scaleLastBin is not set to False, scale the last bin
         if not lastBinIsNotOverflow and not scaleLastBin == False:
@@ -530,117 +730,26 @@ def PlotSpectraOnTwoPanel(
         # ---------------------
         # Construct objects for bottom panel
 
+        ratios = [container.uncs[i].min for i in xrange(container.nBins)]
+        H_ratio_generic = GenericHistogram(container.name, container.title, container.binBoundaries, ratios, color=container.color)
+        H_ratio_generic.set_err_up([ container.uncs[i].rightError for i in xrange(container.nBins) ])
+        H_ratio_generic.set_err_down([ container.uncs[i].leftError for i in xrange(container.nBins) ])
+
+        crosssections = [container.uncs[i].min * container.SMcrosssections[i] for i in xrange(container.nBins)]
+        H_crosssection_generic = GenericHistogram(container.name, container.title, container.binBoundaries, crosssections, color=container.color)
+        H_crosssection_generic.set_err_up([ container.uncs[i].rightError * container.SMcrosssections[i] for i in xrange(container.nBins) ])
+        H_crosssection_generic.set_err_down([ container.uncs[i].leftError * container.SMcrosssections[i] for i in xrange(container.nBins) ])
+
         if not(container.name == 'combination' or container.name == 'combWithHbb') and not(getattr(container, 'error_line', False)):
-
-            Hratio = ROOT.TH1F(
-                GetUniqueRootName(), '',
-                len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
-                )
-            ROOT.SetOwnership( Hratio, False )
-            Hratio.SetLineColor(container.color)
-            Hratio.SetLineWidth(2)
-            for iBin in xrange(container.nBins):
-                Hratio.SetBinContent( iBin+1, container.uncs[iBin].min )
-            bottomPanelObjects.append( ( Hratio, 'HISTSAME' ) )
-
-            Hcrosssection = ROOT.TH1F(
-                GetUniqueRootName(), '',
-                len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
-                )
-            ROOT.SetOwnership( Hcrosssection, False )
-            Hcrosssection.SetLineColor(container.color)
-            Hcrosssection.SetLineWidth(2)
-            for iBin in xrange(container.nBins):
-                Hcrosssection.SetBinContent( iBin+1, container.uncs[iBin].min * container.SMcrosssections[iBin] )
-            topPanelObjects.append( ( Hcrosssection, 'HISTSAME' ) )
-
-
-            # ---------------------
-            # Construct separate TGraphAsymmErrors for the uncertainties
-
-            Tgratio = ROOT.TGraphAsymmErrors(
-                container.nBins,
-                array( 'f', container.binCenters ),
-                array( 'f', [ container.uncs[i].min for i in xrange(container.nBins) ] ),
-                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
-                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
-                array( 'f', [ container.uncs[i].leftError for i in xrange(container.nBins) ] ),
-                array( 'f', [ container.uncs[i].rightError for i in xrange(container.nBins) ] ),
-                )
-            ROOT.SetOwnership( Tgratio, False )
-            Tgratio.SetName( GetUniqueRootName() )
-            Tgratio.SetFillStyle(container.fillStyle)
-            Tgratio.SetFillColor(container.color)
-            Tgratio.SetMarkerStyle(1)
-            Tgratio.SetMarkerSize(0)
-            Tgratio.SetMarkerColor(container.color)
-            bottomPanelObjects.append( ( Tgratio, 'E2PSAME' ) )
-
-            Tgcrosssection = ROOT.TGraphAsymmErrors(
-                container.nBins,
-                array( 'f', container.binCenters ),
-                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].min for i in xrange(container.nBins) ] ),
-                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
-                array( 'f', [ 0.45*binWidth for binWidth in container.binWidths ] ),
-                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].leftError for i in xrange(container.nBins) ] ),
-                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].rightError for i in xrange(container.nBins) ] ),
-                )
-            ROOT.SetOwnership( Tgcrosssection, False )
-            Tgcrosssection.SetName( GetUniqueRootName() )
-            Tgcrosssection.SetFillStyle(container.fillStyle)
-            Tgcrosssection.SetFillColor(container.color)
-            Tgcrosssection.SetMarkerStyle(1)
-            Tgcrosssection.SetMarkerSize(0)
-            Tgcrosssection.SetMarkerColor(container.color)
-            Tgcrosssection.SetLineColor(container.color)
-            Tgcrosssection.SetLineWidth(2)
-            topPanelObjects.append( ( Tgcrosssection, 'E2PSAME' ) )
-
-            if not getattr(container, 'suppress_text', False):
-                leg.AddEntry( Tgcrosssection.GetName(), container.title, 'LF' )
-
-
+            bottomPanelObjects.extend(H_ratio_generic.repr_horizontal_bars())
+            bottomPanelObjects.extend(H_ratio_generic.repr_uncertainties_narrow_filled_area())
+            # bottomPanelObjects.extend(H_ratio_generic.repr_uncertainties_fully_filled_area())
+            topPanelObjects.extend(H_crosssection_generic.repr_horizontal_bars())
+            topPanelObjects.extend(H_crosssection_generic.repr_uncertainties_narrow_filled_area(leg if not getattr(container, 'suppress_text', False) else None))
+            # topPanelObjects.extend(H_crosssection_generic.repr_uncertainties_fully_filled_area(leg if not getattr(container, 'suppress_text', False) else None))
         else:
-
-
-            Tgratio = ROOT.TGraphAsymmErrors(
-                container.nBins,
-                array( 'f', container.binCenters ),
-                array( 'f', [ container.uncs[i].min for i in xrange(container.nBins) ] ),
-                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
-                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
-                array( 'f', [ container.uncs[i].leftError for i in xrange(container.nBins) ] ),
-                array( 'f', [ container.uncs[i].rightError for i in xrange(container.nBins) ] ),
-                )
-            ROOT.SetOwnership( Tgratio, False )
-            Tgratio.SetName( GetUniqueRootName() )
-            Tgratio.SetMarkerStyle(8)
-            Tgratio.SetMarkerSize(1.2)
-            # Tgratio.SetLineWidth(2)
-            Tgratio.SetMarkerColor(container.color)
-            Tgratio.SetLineColor(container.color)
-            bottomPanelObjects.append( ( Tgratio, 'PSAME' ) )
-
-            Tgcrosssection = ROOT.TGraphAsymmErrors(
-                container.nBins,
-                array( 'f', container.binCenters ),
-                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].min for i in xrange(container.nBins) ] ),
-                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
-                array( 'f', [ 0.0 for i in xrange(container.nBins) ] ),
-                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].leftError for i in xrange(container.nBins) ] ),
-                array( 'f', [ container.SMcrosssections[i] * container.uncs[i].rightError for i in xrange(container.nBins) ] ),
-                )
-            ROOT.SetOwnership( Tgcrosssection, False )
-            Tgcrosssection.SetName( GetUniqueRootName() )
-            Tgcrosssection.SetMarkerStyle(8)
-            Tgcrosssection.SetMarkerSize(1.2)
-            Tgcrosssection.SetMarkerColor(container.color)
-            Tgcrosssection.SetLineColor(container.color)
-            # Tgcrosssection.SetLineWidth(2)
-            topPanelObjects.append( ( Tgcrosssection, 'PSAME' ) )
-
-            if not getattr(container, 'suppress_text', False):
-                leg.AddEntry( Tgcrosssection.GetName(), container.title, 'PE' )
+            bottomPanelObjects.extend(H_ratio_generic.repr_point_with_vertical_bar())
+            topPanelObjects.extend(H_crosssection_generic.repr_point_with_vertical_bar(leg if not getattr(container, 'suppress_text', False) else None))
 
 
         # ======================================
@@ -844,6 +953,10 @@ def PlotParametrizationsOnCombination(
         OnOneCanvas = False
         ):
 
+    def debug(txt):
+        print '[debug]', txt
+        sys.exit()
+
     expBinBoundaries    = container.expBinBoundaries
     ws_combination      = container.ws_combination
     scanDir_combination = container.scanDir_combination
@@ -977,6 +1090,7 @@ def PlotParametrizationsOnCombination(
     combined.title = 'Nominal'
 
     allcontours = TheoryCommands.GetContoursFromTH2( combined.H2, 2.30 )
+    # debug('Got contours')
     candidatecontours = []
 
     xBestfit = combined.xBestfit
@@ -1006,7 +1120,7 @@ def PlotParametrizationsOnCombination(
         # if abs(Tg.distRatio) > 0.8: continue
 
         candidatecontours.append( Tg )
-
+    # debug('Filtered contours')
 
     if len(candidatecontours) == 0:
         Commands.ThrowError( 'Can\'t find contour' )
@@ -1026,6 +1140,8 @@ def PlotParametrizationsOnCombination(
     # Determine the points to analyze:
 
     points = []
+
+    # debug('Sorted contours')
 
     if DO_BESTFIT:
         points.append( ( xBestfit, yBestfit ) )
@@ -1080,8 +1196,7 @@ def PlotParametrizationsOnCombination(
                 except TypeError:
                     y = yRaw( yBestfit, container.ySM )
             else:
-                y = xRaw
-
+                y = yRaw
 
             points.append( ( x, y ) )
 
@@ -1089,7 +1204,7 @@ def PlotParametrizationsOnCombination(
     # ======================================
     # Get the parametrization
 
-    wsParametrization = WSParametrization( ws_coupling )
+    wsParametrization = WSParametrization( ws_coupling, verbose=True, newStyle=container.newStyleCoupling )
 
     colorCycle = newColorCycle()
     for xPoint, yPoint in points:
@@ -1304,7 +1419,7 @@ def PlotMultipleScans(
     leg.SetFillStyle(0)
 
     colorCycle = itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
-    for container in containers:
+    for i_container, container in enumerate(containers):
 
         if hasattr( container, 'line' ):
             if container.line.GetX1() == -999: container.line.SetX1( xMin )
@@ -1316,6 +1431,10 @@ def PlotMultipleScans(
 
         if printUncertainties:
             container.unc = PhysicsCommands.FindMinimaAndErrors( container.x, container.y, returnContainer=True )
+            print 'uncertainties in container',i_container
+            print container.unc
+            for attr in container.unc.ListAttributes():
+                print '  ',attr,' : ',getattr(container.unc, attr)
 
         if translateToChi2:
             container.y = [ 2.*y for y in container.y ]
@@ -1384,9 +1503,10 @@ def PlotMultipleScans(
                         )
 
 
+                l.SetTextColor(container.color)
                 l.SetTextAlign(11)
                 l.SetNDC()
-                l.DrawLatex( 0.2, 0.8, text )
+                l.DrawLatex( 0.2, 0.8-(i_container*0.06), text )
 
             else:
                 if withPercentages:
@@ -1710,25 +1830,25 @@ def PlotSingle2DHistogram(
     container.H2.GetYaxis().SetTitleSize(0.06)
     container.H2.GetYaxis().SetLabelSize(0.05)
 
-    if hasattr(container, 'contours_1sigma'):
-        for Tg in container.contours_1sigma:
-            Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
-            Tg.Draw('CSAME')
-    if hasattr(container, 'contours_2sigma'):
-        for Tg in container.contours_2sigma:
-            Tg.SetName( 'contour_2sigma_' + GetUniqueRootName() )
-            Tg.Draw('CSAME')
-    if not getCustomContour is None:
-        container.contours_custom = TheoryCommands.GetContoursFromTH2( container.H2, getCustomContour )
-        for Tg in container.contours_custom:
-            Tg.SetName( 'contour_custom_' + GetUniqueRootName() )
-            Tg.Draw('CSAME')
+    # if hasattr(container, 'contours_1sigma'):
+    #     for Tg in container.contours_1sigma:
+    #         Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
+    #         Tg.Draw('CSAME')
+    # if hasattr(container, 'contours_2sigma'):
+    #     for Tg in container.contours_2sigma:
+    #         Tg.SetName( 'contour_2sigma_' + GetUniqueRootName() )
+    #         Tg.Draw('CSAME')
+    # if not getCustomContour is None:
+    #     container.contours_custom = TheoryCommands.GetContoursFromTH2( container.H2, getCustomContour )
+    #     for Tg in container.contours_custom:
+    #         Tg.SetName( 'contour_custom_' + GetUniqueRootName() )
+    #         Tg.Draw('CSAME')
 
-    if hasattr( container, 'color' ):
-        container.bestfitPoint.SetMarkerColor(container.color)
+    # if hasattr( container, 'color' ):
+    #     container.bestfitPoint.SetMarkerColor(container.color)
 
-    if hasattr(container, 'bestfitPoint'):
-        container.bestfitPoint.Draw('PSAME')
+    # if hasattr(container, 'bestfitPoint'):
+    #     container.bestfitPoint.Draw('PSAME')
 
     c.Update()
     c.RedrawAxis()

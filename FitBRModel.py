@@ -47,6 +47,76 @@ class GeneralDifferentialModel( MultiSignalModel ):
 
 
 
+class FitBRPerPTHBinModel(GeneralDifferentialModel):
+    """docstring for FitBRPerPTHBinModel
+
+    DROP THIS IDEA
+
+    This can only work for the coarsest binning scheme.
+
+    The idea is to let kappa_hzz_j modify the hzz BR, kappa_hgg_i modify the hgg BR
+    Make kappa_hzz_j a function of kappa_hgg_i and R_j
+    R_j cannot be R_i, that would be unconstrained.
+
+    Would have been possible to do this for the hzz bins (and scaling 2 hgg bins by the same modifier: kappa_hgg_i = kappa_hgg_i+1 = kappa_hgg_j)
+    But this is not worth the effort.
+    """
+    
+    def __init__(self):
+        super(FitBRPerPTHBinModel, self).__init__()
+
+        self.hgg_bins = [ 0., 15., 30., 45., 85., 125., 200., 350. ]
+        self.hzz_bins = [ 0., 15., 30., 85., 200. ]
+
+        self.map_hgg_to_hzz = {
+            0 : 0,
+            1 : 1
+            2 : 3
+            3 : 3
+            4 : 4
+            5 : 4
+            6 : 6
+            7 : 6
+            }
+
+        self.n_bins_hgg = len(self.hgg_bins)-1
+        self.n_bins_hzz = len(self.hzz_bins)-1
+
+    def get_corresponding_hzz_bin(self, i_hgg):
+        return self.map_hgg_to_hzz[i_hgg]
+
+    def get_range_str_hgg(self, i):
+        return '{0}_{1}'.format(int(self.hgg_bins[i]), int(self.hgg_bins[i+1]))
+
+    def get_range_str_hzz(self, i):
+        return '{0}_{1}'.format(int(self.hzz_bins[i]), int(self.hzz_bins[i+1]))
+
+
+    def doParametersOfInterest(self):
+        GeneralDifferentialModel.doParametersOfInterest( self )
+
+
+        # Load spline for HZZ BR (function of MH)
+        self.SMH = SMHiggsBuilder(self.modelBuilder)
+        datadir = os.environ['CMSSW_BASE'] + '/src/HiggsAnalysis/CombinedLimit/data/lhc-hxswg'
+        self.SMH.textToSpline( 'BR_hzz', os.path.join( datadir, 'sm/br/BR4.txt' ), ycol=11 );
+        spline_SMBR_hzz = self.modelBuilder.out.function('BR_hzz')
+        spline_SMBR_hgg = self.modelBuilder.out.function('fbr_13TeV')
+
+
+        # self.modelBuilder.doVar( 'ratio_BR_hgg_hzz[0.086,0.0,0.5]' )
+        # self.modelBuilder.doVar( 'hgg_BRmodifier[1.0,-2.0,4.0]' )
+
+
+        for i_hgg in xrange(self.n_bins_hgg):
+            self.modelBuilder.doVar('kappaBR_{0}[1.0,-2.0,4.0]'.format(self.get_range_str_hgg(i_hgg)))
+
+
+
+
+
+        
+
 
 class FitTotalXSModel( GeneralDifferentialModel ):
 

@@ -20,9 +20,10 @@ ROOT.gROOT.SetBatch(True)
 
 
 class WSParametrization():
-    def __init__( self, wsFile=None, returnWhat='theory', verbose=False ):
+    def __init__( self, wsFile=None, returnWhat='theory', verbose=False, newStyle=False ):
         self.verbose = verbose
         self.Persistence = []
+        self.newStyle = newStyle
 
         if not returnWhat in [ 'both', 'theory', 'exp' ]:
             Commands.ThrowError( 'Argument \'returnWhat\' should be \'both\', \'theory\' or \'exp\'' )
@@ -56,7 +57,7 @@ class WSParametrization():
             couplings.append( couplingsList[i] )
 
         yieldParameters = []
-        yieldParameterList = ROOT.RooArgList( w.set('yieldParameters') )
+        yieldParameterList = ROOT.RooArgList( w.set('yieldParameters' if not self.newStyle else 'all_ggH_yieldParameters') )
         for i in xrange( yieldParameterList.getSize() ):
             yieldParameters.append( yieldParameterList[i] )
 

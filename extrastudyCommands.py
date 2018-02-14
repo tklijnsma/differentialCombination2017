@@ -489,6 +489,9 @@ def main( args ):
 
     #____________________________________________________________________
     if args.inclusive_scan:
+
+        # STATONLY = True
+        STATONLY = False
         
         ws = LatestPaths.ws_combined_totalXS
 
@@ -498,12 +501,30 @@ def main( args ):
         totalXS_ranges = [ 0., 2. ]
 
         jobDirectory = 'Scan_TotalXS_{0}'.format( datestr )
+        if STATONLY: jobDirectory += '_statonly'
         if ASIMOV: jobDirectory += '_asimov'
         jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
 
         nPoints = 55
         nPointsPerJob = 5
         queue = 'short.q'
+
+        extraOptions  = [
+            # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
+            '-P r',
+            '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
+            # '--setPhysicsModelParameters {0}'.format(
+            #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
+            #     ),
+            # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
+            #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
+            # '--saveSpecifiedFunc {0}'.format(','.join(
+            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            '--squareDistPoiStep',
+            ]
+
+        if STATONLY:
+            extraOptions.append('--freezeNuisances rgx{.*}')
 
         Commands.MultiDimCombineTool(
             ws,
@@ -515,19 +536,7 @@ def main( args ):
             fastscan      = False,
             asimov        = ASIMOV,
             jobPriority   = 0,
-            extraOptions  = [
-                # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
-                '-P r',
-                '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
-                # '--setPhysicsModelParameters {0}'.format(
-                #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
-                #     ),
-                # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
-                #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
-                # '--saveSpecifiedFunc {0}'.format(','.join(
-                #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
-                '--squareDistPoiStep',
-                ]
+            extraOptions  = extraOptions
             )
 
 
@@ -1118,6 +1127,9 @@ def main( args ):
     #____________________________________________________________________
     if args.TotalXS_scan:
 
+        # STATONLY = True
+        STATONLY = False
+
         ws = LatestPaths.ws_totalXS
 
         doFastscan = False
@@ -1129,6 +1141,7 @@ def main( args ):
         totalXS_ranges = [ 0., 2. ]
 
         jobDirectory = 'Scan_TotalXS_{0}'.format( datestr )
+        if STATONLY: jobDirectory += '_statonly'
         if ASIMOV: jobDirectory += '_asimov'
         jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
 
@@ -1142,6 +1155,23 @@ def main( args ):
             nPointsPerJob = 5
             queue = 'short.q'
 
+        extraOptions  = [
+            # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
+            '-P r',
+            '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
+            # '--setPhysicsModelParameters {0}'.format(
+            #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
+            #     ),
+            # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
+            #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
+            # '--saveSpecifiedFunc {0}'.format(','.join(
+            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            '--squareDistPoiStep',
+            ]
+
+        if STATONLY:
+            extraOptions.append('--freezeNuisances rgx{.*}')
+
         Commands.MultiDimCombineTool(
             ws,
             nPoints       = nPoints,
@@ -1152,61 +1182,69 @@ def main( args ):
             fastscan      = doFastscan,
             asimov        = ASIMOV,
             jobPriority   = 0,
-            extraOptions  = [
-                # '--importanceSampling={0}:couplingScan'.format( abspath('scanTH2D_Jun01.root') ),
-                '-P r',
-                '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
-                # '--setPhysicsModelParameters {0}'.format(
-                #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
-                #     ),
-                # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
-                #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
-                # '--saveSpecifiedFunc {0}'.format(','.join(
-                #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
-                '--squareDistPoiStep',
-                ]
+            extraOptions  = extraOptions
             )
 
+
+
+    def filter_scan( xs, ys, xMin=-10., xMax=10., yMin=-10., yMax=10.):
+        xs_filtered = []
+        ys_filtered = []
+        for x, y in zip(xs, ys):
+            if (
+                x > xMin and x < xMax
+                and
+                y > yMin and y < yMax
+                ):
+                xs_filtered.append(x)
+                ys_filtered.append(y)
+        return xs_filtered, ys_filtered
 
 
     if args.TotalXS_plot:
 
-        scanRootFiles = glob( LatestPaths.scan_combined_totalXS + '/*.root' )
+        yMaxObjects = 3.75
 
-        scanContainer = OutputInterface.OutputContainer()
+        def make_container(scanDir):
+
+            x_unfiltered, y_unfiltered = TheoryCommands.BasicReadScan(
+                Commands.GlobRootFiles(scanDir),
+                xAttr = 'r',
+                yAttr = 'deltaNLL',
+                )
+            if len(x_unfiltered)==0:
+                raise ValueError('x_unfiltered is an empty list, scanDir = {0}'.format(scanDir))
+            if len(y_unfiltered)==0:
+                raise ValueError('y_unfiltered is an empty list, scanDir = {0}'.format(scanDir))
+
+            scanContainer = OutputInterface.OutputContainer()
+            scanContainer.x, scanContainer.y = filter_scan(x_unfiltered, y_unfiltered, yMax=yMaxObjects*.5)
+
+            print '[info] Multiplying all x by {0}'.format( LatestBinning.YR4_totalXS )
+            scanContainer.x = [ LatestBinning.YR4_totalXS*x for x in scanContainer.x ]
+
+            # FindMinimaAndErrors assumes deltaNLL (not 2*deltaNLL), so compute it before scaling
+            scanContainer.extrema = PhysicsCommands.FindMinimaAndErrors( scanContainer.x, scanContainer.y, returnContainer=True )
+
+            print '[info] Multiplying by 2: deltaNLL --> chi^2'
+            scanContainer.y = [ 2.*y for y in scanContainer.y ]
+
+            scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
+            scanContainer.Tg.SetMarkerStyle(8)
+            scanContainer.Tg.SetMarkerSize(0.8)
+
+            scanContainer.Tg.SetName(TheoryCommands.GetUniqueRootName())
+
+            return scanContainer
 
 
-        x_unfiltered, y_unfiltered = TheoryCommands.BasicReadScan(
-            scanRootFiles,
-            xAttr = 'r',
-            yAttr = 'deltaNLL',
-            )
+        scanDir_statsyst = 'out/Scan_TotalXS_Feb09_0'
+        scanContainer = make_container(scanDir_statsyst)
 
-        scanContainer.x = []
-        scanContainer.y = []
-        for x, y in zip( x_unfiltered, y_unfiltered ):
-            if (
-                x > -10.0 and x < 10.
-                and
-                y > -10.0 and y < 10.
-                ):
-                scanContainer.x.append( x )
-                scanContainer.y.append( y )
-
-
-        print '[info] Multiplying all x by {0}'.format( LatestPaths.YR4_totalXS )
-        scanContainer.x = [ LatestPaths.YR4_totalXS*x for x in scanContainer.x ]
-
-        # FindMinimaAndErrors assumes deltaNLL (not 2*deltaNLL), so compute it before scaling
-        scanContainer.extrema = PhysicsCommands.FindMinimaAndErrors( scanContainer.x, scanContainer.y, returnContainer=True )
-
-        print '[info] Multiplying by 2: deltaNLL --> chi^2'
-        scanContainer.y = [ 2.*y for y in scanContainer.y ]
-
-
-        scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
-        scanContainer.Tg.SetMarkerStyle(8)
-        scanContainer.Tg.SetMarkerSize(0.8)
+        scanDir_statonly = 'out/Scan_TotalXS_Feb09_0_statonly'
+        scanContainer_statonly = make_container(scanDir_statonly)
+        scanContainer_statonly.Tg.SetLineColor(14)
+        scanContainer_statonly.Tg.SetMarkerColor(14)
 
 
         # ======================================
@@ -1224,22 +1262,23 @@ def main( args ):
 
         # xMin = min( scanContainer.x )
         # xMax = max( scanContainer.x )
-        xMin = 0.8 * LatestPaths.YR4_totalXS
-        xMax = 1.4 * LatestPaths.YR4_totalXS
+        xMin = 0.8 * LatestBinning.YR4_totalXS
+        xMax = 1.4 * LatestBinning.YR4_totalXS
 
         base = GetPlotBase(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
             yMax = yMax,
-            xTitle = '#sigma_{tot}',
+            xTitle = '#sigma_{tot} (pb)',
             # yTitle = '#Delta NLL',
             yTitle = '2#DeltaNLL',
             )
         base.Draw('P')
 
 
-        scanContainer.Tg.Draw('XPL')
+        scanContainer.Tg.Draw('XC')
+        scanContainer_statonly.Tg.Draw('XC')
 
 
         oneLine = ROOT.TLine( xMin, 1.0, xMax, 1.0 )
@@ -1249,21 +1288,24 @@ def main( args ):
         print '\n' + '-'*70
         print 'Found range: {0:.4f} < r_totalXS < {1:.4f}'.format( scanContainer.extrema.leftBound, scanContainer.extrema.rightBound )
 
-        # imin
-        # min
-        # leftError
-        # leftBound
-        # rightError
-        # rightBound
-        # wellDefinedRightBound
-        # wellDefinedLeftBound
-
-
         xBestfit = scanContainer.x[ scanContainer.extrema.imin ]
-        bestfitLine = ROOT.TLine( xBestfit, yMin, xBestfit, yMax )
+        left_full  = scanContainer.extrema.leftError
+        right_full = scanContainer.extrema.rightError
+        left_stat  = scanContainer_statonly.extrema.leftError
+        right_stat = scanContainer_statonly.extrema.rightError
+        left_syst  = -sqrt(left_full**2 - left_stat**2)
+        right_syst = sqrt(right_full**2 - right_stat**2)
+        print '\nSeparated syst-stat:'
+        print 'r_totalXS = {0:.4f}  {1:.4f}/{2:.4f} (stat) {3:.4f}/{4:.4f} (syst)'.format(
+            xBestfit, right_stat, left_stat, right_syst, left_syst)
+
+        # TLines can't be added to the legend
+        # bestfitLine = ROOT.TLine( xBestfit, yMin, xBestfit, yMaxObjects )
+        bestfitLine = ROOT.TGraph(2, array('f', [xBestfit, xBestfit]), array('f', [yMin, yMaxObjects]))
+        bestfitLine.SetName('bestfitLine')
         bestfitLine.SetLineWidth(2)
         bestfitLine.SetLineColor(2)
-        bestfitLine.Draw()
+        bestfitLine.Draw('LSAME')
 
         # for x in [ scanContainer.extrema.leftBound, scanContainer.extrema.rightBound ]:
         #     uncLine = ROOT.TLine( x, 0.0, x, 1.0 )
@@ -1272,18 +1314,17 @@ def main( args ):
         #     uncLine.SetLineColor(2)
         #     uncLine.Draw()
 
-        smLine = ROOT.TLine( LatestPaths.YR4_totalXS, yMin, LatestPaths.YR4_totalXS, yMax )
+        smLine = ROOT.TGraph(2, array('f', [LatestBinning.YR4_totalXS, LatestBinning.YR4_totalXS]), array('f', [yMin, yMaxObjects]))
+        smLine.SetName('smLine')
         smLine.SetLineWidth(2)
         smLine.SetLineColor(9)
-        smLine.Draw()
-
-
+        smLine.Draw('LSAME')
 
 
         l = ROOT.TLatex()
         l.SetNDC()
         l.SetTextColor(1)
-        l.SetTextSize(0.05)
+        l.SetTextSize(0.040)
 
         # l.SetTextAlign(31)
         # l.DrawLatex(
@@ -1307,8 +1348,15 @@ def main( args ):
         #     '{0:.3f}'.format( xBestfit )
         #     )
 
-        l.DrawLatex( 0.65, 0.8, '#sigma_{{tot}} = {0:.1f} _{{{1:+.1f}}}^{{{2:+.1f}}}'.format(
-            xBestfit, -abs(scanContainer.extrema.leftError), scanContainer.extrema.rightError
+
+        # l.DrawLatex( 0.65, 0.8, '#sigma_{{tot}} = {0:.1f} _{{{1:+.1f}}}^{{{2:+.1f}}}'.format(
+        #     xBestfit, -abs(scanContainer.extrema.leftError), scanContainer.extrema.rightError
+        #     ))
+        # l.DrawLatex( c.GetLeftMargin()+0.03, 0.78, '#sigma_{{tot}} = {0:.1f} _{{{1:+.1f} (stat.)  {2:+.1f} (syst.)}}^{{{3:+.1f} (stat.)  {4:+.1f} (syst.)}} pb'.format(
+        #     xBestfit, -abs(left_stat), -abs(left_syst), right_stat, right_syst
+        #     ))
+        l.DrawLatex( c.GetLeftMargin()+0.03, 0.78, '#sigma_{{tot}} = {0:.1f}  #pm{1:.1f} (stat.) #pm{2:.1f} (syst.)  pb'.format(
+            xBestfit, 0.5*(abs(left_stat)+abs(right_stat)), 0.5*(abs(left_syst)+abs(right_syst))
             ))
 
 
@@ -1320,6 +1368,23 @@ def main( args ):
         TgPoints.SetMarkerStyle(8)
         TgPoints.SetMarkerColor(2)
         TgPoints.Draw('PSAME')
+
+        leg = ROOT.TLegend(
+            c.GetLeftMargin()+0.02,
+            1-c.GetTopMargin()-0.07, 
+            c.GetLeftMargin()+0.7,
+            1-c.GetTopMargin(),
+            )
+        leg.SetBorderSize(0)
+        leg.SetFillStyle(0)
+        leg.SetNColumns(4)
+
+        leg.AddEntry(scanContainer.Tg.GetName(), 'Stat.+syst.', 'l')
+        leg.AddEntry(scanContainer_statonly.Tg.GetName(), 'Stat. only', 'l')
+        leg.AddEntry(bestfitLine.GetName(), 'Best fit', 'l')
+        leg.AddEntry(smLine.GetName(), 'SM', 'l')
+
+        leg.Draw()
 
         Commands.GetCMSLabel()
         Commands.GetCMSLumi()
@@ -1925,7 +1990,7 @@ def main( args ):
         #     0.004398
         #     ]
         # # shape = [ s / sum(shape) for s in shape ]
-        # SMXSs = [ s * LatestPaths.YR4_totalXS for s in shape ]
+        # SMXSs = [ s * LatestBinning.YR4_totalXS for s in shape ]
 
 
         # Re-normalize the shape

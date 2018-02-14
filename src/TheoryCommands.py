@@ -67,6 +67,10 @@ SAVEPNG = False
 def SaveAsPng( newvalue=True ):
     global SAVEPNG
     SAVEPNG = newvalue
+SAVEPNG_THROUGH_CONVERT = False
+def SaveAsPngThroughConvert( newvalue=True ):
+    global SAVEPNG_THROUGH_CONVERT
+    SAVEPNG_THROUGH_CONVERT = newvalue
 
 def SaveC( outname, asPNG=False, asROOT=False ):
     global PLOTDIR
@@ -83,6 +87,11 @@ def SaveC( outname, asPNG=False, asROOT=False ):
         c.SaveAs( outname + '.png' )
     if asROOT or SAVEROOT:
         c.SaveAs( outname + '.root' )
+
+    if SAVEPNG_THROUGH_CONVERT:
+        # See: https://stackoverflow.com/a/6605085/9209944
+        cmd = 'convert -density 300 -quality 100 {0}.pdf {0}.png'.format(outname)
+        Commands.executeCommand(cmd)
 
 
 ROOTCOUNTER = 1000
@@ -728,6 +737,8 @@ def GetTH2FromListOfRootFiles(
         # defaultHValue = None,
         defaultHValue = 999.,
         refind_minimum_if_dnll_negative = False,
+        ignore_deltaNLL_negativity = False,
+        multiplier = None
         ):
 
     # Read values from specified rootfiles
@@ -803,7 +814,10 @@ def GetTH2FromListOfRootFiles(
             for point in scan:
                 point['deltaNLL'] -= minDeltaNLL
         elif minDeltaNLL < -0.01:
-            Commands.ThrowError('The minimum deltaNLL threshold is -0.01, but minDeltaNLL = {0}'.format(minDeltaNLL))
+            if ignore_deltaNLL_negativity:
+                Commands.Warning('Ignoring the fact that some points are negative!')
+            else:
+                Commands.ThrowError('The minimum deltaNLL threshold is -0.01, but minDeltaNLL = {0}'.format(minDeltaNLL))
 
     H2name = GetUniqueRootName()
     H2 = ROOT.TH2D(
@@ -842,10 +856,12 @@ def GetTH2FromListOfRootFiles(
             print '[ERROR] Point {0} ({1}) not in list'.format( iPoint, y )
             continue
 
+        val = scan[iPoint][zVariable]
         if multiplyByTwo:
-            H2.SetBinContent( iBinX+1, iBinY+1, 2.*scan[iPoint][zVariable] )
-        else:
-            H2.SetBinContent( iBinX+1, iBinY+1, scan[iPoint][zVariable] )
+            val *= 2.
+        if not(multiplier is None):
+            val *= multiplier
+        H2.SetBinContent( iBinX+1, iBinY+1, val )
 
 
     # Open return object

@@ -141,7 +141,8 @@ ws_hzz_Yukawa      = 'out/workspaces_Feb01/hzz4l_comb_13TeV_xs_processesShifted_
 ws_combined_Yukawa_reweighted = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_reweighted.root'
 
 # ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS.root'
-ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Feb05/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_reweighted.root'
+# ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Feb05/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_reweighted.root'
+ws_combined_Yukawa_profiledTotalXS                     = 'out/workspaces_Feb07/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_profiledTotalXS_reweighted.root'
 
 ws_combined_Yukawa_noTheoryUncertainties               = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_noTheoryUncertainties.root'
 ws_combined_Yukawa_withUncorrelatedTheoryUncertainties = 'out/workspaces_Nov06/combinedCard_Nov03_CouplingModel_Yukawa_withUncorrelatedTheoryUncertainties.root'
@@ -152,8 +153,11 @@ ws_combined_Yukawa_lumiScalable                        = 'out/workspaces_Nov06/c
 ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov28/combinedCard_smH_Nov27_INCLUSIVE_CouplingModel_Yukawa_profiledTotalXS_fitOnlyNormalization.root'
 
 
-# Reweighted and using the new model
-ws_combined_Yukawa_couplingDependentBR = 'out/workspaces_Jan25/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR_reweighted.root'
+# Using the new model
+ws_combined_Yukawa_couplingDependentBR_reweighted = 'out/workspaces_Jan25/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR_reweighted.root'
+ws_combined_Yukawa_couplingDependentBR = 'out/workspaces_Feb07/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR.root'
+ws_combined_Yukawa_couplingDependentBR_profiledTotalXS = 'out/workspaces_Feb07/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_couplingDependentBR_profiledTotalXS.root'
+
 
 # ======================================
 # kappat kappag
@@ -185,7 +189,10 @@ ws_combWithHbb_TopHighPt = 'out/workspaces_Jan19/combinedCard_hgg_hzz_hbb_ggHxH_
 
 # ws_combined_Top_lumiScalable           = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_lumiScale.root'
 # ws_combined_Top_profiledTotalXS        = 'out/workspaces_Nov09/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS.root'
+
 ws_combined_Top_couplingDependentBR    = 'out/workspaces_Nov10/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_couplingDependentBR.root'
+ws_combined_Top_couplingDependentBR_profiledTotalXS = 'out/workspaces_Feb07/combinedCard_Nov03_CouplingModel_TopHighPt_withTheoryUncertainties_profiledTotalXS_couplingDependentBR.root'
+
 ws_combined_Top_skippedLastBin         = 'out/workspaces_Nov17/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_skippedLastBin.root'
 
 # ws_combined_Top_profiledTotalXS_fitOnlyNormalization = 'out/workspaces_Nov17/combinedCard_Nov03_CouplingModel_Top_withTheoryUncertainties_profiledTotalXS_fitOnlyNormalization.root'
@@ -272,11 +279,16 @@ scan_combined_Yukawa_uncorrelatedTheoryUncertainties_asimov = 'out/Scan_Yukawa_N
 # scan_combined_Yukawa_profiledTotalXS_asimov                 = 'out/Scan_Yukawa_Nov09_profiledTotalXS_asimov'
 scan_combined_Yukawa_profiledTotalXS_asimov                 = 'out/Scan_Yukawa_Feb05_combined_profiledTotalXS_asimov'
 
-scan_combined_Yukawa_oneKappa_kappac                        = 'out/Scan_Yukawa_Nov06_oneKappa_kappac'
-scan_combined_Yukawa_oneKappa_kappac_asimov                 = 'out/Scan_Yukawa_Nov06_oneKappa_kappac_asimov'
-# scan_combined_Yukawa_oneKappa_kappab                        = 'out/Scan_Yukawa_Nov06_oneKappa_kappab'
-scan_combined_Yukawa_oneKappa_kappab                        = 'out/Scan_Yukawa_Jan30_oneKappa_kappab_0'
-scan_combined_Yukawa_oneKappa_kappab_asimov                 = 'out/Scan_Yukawa_Nov06_oneKappa_kappab_asimov'
+# Reweighting wrong way around, and only half applied
+# scan_combined_Yukawa_oneKappa_kappac                        = 'out/Scan_Yukawa_Nov06_oneKappa_kappac'
+# scan_combined_Yukawa_oneKappa_kappac_asimov                 = 'out/Scan_Yukawa_Nov06_oneKappa_kappac_asimov'
+# scan_combined_Yukawa_oneKappa_kappab                        = 'out/Scan_Yukawa_Jan30_oneKappa_kappab_0'
+# scan_combined_Yukawa_oneKappa_kappab_asimov                 = 'out/Scan_Yukawa_Nov06_oneKappa_kappab_asimov'
+# Corrected
+scan_combined_Yukawa_oneKappa_kappac                        = 'out/Scan_Yukawa_Feb07_combined_oneKappa_kappac'
+scan_combined_Yukawa_oneKappa_kappac_asimov                 = 'out/Scan_Yukawa_Feb07_combined_oneKappa_kappac_asimov'
+scan_combined_Yukawa_oneKappa_kappab                        = 'out/Scan_Yukawa_Feb07_combined_oneKappa_kappab'
+scan_combined_Yukawa_oneKappa_kappab_asimov                 = 'out/Scan_Yukawa_Feb07_combined_oneKappa_kappab_asimov'
 
 scan_combined_Yukawa_couplingDependentBR_asimov              = 'out/Scan_Yukawa_Nov10_couplingDependentBR_asimov'
 scan_combined_Yukawa_couplingDependentBR_fixedKappaV_asimov  = 'out/Scan_Yukawa_Nov10_couplingDependentBR_fixedKappaV_asimov'
@@ -289,6 +301,8 @@ scan_combined_Yukawa_ratioOfBRs_onedimRatioScan_asimov       = 'out/Scan_Yukawa_
 
 scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan        = 'out/Scan_Yukawa_Nov16_profiledTotalXS_onedimTotalXSScan'
 scan_combined_Yukawa_profiledTotalXS_onedimTotalXSScan_asimov = 'out/Scan_Yukawa_Nov16_profiledTotalXS_onedimTotalXSScan_asimov'
+
+scan_combined_Yukawa_couplingDependentBR_profiledTotalXS_asimov = 'out/Scan_Yukawa_Feb07_combination_couplingDependentBR_profiledTotalXS'
 
 
 # ======================================
@@ -387,6 +401,9 @@ scan_combined_TopCtCb_asimov                             = 'out/Scan_TopCtCb_Nov
 scan_hgg_TopCtCb_asimov                                  = 'out/Scan_TopCtCb_Nov15_hgg_asimov'
 scan_hzz_TopCtCb_asimov                                  = 'out/Scan_TopCtCb_Nov15_hzz_asimov'
 
+# For pre-app
+scan_combined_TopHighPt_couplingDependentBR_profiledTotalXS_asimov = 'out/Scan_TopHighPt_Feb07_combination_couplingDependentBR_profiledTotalXS'
+
 
 ########################################
 # Differential combination
@@ -399,11 +416,11 @@ card_combination_pth_ggH   = card_combined_ggHxH_PTH
 card_hgg_pth_smH           = card_hgg_smH_PTH
 card_hzz_pth_smH           = card_hzz_smH_PTH
 card_combination_pth_smH   = card_combined_smH_PTH
-card_hgg_ptjet             = card_hzz_smH_PTJ
-card_hzz_ptjet             = card_hgg_smH_PTJ
+card_hgg_ptjet             = card_hgg_smH_PTJ
+card_hzz_ptjet             = card_hzz_smH_PTJ
 card_combination_ptjet     = card_combined_smH_PTJ
-card_hgg_njets             = card_hzz_smH_NJ
-card_hzz_njets             = card_hgg_smH_NJ
+card_hgg_njets             = card_hgg_smH_NJ
+card_hzz_njets             = card_hzz_smH_NJ
 card_combination_njets     = card_combined_smH_NJ
 card_hgg_rapidity          = card_hgg_smH_YH
 card_hzz_rapidity          = card_hzz_smH_YH
@@ -424,6 +441,13 @@ ws_combination_pth_smH   = 'out/workspaces_Nov07/combinedCard_smH_Nov07.root'
 ws_combination_ptjet     = 'out/workspaces_Nov30/combinedCard_PTJ_smH_Nov28.root'
 ws_combination_njets     = 'out/workspaces_Nov12/combinedCard_NJ_smH_Nov12.root'
 ws_combination_rapidity  = 'out/workspaces_Nov28/combinedCard_YH_smH_Nov28.root'
+
+ws_combination_pth_ggH_lumiScale   = 'out/workspaces_Feb12/combinedCard_Nov03_DifferentialModel_lumiScale.root'
+ws_combination_pth_smH_lumiScale   = 'out/workspaces_Feb12/combinedCard_smH_Nov07_DifferentialModel_lumiScale.root'
+ws_combination_ptjet_lumiScale     = 'out/workspaces_Feb12/combinedCard_PTJ_smH_Nov28_DifferentialModel_lumiScale.root'
+ws_combination_njets_lumiScale     = 'out/workspaces_Feb12/combinedCard_NJ_smH_Nov12_DifferentialModel_lumiScale.root'
+ws_combination_rapidity_lumiScale  = 'out/workspaces_Feb12/combinedCard_YH_smH_Nov28_DifferentialModel_lumiScale.root'
+
 
 # Legacy in order not to break old code
 ws_hgg_ggH_xHfixed       = ws_hgg_pth_ggH
@@ -566,6 +590,12 @@ scan_hzz_rapidity_asimov                  = 'out/Scan_rapidity_Feb06_hzz_asimov'
 scan_hzz_rapidity_statonly                = 'out/Scan_rapidity_Feb06_hzz_statonly'
 scan_hzz_rapidity_statonly_asimov         = 'out/Scan_rapidity_Feb06_hzz_statonly_asimov'
 
+scan_combination_njets_lumiScale_asimov    = 'out/Scan_njets_Feb12_combination_lumiScale_asimov'
+scan_combination_pth_ggH_lumiScale_asimov  = 'out/Scan_pth_ggH_Feb12_combination_lumiScale_asimov'
+scan_combination_pth_smH_lumiScale_asimov  = 'out/Scan_pth_smH_Feb12_combination_lumiScale_asimov'
+scan_combination_ptjet_lumiScale_asimov    = 'out/Scan_ptjet_Feb12_combination_lumiScale_asimov'
+scan_combination_rapidity_lumiScale_asimov = 'out/Scan_rapidity_Feb12_combination_lumiScale_asimov'
+
 # Legacy keys, so old code doesn't break
 scan_combined_NJ      = scan_combination_njets
 scan_hgg_NJ           = scan_hgg_njets
@@ -608,7 +638,7 @@ scan_hzz_PTJ_asimov      = 'out/Scan_PTJ_Nov28_asimov_1'
 # End
 ########################################
 if __name__ == "__main__":
-    vardict = vars().keys()
+    vardict = vars()
     for key in vardict.keys():
         if key.startswith('__'): continue
         print '{0}: {1}'.format( key, vardict[key] )
