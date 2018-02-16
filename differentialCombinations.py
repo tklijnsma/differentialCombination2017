@@ -14,17 +14,19 @@ from copy import deepcopy
 
 from OptionHandler import flag_as_option
 
-sys.path.append('src')
-import Commands
-import PhysicsCommands
-import TheoryCommands
-import LatestPaths
-import LatestPathsGetters
-import LatestBinning
-from Container import Container
-import PlotCommands
-from differentialTools import *
-import CombineToolWrapper
+import differentials
+
+# sys.path.append('src')
+# import Commands
+# import PhysicsCommands
+# import TheoryCommands
+# import LatestPaths
+# import LatestPathsGetters
+# import LatestBinning
+# from Container import Container
+# import PlotCommands
+# from differentialTools import *
+# import CombineToolWrapper
 
 from time import strftime
 datestr = strftime( '%b%d' )

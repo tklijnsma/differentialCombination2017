@@ -21,8 +21,6 @@ src = os.path.basename(__file__)
 from subprocess import check_output
 currentcommit = check_output(['git', 'log', '-1', '--oneline' ])
 
-from Container import Container
-
 import ROOT
 
 ########################################
@@ -50,12 +48,29 @@ def get_temp_job_dir():
     global TEMPJOBDIR
     return TEMPJOBDIR
 
-#____________________________________________________________________
 def format_str_to_width(text, width):
     if len(text) > width:
         text = text[:width-3] + '...'
     ret = '{0:{width}}'.format( text, width=width )
     return ret
+
+
+#____________________________________________________________________
+class Container(object):
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+
+    def list_attributes( self, onlyVariables=False ):
+        if onlyVariables:
+            return [ a for a in dir(self) if not a.startswith('__') and not a == 'ListAttributes' and not a == 'PrintAttributes' and not callable(a) ]
+        else:
+            return [ a for a in dir(self) if not a.startswith('__') and not a == 'ListAttributes' and not a == 'PrintAttributes' ]
+
+    def print_attributes( self ):
+        variables = self.list_attributes( onlyVariables=True )
+        for variable in variables:
+            print '{0:20} : {1}'.format( variable, getattr( self, variable ) )
+
 
 def print_table(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n'):
     nRows = len(table)
@@ -82,17 +97,13 @@ def print_table(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n'
         out.append( sep.join(line) )
     return newline_sep.join(out)
 
-#____________________________________________________________________
 def make_unique_directory(
         dirName,
         nAttempts = 100,
         ):
-
     dirName = abspath(dirName)
-
     if not isdir(dirName):
         return dirName
-
     dirName += '_{0}'
     for iAttempt in xrange(nAttempts):
         if not isdir( dirName.format(iAttempt) ):
@@ -101,14 +112,9 @@ def make_unique_directory(
     else:
         throw_error( 'Could not create a unique directory for {0}'.format(dirName.format('X')) )
         sys.exit()
-
     print '[info] New directory: {0}'.format( dirName )
     return dirName
 
-
-
-
-#____________________________________________________________________
 def convert_float_to_str( number, nDecimals=None ):
     number = float(number)
     if not nDecimals is None:
@@ -119,18 +125,15 @@ def convert_float_to_str( number, nDecimals=None ):
     string = str(number).replace('-','m').replace('.','p')
     return string
 
-#____________________________________________________________________
 def convert_str_to_float( string ):
     string = str(string)
     number = string.replace('m','-').replace('p','.')
     number = float(number)
     return number
 
-#____________________________________________________________________
 def get_range_from_str(text):
     regular_match = re.search(r'([\dpm\.\-]+)_([\dpm\.\-]+)', text)
     overflow_match = re.search(r'(GE|GT)([\dpm\.\-]+)', text)
-
     if regular_match:
         left = convert_str_to_float(regular_match.group(1))
         right = convert_str_to_float(regular_match.group(2))
@@ -140,7 +143,6 @@ def get_range_from_str(text):
     else:
         left = 'UNDEFINED'
         right = 'UNDEFINED'
-
     return left, right
 
 def range_sorter(text):
@@ -161,13 +163,11 @@ def poi_sorter( POI ):
     else:
         return Range[0]
 
-def sort_pois( POIs ):
-    POIs.sort( key = POIsorter )
+def sort_pois(POIs):
+    POIs.sort(key=poi_sorter)
 
 
-#____________________________________________________________________
-def execute_command( cmd, captureOutput=False, ignoreTestmode=False ):
-
+def execute_command(cmd, captureOutput=False, ignoreTestmode=False):
     if not isinstance( cmd, basestring ):
         cmd = [ l for l in cmd if not len(l.strip()) == 0 ]
         cmdStr = '\n    '.join( cmd )
@@ -190,7 +190,6 @@ def execute_command( cmd, captureOutput=False, ignoreTestmode=False ):
             return output
 
 
-#____________________________________________________________________
 def copyfile( src, dst, verbose=True ):
     # src = abspath(src)
     # dst = abspath(dst)
@@ -200,7 +199,6 @@ def copyfile( src, dst, verbose=True ):
         if verbose: print '\n[EXECUTING] Copying\n  {0}\n  to\n  {1}'.format( src, dst )
         shutil.copyfile( src, dst )
 
-#____________________________________________________________________
 def movefile( src, dst, verbose=True ):
     # src = relpath( src, '.' )
     # dst = relpath( dst, '.' )
@@ -210,71 +208,52 @@ def movefile( src, dst, verbose=True ):
         if verbose: print '\n[EXECUTING] Moving\n  {0}\n  to\n  {1}'.format( src, dst )
         os.rename( src, dst )
 
-#____________________________________________________________________
 def new_color_cycle():
     return itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
 
 
 
-
 class AnalysisError(Exception):
     pass
-#____________________________________________________________________
 def throw_error(
     errstr = '',
     throwException = True
     ):
-
     if throwException:
         raise AnalysisError( errstr )
-
     else:
         stack = traceback.extract_stack(None, 2)[0]
         linenumber = stack[1]
         funcname = stack[2]
-
         cwd = abspath( os.getcwd() )
         modulefilename = relpath( stack[0], cwd )
-
         print 'ERROR in {0}:{1} {2}:\n    {3}'.format( modulefilename, linenumber, funcname, errstr )
 
-#____________________________________________________________________
 def warning(
         warningStr,
         ):
-
     if DISABLE_WARNINGS:
         return
-
     stack = traceback.extract_stack(None, 2)[0]
     linenumber = stack[1]
     funcname = stack[2]
-
     cwd = abspath( os.getcwd() )
     modulefilename = relpath( stack[0], cwd )
-
     print '\n[WARNING {0}:{1} L{2}] '.format(modulefilename, funcname, linenumber) + warningStr
 
-#____________________________________________________________________
 def tag_git_commit_and_module():
-
     stack = traceback.extract_stack(None, 2)
     stack = stack[0]
     linenumber = stack[1]
     funcname = stack[2]
-
     cwd = abspath( os.getcwd() )
     modulefilename = relpath( stack[0], cwd )
-
     ret = 'Generated on {0} by {1}; current git commit: {2}'.format( datestr_detailed, modulefilename, currentcommit.replace('\n','') )
-
     return ret
 
 
-#____________________________________________________________________
 class EnterDirectory():
     """Context manager to (create and) go into and out of a directory"""
-
     def __init__(self, subDirectory=None, verbose=True ):
         self.verbose = verbose
         self._active = False
@@ -300,10 +279,8 @@ class EnterDirectory():
         if self._active:
             os.chdir( self.backDir )
 
-#____________________________________________________________________
 class OpenRootFile():
     """Context manager to safely open and close root files"""
-
     def __init__(self, rootFile ):
         self._rootFile = rootFile
 
@@ -317,17 +294,14 @@ class OpenRootFile():
         self._rootFp.Close()
 
 
-#____________________________________________________________________
 def fileno(file_or_fd):
     fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
     if not isinstance(fd, int):
         raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
     return fd
 
-
 class RedirectStdout():
     """Context manager to capture stdout from ROOT/C++ prints"""
-
     def __init__( self, verbose=False ):
         self.stdout_fd = fileno(sys.stdout)
         self.enableDebugPrint = verbose
@@ -354,19 +328,15 @@ class RedirectStdout():
 
         return self
 
-
     def __exit__(self, *args):
         sys.stdout.flush()
         os.dup2( self.copied_stdout.fileno(), self.stdout_fd )  # $ exec >&copied
 
-
-    def read( self ):
+    def read(self):
         sys.stdout.flush()
         self.debug_print( '  Draining pipe' )
-
         # Without this line the reading does not end - is that 'deadlock'?
         os.close(self.stdout_fd)
-
         captured_str = ''
         while True:
             data = os.read( self.captured_fd_r, 1024)
@@ -376,10 +346,7 @@ class RedirectStdout():
             self.debug_print( '\n  captured_str: ' + captured_str )
 
         self.debug_print( '  Draining completed' )
-        
-
         return captured_str
-
 
     def debug_print( self, text ):
         if self.enableDebugPrint:
@@ -388,10 +355,6 @@ class RedirectStdout():
             else:
                 os.write( fileno(self.stdout_fd), text + '\n' )
 
-
-
-
-#____________________________________________________________________
 def get_cms_label(
         text='Preliminary',
         x=None,
@@ -423,7 +386,6 @@ def get_cms_label(
             y = 1. - ROOT.gPad.GetTopMargin() + textOffset
         l.DrawLatex( x, y, latexStr )
 
-#____________________________________________________________________
 def get_cms_lumi(
         lumi=35.9,
         x=None,

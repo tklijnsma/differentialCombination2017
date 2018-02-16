@@ -1,25 +1,22 @@
-def basic_combine_cards(
-    outputFile,
-    *inputList
-    ):
+from core import *
 
+def basic_combine_cards(
+        outputFile,
+        *inputList
+        ):
     cmd = [ 'combineCards.py' ]
     for datacard in inputList:
         cmd.append( datacard )
-
     cmd.append( '> {0}'.format( outputFile ) )
-
     execute_command( cmd )
 
 
 def process_maps(datacard, smartMaps=None, manualMaps=None, verbose=True):
-
     if smartMaps is None and manualMaps is None:
         # raise ValueError('Supply smartMaps and/or manualMaps')
         return []
 
     signalprocesses, processes, bins = list_processes( datacard )
-
     maps = []
 
     if smartMaps:
@@ -109,12 +106,12 @@ def basic_t2ws(
 
     execute_command( cmd )
 
+
 def copy_physics_models():
     """
     Copies models to compiled directory
     (scram b takes unnecessarily long)
     """
-
     physicsModelsDir = 'physicsModels'
     dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(physicsModelsDir) )
 
@@ -125,6 +122,7 @@ def copy_physics_models():
         if isdir(dst):
             shutil.rmtree(dst)
         shutil.copytree( physicsModelsDir, dst )
+
 
 def basic_t2ws_with_model(
     datacard,
@@ -235,10 +233,6 @@ def basic_generic_combine_command(
 
     else:
         execute_command( cmd )
-
-
-
-
 
 
 

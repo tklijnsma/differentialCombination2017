@@ -9,19 +9,19 @@ Thomas Klijnsma
 
 import argparse
 
-import combineCommands
-import plotCommands
-import yukawaCommands
-import topCommands
-import onetimeplotsCommands
-import extrastudyCommands
-import crosscheckCommands
-import differentialCombinations
+import differentials
 
-import sys
-sys.path.append('src')
-import Commands
-import TheoryCommands
+
+# import yukawaCommands
+# import topCommands
+# import extrastudyCommands
+# import crosscheckCommands
+
+
+# import sys
+# sys.path.append('src')
+# import Commands
+# import TheoryCommands
 
 # New style option handling
 from OptionHandler import OptionHandler
@@ -58,10 +58,10 @@ def main():
 
     #____________________________________________________________________
     # Old style imports
-    yukawaCommands.AppendParserOptions(parser)
-    topCommands.AppendParserOptions(parser)
-    extrastudyCommands.AppendParserOptions(parser)
-    crosscheckCommands.AppendParserOptions(parser)
+    # yukawaCommands.AppendParserOptions(parser)
+    # topCommands.AppendParserOptions(parser)
+    # extrastudyCommands.AppendParserOptions(parser)
+    # crosscheckCommands.AppendParserOptions(parser)
 
     #____________________________________________________________________
     # New style imports
@@ -81,14 +81,15 @@ def main():
 
     if args.bkg:
         pass
-    if args.test: Commands.test_mode()
+    if args.test: differentials.test_mode()
 
-    if args.saveroot:
-        TheoryCommands.save_as_root()
-    if args.savepng:
-        TheoryCommands.save_as_png()
-    if args.savepng_convert:
-        TheoryCommands.save_as_png_through_convert()
+    # REIMPLEMENT THIS LATER!!
+    # if args.saveroot:
+    #     TheoryCommands.save_as_root()
+    # if args.savepng:
+    #     TheoryCommands.save_as_png()
+    # if args.savepng_convert:
+    #     TheoryCommands.save_as_png_through_convert()
 
 
     ########################################
@@ -103,17 +104,17 @@ def main():
     # Old style options
     ########################################
 
-    if args.yukawaCommands:
-        yukawaCommands.main(args)
+    # if args.yukawaCommands:
+    #     yukawaCommands.main(args)
 
-    if args.topCommands:
-        topCommands.main(args)
+    # if args.topCommands:
+    #     topCommands.main(args)
 
-    if args.extrastudyCommands:
-        extrastudyCommands.main(args)
+    # if args.extrastudyCommands:
+    #     extrastudyCommands.main(args)
 
-    if args.crosscheckCommands:
-        crosscheckCommands.main(args)
+    # if args.crosscheckCommands:
+    #     crosscheckCommands.main(args)
 
 
 ########################################
