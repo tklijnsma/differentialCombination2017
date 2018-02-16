@@ -90,7 +90,7 @@ class CombineConfig(Container):
 
 
     def make_unique_directory(self):
-        self.subDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore(self.subDirectory)
+        self.subDirectory = Commands.make_unique_directory(self.subDirectory)
 
     def get_name(self):
         return basename(self.datacard).replace('.root','')
@@ -175,7 +175,7 @@ class BaseCombineScan(Container):
         if self.onBatch:
             if 't3' in os.environ['HOSTNAME']:
                 if not self.input.queue in [ 'all.q', 'long.q', 'short.q' ]:
-                    Commands.ThrowError( 'Queue \'{0}\' is not available on PSI'.format(self.input.queue) )
+                    Commands.throw_error( 'Queue \'{0}\' is not available on PSI'.format(self.input.queue) )
                 if self.input.jobPriority != 0:
                     cmd.append(
                         '--job-mode psi --task-name {0} --sub-opts=\'-q {1} -p {2}\' '.format( taskName, self.input.queue, self.input.jobPriority ),
@@ -185,7 +185,7 @@ class BaseCombineScan(Container):
                         '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '.format( taskName, self.input.queue ),
                         )
             else:
-                Commands.ThrowError( 'Only jobs submitted from T3 are implemented now' )
+                Commands.throw_error( 'Only jobs submitted from T3 are implemented now' )
 
         return cmd
 
@@ -193,7 +193,7 @@ class BaseCombineScan(Container):
     def run(self):
         cmd = self.parse_command()
         with Commands.EnterDirectory(self.subDirectory):
-            Commands.executeCommand(cmd)
+            Commands.execute_command(cmd)
 
 
 #____________________________________________________________________
@@ -211,7 +211,7 @@ class CombinePostfit(BaseCombineScan):
         cmd = super(CombinePostfit, self).parse_command()
 
         if self.input.asimov and len(self.input.PhysicsModelParameters)==0:
-            Commands.ThrowError('PhysicsModelParameters *have* to be set when running asimov, or the best fit may make no sense')
+            Commands.throw_error('PhysicsModelParameters *have* to be set when running asimov, or the best fit may make no sense')
 
         if len(self.input.POIs) > 0:
             cmd.append( '-P ' + ' -P '.join(self.input.POIs) )
@@ -409,24 +409,24 @@ class CombinePointwiseScan(BaseCombineScan):
                 self.get_task_name = lambda: self.get_task_name_without_number() + '_' + str(iChunk)
 
                 cmd = self.parse_command()
-                Commands.executeCommand( cmd )
+                Commands.execute_command( cmd )
 
 
     def list_accepted_points(self, fastscanFile):
 
         if not isfile(fastscanFile):
-            if Commands.IsTestMode():
+            if Commands.is_test_mode():
                 self.print_info('[TESTMODE] No file \'{0}\'; Returning some bogus accepted points'.format(fastscanFile))
                 # return [ Container(iPoint=i) for i in xrange(2*self.nPointsPerJob) ]
                 return range(2*self.nPointsPerJob)
             else:
-                Commands.ThrowError( 'File \'{0}\' does not exist'.format(fastscanFile) )
+                Commands.throw_error( 'File \'{0}\' does not exist'.format(fastscanFile) )
 
 
         with Commands.OpenRootFile(fastscanFile) as fastscanFp:
 
             if not fastscanFp.GetListOfKeys().Contains('limit'):
-                Commands.ThrowError( 'There is no tree \'limit\' in', fastscanFile )
+                Commands.throw_error( 'There is no tree \'limit\' in', fastscanFile )
 
             acceptedPoints = []
             rejectedPoints = []
@@ -527,9 +527,9 @@ class CombineScan_OLD(Container):
 
     # Setter and getter methods for the postfitWS attribute
     _postfitWS = None
-    def get_postfitWS( self ):
+    def get_postfit_ws( self ):
         return self._postfitWS
-    def set_postfitWS( self, postfitWS ):
+    def set_postfit_ws( self, postfitWS ):
         print '\nSetting postfitWS to \'{0}\''.format(postfitWS)
         self._postfitWS = postfitWS
     postfitWS = property( get_postfitWS, set_postfitWS )
@@ -546,9 +546,9 @@ class CombineScan_OLD(Container):
 
     # Setter and getter methods for the datacard attribute
     _fastscanRootFile = None
-    def get_fastscanRootFile( self ):
+    def get_fastscan_root_file( self ):
         return self._fastscanRootFile
-    def set_fastscanRootFile( self, fastscanRootFile ):
+    def set_fastscan_root_file( self, fastscanRootFile ):
         print '\nSetting fastscanRootFile to \'{0}\''.format(fastscanRootFile)
         self._fastscanRootFile = fastscanRootFile
     fastscanRootFile = property( get_fastscanRootFile, set_fastscanRootFile )
@@ -562,7 +562,7 @@ class CombineScan_OLD(Container):
         # Overwrite with attributes from the input container
 
         if not container is None:
-            for attribute in container.ListAttributes( onlyVariables=True ):
+            for attribute in container.list_attributes( onlyVariables=True ):
                 if attribute.startswith('get_') or attribute.startswith('set_'):
                     continue
                 elif callable(getattr( container, attribute )):
@@ -574,23 +574,23 @@ class CombineScan_OLD(Container):
 
 
     #____________________________________________________________________
-    def MakeSubdirectory(self):
+    def make_subdirectory(self):
         if isdir( self.subDirectory ):
-            self.subDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore(self.subDirectory)
-        if not Commands.IsTestMode():
+            self.subDirectory = Commands.make_unique_directory(self.subDirectory)
+        if not Commands.is_test_mode():
             os.makedirs(self.subDirectory)
 
 
     #____________________________________________________________________
-    def Run( self ):
+    def run( self ):
 
         # Make the subDirectory now, avoid race condition while waiting for the postfit
         if self.asimov:
             self.tags.append('asimov')
         if len(self.tags) > 0:
             self.subDirectory += '_' + '_'.join(self.tags)
-        self.subDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore(self.subDirectory)
-        self.MakeSubdirectory()
+        self.subDirectory = Commands.make_unique_directory(self.subDirectory)
+        self.make_subdirectory()
         
         if self.APPLY_FASTSCAN_FILTER:
 
@@ -598,7 +598,7 @@ class CombineScan_OLD(Container):
             # Make sure there is a self.postfitWS
 
             if self.postfitWS is None:
-                self.Chapter( 'Postfit not given - Creating postfit' )
+                self.chapter( 'Postfit not given - Creating postfit' )
 
                 # Create new instance from self
                 # print 'Creating copied instance...'
@@ -608,7 +608,7 @@ class CombineScan_OLD(Container):
                 postfitScan.subDirectory = 'postfitWSs_{0}'.format(datestr)
                 postfitScan.onBatch = False
 
-                self.postfitWS = postfitScan.CreatePostfit()
+                self.postfitWS = postfitScan.create_postfit()
 
 
             # ======================================
@@ -616,38 +616,38 @@ class CombineScan_OLD(Container):
 
             if not self.asimov:
                 # Now remove any overwriting of PhysicsModelParameters
-                Commands.Warning( 'Deleting any previously PhysicsModelParameters (They will be read from the postfit)' )
+                Commands.warning( 'Deleting any previously PhysicsModelParameters (They will be read from the postfit)' )
                 self.PhysicsModelParameters = []
 
             if self.fastscanRootFile is None:
-                self.Chapter( 'No fastscanRootFile was given - Creating fastscanRootFile' )
-                self.fastscanRootFile = self.DetermineRelevantPointsFromFastScan()
+                self.chapter( 'No fastscanRootFile was given - Creating fastscanRootFile' )
+                self.fastscanRootFile = self.determine_relevant_points_from_fast_scan()
 
-            if not Commands.IsTestMode():
+            if not Commands.is_test_mode():
                 print '\nMaking basic plot of fast scan result'
-                self.PlotFastScan(self.fastscanRootFile)
+                self.plot_fast_scan(self.fastscanRootFile)
 
             print '\nDetermining accepted points from fastscanRootFile:', self.fastscanRootFile
-            acceptedPoints = self.GetListOfAcceptedPoints( self.fastscanRootFile )
+            acceptedPoints = self.get_list_of_accepted_points( self.fastscanRootFile )
 
 
             # ======================================
             # Submit the scan based on the accepted points
 
-            self.Chapter( 'Submitting profiled scan based on accepted points' )
-            self.SubmitScan( acceptedPoints )
+            self.chapter( 'Submitting profiled scan based on accepted points' )
+            self.submit_scan( acceptedPoints )
 
 
         else:
-            self.SubmitScan()
+            self.submit_scan()
 
 
     #____________________________________________________________________
-    def PlotFastScan( self, fastscanRootFile ):
+    def plot_fast_scan( self, fastscanRootFile ):
 
         print '\nAttempting to make a quick plot of {0}'.format(fastscanRootFile)
 
-        container = TheoryCommands.GetTH2FromListOfRootFiles(
+        container = TheoryCommands.get_TH2_from_list_of_root_files(
             [ fastscanRootFile ],
             self.POIs[0],
             self.POIs[1],
@@ -663,7 +663,7 @@ class CombineScan_OLD(Container):
             x_ranges = [ -8.5, 8.5 ]
             y_ranges = [ -0.65, 0.65 ]
 
-        PlotCommands.PlotSingle2DHistogram(
+        PlotCommands.plot_single_TH2(
             container,
             container.xBinBoundaries[0], container.xBinBoundaries[-1],
             container.yBinBoundaries[0], container.yBinBoundaries[-1],
@@ -676,20 +676,20 @@ class CombineScan_OLD(Container):
 
 
     #____________________________________________________________________
-    def Chapter( self, txt ):
+    def chapter( self, txt ):
         print '\n' + '='*70
         print txt
 
 
     #____________________________________________________________________
-    def CreatePostfit( self ):
+    def create_postfit( self ):
 
         finalPostfitWS = abspath(join( self.subDirectory, 'POSTFIT_' + ( 'ASIMOV_' if self.asimov else '' ) + basename(self.datacard).replace('/','') ))
 
-        cmd = self.ParseBestfitCommand()
+        cmd = self.parse_bestfit_command()
 
         with RunInDirectory( subDirectory = self.subDirectory ):
-            Commands.executeCommand( cmd )
+            Commands.execute_command( cmd )
             Commands.movefile( self.postfitRootFileBasename, finalPostfitWS )
 
         # Return path to the output root file
@@ -697,7 +697,7 @@ class CombineScan_OLD(Container):
 
 
     #____________________________________________________________________
-    def DetermineRelevantPointsFromFastScan( self ):
+    def determine_relevant_points_from_fast_scan( self ):
 
         try:
             _doFastscan = self.doFastscan
@@ -714,8 +714,8 @@ class CombineScan_OLD(Container):
 
             with RunInDirectory( subDirectory = self.subDirectory ):
                 Commands.copyfile( srcPostfitWS, self.postfitWS )
-                fastscanRootFile, cmd = self.ParseScanCommand()
-                Commands.executeCommand( cmd )
+                fastscanRootFile, cmd = self.parse_scan_command()
+                Commands.execute_command( cmd )
 
         finally:
             self.doFastscan   = _doFastscan
@@ -726,8 +726,8 @@ class CombineScan_OLD(Container):
         return fastscanRootFile
 
     #____________________________________________________________________
-    def SubmitScan( self, acceptedPoints=None ):
-        self.PrepareForCommandCompilation( mode = 'scan' )
+    def submit_scan( self, acceptedPoints=None ):
+        self.prepare_for_command_compilation( mode = 'scan' )
 
         try:
             _extraOptions = deepcopy(self.extraOptions)
@@ -735,35 +735,35 @@ class CombineScan_OLD(Container):
             with RunInDirectory( subDirectory = self.subDirectory ):
                 if acceptedPoints is None:
                     self.extraOptions.append( '--split-points {0}'.format(self.nPointsPerJob) )
-                    cmd = self.ParseScanCommand()
-                    Commands.executeCommand( cmd )
+                    cmd = self.parse_scan_command()
+                    Commands.execute_command( cmd )
                 else:
                     for iChunk, chunk in enumerate(chunks( [ container.iPoint for container in acceptedPoints ], self.nPointsPerJob )):
                         print '\nJob', iChunk
                         self.extraOptions = _extraOptions + [ '--doPoints ' + ','.join([ str(i) for i in chunk ]) ]
                         self.taskNamePrefix = '_' + str(iChunk)
-                        cmd = self.ParseScanCommand()
-                        Commands.executeCommand( cmd )
+                        cmd = self.parse_scan_command()
+                        Commands.execute_command( cmd )
 
         finally:
             self.extraOptions = _extraOptions
 
     #____________________________________________________________________
-    def PrepareForCommandCompilation( self, mode ):
+    def prepare_for_command_compilation( self, mode ):
 
         if mode == 'postfit':
             if self.datacard is None:
-                Commands.ThrowError( 'Set the \'datacard\' attribute to /path/to/datacard.root' )
+                Commands.throw_error( 'Set the \'datacard\' attribute to /path/to/datacard.root' )
             elif not isfile(self.datacard):
-                Commands.ThrowError( '{0} does not exist'.format(self.datacard) )
+                Commands.throw_error( '{0} does not exist'.format(self.datacard) )
             self.datacard = abspath(self.datacard)
 
             if self.asimov and len(self.PhysicsModelParameters) == 0:
-                Commands.ThrowError( 'PhysicsModelParameters HAS to be set when running on asimov, otherwise behavior is unspecfied!!' )
+                Commands.throw_error( 'PhysicsModelParameters HAS to be set when running on asimov, otherwise behavior is unspecfied!!' )
 
             if self.name is None:
                 self.name = basename(self.datacard).replace('/','').replace('.root','')
-                Commands.Warning( 'No name given; Will fill \'{0}\''.format(self.name) )
+                Commands.warning( 'No name given; Will fill \'{0}\''.format(self.name) )
 
         elif mode == 'scan':
 
@@ -773,46 +773,46 @@ class CombineScan_OLD(Container):
                 dc = self.datacard
 
             if dc is None:
-                Commands.ThrowError( 'Set the \'postfitWS\' attribute to /path/to/postfitWS.root' )
-            elif Commands.IsTestMode():
+                Commands.throw_error( 'Set the \'postfitWS\' attribute to /path/to/postfitWS.root' )
+            elif Commands.is_test_mode():
                 pass
             elif not isfile(dc):
-                Commands.ThrowError( '{0} does not exist'.format(dc) )
+                Commands.throw_error( '{0} does not exist'.format(dc) )
             else:
                 dc = abspath(dc)
 
             if self.name is None:
                 self.name = basename(dc).replace('/','').replace('.root','')
-                Commands.Warning( 'No name given; Will fill \'{0}\''.format(self.name) )
+                Commands.warning( 'No name given; Will fill \'{0}\''.format(self.name) )
 
 
             if self.nPoints is None:
-                Commands.ThrowError( 'Mode \'scan\' needs attribute \'nPoints\'' )
+                Commands.throw_error( 'Mode \'scan\' needs attribute \'nPoints\'' )
 
             if not self.doFastscan and self.nPointsPerJob is None:
-                Commands.ThrowError( 'Mode \'scan\' needs attribute \'nPointsPerJob\' for profiled scans' )
+                Commands.throw_error( 'Mode \'scan\' needs attribute \'nPointsPerJob\' for profiled scans' )
 
 
         else:
-            Commands.ThrowError( 'Mode \'{0}\' is not implemented'.format(mode) )
+            Commands.throw_error( 'Mode \'{0}\' is not implemented'.format(mode) )
 
 
         if len( self.POIs ) == 0:
-            Commands.Warning( 'No POIs are set; this will take the pre-defined POI set from the datacard' )
+            Commands.warning( 'No POIs are set; this will take the pre-defined POI set from the datacard' )
 
         if len( self.PhysicsModelParameters ) == 0:
-            Commands.Warning( 'No physics model parameters were overwritten; all the default values are used' )
+            Commands.warning( 'No physics model parameters were overwritten; all the default values are used' )
 
         if len( self.PhysicsModelParameterRanges ) == 0:
             if not mode == 'scan':
-                Commands.Warning( 'No physics model parameter ranges were overwritten; all the default ranges are used' )
+                Commands.warning( 'No physics model parameter ranges were overwritten; all the default ranges are used' )
             else:
-                Commands.ThrowError( 'No physics model parameter ranges were overwritten; not allowed for mode \'scan\'' )
+                Commands.throw_error( 'No physics model parameter ranges were overwritten; not allowed for mode \'scan\'' )
 
 
     #____________________________________________________________________
-    def ParseScanCommand( self ):
-        self.PrepareForCommandCompilation( mode = 'scan' )
+    def parse_scan_command( self ):
+        self.prepare_for_command_compilation( mode = 'scan' )
         commandType = 'FASTSCAN' if self.doFastscan else 'SCAN'
         taskName = commandType + self.taskNamePrefix + '_' + self.name
 
@@ -835,7 +835,7 @@ class CombineScan_OLD(Container):
             ])
 
         # Set all the common stuff in separate method
-        self.CommonCommandSettings(cmd, taskName)
+        self.common_command_settings(cmd, taskName)
 
         if self.doFastscan:
             cmd.append( '--fastScan' )
@@ -855,7 +855,7 @@ class CombineScan_OLD(Container):
 
 
     #____________________________________________________________________
-    def CommonCommandSettings(self, cmd, taskName):
+    def common_command_settings(self, cmd, taskName):
 
         if self.asimov:
             cmd.append( '-t -1' )
@@ -904,7 +904,7 @@ class CombineScan_OLD(Container):
             if 't3' in os.environ['HOSTNAME']:
 
                 if not self.queue in [ 'all.q', 'long.q', 'short.q' ]:
-                    Commands.ThrowError( 'Queue \'{0}\' is not available on PSI'.format(self.queue) )
+                    Commands.throw_error( 'Queue \'{0}\' is not available on PSI'.format(self.queue) )
                 if self.jobPriority != 0:
                     cmd.append(
                         '--job-mode psi --task-name {0} --sub-opts=\'-q {1} -p {2}\' '.format( taskName, self.queue, self.jobPriority ),
@@ -914,27 +914,27 @@ class CombineScan_OLD(Container):
                         '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '.format( taskName, self.queue ),
                         )
             else:
-                Commands.ThrowError( 'Only jobs submitted from T3 are implemented now' )
+                Commands.throw_error( 'Only jobs submitted from T3 are implemented now' )
 
 
     #____________________________________________________________________
-    def GetListOfAcceptedPoints( self, fastscanRootFile, deltaNLLCutOff = None, verbose=False ):
+    def get_list_of_accepted_points( self, fastscanRootFile, deltaNLLCutOff = None, verbose=False ):
 
         if deltaNLLCutOff is None:
             deltaNLLCutOff = self.deltaNLLCutOff
 
         if not isfile(fastscanRootFile):
-            if Commands.IsTestMode():
+            if Commands.is_test_mode():
                 print '\n[TESTMODE] No file \'{0}\'; Returning some bogus accepted points'.format(fastscanRootFile)
                 return [ Container(iPoint=i) for i in xrange(5) ]
             else:
-                Commands.ThrowError( 'File \'{0}\' does not exist'.format(fastscanRootFile) )
+                Commands.throw_error( 'File \'{0}\' does not exist'.format(fastscanRootFile) )
 
         fastscanRootFp = ROOT.TFile.Open( fastscanRootFile )
 
         if not fastscanRootFp.GetListOfKeys().Contains('limit'):
             fastscanRootFp.Close()
-            Commands.ThrowError( 'There is no tree \'limit\' in', fastscanRootFile )
+            Commands.throw_error( 'There is no tree \'limit\' in', fastscanRootFile )
 
         acceptedPoints = []
         rejectedPoints = []
@@ -982,9 +982,9 @@ class CombineScan_OLD(Container):
 
 
     #____________________________________________________________________
-    def ParseBestfitCommand( self ):
+    def parse_bestfit_command( self ):
 
-        self.PrepareForCommandCompilation( mode = 'postfit' )
+        self.prepare_for_command_compilation( mode = 'postfit' )
 
         cmd = []
 
@@ -1002,7 +1002,7 @@ class CombineScan_OLD(Container):
             # '--points={0}'.format(self.nPoints)
             ])
 
-        self.CommonCommandSettings(cmd, taskName)
+        self.common_command_settings(cmd, taskName)
 
         # For the postfit: Hard-coded saving the workspace
         cmd.append( '--saveWorkspace' )
@@ -1013,8 +1013,8 @@ class CombineScan_OLD(Container):
 
 
     #____________________________________________________________________
-    def ParseBestfitCommand_old( self ):
-        self.PrepareForCommandCompilation( mode = 'postfit' )
+    def parse_bestfit_command_old( self ):
+        self.prepare_for_command_compilation( mode = 'postfit' )
 
         cmd = []
 
@@ -1086,7 +1086,7 @@ class CombineScan_OLD(Container):
                 queue = 'short.q'
 
                 if not queue in [ 'all.q', 'long.q', 'short.q' ]:
-                    Commands.ThrowError( 'Queue \'{0}\' is not available on PSI'.format(queue) )
+                    Commands.throw_error( 'Queue \'{0}\' is not available on PSI'.format(queue) )
                 if self.jobPriority != 0:
                     cmd.append(
                         '--job-mode psi --task-name {0} --sub-opts=\'-q {1} -p {2}\' '.format( taskName, queue, self.jobPriority ),
@@ -1096,7 +1096,7 @@ class CombineScan_OLD(Container):
                         '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '.format( taskName, queue ),
                         )
             else:
-                Commands.ThrowError( 'Only jobs submitted from T3 are implemented now' )
+                Commands.throw_error( 'Only jobs submitted from T3 are implemented now' )
 
         return cmd
 
@@ -1116,7 +1116,7 @@ class RunInDirectory():
 
     def __enter__(self):
         if self._active:
-            if Commands.IsTestMode():
+            if Commands.is_test_mode():
                 print '\n[TESTMODE] Would now create/go into \'{0}\''.format(self.subDirectory)
             else:
                 print ''

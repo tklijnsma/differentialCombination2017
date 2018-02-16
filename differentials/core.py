@@ -30,34 +30,34 @@ import ROOT
 ########################################
 
 TESTMODE = False
-def TestMode(flag=True):
+def test_mode(flag=True):
     global TESTMODE
     TESTMODE = flag
-def IsTestMode():
+def is_test_mode():
     global TESTMODE
     return TESTMODE
 
 DISABLE_WARNINGS = False
-def DisableWarnings(flag=True):
+def disable_warnings(flag=True):
     global DISABLE_WARNINGS
     DISABLE_WARNINGS = flag
 
 TEMPJOBDIR = abspath( 'tmp' )
-def SetTempJobDir( newdirname='tmp' ):
+def set_temp_job_dir( newdirname='tmp' ):
     global TEMPJOBDIR
     TEMPJOBDIR = newdirname
-def GetTempJobDir():
+def get_temp_job_dir():
     global TEMPJOBDIR
     return TEMPJOBDIR
 
 #____________________________________________________________________
-def FormatStrToWidth(text, width):
+def format_str_to_width(text, width):
     if len(text) > width:
         text = text[:width-3] + '...'
     ret = '{0:{width}}'.format( text, width=width )
     return ret
 
-def PrintTable(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n'):
+def print_table(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n'):
     nRows = len(table)
     nCols = len(table[0])
 
@@ -67,7 +67,7 @@ def PrintTable(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n')
         for iRow in xrange(nRows):
             entry = table[iRow][iCol]
             if not isinstance( entry, basestring ):
-                ThrowError( 'Entry of a table is not a string' )
+                throw_error( 'Entry of a table is not a string' )
             # entry = escape_ansi( entry )
             if len(entry) > maxWidth:
                 maxWidth = len(entry)
@@ -78,12 +78,12 @@ def PrintTable(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n')
         line = []
         for iCol in xrange(nCols):
             entry = table[iRow][iCol]
-            line.append( FormatStrToWidth( entry, maxColWidths[iCol] ) )
+            line.append( format_str_to_width( entry, maxColWidths[iCol] ) )
         out.append( sep.join(line) )
     return newline_sep.join(out)
 
 #____________________________________________________________________
-def AppendNumberToDirNameUntilItDoesNotExistAnymore(
+def make_unique_directory(
         dirName,
         nAttempts = 100,
         ):
@@ -99,7 +99,7 @@ def AppendNumberToDirNameUntilItDoesNotExistAnymore(
             dirName = dirName.format(iAttempt)
             break
     else:
-        ThrowError( 'Could not create a unique directory for {0}'.format(dirName.format('X')) )
+        throw_error( 'Could not create a unique directory for {0}'.format(dirName.format('X')) )
         sys.exit()
 
     print '[info] New directory: {0}'.format( dirName )
@@ -109,7 +109,7 @@ def AppendNumberToDirNameUntilItDoesNotExistAnymore(
 
 
 #____________________________________________________________________
-def ConvertFloatToStr( number, nDecimals=None ):
+def convert_float_to_str( number, nDecimals=None ):
     number = float(number)
     if not nDecimals is None:
         string = '{:.{nDecimals}f}'.format( number, nDecimals=nDecimals ).replace('-','m').replace('.','p')
@@ -120,22 +120,22 @@ def ConvertFloatToStr( number, nDecimals=None ):
     return string
 
 #____________________________________________________________________
-def ConvertStrToFloat( string ):
+def convert_str_to_float( string ):
     string = str(string)
     number = string.replace('m','-').replace('p','.')
     number = float(number)
     return number
 
 #____________________________________________________________________
-def getRangeFromStr(text):
+def get_range_from_str(text):
     regular_match = re.search(r'([\dpm\.\-]+)_([\dpm\.\-]+)', text)
     overflow_match = re.search(r'(GE|GT)([\dpm\.\-]+)', text)
 
     if regular_match:
-        left = ConvertStrToFloat(regular_match.group(1))
-        right = ConvertStrToFloat(regular_match.group(2))
+        left = convert_str_to_float(regular_match.group(1))
+        right = convert_str_to_float(regular_match.group(2))
     elif overflow_match:
-        left = ConvertStrToFloat(overflow_match.group(2))
+        left = convert_str_to_float(overflow_match.group(2))
         right = 'INF'
     else:
         left = 'UNDEFINED'
@@ -143,8 +143,8 @@ def getRangeFromStr(text):
 
     return left, right
 
-def rangeSorter(text):
-    left, right = getRangeFromStr(text)
+def range_sorter(text):
+    left, right = get_range_from_str(text)
     if left == 'UNDEFINED':
         return 900000
     elif right == 'INF':
@@ -152,8 +152,8 @@ def rangeSorter(text):
     else:
         return left
 
-def POIsorter( POI ):
-    _1, _2, Range = InterpretPOI(POI)
+def poi_sorter( POI ):
+    _1, _2, Range = interpret_poi(POI)
     if Range[0] == '-INF':
         return -100000
     elif len(Range) > 1 and Range[1] == 'INF':
@@ -161,12 +161,12 @@ def POIsorter( POI ):
     else:
         return Range[0]
 
-def SortPOIs( POIs ):
+def sort_pois( POIs ):
     POIs.sort( key = POIsorter )
 
 
 #____________________________________________________________________
-def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
+def execute_command( cmd, captureOutput=False, ignoreTestmode=False ):
 
     if not isinstance( cmd, basestring ):
         cmd = [ l for l in cmd if not len(l.strip()) == 0 ]
@@ -194,7 +194,7 @@ def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
 def copyfile( src, dst, verbose=True ):
     # src = abspath(src)
     # dst = abspath(dst)
-    if IsTestMode():
+    if is_test_mode():
         print '\n[TESTMODE] Would now copy\n  {0}\n  to\n  {1}'.format( src, dst )
     else:
         if verbose: print '\n[EXECUTING] Copying\n  {0}\n  to\n  {1}'.format( src, dst )
@@ -204,14 +204,14 @@ def copyfile( src, dst, verbose=True ):
 def movefile( src, dst, verbose=True ):
     # src = relpath( src, '.' )
     # dst = relpath( dst, '.' )
-    if IsTestMode():
+    if is_test_mode():
         print '\n[TESTMODE] Would now move\n  {0}\n  to\n  {1}'.format( src, dst )
     else:
         if verbose: print '\n[EXECUTING] Moving\n  {0}\n  to\n  {1}'.format( src, dst )
         os.rename( src, dst )
 
 #____________________________________________________________________
-def newColorCycle():
+def new_color_cycle():
     return itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
 
 
@@ -220,7 +220,7 @@ def newColorCycle():
 class AnalysisError(Exception):
     pass
 #____________________________________________________________________
-def ThrowError(
+def throw_error(
     errstr = '',
     throwException = True
     ):
@@ -239,7 +239,7 @@ def ThrowError(
         print 'ERROR in {0}:{1} {2}:\n    {3}'.format( modulefilename, linenumber, funcname, errstr )
 
 #____________________________________________________________________
-def Warning(
+def warning(
         warningStr,
         ):
 
@@ -256,7 +256,7 @@ def Warning(
     print '\n[WARNING {0}:{1} L{2}] '.format(modulefilename, funcname, linenumber) + warningStr
 
 #____________________________________________________________________
-def TagGitCommitAndModule():
+def tag_git_commit_and_module():
 
     stack = traceback.extract_stack(None, 2)
     stack = stack[0]
@@ -285,7 +285,7 @@ class EnterDirectory():
 
     def __enter__(self):
         if self._active:
-            if IsTestMode():
+            if is_test_mode():
                 if self.verbose: print '\n[TESTMODE] Would now create/go into \'{0}\''.format(self.subDirectory)
             else:
                 if self.verbose: print ''
@@ -309,7 +309,7 @@ class OpenRootFile():
 
     def __enter__(self):
         if not isfile(self._rootFile):
-            ThrowError( 'File {0} does not exist'.format(self._rootFile) )
+            throw_error( 'File {0} does not exist'.format(self._rootFile) )
         self._rootFp = ROOT.TFile.Open(self._rootFile)
         return self._rootFp
 
@@ -335,18 +335,18 @@ class RedirectStdout():
         pass
         
     def __enter__( self ):
-        self.debugPrint( 'Entering' )
+        self.debug_print( 'Entering' )
 
         self.captured_fd_r, self.captured_fd_w = os.pipe()
-        self.debugPrint( '  Opened read: {0}, and write: {1}'.format( self.captured_fd_r, self.captured_fd_w ) )
+        self.debug_print( '  Opened read: {0}, and write: {1}'.format( self.captured_fd_r, self.captured_fd_w ) )
 
         # Copy stdout
-        self.debugPrint( '  Copying stdout' )
+        self.debug_print( '  Copying stdout' )
         self.copied_stdout = os.fdopen( os.dup(self.stdout_fd), 'wb' )
         sys.stdout.flush() # To flush library buffers that dup2 knows nothing about
         
         # Overwrite stdout_fd with the target
-        self.debugPrint( '  Overwriting target ({0}) with stdout_fd ({1})'.format( fileno(self.captured_fd_w), self.stdout_fd ) )        
+        self.debug_print( '  Overwriting target ({0}) with stdout_fd ({1})'.format( fileno(self.captured_fd_w), self.stdout_fd ) )        
         os.dup2( fileno(self.captured_fd_w), self.stdout_fd )
         self.isRedirected = True
 
@@ -362,7 +362,7 @@ class RedirectStdout():
 
     def read( self ):
         sys.stdout.flush()
-        self.debugPrint( '  Draining pipe' )
+        self.debug_print( '  Draining pipe' )
 
         # Without this line the reading does not end - is that 'deadlock'?
         os.close(self.stdout_fd)
@@ -373,15 +373,15 @@ class RedirectStdout():
             if not data:
                 break
             captured_str += data
-            self.debugPrint( '\n  captured_str: ' + captured_str )
+            self.debug_print( '\n  captured_str: ' + captured_str )
 
-        self.debugPrint( '  Draining completed' )
+        self.debug_print( '  Draining completed' )
         
 
         return captured_str
 
 
-    def debugPrint( self, text ):
+    def debug_print( self, text ):
         if self.enableDebugPrint:
             if self.isRedirected:
                 os.write( fileno(self.copied_stdout), text + '\n' )
@@ -392,7 +392,7 @@ class RedirectStdout():
 
 
 #____________________________________________________________________
-def GetCMSLabel(
+def get_cms_label(
         text='Preliminary',
         x=None,
         y=None,
@@ -402,7 +402,7 @@ def GetCMSLabel(
         ):
 
     if not text in [ 'Preliminary', 'Supplementary' ]:
-        Commands.Warning( 'Label \'{0}\' is not a standard label!'.format(text) )
+        Commands.warning( 'Label \'{0}\' is not a standard label!'.format(text) )
     l = ROOT.TLatex()
     ROOT.SetOwnership( l, False )
     l.SetNDC()
@@ -424,7 +424,7 @@ def GetCMSLabel(
         l.DrawLatex( x, y, latexStr )
 
 #____________________________________________________________________
-def GetCMSLumi(
+def get_cms_lumi(
         lumi=35.9,
         x=None,
         y=None,

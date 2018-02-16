@@ -29,7 +29,7 @@ class Container:
 
 
 TEMPCARDDIR = 'tempcards_{0}'.format( datestr )
-def makeTempDir( newTempDir=None ):
+def make_temp_dir( newTempDir=None ):
     global TEMPCARDDIR
     if newTempDir: TEMPCARDDIR = newTempDir
     if not isdir(TEMPCARDDIR): os.makedirs(TEMPCARDDIR)
@@ -42,7 +42,7 @@ def main():
     # xhDatacard  = '../suppliedInput/fromVittorio/differential_pT_moriond17_HxOnly_July19/Datacard_13TeV_differential_pT_moriond17_HxOnly.txt'    
     # gghDatacard = '../suppliedInput/fromVittorio/pT_ggHonly_Jun26/Datacard_13TeV_differential_pT_moriond17_ggHonly_v2.txt'
 
-    # Merge_xH_ggH_hgg_cards(
+    # merge_xH_ggH_hgg_cards(
     #         xhDatacard,
     #         gghDatacard,
     #         )
@@ -52,7 +52,7 @@ def main():
 # njets combination
 ########################################
 
-def RenameProcesses_Hgg_differentials(
+def rename_processes_hgg_differentials(
         indatacard,
         globalReplace = None,
         writeToFile = True,
@@ -224,7 +224,7 @@ def RenameProcesses_Hgg_differentials(
 
         outdatacard = indatacard.replace( '.txt', '{0}.txt'.format(outTag) )
 
-        if Commands.IsTestMode():
+        if Commands.is_test_mode():
             print '\nContents of the new datacard:\n\n'
             print outdatacardTxt
             print '\n\nWould now open \'{0}\' to dump these contents'.format( outdatacard )
@@ -244,7 +244,7 @@ def RenameProcesses_Hgg_differentials(
 ########################################
 
 
-def RenameProcesses_Aug21(
+def rename_processes_aug21(
     indatacard,
     renameOutsideAcceptance = True,
     globalReplace = None,
@@ -346,7 +346,7 @@ def RenameProcesses_Aug21(
     if writeToFile:
         outdatacard = indatacard.replace( '.txt', '{0}.txt'.format(outTag) )
 
-        if Commands.IsTestMode():
+        if Commands.is_test_mode():
             print '\nContents of the new datacard:\n\n'
             print outdatacardTxt
             print '\n\nWould now open \'{0}\' to dump these contents'.format( outdatacard )
@@ -386,7 +386,7 @@ def sorter( process ):
     return ret
 
 
-def RenumberProcessesHZZ_Aug21(
+def renumber_processes_hzz_aug21(
         datacardFile,
         ):
 
@@ -441,7 +441,7 @@ def RenumberProcessesHZZ_Aug21(
 
 #____________________________________________________________________
 # There is no need for this function, channel renaming is only for convenience
-def RenameProcessesHZZchannels(
+def rename_processes_hzzchannels(
     process,
     indatacard,
     outdatacard=None,
@@ -507,7 +507,7 @@ def RenameProcessesHZZchannels(
 
 
 
-def RenameProductionModeHgg( process, wsFile ):
+def rename_production_mode_hgg( process, wsFile ):
 
     outRootFile = wsFile.replace( '.root', '_FullyRenamed_{0}.root'.format(datestr) )
     fout = ROOT.TFile( outRootFile, 'recreate' )
@@ -552,13 +552,13 @@ def RenameProductionModeHgg( process, wsFile ):
 
 
 
-def RenameProductionModeHgg_PerMethod( process, wsFile ):
+def rename_production_mode_hgg_per_method( process, wsFile ):
 
     # ======================================
     # Arrange IO for output
 
-    if Commands.IsTestMode():
-        makeTempDir( 'RenamedTests_{0}'.format(datestr) )
+    if Commands.is_test_mode():
+        make_temp_dir( 'RenamedTests_{0}'.format(datestr) )
         outRootFile = join( TEMPCARDDIR, basename(wsFile.replace('.root','_feaRenamed.root')) )
     else:
         outRootFile = wsFile.replace('.root','_FullyRenamed.root')
@@ -638,13 +638,13 @@ def RenameProductionModeHgg_PerMethod( process, wsFile ):
 
 
 
-def Rename_fea( process, wsFile ):
+def rename_fea( process, wsFile ):
 
     # ======================================
     # Arrange IO for output
 
-    if Commands.IsTestMode():
-        makeTempDir( 'Renamed_fea_tests_{0}'.format(datestr) )
+    if Commands.is_test_mode():
+        make_temp_dir( 'Renamed_fea_tests_{0}'.format(datestr) )
         outRootFile = join( TEMPCARDDIR, basename(wsFile.replace('.root','_feaRenamed.root')) )
     else:
         outRootFile = wsFile.replace('.root','_feaRenamed.root')
@@ -684,19 +684,19 @@ def Rename_fea( process, wsFile ):
 
 
 
-def Merge_xH_ggH_hgg_cards(
+def merge_xH_ggH_hgg_cards(
         xhDatacard,
         gghDatacard,
         ):
     
     # Basic rename
-    xhDCrenamed  = RenameProcesses( 'xH',  xhDatacard,  renameOutsideAcceptance=True,
+    xhDCrenamed  = rename_processes( 'xH',  xhDatacard,  renameOutsideAcceptance=True,
         globalReplace = [(
             'CMS-HGG_sigfit_differential_pT_moriond17_HxOnly.root',
             'CMS-HGG_sigfit_differential_pT_moriond17_HxOnly_feaRenamed.root'
             )]
         )
-    gghDCrenamed = RenameProcesses( 'ggH', gghDatacard, renameOutsideAcceptance=True,
+    gghDCrenamed = rename_processes( 'ggH', gghDatacard, renameOutsideAcceptance=True,
         globalReplace = [(
             'CMS-HGG_sigfit_differential_pT_moriond17_ggHonly_v2.root',
             'CMS-HGG_sigfit_differential_pT_moriond17_ggHonly_v2_feaRenamed.root'
@@ -705,25 +705,25 @@ def Merge_xH_ggH_hgg_cards(
 
 
     # Read into container
-    xh  = GetDatacardContainer( xhDCrenamed )
-    ggh = GetDatacardContainer( gghDCrenamed )
+    xh  = get_datacard_container( xhDCrenamed )
+    ggh = get_datacard_container( gghDCrenamed )
     xh.process = 'xH'
     ggh.process = 'ggH'
 
     # Include one directory upwards in the path of the root files
-    ExtendPathOfRootFiles( xh, dirname(xhDatacard) )
-    ExtendPathOfRootFiles( ggh, dirname(gghDatacard) )
+    extend_path_of_root_files( xh, dirname(xhDatacard) )
+    extend_path_of_root_files( ggh, dirname(gghDatacard) )
 
     # Merge
-    smh = MergeCards( ggh, xh )
+    smh = merge_cards( ggh, xh )
 
     outpath = join( dirname(gghDatacard), '..', 'hggMerged_{0}.txt'.format(datestr) )
 
-    ParseDataContainer( smh, writeToFile = outpath )
+    parse_data_container( smh, writeToFile = outpath )
 
 
 
-def MergeCards( c1_original, c2_original ):
+def merge_cards( c1_original, c2_original ):
     c1 = deepcopy(c1_original)
     c2 = deepcopy(c2_original)
 
@@ -786,7 +786,7 @@ def MergeCards( c1_original, c2_original ):
     # Define selection
     # (Now very simple but could be expanded)
 
-    def acceptEntry( entry ):
+    def accept_entry( entry ):
         if entry.processName.startswith( c2.process ):
             return True
         else:
@@ -804,7 +804,7 @@ def MergeCards( c1_original, c2_original ):
 
     for entry in entries:
 
-        if not acceptEntry(entry):
+        if not accept_entry(entry):
             continue
 
         mergedSplitBinLine.append(            entry.bin )
@@ -831,7 +831,7 @@ def MergeCards( c1_original, c2_original ):
 
 
 
-def ExtendPathOfRootFiles( card, basepath ):
+def extend_path_of_root_files( card, basepath ):
     card.unextendedShapesLines = card.shapesLines
     card.shapesLines = []
     for shapesLine in card.unextendedShapesLines:
@@ -852,7 +852,7 @@ def ExtendPathOfRootFiles( card, basepath ):
             )
 
 
-def GetDatacardContainer(
+def get_datacard_container(
         datacardTxt
         ):
 
@@ -970,7 +970,7 @@ def GetDatacardContainer(
     return ret
 
 
-def ParseDataContainer(
+def parse_data_container(
         c,
         writeToFile = None,
         ):
@@ -982,7 +982,7 @@ def ParseDataContainer(
     col1Width   = 40
     col2Width   = 40
     colGE3Width = 40
-    def parseLine(
+    def parse_line(
             line,
             col1Width   = col1Width,
             col2Width   = col2Width,
@@ -1008,7 +1008,7 @@ def ParseDataContainer(
     w()
 
     for shapesLine in c.shapesLines:
-        w( parseLine( shapesLine.split(), 7, 30, 45  ) )
+        w( parse_line( shapesLine.split(), 7, 30, 45  ) )
 
     w()
 
@@ -1016,15 +1016,15 @@ def ParseDataContainer(
     w( c.observationLine )
 
     if all( hasattr( c, listName ) for listName in [ 'splitBinLine', 'splitProcessNamesLine', 'splitProcessNumbersLine', 'splitRateLine' ] ):
-        w( parseLine( [ 'bin', '' ]     + c.splitBinLine ))
-        w( parseLine( [ 'process', '' ] + c.splitProcessNamesLine ))
-        w( parseLine( [ 'process', '' ] + c.splitProcessNumbersLine ))
-        w( parseLine( [ 'rate', '' ]    + c.splitRateLine ))
+        w( parse_line( [ 'bin', '' ]     + c.splitBinLine ))
+        w( parse_line( [ 'process', '' ] + c.splitProcessNamesLine ))
+        w( parse_line( [ 'process', '' ] + c.splitProcessNumbersLine ))
+        w( parse_line( [ 'rate', '' ]    + c.splitRateLine ))
     else:
-        w( parseLine( [ 'bin', '' ]     + c.binLine.split()[1:] ))
-        w( parseLine( [ 'process', '' ] + c.processNamesLine.split()[1:] ))
-        w( parseLine( [ 'process', '' ] + c.processNumbersLine.split()[1:] ))
-        w( parseLine( [ 'rate', '' ]    + c.rateLine.split()[1:] ))
+        w( parse_line( [ 'bin', '' ]     + c.binLine.split()[1:] ))
+        w( parse_line( [ 'process', '' ] + c.processNamesLine.split()[1:] ))
+        w( parse_line( [ 'process', '' ] + c.processNumbersLine.split()[1:] ))
+        w( parse_line( [ 'rate', '' ]    + c.rateLine.split()[1:] ))
 
 
     w()
@@ -1035,7 +1035,7 @@ def ParseDataContainer(
     w()
 
     for nuis in c.nuisanceContainers:
-        w( parseLine( [ nuis.name, nuis.type ] + nuis.vals ) )
+        w( parse_line( [ nuis.name, nuis.type ] + nuis.vals ) )
 
     w()
 
@@ -1050,7 +1050,7 @@ def ParseDataContainer(
 
 
 
-def RenameProcesses(
+def rename_processes(
     process,
     indatacard,
     outdatacard=None,

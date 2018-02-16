@@ -1,6 +1,6 @@
 
 #____________________________________________________________________
-def ListSet(
+def list_set(
         datacardRootFile,
         setName='POI',
         pattern='*',
@@ -37,7 +37,7 @@ def ListSet(
 
 
 #____________________________________________________________________
-def ListPOIs( datacardRootFile, nofilter=False ):
+def list_pois( datacardRootFile, nofilter=False ):
 
     datacardFp = ROOT.TFile.Open( datacardRootFile )
     w = datacardFp.Get('w')
@@ -57,7 +57,7 @@ def ListPOIs( datacardRootFile, nofilter=False ):
 
 
 #____________________________________________________________________
-def ReadBinBoundariesFromWS( datacardRootFile, theory = True ):
+def read_bin_boundaries_from_ws( datacardRootFile, theory = True ):
 
     if theory == True:
         setName = 'theoryBinBoundaries'
@@ -68,7 +68,7 @@ def ReadBinBoundariesFromWS( datacardRootFile, theory = True ):
     w = datacardFp.Get('w')
     argSet = w.set(setName)
     if not argSet:
-        ThrowError( 'No set \'{0}\' in {1}'.format( setName, datacardRootFile ) )
+        throw_error( 'No set \'{0}\' in {1}'.format( setName, datacardRootFile ) )
         datacardFp.Close()
         sys.exit()
     binBoundaryList = ROOT.RooArgList(argSet)
@@ -85,13 +85,13 @@ def ReadBinBoundariesFromWS( datacardRootFile, theory = True ):
     return parValues
 
 #____________________________________________________________________
-def ReadTheoryBinBoundariesFromWS( datacardRootFile ):
-    return ReadBinBoundariesFromWS( datacardRootFile, theory = True )    
-def ReadExpBinBoundariesFromWS( datacardRootFile ):
-    return ReadBinBoundariesFromWS( datacardRootFile, theory = False )
+def read_theory_bin_boundaries_from_ws( datacardRootFile ):
+    return read_bin_boundaries_from_ws( datacardRootFile, theory = True )    
+def read_exp_bin_boundaries_from_ws( datacardRootFile ):
+    return read_bin_boundaries_from_ws( datacardRootFile, theory = False )
 
 #____________________________________________________________________
-def ListProcesses( datacardFile ):
+def list_processes( datacardFile ):
     with open( datacardFile, 'r' ) as datacardFp:
         lines = [ i.strip() for i in datacardFp.readlines() ]
         for line in lines:
@@ -107,13 +107,13 @@ def ListProcesses( datacardFile ):
     processes = list(set(processline.split()[1:]))
     processes.sort()
     signalprocesses = [ p for p in processes if p.split('_')[0].endswith('H') and not p == 'nonResH' and not 'OutsideAcceptance' in p ]
-    signalprocesses.sort( key = lambda i: InterpretPOI(i)[2][0] )
+    signalprocesses.sort( key = lambda i: interpret_poi(i)[2][0] )
     return signalprocesses, processes, bins
 
 
 
 #____________________________________________________________________
-def GlobRootFiles(path):
+def glob_root_files(path):
     if path.endswith('/'):
         path += '*.root'
     else:
@@ -129,7 +129,7 @@ def GlobRootFiles(path):
 
 
 #____________________________________________________________________
-def ConvertTChainToArray(
+def convert_TChain_to_array(
     rootFileList,
     treeName = 'limit',
     variablePattern = '*',
@@ -138,7 +138,7 @@ def ConvertTChainToArray(
     ):
 
     if len(rootFileList) == 0:
-        ThrowError( 'rootFileList has length 0' )
+        throw_error( 'rootFileList has length 0' )
         sys.exit()
 
     if verbose: 'Looking for at least one filled root file to obtain the variable list from...'
@@ -158,7 +158,7 @@ def ConvertTChainToArray(
             if verbose: print '    Found tree in {0}'.format( rootFile )
             break
     else:
-        ThrowError(
+        throw_error(
             'Not a single root file had a tree called \'{0}\'; Cannot extract any data'.format(treeName)
             + '\n  First root file:\n  {0}'.format( rootFileList[0] )
             + '\n  Last root file:\n  {0}'.format( rootFileList[-1] )
@@ -238,7 +238,7 @@ def ConvertTChainToArray(
 
 
 #____________________________________________________________________
-def InterpretPOI( POI ):
+def interpret_poi( POI ):
 
     # Assume it starts with 'r_'
     if not POI.startswith('r_'):
@@ -262,13 +262,13 @@ def InterpretPOI( POI ):
     if len(observableRange) == 1:
         rangeStr = observableRange[0]
         if 'GT' in rangeStr or 'GE' in rangeStr :
-            Range = [ ConvertStrToFloat( rangeStr.replace('GT','').replace('GE','') ), 'INF' ]
+            Range = [ convert_str_to_float( rangeStr.replace('GT','').replace('GE','') ), 'INF' ]
         elif 'LT' in rangeStr or 'LE' in rangeStr :
-            Range = [ '-INF', ConvertStrToFloat( rangeStr.replace('LT','').replace('LE','') ) ]
+            Range = [ '-INF', convert_str_to_float( rangeStr.replace('LT','').replace('LE','') ) ]
         else:
-            Range = [ ConvertStrToFloat( rangeStr ) ]
+            Range = [ convert_str_to_float( rangeStr ) ]
     elif len(observableRange) == 2:
-        Range = [ ConvertStrToFloat(i) for i in observableRange ]
+        Range = [ convert_str_to_float(i) for i in observableRange ]
     else:
         print 'ERROR: Could not make sense of observable range \'{0}\''.format( '_'.join(observableRange) )
         return

@@ -77,7 +77,7 @@ def scan_all(real_args):
             ]
     try:
         decay_channel = get_decay_channel_tag(args)
-        Commands.Warning('Decay channel {0} was specified, so only scans relating to it are submitted'.format(decay_channel))
+        Commands.warning('Decay channel {0} was specified, so only scans relating to it are submitted'.format(decay_channel))
         decay_channels = [decay_channel]
     except DecayChannelNotFoundError:
         pass
@@ -151,7 +151,7 @@ def differential_config(args, ws, obs_name):
     if args.asimov:
         base_config.subDirectory += '_asimov'
 
-    POIs = Commands.ListPOIs(ws)
+    POIs = Commands.list_pois(ws)
     POIrange = [ -1.0, 4.0 ]
     if args.hzz:
         POIrange[0] = 0.0
@@ -169,7 +169,7 @@ def differential_config(args, ws, obs_name):
     base_config.PhysicsModelParameters = [ '{0}=1.0'.format(p) for p in POIs ]
     base_config.PhysicsModelParameterRanges = [ '{0}={1},{2}'.format(p, *POIrange) for p in POIs ]
     if args.hbb or args.combWithHbb:
-        Commands.Warning(
+        Commands.warning(
             'For hbb: qcdeff and r*p* parameters are given ranges! '
             'Should decide on (freezing) behaviour during postfit/scan'
             )
@@ -236,7 +236,7 @@ def t2ws(args, card, extraOptions=None):
         modelName = 'lumiScaleDifferentialModel'
         suffix = 'lumiScale'
     
-    Commands.BasicT2WSwithModel(
+    Commands.basic_t2ws_with_model(
         card,
         pathToModel = 'physicsModels/DifferentialModel.py',
         modelName = modelName,
@@ -305,12 +305,12 @@ def ptjet_t2ws(args):
 
 @flag_as_option
 def RenumberHzzProcesses_Jan24(args):
-    MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+    MergeHGGWDatacards.renumber_processes_hzz_aug21(
         LatestPaths.card_hzz_ggHxH_PTH_newBins_unprocessed,
         )
 @flag_as_option
 def CombineCards_Jan24_hzz_hbb(args):
-    Commands.BasicCombineCards(
+    Commands.basic_combine_cards(
         'suppliedInput/combinedCard_newBins_hzz_hbb_ggHxH_{0}.txt'.format(datestr),
         'hzz=' + LatestPaths.card_hzz_ggHxH_PTH_newBins,
         'hbb=' + LatestPaths.card_hbb_ggHxH_PTH
@@ -321,17 +321,17 @@ def CombineCards_Jan24_hzz_hbb(args):
 
 @flag_as_option
 def RenameHggProcesses_smHcard(args):
-    MergeHGGWDatacards.RenameProcesses_Aug21(
+    MergeHGGWDatacards.rename_processes_aug21(
         LatestPaths.card_hgg_smH_PTH_unprocessed,
         )
 @flag_as_option
 def RenumberHzzProcesses_smHcard(args):
-    MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+    MergeHGGWDatacards.renumber_processes_hzz_aug21(
         LatestPaths.card_hzz_smH_PTH_unprocessed,
         )
 @flag_as_option
 def CombineCards_smHcard(args):
-    Commands.BasicCombineCards(
+    Commands.basic_combine_cards(
         'suppliedInput/combinedCard_smH_{0}.txt'.format(datestr),
         'hgg=' + LatestPaths.card_hgg_smH_PTH,
         'hzz=' + LatestPaths.card_hzz_smH_PTH
@@ -342,24 +342,24 @@ def CombineCards_smHcard(args):
 
 @flag_as_option
 def RenameHggProcesses_Aug21(args):
-    MergeHGGWDatacards.RenameProcesses_Aug21(
+    MergeHGGWDatacards.rename_processes_aug21(
         LatestPaths.card_hgg_ggHxH_PTH_unprocessed,
         )
 @flag_as_option
 def RenumberHzzProcesses_Aug21(args):
-    MergeHGGWDatacards.RenumberProcessesHZZ_Aug21(
+    MergeHGGWDatacards.renumber_processes_hzz_aug21(
         LatestPaths.card_hzz_ggHxH_PTH_unprocessed,
         )
 @flag_as_option
 def CombineCards_Aug21(args):
-    Commands.BasicCombineCards(
+    Commands.basic_combine_cards(
         'suppliedInput/combinedCard_ggHxH_{0}.txt'.format(datestr),
         'hgg=' + LatestPaths.card_hgg_ggHxH_PTH,
         'hzz=' + LatestPaths.card_hzz_ggHxH_PTH
         )
 @flag_as_option
 def CombineCards_Dec15_hbb(args):
-    Commands.BasicCombineCards(
+    Commands.basic_combine_cards(
         'suppliedInput/combinedCard_hgg_hzz_hbb_ggHxH_{0}.txt'.format(datestr),
         'hgg=' + LatestPaths.card_hgg_ggHxH_PTH,
         'hzz=' + LatestPaths.card_hzz_ggHxH_PTH,
@@ -380,7 +380,7 @@ def rename_hgg_njets(args):
 
 @flag_as_option
 def njets_combineCards(args):
-    Commands.BasicCombineCards(
+    Commands.basic_combine_cards(
         'suppliedInput/combinedCard_NJ_smH_{0}.txt'.format(datestr),
         'hgg=' + LatestPaths.card_hgg_smH_NJ,
         'hzz=' + LatestPaths.card_hzz_smH_NJ
@@ -391,13 +391,13 @@ def njets_combineCards(args):
 
 @flag_as_option
 def ptjet_rename_hgg(args):
-    MergeHGGWDatacards.RenameProcesses_Hgg_differentials(
+    MergeHGGWDatacards.rename_processes_hgg_differentials(
         LatestPaths.card_hgg_smH_PTJ_unprocessed
         )
 
 @flag_as_option
 def ptjet_combineCards(args):
-    Commands.BasicCombineCards(
+    Commands.basic_combine_cards(
         'suppliedInput/combinedCard_PTJ_smH_{0}.txt'.format(datestr),
         'hgg=' + LatestPaths.card_hgg_smH_PTJ,
         'hzz=' + LatestPaths.card_hzz_smH_PTJ
@@ -408,13 +408,13 @@ def ptjet_combineCards(args):
 
 @flag_as_option
 def rename_hgg_rapidity(args):
-    MergeHGGWDatacards.RenameProcesses_Hgg_differentials(
+    MergeHGGWDatacards.rename_processes_hgg_differentials(
         LatestPaths.card_hgg_smH_YH_unprocessed,
         )
 
 @flag_as_option
 def rapidity_combineCards(args):
-    Commands.BasicCombineCards(
+    Commands.basic_combine_cards(
         'suppliedInput/combinedCard_YH_smH_{0}.txt'.format(datestr),
         'hgg=' + LatestPaths.card_hgg_smH_YH,
         'hzz=' + LatestPaths.card_hzz_smH_YH
@@ -436,27 +436,27 @@ def all_corrMats(args):
 @flag_as_option
 def corrMat_pth_smH(args):
     ws = LatestPathsGetters.get_ws('pth_smH', args)
-    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+    Commands.compute_corr_matrix( ws, asimov=args.asimov, onBatch = False )
 
 @flag_as_option
 def corrMat_pth_ggH(args):
     ws = LatestPathsGetters.get_ws('pth_ggH', args)
-    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+    Commands.compute_corr_matrix( ws, asimov=args.asimov, onBatch = False )
 
 @flag_as_option
 def corrMat_njets(args):
     ws = LatestPathsGetters.get_ws('njets', args)
-    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+    Commands.compute_corr_matrix( ws, asimov=args.asimov, onBatch = False )
 
 @flag_as_option
 def corrMat_ptjet(args):
     ws = LatestPathsGetters.get_ws('ptjet', args)
-    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+    Commands.compute_corr_matrix( ws, asimov=args.asimov, onBatch = False )
 
 @flag_as_option
 def corrMat_rapidity(args):
     ws = LatestPathsGetters.get_ws('rapidity', args)
-    Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
+    Commands.compute_corr_matrix( ws, asimov=args.asimov, onBatch = False )
 
 @flag_as_option
 def plotCorrelationMatrices(args):
@@ -466,33 +466,33 @@ def plotCorrelationMatrices(args):
     pth_smH.ws           = LatestPathsGetters.get_ws('pth_smH', args)
     pth_smH.corrRootFile = LatestPaths.correlationMatrix_PTH
     pth_smH.xTitle       = 'p_{T}^{H} (GeV)'
-    PlotCommands.PlotCorrelationMatrix( pth_smH )
+    PlotCommands.plot_correlation_matrix( pth_smH )
 
     pth_ggH = Container()
     # pth_ggH.ws           = LatestPaths.ws_combined_ggH_xHfixed
     pth_ggH.ws           = LatestPathsGetters.get_ws('pth_ggH', args)
     pth_ggH.corrRootFile = LatestPaths.correlationMatrix_PTH_ggH
     pth_ggH.xTitle       = 'p_{T}^{H} (GeV) (non-ggH fixed to SM)'
-    PlotCommands.PlotCorrelationMatrix( pth_ggH )
+    PlotCommands.plot_correlation_matrix( pth_ggH )
 
     njets = Container()
     # njets.ws           = LatestPaths.ws_combined_smH_NJ
     njets.ws           = LatestPathsGetters.get_ws('njets', args)
     njets.corrRootFile = LatestPaths.correlationMatrix_NJ
     njets.xTitle       = 'N_{jets}'
-    PlotCommands.PlotCorrelationMatrix( njets )
+    PlotCommands.plot_correlation_matrix( njets )
 
     rapidity = Container()
     # rapidity.ws           = LatestPaths.ws_combined_smH_YH
     rapidity.ws           = LatestPathsGetters.get_ws('rapidity', args)
     rapidity.corrRootFile = LatestPaths.correlationMatrix_YH
     rapidity.xTitle       = '|y_{H}|'
-    PlotCommands.PlotCorrelationMatrix( rapidity )
+    PlotCommands.plot_correlation_matrix( rapidity )
 
     ptjet = Container()
     # ptjet.ws           = LatestPaths.ws_combined_smH_PTJ
     ptjet.ws           = LatestPathsGetters.get_ws('ptjet', args)
     ptjet.corrRootFile = LatestPaths.correlationMatrix_PTJ
     ptjet.xTitle       = 'p_{T}^{j1}'
-    PlotCommands.PlotCorrelationMatrix( ptjet )
+    PlotCommands.plot_correlation_matrix( ptjet )
 

@@ -18,7 +18,7 @@ import PlotCommands
 import scipy
 scipyversion = scipy.__version__.split('.')[1]
 if int(scipyversion) < 15:
-    Commands.ThrowError( 'Need the python environment for MiniCombine!' )
+    Commands.throw_error( 'Need the python environment for MiniCombine!' )
 from scipy.optimize import minimize
 
 import ROOT
@@ -54,7 +54,7 @@ class MiniCombine(object):
         self.name = 'MiniCombine'
 
     #____________________________________________________________________
-    def SetSM(
+    def set_sm(
             self,
             SM
             ):
@@ -62,14 +62,14 @@ class MiniCombine(object):
         self.SMIsSet = True
 
     #____________________________________________________________________
-    def SetCombinationResult(
+    def set_combination_result(
             self,
             scanDir,
             excludeLastBin=False,
             ):
         self.scanDir = scanDir
-        self.signalStrengthNames = GetPOIsFromScandirHeuristic(scanDir)
-        self.expBinBoundaries = PhysicsCommands.FigureOutBinning(self.signalStrengthNames)
+        self.signalStrengthNames = get_pois_from_scandir_heuristic(scanDir)
+        self.expBinBoundaries = PhysicsCommands.figure_out_binning(self.signalStrengthNames)
         if self.lastBinIsOverflow: self.expBinBoundaries[-1] = 10000.
 
         if excludeLastBin:
@@ -77,14 +77,14 @@ class MiniCombine(object):
             self.expBinBoundaries = self.expBinBoundaries[:-1]
 
         self.scans = []
-        rawOutputs = PhysicsCommands.GetScanResults(
+        rawOutputs = PhysicsCommands.get_scan_results(
             self.signalStrengthNames,
             self.scanDir,
             )
         for rawOutput in rawOutputs:
             scan = Container()
-            scan.mus, scan.deltaNLLs = PhysicsCommands.FilterScan(rawOutput)
-            scan.unc = PhysicsCommands.FindMinimaAndErrors( scan.mus, scan.deltaNLLs )
+            scan.mus, scan.deltaNLLs = PhysicsCommands.filter_scan(rawOutput)
+            scan.unc = PhysicsCommands.find_minima_and_errors( scan.mus, scan.deltaNLLs )
             self.scans.append(scan)
 
         self.mus_data      = [ s.unc['min'] for s in self.scans ]
@@ -97,7 +97,7 @@ class MiniCombine(object):
 
 
     #____________________________________________________________________
-    def SetCorrelationMatrix(
+    def set_correlation_matrix(
             self,
             corrMatFile,
             forceDiagonalMatrix = False,
@@ -107,7 +107,7 @@ class MiniCombine(object):
         corrMatFp = ROOT.TFile.Open(corrMatFile)
 
         if forceDiagonalMatrix:
-            Commands.Warning( 'Overwriting with square matrix for testing purposes:' )
+            Commands.warning( 'Overwriting with square matrix for testing purposes:' )
             corrMat = [ [ 1.0 if i==j else 0.0 for j in xrange(len(self.signalStrengthNames)) ] for i in xrange(len(self.signalStrengthNames)) ]
 
         else:
@@ -125,7 +125,7 @@ class MiniCombine(object):
 
 
     #____________________________________________________________________
-    def Parametrize(
+    def parametrize(
             self,
             derivedTheoryContainers,
             includeLinearTerms
@@ -135,8 +135,8 @@ class MiniCombine(object):
         self.derivedTheoryContainers = derivedTheoryContainers
 
         self.parametrization = Parametrization( verbose=False )
-        # self.parametrization.SetSM( self.SM )
-        self.parametrization.Parametrize(
+        # self.parametrization.set_sm( self.SM )
+        self.parametrization.parametrize(
             derivedTheoryContainers,
             includeLinearTerms = self.includeLinearTerms,
             couplingsToParametrize = self.couplings
@@ -144,7 +144,7 @@ class MiniCombine(object):
 
 
     #____________________________________________________________________
-    def Link(
+    def link(
             self
             ):
         """Link together the given SM, scanDir, corrMat and parametrization"""
@@ -153,9 +153,9 @@ class MiniCombine(object):
 
         # Attempt to calculate cross sections
         if not self.SMIsSet:
-            Commands.ThrowError( 'Need a SM container supplied' )
+            Commands.throw_error( 'Need a SM container supplied' )
 
-        self.SMintegralFn = TheoryCommands.GetIntegral(
+        self.SMintegralFn = TheoryCommands.get_integral(
             self.SM.binBoundaries,
             self.SM.crosssection
             )
@@ -177,7 +177,7 @@ class MiniCombine(object):
 
         print '  XSs_SM      =', self.XSs_SM
 
-        # expIntegral = TheoryCommands.GetIntegral( self.expBinBoundaries, self.XSs_SM )
+        # expIntegral = TheoryCommands.get_integral( self.expBinBoundaries, self.XSs_SM )
         # print '  int(XSs_SM) =', expIntegral( 0., 500. ), ' (last bin not properly done)'
 
         # Use SMXSs to compute data XSs
@@ -201,7 +201,7 @@ class MiniCombine(object):
 
 
     #____________________________________________________________________
-    def AddMuConstraint( self, mu, unc, left, right ):
+    def add_mu_constraint( self, mu, unc, left, right ):
 
         print '\nPlugging in an uncorrelated constraint mu_{{{0}-{1}}} = {2} +- {3}'.format(
             left, right, mu, unc
@@ -210,7 +210,7 @@ class MiniCombine(object):
 
         def constr(self):
 
-            XS_param = self.parametrization.EvaluateForBinning(
+            XS_param = self.parametrization.evaluate_for_binning(
                 self.SM.binBoundaries, [ left, right ],
                 returnRatios = False,
                 verbose = self.verbose,
@@ -231,19 +231,19 @@ class MiniCombine(object):
             return delta_chi2
 
         constr.suffix = '_{0}to{1}_unc{2}'.format(
-            Commands.ConvertFloatToStr(left), Commands.ConvertFloatToStr(right), Commands.ConvertFloatToStr(unc, nDecimals=2 )
+            Commands.convert_float_to_str(left), Commands.convert_float_to_str(right), Commands.convert_float_to_str(unc, nDecimals=2 )
             )
 
         self.extra_chi2_constraints.append( constr )
 
 
     #____________________________________________________________________
-    def AddAsymMuConstraint( self, mu, unc_up, unc_down, left, right ):
+    def add_asym_mu_constraint( self, mu, unc_up, unc_down, left, right ):
         print '\nPlugging in an uncorrelated asymmetric constraint mu_{{{0}-{1}}} = {2}  {3:+.2f}/{4:+.2f}'.format( left, right, mu, unc_up, unc_down )
 
         def constr(self):
 
-            XS_param = self.parametrization.EvaluateForBinning(
+            XS_param = self.parametrization.evaluate_for_binning(
                 self.SM.binBoundaries, [ left, right ],
                 returnRatios = False,
                 verbose = self.verbose,
@@ -261,17 +261,17 @@ class MiniCombine(object):
             return delta_chi2
 
         constr.suffix = '_{0}to{1}_uncup{2}_uncdown{3}'.format(
-            Commands.ConvertFloatToStr(left),
-            Commands.ConvertFloatToStr(right),
-            Commands.ConvertFloatToStr(unc_up, nDecimals=2 ),
-            Commands.ConvertFloatToStr(unc_down, nDecimals=2 )
+            Commands.convert_float_to_str(left),
+            Commands.convert_float_to_str(right),
+            Commands.convert_float_to_str(unc_up, nDecimals=2 ),
+            Commands.convert_float_to_str(unc_down, nDecimals=2 )
             )
 
         self.extra_chi2_constraints.append( constr )
 
 
     #____________________________________________________________________
-    def AddOverflowMuConstraint( self, mu, unc, left ):
+    def add_overflow_mu_constraint( self, mu, unc, left ):
         right = self.SM.binBoundaries[-1]
 
         print '\nPlugging in an uncorrelated constraint mu_{{{0}-{1}}} = {2} +- {3}'.format(
@@ -280,7 +280,7 @@ class MiniCombine(object):
 
         def constr(self):
 
-            XS_param = self.parametrization.EvaluateForBinning(
+            XS_param = self.parametrization.evaluate_for_binning(
                 self.SM.binBoundaries, [ left, right ],
                 returnRatios = False,
                 verbose = self.verbose,
@@ -296,20 +296,20 @@ class MiniCombine(object):
             return delta_chi2
 
         constr.suffix = '_GT{0}_unc{1}'.format(
-            Commands.ConvertFloatToStr(left), Commands.ConvertFloatToStr( unc, nDecimals=2 )
+            Commands.convert_float_to_str(left), Commands.convert_float_to_str( unc, nDecimals=2 )
             )
 
         self.extra_chi2_constraints.append( constr )
 
 
     #____________________________________________________________________
-    def AddAsymMuOverflowConstraint( self, mu, unc_up, unc_down, left ):
+    def add_asym_mu_overflow_constraint( self, mu, unc_up, unc_down, left ):
         right = self.SM.binBoundaries[-1]
         print '\nPlugging in an uncorrelated asymmetric constraint mu_{{{0}-{1}}} = {2}  {3:+.2f}/{4:+.2f}'.format( left, right, mu, unc_up, unc_down )
 
         def constr(self):
 
-            XS_param = self.parametrization.EvaluateForBinning(
+            XS_param = self.parametrization.evaluate_for_binning(
                 self.SM.binBoundaries, [ left, right ],
                 returnRatios = False,
                 verbose = self.verbose,
@@ -327,24 +327,24 @@ class MiniCombine(object):
             return delta_chi2
 
         constr.suffix = '_{0}to{1}_uncup{2}_uncdown{3}'.format(
-            Commands.ConvertFloatToStr(left),
-            Commands.ConvertFloatToStr(right),
-            Commands.ConvertFloatToStr(unc_up, nDecimals=2 ),
-            Commands.ConvertFloatToStr(unc_down, nDecimals=2 )
+            Commands.convert_float_to_str(left),
+            Commands.convert_float_to_str(right),
+            Commands.convert_float_to_str(unc_up, nDecimals=2 ),
+            Commands.convert_float_to_str(unc_down, nDecimals=2 )
             )
 
         self.extra_chi2_constraints.append( constr )
 
 
     #____________________________________________________________________
-    def ClearConstraints( self ):
+    def clear_constraints( self ):
         del self.chi2_function
         del self.extra_chi2_constraints
         self.extra_chi2_constraints = []
 
 
     #____________________________________________________________________
-    def BuildChi2Function(
+    def build_chi2_function(
             self
             ):
 
@@ -354,7 +354,7 @@ class MiniCombine(object):
                 if verbose: print '  Setting {0} to {1} in parametrization'.format( coupling, couplingVal )
                 setattr( self.parametrization, coupling, couplingVal )
 
-            XSs_parametrization = self.parametrization.EvaluateForBinning(
+            XSs_parametrization = self.parametrization.evaluate_for_binning(
                 self.SM.binBoundaries, self.expBinBoundaries,
                 returnRatios = False,
                 verbose = verbose,
@@ -378,7 +378,7 @@ class MiniCombine(object):
 
 
     #____________________________________________________________________
-    def ScanGrid(
+    def scan_grid(
             self,
             nPointsX, xMin, xMax,
             nPointsY, yMin, yMax
@@ -425,7 +425,7 @@ class MiniCombine(object):
                 delta_chi2 = self.chi2_function(( x, y )) - bestfit_chi2
 
                 if delta_chi2 < 0.:
-                    Commands.Warning( 'deltachi2 for x = {0}, y = {1} is negative: {2}; setting to 0.0'.format( x, y, delta_chi2 ) )
+                    Commands.warning( 'deltachi2 for x = {0}, y = {1} is negative: {2}; setting to 0.0'.format( x, y, delta_chi2 ) )
                     delta_chi2 = 0.
                 if delta_chi2 > 1000.: delta_chi2 = 1000.
 
@@ -440,15 +440,15 @@ class MiniCombine(object):
         plotContainer = Container()
         plotContainer.name            = '_'.join(self.couplings)
         plotContainer.H2              = H2
-        plotContainer.contours_1sigma = TheoryCommands.GetContoursFromTH2( H2, 2.30 )
-        plotContainer.contours_2sigma = TheoryCommands.GetContoursFromTH2( H2, 6.18 )
+        plotContainer.contours_1sigma = TheoryCommands.get_contours_from_TH2( H2, 2.30 )
+        plotContainer.contours_2sigma = TheoryCommands.get_contours_from_TH2( H2, 6.18 )
         plotContainer.bestfitPoint    = bestfitPoint
 
         for constr in self.extra_chi2_constraints:
             plotContainer.name += constr.suffix
 
 
-        PlotCommands.PlotSingle2DHistogram(
+        PlotCommands.plot_single_TH2(
             plotContainer,
             xMin, xMax,
             yMin, yMax,
@@ -460,7 +460,7 @@ class MiniCombine(object):
 
 
 #____________________________________________________________________
-def GetPOIsFromScandirHeuristic(
+def get_pois_from_scandir_heuristic(
         scanDir
         ):
 

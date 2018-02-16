@@ -40,7 +40,7 @@ lumiMultiplier3000 = 83.56546
 
 @flag_as_option
 def oneKappa_scans(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}_lumiStudy'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}_lumiStudy'.format(datestr) )
 
     scans = [
         # ( 'kappac', LatestPaths.scan_combined_Yukawa_oneKappa_kappac ),
@@ -53,7 +53,7 @@ def oneKappa_scans(args):
 
         container = Container()
         container.kappa = kappa
-        container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), kappa )
+        container.x, container.y = TheoryCommands.basic_read_scan( glob( scanDir + '/*.root' ), kappa )
 
         container_300 = deepcopy(container)
         container_300.y = [ y * lumiMultiplier300 for y in container_300.y ]
@@ -68,7 +68,7 @@ def oneKappa_scans(args):
             xMax = 18.
             xMin = -45.
 
-        PlotCommands.PlotMultipleScans(
+        PlotCommands.plot_multiple_scans(
             [ container, container_300, container_3000 ],
             xTitle   = kappa,
             yTitle   = '2#DeltaNLL',

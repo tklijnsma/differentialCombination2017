@@ -31,7 +31,7 @@ CLeftMargin   = 0.15
 CRightMargin  = 0.03
 CBottomMargin = 0.15
 CTopMargin    = 0.03
-def SetCMargins(
+def set_cmargins(
     LeftMargin   = CLeftMargin,
     RightMargin  = CRightMargin,
     BottomMargin = CBottomMargin,
@@ -42,7 +42,7 @@ def SetCMargins(
     c.SetBottomMargin( BottomMargin )
     c.SetTopMargin( TopMargin )
 
-def GetPlotBase(
+def get_plot_base(
     xMin = 0, xMax = 1,
     yMin = 0, yMax = 1,
     xTitle = 'x', yTitle = 'y',
@@ -66,7 +66,7 @@ def GetPlotBase(
     return base
 
 CPlotDir = 'plots_{0}'.format(datestr)
-def SaveC( outname, asPDF=True, asPNG=False, asROOT=False ):
+def save_c( outname, asPDF=True, asPNG=False, asROOT=False ):
     if not isdir(CPlotDir): os.makedirs( CPlotDir )
     outname = join( CPlotDir, outname.replace('.pdf','').replace('.png','').replace('.root','') )
     if asPDF: c.SaveAs( outname + '.pdf' )
@@ -79,33 +79,33 @@ def SaveC( outname, asPDF=True, asPNG=False, asROOT=False ):
 ########################################
 
 def main():
-    TestMethods()
+    test_methods()
 
 
 
 
 
-def TestMethods(
+def test_methods(
         doWhitening = True,
         doICA       = True,
         doFastICA   = True,
         verbose     = True
         ):
 
-    xPoints, yPoints = GenerateData()
+    xPoints, yPoints = generate_data()
 
     data = numpy.array(
         [ [ x, y ] for x,y in zip( xPoints, yPoints ) ]
         )
 
-    w_init = GetWinit( 2, data.dtype )
+    w_init = get_winit( 2, data.dtype )
 
 
     if doICA:
         chap( 'Running FastICA_byThomas' )
-        res = FastICA_byThomas( deepcopy(data), n_components=2, w_init=deepcopy(w_init) )
+        res = fast_ica_by_thomas( deepcopy(data), n_components=2, w_init=deepcopy(w_init) )
         res.name = 'ICAbyThomas'
-        DrawData( res, verbose )
+        draw_data( res, verbose )
 
     if doFastICA:
         chap( 'Running FastICA from scikit package' )
@@ -129,12 +129,12 @@ def TestMethods(
 
         FastICA_res.rotationMatrix = A_
 
-        DrawData( FastICA_res, verbose )
+        draw_data( FastICA_res, verbose )
 
     if doWhitening:
         chap( 'Running a basic whitening procedure' )
-        whitening_res = Whitening( deepcopy(data), verbose=True )
-        DrawData( whitening_res, verbose )
+        whitening_res = whitening( deepcopy(data), verbose=True )
+        draw_data( whitening_res, verbose )
 
 
     # ======================================
@@ -154,7 +154,7 @@ def TestMethods(
 # Only a whitening operation
 ########################################
 
-def Whitening( data, verbose=False ):
+def whitening( data, verbose=False ):
 
     xPoints = list(data[:,0])
     yPoints = list(data[:,1])
@@ -195,7 +195,7 @@ def Whitening( data, verbose=False ):
     # Sort according to eigenvalues
     eigenValues, eigenVectors = ( list(t) for t in zip(*sorted( zip(eigenValues, eigenVectors), reverse=True )) )
 
-    whiteningMatrix = getWhiteningMatrix( eigenValues, eigenVectors )
+    whiteningMatrix = get_whitening_matrix( eigenValues, eigenVectors )
 
     if verbose:
         print '\neigenValues:'
@@ -215,7 +215,7 @@ def Whitening( data, verbose=False ):
         print numpy.linalg.inv(whiteningMatrix)
 
 
-    xPointsWhitened, yPointsWhitened = applyMatrixOnData(
+    xPointsWhitened, yPointsWhitened = apply_matrix_on_data(
         whiteningMatrix, xPoints, yPoints
         )
 
@@ -226,7 +226,7 @@ def Whitening( data, verbose=False ):
     ret.yPointsRotated = yPointsWhitened
 
     # This is still broken
-    ret.xPointsRotatedBack, ret.yPointsRotatedBack = applyMatrixOnData(
+    ret.xPointsRotatedBack, ret.yPointsRotatedBack = apply_matrix_on_data(
         numpy.linalg.inv(whiteningMatrix),
         xPointsWhitened,
         yPointsWhitened,
@@ -242,7 +242,7 @@ def Whitening( data, verbose=False ):
 
 
 
-def getWhiteningMatrix( eigenValues, eigenVectors ):
+def get_whitening_matrix( eigenValues, eigenVectors ):
     # sqrtD = numpy.diag( [ sqrt(val) for val in eigenValues ] )
     # ET    = numpy.vstack( eigenVectors ) # Works since we need the transpose
     # V = numpy.dot( sqrtD, ET )
@@ -257,7 +257,7 @@ def getWhiteningMatrix( eigenValues, eigenVectors ):
     return V
 
 
-def applyMatrixOnData( matrix, xPoints, yPoints, whiten=True, verbose=False ):
+def apply_matrix_on_data( matrix, xPoints, yPoints, whiten=True, verbose=False ):
     
     if whiten:
         xMean = mean(xPoints)
@@ -291,7 +291,7 @@ def applyMatrixOnData( matrix, xPoints, yPoints, whiten=True, verbose=False ):
 # Minimal FastICA implementation
 ########################################
 
-def FastICA_byThomas( data, n_components, verbose=False, w_init=None ):
+def fast_ica_by_thomas( data, n_components, verbose=False, w_init=None ):
 
     # The hidden transposer
     data = data.T
@@ -299,7 +299,7 @@ def FastICA_byThomas( data, n_components, verbose=False, w_init=None ):
     # ======================================
     # Whiten data
 
-    whiteningMatrix, X_whitened = FastICA_whiten( data, n_components )
+    whiteningMatrix, X_whitened = fast_ica_whiten( data, n_components )
 
     if verbose:
         print '\nX_whitened:'
@@ -332,7 +332,7 @@ def FastICA_byThomas( data, n_components, verbose=False, w_init=None ):
 
     if verbose: chap( 'Running FastICA_ica_par' )
 
-    W, nIterations = FastICA_ica_par( X_whitened, w_init )
+    W, nIterations = fast_ica_ica_par( X_whitened, w_init )
 
     if verbose:
         print '\nFound W in {0} iterations:'.format( nIterations )
@@ -374,7 +374,7 @@ def FastICA_byThomas( data, n_components, verbose=False, w_init=None ):
     return ret
 
 
-def FastICA_whiten( X, n_components ):
+def fast_ica_whiten( X, n_components ):
 
     # Centering the columns (ie the variables)
     X_mean = X.mean(axis=-1)
@@ -397,7 +397,7 @@ def FastICA_whiten( X, n_components ):
     return K, X1
 
 
-def FastICA_ica_par(
+def fast_ica_ica_par(
         X,
         w_init,
         tol      = 1e-4,
@@ -408,14 +408,14 @@ def FastICA_ica_par(
     Used internally by FastICA --main loop
     """
 
-    W = FastICA_sym_decorrelation(w_init)
+    W = fast_ica_sym_decorrelation(w_init)
     del w_init
     p_ = float(X.shape[1])
     for ii in xrange(max_iter):
 
-        gwtx, g_wtx = FastICA_logcosh( numpy.dot(W, X) )
+        gwtx, g_wtx = fast_ica_logcosh( numpy.dot(W, X) )
 
-        W1 = FastICA_sym_decorrelation(
+        W1 = fast_ica_sym_decorrelation(
             numpy.dot(gwtx, X.T) / p_
             - g_wtx[:, numpy.newaxis] * W
             )
@@ -436,7 +436,7 @@ def FastICA_ica_par(
     return W, ii + 1
 
 
-def FastICA_sym_decorrelation(W):
+def fast_ica_sym_decorrelation(W):
     """ Symmetric decorrelation
     i.e. W <- (W * W.T) ^{-1/2} * W
     """
@@ -446,7 +446,7 @@ def FastICA_sym_decorrelation(W):
     return numpy.dot(numpy.dot(u * (1. / numpy.sqrt(s)), u.T), W)
 
 
-def FastICA_logcosh(x, fun_args={}):
+def fast_ica_logcosh(x, fun_args={}):
     alpha = fun_args.get('alpha', 1.0)  # comment it out?
 
     x *= alpha
@@ -465,7 +465,7 @@ def FastICA_logcosh(x, fun_args={}):
 # General functions
 ########################################
 
-def DrawData( res, verbose=False ):
+def draw_data( res, verbose=False ):
 
     xPoints = res.xPoints
     yPoints = res.yPoints
@@ -508,13 +508,13 @@ def DrawData( res, verbose=False ):
     # Make basic plot of data
 
     c.Clear()
-    SetCMargins()
+    set_cmargins()
 
     xMin = xMeanMeasured - 3.*xStdMeasured
     xMax = xMeanMeasured + 3.*xStdMeasured
     yMin = yMeanMeasured - 3.*xStdMeasured
     yMax = yMeanMeasured + 3.*xStdMeasured
-    base = GetPlotBase(
+    base = get_plot_base(
         xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
         xTitle = 'x', yTitle = 'y',
         )
@@ -552,7 +552,7 @@ def DrawData( res, verbose=False ):
     rhoText.SetTextAlign(33)
     rhoText.DrawLatex( 1-CRightMargin-0.01, 1-CTopMargin-0.01, '#rho = {0:.4f}'.format( corr ) )
 
-    SaveC( '{0}_rawdata'.format(res.name) )
+    save_c( '{0}_rawdata'.format(res.name) )
 
 
     # ======================================
@@ -579,7 +579,7 @@ def DrawData( res, verbose=False ):
         TgRotatedBack.SetMarkerColor(2)
         TgRotatedBack.Draw('PSAME')
 
-        SaveC( '{0}_rawdata_rotatedback'.format( res.name ) )
+        save_c( '{0}_rawdata_rotatedback'.format( res.name ) )
 
 
     # ======================================
@@ -588,7 +588,7 @@ def DrawData( res, verbose=False ):
     if hasattr( res, 'xPointsRotated' ):
 
         c.Clear()
-        SetCMargins()
+        set_cmargins()
 
         xPointsRotated = res.xPointsRotated
         yPointsRotated = res.yPointsRotated
@@ -625,7 +625,7 @@ def DrawData( res, verbose=False ):
         xMaxRotated = xMeanRotated + 3.*xStdRotated
         yMinRotated = yMeanRotated - 3.*xStdRotated
         yMaxRotated = yMeanRotated + 3.*xStdRotated
-        baseRotated = GetPlotBase(
+        baseRotated = get_plot_base(
             xMin = xMinRotated, xMax = xMaxRotated, yMin = yMinRotated, yMax = yMaxRotated,
             xTitle = 'xRotated', yTitle = 'yRotated',
             )
@@ -642,7 +642,7 @@ def DrawData( res, verbose=False ):
 
         TgRotated.Draw('PSAME')
 
-        SaveC( '{0}_rotateddata'.format(res.name) )
+        save_c( '{0}_rotateddata'.format(res.name) )
 
 
     if hasattr( res, 'rotationMatrix' ):
@@ -667,7 +667,7 @@ def numpy_row( l ):
     return numpy.array(l)[:,numpy.newaxis]    
 
 
-def GetWinit( n_components, dtype ):
+def get_winit( n_components, dtype ):
     random_state = numpy.random.mtrand._rand
 
     w_init = numpy.asarray(
@@ -680,7 +680,7 @@ def GetWinit( n_components, dtype ):
     return w_init
 
 
-def GenerateData(
+def generate_data(
         xMean = 50.,
         xStd  = 10.,
         yMean = 100.,

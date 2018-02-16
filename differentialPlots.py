@@ -37,7 +37,7 @@ datestr = strftime( '%b%d' )
 def check_containers(containers):
     for container in containers:
         if not len(container.POIs) == len(container.SMcrosssections):
-            Commands.ThrowError(
+            Commands.throw_error(
                 'For container {2}, found {0} POIs, but {1} SM cross sections; something is misaligned.'.format(
                     len(container.POIs), len(container.SMcrosssections), container.name )
                 + '\n  POIs:  {0}'.format(container.POIs)
@@ -45,7 +45,7 @@ def check_containers(containers):
                 )
 
 def draw_parabolas(container):
-    PhysicsCommands.BasicDrawScanResults(container.POIs, container.Scans, name=container.name)
+    PhysicsCommands.basic_draw_scan_results(container.POIs, container.Scans, name=container.name)
 
 def prepare_container(
         name,
@@ -55,11 +55,11 @@ def prepare_container(
         draw_parabolas=False,
         scale_scans=None
         ):
-    POIs = Commands.ListPOIs( ws )
+    POIs = Commands.list_pois( ws )
     POIs.sort( key=Commands.POIsorter )
     if verbose: print 'Sorted POIs:', POIs
 
-    scans = PhysicsCommands.GetScanResults(
+    scans = PhysicsCommands.get_scan_results(
         POIs,
         scandir,
         # pattern = pattern,
@@ -205,17 +205,17 @@ def rapidity_obs(decay_channel):
 #____________________________________________________________________
 @flag_as_option
 def all_tables(args):
-    Commands.DisableWarnings()
+    Commands.disable_warnings()
     pth_smH_tables(args)
     pth_ggH_tables(args)
     ptjet_tables(args)
     njets_tables(args)
     rapidity_tables(args)
-    Commands.DisableWarnings(False)
+    Commands.disable_warnings(False)
 
 @flag_as_option
 def pth_smH_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='pth_smH', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -228,7 +228,7 @@ def pth_smH_tables(args):
 
 @flag_as_option
 def pth_ggH_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='pth_ggH', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -241,7 +241,7 @@ def pth_ggH_tables(args):
 
 @flag_as_option
 def ptjet_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='ptjet', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -254,7 +254,7 @@ def ptjet_tables(args):
 
 @flag_as_option
 def njets_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='njets', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -267,7 +267,7 @@ def njets_tables(args):
 
 @flag_as_option
 def rapidity_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='rapidity', last_bin_is_overflow=False)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -293,7 +293,7 @@ def plot_all_differentials(args):
 #____________________________________________________________________
 @flag_as_option
 def pth_smH_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
     if args.lumiScale:
         containers = []
@@ -355,7 +355,7 @@ def pth_smH_plot(args):
         containers.append(combination)
 
         # for container in containers:
-        #     PlotCommands.WriteScansToTable(
+        #     PlotCommands.write_scans_to_table(
         #         container,
         #         'pth',
         #         xTitle = 'p_{T}^{H} (GeV)',
@@ -369,7 +369,7 @@ def pth_smH_plot(args):
         )
     containers.append(SM)
 
-    PlotCommands.PlotSpectraOnTwoPanel(
+    PlotCommands.plot_spectra_on_two_panel(
         'twoPanel_pthSpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{H} (GeV)',
@@ -382,7 +382,7 @@ def pth_smH_plot(args):
 #____________________________________________________________________
 @flag_as_option
 def pth_ggH_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
         containers = read_containers_statsyst(args, 'pth_ggH', decay_channels=['combination'])
@@ -404,7 +404,7 @@ def pth_ggH_plot(args):
         containers.append(combination)
 
         for container in containers:
-            PlotCommands.WriteScansToTable(
+            PlotCommands.write_scans_to_table(
                 container,
                 'pth_ggh',
                 xTitle = 'p_{T}^{H} (GeV)',
@@ -426,7 +426,7 @@ def pth_ggH_plot(args):
     l.SetTextSize(0.05)
     l.SetTextAlign(33)
 
-    PlotCommands.PlotSpectraOnTwoPanel(
+    PlotCommands.plot_spectra_on_two_panel(
         'twoPanel_pth_ggH_Spectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{H} (GeV)',
@@ -437,7 +437,7 @@ def pth_ggH_plot(args):
 #____________________________________________________________________
 @flag_as_option
 def pth_ggH_hbb_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
     containers = []
 
     if args.asimov:
@@ -476,7 +476,7 @@ def pth_ggH_hbb_plot(args):
 
     check_containers(containers)
     for container in containers:
-        PlotCommands.WriteScansToTable(
+        PlotCommands.write_scans_to_table(
             container,
             'pth_ggh_whbb',
             xTitle = 'p_{T}^{H} (GeV)',
@@ -498,7 +498,7 @@ def pth_ggH_hbb_plot(args):
     l.SetTextSize(0.05)
     l.SetTextAlign(33)
 
-    PlotCommands.PlotSpectraOnTwoPanel(
+    PlotCommands.plot_spectra_on_two_panel(
         'twoPanel_pth_ggH_hbb_Spectrum' + ( '_asimov' if args.asimov else '' ) + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{H} (GeV)',
@@ -509,7 +509,7 @@ def pth_ggH_hbb_plot(args):
 #____________________________________________________________________
 @flag_as_option
 def njets_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
         containers = read_containers_statsyst(args, 'njets', decay_channels=['combination'])
@@ -531,7 +531,7 @@ def njets_plot(args):
 
         check_containers(containers)
         for container in containers:
-            PlotCommands.WriteScansToTable(
+            PlotCommands.write_scans_to_table(
                 container,
                 'njets',
                 xTitle = 'N_{jets}',
@@ -545,7 +545,7 @@ def njets_plot(args):
         )
     containers.append(SM)
 
-    PlotCommands.PlotSpectraOnTwoPanel(
+    PlotCommands.plot_spectra_on_two_panel(
         'twoPanel_nJetsSpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'N_{jets}',
@@ -557,7 +557,7 @@ def njets_plot(args):
 #____________________________________________________________________
 @flag_as_option
 def ptjet_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
         containers = read_containers_statsyst(args, 'ptjet', decay_channels=['combination'])
@@ -577,7 +577,7 @@ def ptjet_plot(args):
         combination.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
         containers.append(combination)
 
-    Commands.Warning( 'Skipping first bin for ptjet (should be the underflow)' )
+    Commands.warning( 'Skipping first bin for ptjet (should be the underflow)' )
     for container in containers:
         container.POIs = container.POIs[1:]
         container.Scans = container.Scans[1:]
@@ -586,7 +586,7 @@ def ptjet_plot(args):
     if not args.statsyst:
         check_containers(containers)
         for container in containers:
-            PlotCommands.WriteScansToTable(
+            PlotCommands.write_scans_to_table(
                 container,
                 'ptjet',
                 xTitle = 'p_{T}^{jet} (GeV)',
@@ -600,7 +600,7 @@ def ptjet_plot(args):
         )
     containers.append(SM)
 
-    PlotCommands.PlotSpectraOnTwoPanel(
+    PlotCommands.plot_spectra_on_two_panel(
         'twoPanel_ptjetSpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = 'p_{T}^{jet} (GeV)',
@@ -614,7 +614,7 @@ def ptjet_plot(args):
 #____________________________________________________________________
 @flag_as_option
 def rapidity_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
     if args.statsyst:
         containers = read_containers_statsyst(args, 'rapidity', decay_channels=['combination'])
@@ -636,7 +636,7 @@ def rapidity_plot(args):
 
         check_containers(containers)
         for container in containers:
-            PlotCommands.WriteScansToTable(
+            PlotCommands.write_scans_to_table(
                 container,
                 'rapidity',
                 xTitle = '|y_{H}|',
@@ -650,7 +650,7 @@ def rapidity_plot(args):
         )
     containers.append(SM)
 
-    PlotCommands.PlotSpectraOnTwoPanel(
+    PlotCommands.plot_spectra_on_two_panel(
         'twoPanel_rapiditySpectrum' + ('_statsyst' if args.statsyst else ''),
         containers,
         xTitle = '|y_{H}|',

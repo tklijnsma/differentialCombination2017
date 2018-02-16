@@ -35,7 +35,7 @@ def main():
     args = parser.parse_args()
 
     if args.test:
-        Commands.TestMode()
+        Commands.test_mode()
 
     if args.tarball:
         TarballLatestPaths()
@@ -97,21 +97,21 @@ def TarballLatestPaths():
 
     cmd = 'tar cf {0} {1}'.format( tarballOut, ' '.join(LatestInodes) )
 
-    # Commands.TestMode()
-    Commands.executeCommand( cmd )
+    # Commands.test_mode()
+    Commands.execute_command( cmd )
 
 
 #____________________________________________________________________
 def ShrinkLogFile( logFile, cutoff=None ):
     if cutoff is None: cutoff = HRToBytes( 10, 'mb' )
     if getsize(logFile) > cutoff:
-        if Commands.IsTestMode():
+        if Commands.is_test_mode():
             print 'Would now shrink {0} (is {1})'.format( logFile, bytesToHR(getsize(logFile)) )
         else:
             print 'Shrinking {0} (is {1})'.format( logFile, bytesToHR(getsize(logFile)) )
-            beginning = Commands.executeCommand( 'head -n 300 {0}'.format(logFile), captureOutput=True )
-            end       = Commands.executeCommand( 'tail -n 300 {0}'.format(logFile), captureOutput=True )
-            centerTag = '\n<<<<<<<<<\nFILE LIMITED\n{0}\n>>>>>>>>>\n'.format( Commands.TagGitCommitAndModule() )
+            beginning = Commands.execute_command( 'head -n 300 {0}'.format(logFile), captureOutput=True )
+            end       = Commands.execute_command( 'tail -n 300 {0}'.format(logFile), captureOutput=True )
+            centerTag = '\n<<<<<<<<<\nFILE LIMITED\n{0}\n>>>>>>>>>\n'.format( Commands.tag_git_commit_and_module() )
             newText = beginning[:-1] + '\n' + centerTag + '\n' + end
             with open( logFile, 'w' ) as logFp:
                 logFp.write( newText )
@@ -142,7 +142,7 @@ def HRToBytes( num, unit ):
         }
     unit = unit.lower()
     if not unit in conversionToBytes:
-        Tools.ThrowError( 'Unit \'{0}\' has no known conversion factor to bytes'.format(unit) )
+        Tools.throw_error( 'Unit \'{0}\' has no known conversion factor to bytes'.format(unit) )
     return int( num*conversionToBytes[unit] )
 
 

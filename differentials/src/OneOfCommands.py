@@ -26,7 +26,7 @@ import ROOT
 
 
 
-def ChangeOutsideAcceptanceToSignalProcess(
+def change_outside_acceptance_to_signal_process(
     datacard = 'suppliedInput/PTH/hzz4l_comb_13TeV_xs.txt',
     ):
 
@@ -73,10 +73,10 @@ def ChangeOutsideAcceptanceToSignalProcess(
 
 
 
-def RenameNormalizationsInHzz():
+def rename_normalizations_in_hzz():
 
     # Compile list of all faulty normalization names
-    signalprocesses, processes, bins = Commands.ListProcesses( 'suppliedInput/PTH/hzz4l_comb_13TeV_xs.txt' )
+    signalprocesses, processes, bins = Commands.list_processes( 'suppliedInput/PTH/hzz4l_comb_13TeV_xs.txt' )
     oldNames = []
     newNames = []
     for process, bin in itertools.product( signalprocesses, bins ):
@@ -92,7 +92,7 @@ def RenameNormalizationsInHzz():
 
         print 'Processing {0}'.format( rootFile )
 
-        ChangeNameOfElementInWs(
+        change_name_of_element_in_ws(
             rootFile,
             outRootFile,
             oldNames,
@@ -103,7 +103,7 @@ def RenameNormalizationsInHzz():
 
 
 
-def ChangeNameOfElementInWs(
+def change_name_of_element_in_ws(
     wsFile,
     wsFileOut,
     oldNames,
@@ -113,7 +113,7 @@ def ChangeNameOfElementInWs(
 
     assert( not isinstance( oldNames, basestring ) and not isinstance( newNames, basestring ) )
     if not len(oldNames) == len(newNames):
-        print 'ERROR in ChangeNameOfElementInWs(): Supply lists of the same length'
+        print 'ERROR in change_name_of_element_in_ws(): Supply lists of the same length'
         print '    oldNames = ', oldNames
         print '    newNames = ', newNames
 
@@ -126,7 +126,7 @@ def ChangeNameOfElementInWs(
 
     for varName, newVarName in zip( oldNames, newNames ):
         # print 'Trying to get \'{0}\''.format( varName )
-        variable = GetVarFromWs( w, varName )
+        variable = get_var_from_ws( w, varName )
 
         if not variable:
             continue
@@ -137,7 +137,7 @@ def ChangeNameOfElementInWs(
 
 
     # if not success:
-    #     print 'Failure in ChangeNameOfElementInWs():'
+    #     print 'Failure in change_name_of_element_in_ws():'
     #     print '    Element \'{0}\' does not exist in \'{1}\''.format(
     #         oldName, wsFile
     #         )
@@ -152,7 +152,7 @@ def ChangeNameOfElementInWs(
     
 
 
-def GetVarFromWs( w, varName ):
+def get_var_from_ws( w, varName ):
     success = False
     for getter in [ 'pdf', 'function', 'var', 'cat', 'genobj' ]:
         try:
@@ -175,7 +175,7 @@ def GetVarFromWs( w, varName ):
 
 
 # Returns a function that can be evaluated for an integral from a to b
-def GetIntegralTrapzoidal( xs, ys ):
+def get_integral_trapzoidal( xs, ys ):
 
     nPoints = len(xs)
 
@@ -231,7 +231,7 @@ def GetIntegralTrapzoidal( xs, ys ):
 
 
         if not aInterpolated or not bInterpolated:
-            Commands.ThrowError( 'Somehow this case was not interpolated; this is wrong' )
+            Commands.throw_error( 'Somehow this case was not interpolated; this is wrong' )
             return 0.
 
         x_integration = [ a  ] + xs[ia+1:ib+1] + [ b  ]
@@ -261,7 +261,7 @@ def GetIntegralTrapzoidal( xs, ys ):
 
 
 
-def hzz_T2WS(
+def hzz_t2ws(
     datacard,
     extraOptions=None,
     ):
@@ -270,7 +270,7 @@ def hzz_T2WS(
     if not isdir( outputDir ): os.makedirs( outputDir )
     outputWS = join( outputDir, basename(datacard).replace( '.txt', '.root' ) )
 
-    signalprocesses, processes, bins = Commands.ListProcesses( datacard )
+    signalprocesses, processes, bins = Commands.list_processes( datacard )
     # cats = list(set([ b.split('cat')[1] for b in bins ]))
 
     cmd = []
@@ -317,11 +317,11 @@ def hzz_T2WS(
     else:
         cmd.extend( extraOptions )
 
-    Commands.executeCommand( cmd )
+    Commands.execute_command( cmd )
 
 
 
-def hzz_manualMapping_T2WS(
+def hzz_manual_mapping_t2ws(
     datacard,
     extraOptions=None,
     ):
@@ -330,7 +330,7 @@ def hzz_manualMapping_T2WS(
     if not isdir( outputDir ): os.makedirs( outputDir )
     outputWS = join( outputDir, basename(datacard).replace( '.txt', '.root' ) )
 
-    signalprocesses, processes, bins = ListProcesses( datacard )
+    signalprocesses, processes, bins = list_processes( datacard )
     cats = list(set([ b.split('cat')[1] for b in bins ]))
 
     cmd = []
@@ -426,7 +426,7 @@ def hzz_manualMapping_T2WS(
     else:
         cmd.extend( extraOptions )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
 
 

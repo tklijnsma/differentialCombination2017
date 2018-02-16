@@ -98,7 +98,7 @@ class NormalizationCrossCheck(object):
                 '\n    bin_boundaries: {0}'.format(self.bin_boundaries)
                 )
         elif len(values) > self.n_bins:
-            Commands.Warning(
+            Commands.warning(
                 'The passed spectrum \'{0}\' has {1} bins, but the number of passed bins is {2}'.format(
                     name, len(values), self.n_bins) +
                 '\n    Will keep only the first {0} bins'.format(self.n_bins)
@@ -142,8 +142,8 @@ class NormalizationCrossCheck(object):
             y_max = y_maxAbs + 0.1*(y_maxAbs-y_minAbs)
 
         c.Clear()
-        SetCMargins()
-        base = GetPlotBase(
+        set_cmargins()
+        base = get_plot_base(
             xMin = x_min,
             xMax = x_max,
             yMin = y_min,
@@ -175,12 +175,12 @@ class NormalizationCrossCheck(object):
         outname = 'normalizationCrosscheck_reimpl'
         if not(tag is None):
             outname += '_' + tag
-        SaveC(outname)
+        save_c(outname)
 
 
     def spectrum_to_hist(self, s):
         H = ROOT.TH1F(
-            s.name+'_'+TheoryCommands.GetUniqueRootName(), s.title,
+            s.name+'_'+TheoryCommands.get_unique_root_name(), s.title,
             self.n_bins, array('f', self.bin_boundaries)
             )
         ROOT.SetOwnership( H, False )
@@ -195,7 +195,7 @@ class NormalizationCrossCheck(object):
 
 
 def main( args ):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
 
     #____________________________________________________________________
@@ -206,10 +206,10 @@ def main( args ):
         from LatestBinning import obs_pth_combWithHbbBinning as obs_pth
         obs_pth.YR4_totalXS = LatestBinning.YR4_ggF_n3lo
 
-        Commands.Warning('Merging some SM bin boundaries; fix when hgg comes in (BAD FIX!)')
+        Commands.warning('Merging some SM bin boundaries; fix when hgg comes in (BAD FIX!)')
         obs_pth.binning[obs_pth.binning.index(85.)] = 80.
         obs_pth.binning[obs_pth.binning.index(125.)] = 120.
-        obs_pth = obs_pth.mergeBins([ 0, 1, [2,3], [4,5], 6, 7, 8 ])
+        obs_pth = obs_pth.merge_bins([ 0, 1, [2,3], [4,5], 6, 7, 8 ])
 
         normalizationCrossCheck.set_bin_boundaries(obs_pth.binning[:-1], add_overflow=True)
 
@@ -218,23 +218,23 @@ def main( args ):
         normalizationCrossCheck.add_spectrum('YR4, shape Vitt.', SMXSs, isSM=True, color=4)
 
         # Add raw from Agnieszka
-        SM_Top = TheoryFileInterface.FileFinder(
+        SM_Top = TheoryFileInterface.file_finder(
             ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
             expectOneFile=True, loadImmediately=True,
             # directory=LatestPaths.derivedTheoryFiles_TopHighPt
             directory=LatestPaths.derivedTheoryFiles_Top
             )
-        xs_Top = TheoryCommands.Rebin(SM_Top.binBoundaries, SM_Top.crosssection, obs_pth.binning, lastBinIsOverflow=True)
+        xs_Top = TheoryCommands.rebin(SM_Top.binBoundaries, SM_Top.crosssection, obs_pth.binning, lastBinIsOverflow=True)
         normalizationCrossCheck.add_spectrum('Agnieszka', xs_Top, color=2)
 
         # Add SM from the ws (what is actually used)
         ws = 'out/workspaces_Jan29/combinedCard_newBins_hzz_hbb_ggHxH_Jan24_CouplingModel_TopHighPt_noTheoryUncertainties_hzz_hbb_newBins.root'
         with Commands.OpenRootFile(ws) as wsFp:
             w = wsFp.Get('w')
-            yieldParameters = Commands.ListSet(w, 'all_ggH_yieldParameters')
+            yieldParameters = Commands.list_set(w, 'all_ggH_yieldParameters')
             yieldParameters.sort(key=Commands.rangeSorter)
             reweightors = [ w.function(y).getVal() for y in yieldParameters ]
-            SMXS_ws = [ w.var(y).getVal() for y in Commands.ListSet(w, 'SMXS') ]
+            SMXS_ws = [ w.var(y).getVal() for y in Commands.list_set(w, 'SMXS') ]
         binWidths = [ right-left for left, right in zip(normalizationCrossCheck.bin_boundaries[:-1], normalizationCrossCheck.bin_boundaries[1:]) ]
         binWidths[-1] = 1.0 # Don't divide by bin width in overflow bin
         ws_xs = [ reweightor * SMXS / binWidth for reweightor, SMXS, binWidth in zip(reweightors, SMXS_ws, binWidths) ]
@@ -251,7 +251,7 @@ def main( args ):
 
         from LatestBinning import obs_pth_ggH as obs_pth
         obs_pth.YR4_totalXS = LatestBinning.YR4_ggF_n3lo
-        obs_pth.keepOnlyFirstNBins(5)
+        obs_pth.keep_only_first_nbins(5)
 
         normalizationCrossCheck.set_bin_boundaries(obs_pth.binning, add_overflow=False)
 
@@ -260,12 +260,12 @@ def main( args ):
         normalizationCrossCheck.add_spectrum('YR4, shape Vitt.', SMXSs, isSM=True, color=4)
 
         # Add raw from Pier
-        SM_Yukawa = TheoryFileInterface.FileFinder(
+        SM_Yukawa = TheoryFileInterface.file_finder(
             kappab=1, kappac=1, muR=1, muF=1, Q=1,
             expectOneFile=True, loadImmediately=True,
             directory=LatestPaths.derivedTheoryFiles_YukawaSummed
             )
-        xs_Yukawa = TheoryCommands.Rebin(SM_Yukawa.binBoundaries, SM_Yukawa.crosssection, obs_pth.binning, lastBinIsOverflow=False)
+        xs_Yukawa = TheoryCommands.rebin(SM_Yukawa.binBoundaries, SM_Yukawa.crosssection, obs_pth.binning, lastBinIsOverflow=False)
         normalizationCrossCheck.add_spectrum('Pier', xs_Yukawa, color=2)
 
         # Add SM from the ws (what is actually used)
@@ -281,7 +281,7 @@ def main( args ):
                     print 'Error: left = {0}, right = {1}'.format(left, right)
                     print name
                     raise
-            SMXS_ws = [ w.var(y).getVal() for y in Commands.ListSet(w, 'SMXS') ]
+            SMXS_ws = [ w.var(y).getVal() for y in Commands.list_set(w, 'SMXS') ]
         binWidths = [ right-left for left, right in zip(normalizationCrossCheck.bin_boundaries[:-1], normalizationCrossCheck.bin_boundaries[1:]) ]
         ws_xs = [ reweightor * SMXS / binWidth for reweightor, SMXS, binWidth in zip(reweightors, SMXS_ws, binWidths) ]
         normalizationCrossCheck.add_spectrum('Pier reweighted', ws_xs, line_style=2)
@@ -298,7 +298,7 @@ def main( args ):
         obs_pth.YR4_totalXS = LatestBinning.YR4_ggF_n3lo
         SMXS = obs_pth.crosssection_over_binwidth()
 
-        H_SMXS = obs_pth.BasicHistogram()
+        H_SMXS = obs_pth.basic_histogram()
         H_SMXS.SetLineColor(1)
 
         xMin = obs_pth.binning[0]
@@ -319,9 +319,9 @@ def main( args ):
             yMax = yMaxAbs + 0.1*(yMaxAbs-yMinAbs)
 
         c.Clear()
-        SetCMargins()
+        set_cmargins()
 
-        base = GetPlotBase(
+        base = get_plot_base(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
@@ -338,7 +338,7 @@ def main( args ):
         # ======================================
         # Load theory predictions on top
 
-        SM_Top = TheoryFileInterface.FileFinder(
+        SM_Top = TheoryFileInterface.file_finder(
             ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
             expectOneFile=True, loadImmediately=True,
             # directory=LatestPaths.derivedTheoryFiles_TopHighPt
@@ -352,7 +352,7 @@ def main( args ):
 
 
         SM_Top_Rebinned = deepcopy(SM_Top)
-        TheoryCommands.RebinDerivedTheoryContainer( SM_Top_Rebinned, obs_pth.binning, lastBinIsOverflow=False )
+        TheoryCommands.rebin_derived_theory_container( SM_Top_Rebinned, obs_pth.binning, lastBinIsOverflow=False )
 
         H_Top_Rebinned = BasicHistogramFromContainer( SM_Top_Rebinned, lastBinIsOverflow=False )
         H_Top_Rebinned.SetLineColor(9)
@@ -377,7 +377,7 @@ def main( args ):
 
 
         SM_Top_Rescaled_Rebinned = deepcopy(SM_Top_Rescaled)
-        TheoryCommands.RebinDerivedTheoryContainer( SM_Top_Rescaled_Rebinned, obs_pth.binning, lastBinIsOverflow=False )
+        TheoryCommands.rebin_derived_theory_container( SM_Top_Rescaled_Rebinned, obs_pth.binning, lastBinIsOverflow=False )
 
         H_Top_Rescaled_Rebinned = BasicHistogramFromContainer( SM_Top_Rescaled_Rebinned, lastBinIsOverflow=False )
         H_Top_Rescaled_Rebinned.SetLineColor(46)
@@ -412,7 +412,7 @@ def main( args ):
         # print 'Top rebinned: ', BasicIntegral( SM_Top_Rebinned.binBoundaries, SM_Top_Rebinned.crosssection )
 
         if LOGSCALE: c.SetLogy()
-        SaveC( 'normalizationCrosscheck_Top' )
+        save_c( 'normalizationCrosscheck_Top' )
 
 
     #____________________________________________________________________
@@ -422,9 +422,9 @@ def main( args ):
 
         from LatestBinning import obs_pth_combWithHbbBinning as obs_pth
         obs_pth.YR4_totalXS = LatestBinning.YR4_ggF_n3lo
-        obs_pth.keepOnlyFirstNBins(5)
+        obs_pth.keep_only_first_nbins(5)
 
-        H_SMXS = obs_pth.BasicHistogram()
+        H_SMXS = obs_pth.basic_histogram()
         H_SMXS.SetLineColor(1)
 
         xMin = obs_pth.binning[0]
@@ -445,9 +445,9 @@ def main( args ):
             yMax = yMaxAbs + 0.1*(yMaxAbs-yMinAbs)
 
         c.Clear()
-        SetCMargins()
+        set_cmargins()
 
-        base = GetPlotBase(
+        base = get_plot_base(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
@@ -463,7 +463,7 @@ def main( args ):
 
         #____________________________________________________________________
 
-        SM_Yukawa = TheoryFileInterface.FileFinder(
+        SM_Yukawa = TheoryFileInterface.file_finder(
             kappab=1, kappac=1, muR=1, muF=1, Q=1,
             expectOneFile=True, loadImmediately=True,
             directory=LatestPaths.derivedTheoryFiles_YukawaSummed
@@ -476,7 +476,7 @@ def main( args ):
 
 
         SM_Yukawa_Rebinned = deepcopy(SM_Yukawa)
-        TheoryCommands.RebinDerivedTheoryContainer( SM_Yukawa_Rebinned, obs_pth.binning, lastBinIsOverflow=False )
+        TheoryCommands.rebin_derived_theory_container( SM_Yukawa_Rebinned, obs_pth.binning, lastBinIsOverflow=False )
 
         H_Yukawa_Rebinned = BasicHistogramFromContainer( SM_Yukawa_Rebinned, lastBinIsOverflow=False )
         H_Yukawa_Rebinned.SetLineColor(9)
@@ -493,7 +493,7 @@ def main( args ):
 
 
         if LOGSCALE: c.SetLogy()
-        SaveC( 'normalizationCrosscheck_Yukawa' )
+        save_c( 'normalizationCrosscheck_Yukawa' )
 
 
 
@@ -504,7 +504,7 @@ def BasicHistogramFromContainer( container, lastBinIsOverflow=False ):
     nBins = len(container.crosssection)
 
     H = ROOT.TH1F(
-        TheoryCommands.GetUniqueRootName(), TheoryCommands.GetUniqueRootName(),
+        TheoryCommands.get_unique_root_name(), TheoryCommands.get_unique_root_name(),
         nBins, array( 'f', container.binBoundaries )
         )
     ROOT.SetOwnership( H, False )
@@ -539,7 +539,7 @@ def GetIntegratedLineForLastBin( container ):
 def BasicIntegral( binning, xss_per_binWidth, lastBinIsOverflow=False, verbose=False ):
 
     if not len(binning)-1 == len(xss_per_binWidth):
-        Commands.ThrowError( 'len(binning) = {0}, len(xss) = {1}; Cannot calculate integral.'.format( len(binning), len(xss_per_binWidth) ) )
+        Commands.throw_error( 'len(binning) = {0}, len(xss) = {1}; Cannot calculate integral.'.format( len(binning), len(xss_per_binWidth) ) )
 
     nBins = len(xss_per_binWidth)
 

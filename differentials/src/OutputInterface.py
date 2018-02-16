@@ -35,12 +35,12 @@ class OutputContainer(Container):
         
         if len(args) == 1:
             if isinstance( args[0], Container ):
-                self.ReadDerivedTheoryFileContainer( args[0] )
+                self.read_derived_theory_file_container( args[0] )
 
 
 
 
-    def GetTGraph(
+    def get_TGraph(
             self,
             name=None,
             xAttr=None,
@@ -60,7 +60,7 @@ class OutputContainer(Container):
                     xAttr = attempt
                     break
             else:
-                Commands.ThrowError( 'Can not determine an attribute to use for the x axis' )
+                Commands.throw_error( 'Can not determine an attribute to use for the x axis' )
                 sys.exit()
 
         if yAttr is None:
@@ -69,7 +69,7 @@ class OutputContainer(Container):
                     yAttr = attempt
                     break
             else:
-                Commands.ThrowError( 'Can not determine an attribute to use for the x axis' )
+                Commands.throw_error( 'Can not determine an attribute to use for the x axis' )
                 sys.exit()
 
         xValues = getattr( self, xAttr )
@@ -77,10 +77,10 @@ class OutputContainer(Container):
 
         if self.xAreBinBoundaries:
             if len(xValues)-1 > len(yValues):
-                Commands.Warning( 'Found len(xValues) = {0}, len(yValues) = {1}; need to limit number of bins to make a TGraph'.format( len(xValues), len(yValues) ) )
+                Commands.warning( 'Found len(xValues) = {0}, len(yValues) = {1}; need to limit number of bins to make a TGraph'.format( len(xValues), len(yValues) ) )
                 xValues = xValues[:len(yValues)+1]
             elif len(xValues)-1 < len(yValues):
-                Commands.ThrowError(
+                Commands.throw_error(
                     'len(xValues)-1 = {0}, len(yValues) = {1} ; should be the same'.format( len(xValues)-1, len(yValues) ),
                     throwException = True
                     )
@@ -93,7 +93,7 @@ class OutputContainer(Container):
 
         else:
             if len(xValues) != len(yValues):
-                Commands.ThrowError(
+                Commands.throw_error(
                     'len(xValues) = {0}, len(yValues) = {1} ; should be the same'.format( len(xValues), len(yValues) ),
                     throwException = True
                     )
@@ -141,7 +141,7 @@ class OutputContainer(Container):
 
         # if name is None:
         #     if not hasattr( self, 'name' ):
-        #         Commands.ThrowError( 'Need to specify a name.' )
+        #         Commands.throw_error( 'Need to specify a name.' )
         #         sys.exit()
         #     name = self.name
         # Tg.SetName( name )
@@ -189,18 +189,18 @@ class OutputContainer(Container):
         return Tg
 
 
-    def ReadDerivedTheoryFileContainer(
+    def read_derived_theory_file_container(
             self,
             theoryContainer,
             ):
-        for attr in theoryContainer.ListAttributes():
+        for attr in theoryContainer.list_attributes():
             setattr( self, attr, getattr( theoryContainer, attr ) )
 
 
 
 
 
-# def OutputContainerFromWSParametrization(
+# def output_container_from_wsparametrization(
 #         wsFile, returnWhat='theory', **kwargs
 #         ):
 

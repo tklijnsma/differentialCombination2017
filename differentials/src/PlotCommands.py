@@ -47,7 +47,7 @@ datestr = strftime( '%b%d' )
 ########################################
 
 #____________________________________________________________________
-def SetColorPalette(option=None):
+def set_color_palette(option=None):
 
     # n_stops = 3
     # stops  = [ 0.0, 0.5, 1.0 ]
@@ -103,7 +103,7 @@ class TLegendMultiPanel(object):
     def AddEntry( self, *args ):
         self._entries.append( args )
 
-    def SetNColumns( self, val ):
+    def set_n_columns( self, val ):
         self._SetNColumns = val
     def SetBorderSize( self, val ):
         self._SetBorderSize = val
@@ -124,7 +124,7 @@ class TLegendMultiPanel(object):
             leg.AddEntry( *args )
 
         if not( self._SetNColumns is None ):
-            leg.SetNColumns(   self._SetNColumns )
+            leg.set_n_columns(   self._SetNColumns )
         if not( self._SetBorderSize is None ):
             leg.SetBorderSize( self._SetBorderSize )
         if not( self._SetFillStyle is None ):
@@ -190,7 +190,7 @@ class TLatexMultiPanel(object):
 
 
 #____________________________________________________________________
-def PlotWithBottomPanel(
+def plot_with_bottom_panel(
         plotName,
         topPanelObjects,
         bottomPanelObjects,
@@ -232,7 +232,7 @@ def PlotWithBottomPanel(
 
 
     topPad = ROOT.TPad(
-        GetUniqueRootName(), '',
+        get_unique_root_name(), '',
         # c.GetLeftMargin(), topPad_bottom, 1-c.GetRightMargin(), topPad_top
         0.0, topPad_bottom, 1.0, 1.0
         )
@@ -243,7 +243,7 @@ def PlotWithBottomPanel(
     topPad.Draw()
 
     bottomPad = ROOT.TPad(
-        GetUniqueRootName(), '',
+        get_unique_root_name(), '',
         # c.GetLeftMargin(), bottomPad_bottom, 1-c.GetRightMargin(), bottomPad_top
         0.0, 0.0, 1.0, bottomPad_top
         )
@@ -327,19 +327,19 @@ def PlotWithBottomPanel(
 
     if not disableCMSText:
         topPad.cd()
-        Commands.GetCMSLabel( textSize=0.08 )
-        Commands.GetCMSLumi( textSize=0.07 )
+        Commands.get_cms_label( textSize=0.08 )
+        Commands.get_cms_lumi( textSize=0.07 )
 
-    SaveC(plotName)
+    save_c(plotName)
     c.SetCanvasSize( _width, _height )
 
 #____________________________________________________________________
 def get_uncs_from_scans(container):
-    container.binBoundaries = PhysicsCommands.FigureOutBinning( container.POIs )
+    container.binBoundaries = PhysicsCommands.figure_out_binning( container.POIs )
     container.uncs = []
     for POI, scan in zip( container.POIs, container.Scans ):
-        POIvals, deltaNLLs = PhysicsCommands.FilterScan( scan )
-        unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
+        POIvals, deltaNLLs = PhysicsCommands.filter_scan( scan )
+        unc = PhysicsCommands.find_minima_and_errors( POIvals, deltaNLLs, returnContainer=True )
         container.uncs.append(unc)
 
     container.nBins         = len(container.binBoundaries)-1
@@ -355,7 +355,7 @@ def get_uncs_from_scans(container):
 class GenericHistogram(object):
     """docstring for GenericHistogram"""
 
-    colorCycle = Commands.newColorCycle()
+    colorCycle = Commands.new_color_cycle()
     fillStyleCycle = itertools.cycle([ 3245, 3254, 3205 ])
 
     def __init__(self, name, title, bin_boundaries, bin_values, color=None):
@@ -397,7 +397,7 @@ class GenericHistogram(object):
 
     def repr_basic_histogram(self, leg=None):
         H = ROOT.TH1F(
-            GetUniqueRootName(), '',
+            get_unique_root_name(), '',
             len(self.bin_boundaries)-1, array( 'f', self.bin_boundaries)
             )
         ROOT.SetOwnership( H, False )
@@ -421,7 +421,7 @@ class GenericHistogram(object):
             array( 'f', self.get_zeroes() ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( get_unique_root_name() )
 
         Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
         # Tg.SetLineWidth(   getattr(self, 'setLineWidth',   2 ) )
@@ -440,7 +440,7 @@ class GenericHistogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( get_unique_root_name() )
     
         Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
@@ -466,7 +466,7 @@ class GenericHistogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( get_unique_root_name() )
     
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
         Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
@@ -494,7 +494,7 @@ class GenericHistogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( get_unique_root_name() )
     
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
         Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
@@ -523,7 +523,7 @@ class GenericHistogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( get_unique_root_name() )
 
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
         Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
@@ -542,7 +542,7 @@ class GenericHistogram(object):
 
 
 #____________________________________________________________________
-def PlotSpectraOnTwoPanel(
+def plot_spectra_on_two_panel(
         plotname,
         containers,
         xTitle       = 'p_{T}^{H}',
@@ -638,7 +638,7 @@ def PlotSpectraOnTwoPanel(
     yMinBottom = yMinAbsBottom - 0.1*(yMaxAbsBottom-yMinAbsBottom)
     yMaxBottom = yMaxAbsBottom + 0.1*(yMaxAbsBottom-yMinAbsBottom)
 
-    baseBottom = GetPlotBase(
+    baseBottom = get_plot_base(
         xMin = xMin,
         xMax = xMax,
         yMin = yMinBottom,
@@ -668,7 +668,7 @@ def PlotSpectraOnTwoPanel(
     if yMinExternalTop: 
         yMinTop = yMinExternalTop
 
-    baseTop = GetPlotBase(
+    baseTop = get_plot_base(
         xMin = xMin,
         xMax = xMax,
         yMin = yMinTop,
@@ -686,11 +686,11 @@ def PlotSpectraOnTwoPanel(
         lambda c: 1 - c.GetRightMargin() - 0.01,
         lambda c: 1 - c.GetTopMargin()
         )
-    leg.SetNColumns( min( len(containers)+len(hardcoded_numbers_containers), 4 ) )
+    leg.set_n_columns( min( len(containers)+len(hardcoded_numbers_containers), 4 ) )
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
-    colorCycle = Commands.newColorCycle()
+    colorCycle = Commands.new_color_cycle()
     fillStyleCycle = itertools.cycle([ 3245, 3254, 3205 ])
 
 
@@ -699,7 +699,7 @@ def PlotSpectraOnTwoPanel(
         container.nBins = getattr(container, 'nBins', len(container.binBoundaries)-1)
 
         Hratio = ROOT.TH1F(
-            GetUniqueRootName(), '',
+            get_unique_root_name(), '',
             len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
             )
         ROOT.SetOwnership( Hratio, False )
@@ -710,7 +710,7 @@ def PlotSpectraOnTwoPanel(
         bottomPanelObjects.append( ( Hratio, 'HISTSAME' ) )
 
         Hcrosssection = ROOT.TH1F(
-            GetUniqueRootName(), '',
+            get_unique_root_name(), '',
             len(container.binBoundaries)-1, array( 'f', container.binBoundaries )
             )
         ROOT.SetOwnership( Hcrosssection, False )
@@ -815,7 +815,7 @@ def PlotSpectraOnTwoPanel(
         bottomPanelObjects.append(obj)
 
     ROOT.gStyle.SetEndErrorSize(3)
-    PlotWithBottomPanel(
+    plot_with_bottom_panel(
         plotname,
         topPanelObjects,
         bottomPanelObjects,
@@ -830,7 +830,7 @@ def PlotSpectraOnTwoPanel(
 
 
 #____________________________________________________________________
-def WriteScansToTable(
+def write_scans_to_table(
         container,
         tag,
         xTitle       = 'p_{T}^{H}',
@@ -840,14 +840,14 @@ def WriteScansToTable(
         scaleLastBin = False,
         ):
 
-    container.binBoundaries = PhysicsCommands.FigureOutBinning( container.POIs )
+    container.binBoundaries = PhysicsCommands.figure_out_binning( container.POIs )
     container.nBins = len(container.binBoundaries)-1
     
     # Determine uncertainties from scan
     container.uncs = []
     for POI, scan in zip( container.POIs, container.Scans ):
-        POIvals, deltaNLLs = PhysicsCommands.FilterScan( scan )
-        unc = PhysicsCommands.FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=True )
+        POIvals, deltaNLLs = PhysicsCommands.filter_scan( scan )
+        unc = PhysicsCommands.find_minima_and_errors( POIvals, deltaNLLs, returnContainer=True )
         container.uncs.append(unc)
 
     # If last bin is indeed an overflow, and scaleLastBin is not set to False, scale the last bin
@@ -939,8 +939,8 @@ def WriteScansToTable(
     table.append(crosssectionLine)
     table.append(ratiosLine)
 
-    tableText = '% ' + Commands.TagGitCommitAndModule() + '\n'
-    tableText += Commands.PrintTable(table, maxColWidth=100, sep=' & ', newline_sep=' \\\\\n' )
+    tableText = '% ' + Commands.tag_git_commit_and_module() + '\n'
+    tableText += Commands.print_table(table, maxColWidth=100, sep=' & ', newline_sep=' \\\\\n' )
 
     outname = join(TheoryCommands.PLOTDIR, 'mutable_{0}_{1}.tex'.format(tag, container.name))
     with open(outname, 'w') as outFp:
@@ -948,7 +948,7 @@ def WriteScansToTable(
 
 
 #____________________________________________________________________
-def PlotParametrizationsOnCombination(
+def plot_parametrizations_on_combination(
         container,
         OnOneCanvas = False
         ):
@@ -990,9 +990,9 @@ def PlotParametrizationsOnCombination(
     if hasattr( container, 'StraightLineToSM' ) and container.StraightLineToSM:
         STRAIGHT_LINE_TO_SM = True
         if not hasattr( container, 'xSM' ):
-            Commands.ThrowError( 'Requested mode \'StraightLineToSM\', but xSM is not specified' )
+            Commands.throw_error( 'Requested mode \'StraightLineToSM\', but xSM is not specified' )
         if not hasattr( container, 'ySM' ):
-            Commands.ThrowError( 'Requested mode \'StraightLineToSM\', but ySM is not specified' )
+            Commands.throw_error( 'Requested mode \'StraightLineToSM\', but ySM is not specified' )
 
 
     # ======================================
@@ -1001,14 +1001,14 @@ def PlotParametrizationsOnCombination(
     newColorCycle = lambda: itertools.cycle( [ 2, 4, 6, 41, 46, 30, 43, 3, 5, 8, 9 ] )
 
     c.Clear()
-    SetCMargins( TopMargin = 0.09 )
+    set_cmargins( TopMargin = 0.09 )
 
     xMin = expBinBoundaries[0]
     xMax = expBinBoundaries[-2] + ( expBinBoundaries[-2] - expBinBoundaries[-3] ) # Overflow will screw up plot
     yMin = 0.0
     yMax = 1.0
 
-    base = GetPlotBase(
+    base = get_plot_base(
         xMin = xMin,
         xMax = xMax,
         yMin = yMin,
@@ -1024,7 +1024,7 @@ def PlotParametrizationsOnCombination(
             c.GetLeftMargin() + 0.5*( 1. - c.GetRightMargin() - c.GetLeftMargin() ),
             1 - c.GetTopMargin() 
             )
-        leg.SetNColumns(1)
+        leg.set_n_columns(1)
     else:
         leg = ROOT.TLegend(
             c.GetLeftMargin(),
@@ -1032,7 +1032,7 @@ def PlotParametrizationsOnCombination(
             1 - c.GetRightMargin(),
             1 - c.GetTopMargin() 
             )
-        leg.SetNColumns(2)
+        leg.set_n_columns(2)
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
@@ -1040,13 +1040,13 @@ def PlotParametrizationsOnCombination(
     # ======================================
     # Draw the combination as blocks
 
-    combinationPOIs = Commands.ListPOIs( ws_combination )
-    combinationscans = PhysicsCommands.GetScanResults( combinationPOIs, scanDir_combination, pattern = '' )
+    combinationPOIs = Commands.list_pois( ws_combination )
+    combinationscans = PhysicsCommands.get_scan_results( combinationPOIs, scanDir_combination, pattern = '' )
 
-    TgCombination = PhysicsCommands.GetTGraphForSpectrum(
+    TgCombination = PhysicsCommands.get_TGraph_for_spectrum(
         combinationPOIs,
         combinationscans,
-        name = GetUniqueRootName()
+        name = get_unique_root_name()
         )
 
     TgCombination.SetLineColor( 1 )
@@ -1058,7 +1058,7 @@ def PlotParametrizationsOnCombination(
 
     TgCombination.title = 'Combination'
 
-    # CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+    # CorrelationMatrices.convert_TGraph_to_lines_and_boxes(
     #     TgCombination,
     #     drawImmediately=True,
     #     legendObject=leg,
@@ -1082,21 +1082,21 @@ def PlotParametrizationsOnCombination(
     # Get a contour
 
     combined_rootfiles  = glob( '{0}/*.root'.format( scanDir_coupling ) )
-    combined = TheoryCommands.GetTH2FromListOfRootFiles(
+    combined = TheoryCommands.get_TH2_from_list_of_root_files(
         combined_rootfiles, xCoupling, yCoupling, verbose = False,
         )
     combined.color = 1
     combined.name = 'regular'
     combined.title = 'Nominal'
 
-    allcontours = TheoryCommands.GetContoursFromTH2( combined.H2, 2.30 )
+    allcontours = TheoryCommands.get_contours_from_TH2( combined.H2, 2.30 )
     # debug('Got contours')
     candidatecontours = []
 
     xBestfit = combined.xBestfit
     yBestfit = combined.yBestfit
     for Tg in allcontours:
-        Tg.x, Tg.y = TheoryCommands.GetXYfromTGraph(Tg)
+        Tg.x, Tg.y = TheoryCommands.get_xyfrom_TGraph(Tg)
         Tg.xMin = min(Tg.x)
         Tg.xMax = max(Tg.x)
         Tg.yMin = min(Tg.y)
@@ -1123,7 +1123,7 @@ def PlotParametrizationsOnCombination(
     # debug('Filtered contours')
 
     if len(candidatecontours) == 0:
-        Commands.ThrowError( 'Can\'t find contour' )
+        Commands.throw_error( 'Can\'t find contour' )
     elif len(candidatecontours) > 1:
         candidatecontours.sort( key = lambda Tg: Tg.minDist )
         candidatecontours = candidatecontours[:2]
@@ -1206,12 +1206,12 @@ def PlotParametrizationsOnCombination(
 
     wsParametrization = WSParametrization( ws_coupling, verbose=True, newStyle=container.newStyleCoupling )
 
-    colorCycle = newColorCycle()
+    colorCycle = new_color_cycle()
     for xPoint, yPoint in points:
         color = next(colorCycle)
 
         kwargs = { xCoupling : xPoint, yCoupling : yPoint }
-        Tg_param = wsParametrization.GetOutputContainer( returnWhat='exp', xMax=xMax, **kwargs ).Tg
+        Tg_param = wsParametrization.get_output_container( returnWhat='exp', xMax=xMax, **kwargs ).Tg
 
         Tg_param.SetLineColor(color)
         Tg_param.SetMarkerColor(color)
@@ -1222,7 +1222,7 @@ def PlotParametrizationsOnCombination(
             xCouplingTitle, xPoint, yCouplingTitle, yPoint
             )
 
-        CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+        CorrelationMatrices.convert_TGraph_to_lines_and_boxes(
             Tg_param,
             drawImmediately=True,
             legendObject=leg,
@@ -1257,11 +1257,11 @@ def PlotParametrizationsOnCombination(
 
     leg.Draw()
 
-    Commands.GetCMSLabel()
-    Commands.GetCMSLumi()
+    Commands.get_cms_label()
+    Commands.get_cms_lumi()
 
     if not OnOneCanvas:
-        SaveC( '{0}_onCombination'.format(plotTitle) )
+        save_c( '{0}_onCombination'.format(plotTitle) )
 
 
     # ======================================
@@ -1269,12 +1269,12 @@ def PlotParametrizationsOnCombination(
 
     if not OnOneCanvas:
         c.Clear()
-        SetCMargins( for2Dhist = True )
+        set_cmargins( for2Dhist = True )
     else:
         cw = 1.0 - c.GetLeftMargin() - c.GetRightMargin()
         ch = 1.0 - c.GetBottomMargin() - c.GetTopMargin()
         smallPad = ROOT.TPad(
-            GetUniqueRootName(), '',
+            get_unique_root_name(), '',
             c.GetLeftMargin() + 0.50*cw, c.GetBottomMargin() + 0.50*ch,
             c.GetLeftMargin() + 0.99*cw, c.GetBottomMargin() + 0.99*ch,
             )
@@ -1287,7 +1287,7 @@ def PlotParametrizationsOnCombination(
         smallPad.cd()
 
 
-    SetColorPalette()
+    set_color_palette()
 
     combined.H2.GetXaxis().SetLabelSize(0.045)
     combined.H2.GetYaxis().SetLabelSize(0.045)
@@ -1310,7 +1310,7 @@ def PlotParametrizationsOnCombination(
     contour.Draw('SAMEL')
 
 
-    colorCycle = newColorCycle()
+    colorCycle = new_color_cycle()
     for xPoint, yPoint in points:
         color = next(colorCycle)
 
@@ -1347,15 +1347,15 @@ def PlotParametrizationsOnCombination(
     c.Update()
 
     if not OnOneCanvas:
-        Commands.GetCMSLabel()
-        Commands.GetCMSLumi()
-        SaveC( '{0}_pointsOnContour'.format(plotTitle) )
+        Commands.get_cms_label()
+        Commands.get_cms_lumi()
+        save_c( '{0}_pointsOnContour'.format(plotTitle) )
     else:
-        SaveC( '{0}_pointsOnContourOnePlot'.format(plotTitle) )
+        save_c( '{0}_pointsOnContourOnePlot'.format(plotTitle) )
 
 
 #____________________________________________________________________
-def PlotMultipleScans(
+def plot_multiple_scans(
         containers,
         xMin      = None,
         xMax      = None,
@@ -1390,9 +1390,9 @@ def PlotMultipleScans(
 
     c.cd()
     c.Clear()
-    SetCMargins( TopMargin = 0.09 )
+    set_cmargins( TopMargin = 0.09 )
 
-    base = GetPlotBase(
+    base = get_plot_base(
         xMin = xMin,
         xMax = xMax,
         yMin = yMin,
@@ -1414,7 +1414,7 @@ def PlotMultipleScans(
         1 - c.GetRightMargin() - 0.01,
         c.GetBottomMargin() + 0.09
         )
-    leg.SetNColumns(3)
+    leg.set_n_columns(3)
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
@@ -1430,10 +1430,10 @@ def PlotMultipleScans(
             continue
 
         if printUncertainties:
-            container.unc = PhysicsCommands.FindMinimaAndErrors( container.x, container.y, returnContainer=True )
+            container.unc = PhysicsCommands.find_minima_and_errors( container.x, container.y, returnContainer=True )
             print 'uncertainties in container',i_container
             print container.unc
-            for attr in container.unc.ListAttributes():
+            for attr in container.unc.list_attributes():
                 print '  ',attr,' : ',getattr(container.unc, attr)
 
         if translateToChi2:
@@ -1569,15 +1569,15 @@ def PlotMultipleScans(
         line2sigma.SetLineColor(14)
         line2sigma.Draw()
 
-    Commands.GetCMSLabel()
-    Commands.GetCMSLumi()
+    Commands.get_cms_label()
+    Commands.get_cms_lumi()
 
-    SaveC( plotname )
+    save_c( plotname )
 
 
 
 #____________________________________________________________________
-def FilterContourHeuristic(
+def filter_contour_heuristic(
         contours,
         xBestfit,
         yBestfit,
@@ -1586,7 +1586,7 @@ def FilterContourHeuristic(
     filteredContours = []
 
     for Tg in contours:
-        Tg.x, Tg.y = TheoryCommands.GetXYfromTGraph(Tg)
+        Tg.x, Tg.y = TheoryCommands.get_xyfrom_TGraph(Tg)
         Tg.xMin = min(Tg.x)
         Tg.xMax = max(Tg.x)
         Tg.yMin = min(Tg.y)
@@ -1627,7 +1627,7 @@ def FilterContourHeuristic(
 
 
 #____________________________________________________________________
-def BasicMixedContourPlot(
+def basic_mixed_contour_plot(
         containers,
         xMin      = 0.,
         xMax      = 1.,
@@ -1650,12 +1650,12 @@ def BasicMixedContourPlot(
     # Check whether the passed containers fulfill requirements
 
     for container in containers:
-        attrs = container.ListAttributes()
+        attrs = container.list_attributes()
 
 
         # for expectedAttr in [ 'H2', 'name' ]:
         #     if not expectedAttr in attrs:
-        #         Commands.ThrowError(
+        #         Commands.throw_error(
         #             'Container misses mandatory attribute \'{0}\' (defined attributes: {1})'.format( expectedAttr, ', '.join(attrs) ),
         #             throwException = True
         #             )
@@ -1671,12 +1671,12 @@ def BasicMixedContourPlot(
 
         if not hasattr( container, 'contours_1sigma' ):
             print '\nGetting contours for {0}'.format( container.name )
-            container.contours_1sigma = TheoryCommands.GetContoursFromTH2( container.H2, 2.30 )
-            container.contours_2sigma = TheoryCommands.GetContoursFromTH2( container.H2, 6.18 )
+            container.contours_1sigma = TheoryCommands.get_contours_from_TH2( container.H2, 2.30 )
+            container.contours_2sigma = TheoryCommands.get_contours_from_TH2( container.H2, 6.18 )
 
         if filterContours:
-            container.contours_1sigma = FilterContourHeuristic( container.contours_1sigma, container.xBestfit, container.yBestfit )
-            container.contours_2sigma = FilterContourHeuristic( container.contours_2sigma, container.xBestfit, container.yBestfit )
+            container.contours_1sigma = filter_contour_heuristic( container.contours_1sigma, container.xBestfit, container.yBestfit )
+            container.contours_2sigma = filter_contour_heuristic( container.contours_2sigma, container.xBestfit, container.yBestfit )
 
         if hasattr( container, 'bestfitPoint' ):
             x_root = ROOT.Double(0.)
@@ -1695,10 +1695,10 @@ def BasicMixedContourPlot(
 
     c.cd()
     c.Clear()
-    SetCMargins( TopMargin=0.08 )
+    set_cmargins( TopMargin=0.08 )
 
 
-    base = GetPlotBase(
+    base = get_plot_base(
         xMin = xMin,
         xMax = xMax,
         yMin = yMin,
@@ -1721,9 +1721,9 @@ def BasicMixedContourPlot(
         c.GetBottomMargin() + 0.09
         )
     ROOT.SetOwnership( leg, False )
-    leg.SetNColumns( min( 3, len(containers) ) )
+    leg.set_n_columns( min( 3, len(containers) ) )
     if not nLegendColumns is None:
-        leg.SetNColumns( nLegendColumns )
+        leg.set_n_columns( nLegendColumns )
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
 
@@ -1737,11 +1737,11 @@ def BasicMixedContourPlot(
 
     for container in containers:
         for Tg_original in container.contours_1sigma:
-            Tg = Tg_original.Clone( 'contour_1sigma_' + GetUniqueRootName() )
+            Tg = Tg_original.Clone( 'contour_1sigma_' + get_unique_root_name() )
             Tg.SetLineWidth(2)
             Tg.SetLineColor( container.color )
             Tg.SetLineStyle(1)
-            # Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
+            # Tg.SetName( 'contour_1sigma_' + get_unique_root_name() )
             Tg.Draw('CSAME')
             if Tg_original == container.contours_1sigma[0]:
                 Tg.SetName( '{0}_contour_1sigma'.format(container.name) )
@@ -1769,22 +1769,22 @@ def BasicMixedContourPlot(
 
     leg.Draw()
 
-    Commands.GetCMSLabel()
-    Commands.GetCMSLumi()
+    Commands.get_cms_label()
+    Commands.get_cms_lumi()
 
-    ContourDummyLegend(
+    contour_dummy_legend(
         c.GetLeftMargin() + 0.01,
         1. - c.GetTopMargin() - 0.1,
         1. - c.GetRightMargin() - 0.01,
         1. - c.GetTopMargin() - 0.01,
         )
 
-    SaveC( plotname )
+    save_c( plotname )
 
 
     if plotIndividualH2s:
         for container in containers:
-            PlotSingle2DHistogram(
+            plot_single_TH2(
                 container,
                 xMin, xMax,
                 yMin, yMax,
@@ -1794,7 +1794,7 @@ def BasicMixedContourPlot(
 
 
 #____________________________________________________________________
-def PlotSingle2DHistogram(
+def plot_single_TH2(
         container,
         xMin, xMax,
         yMin, yMax,
@@ -1806,10 +1806,10 @@ def PlotSingle2DHistogram(
         getCustomContour=None,
         ):
 
-    SetColorPalette(palette)
+    set_color_palette(palette)
 
     c.Clear()
-    SetCMargins(
+    set_cmargins(
         # LeftMargin   = 0.12,
         RightMargin  = 0.10,
         # BottomMargin = 0.12,
@@ -1832,16 +1832,16 @@ def PlotSingle2DHistogram(
 
     # if hasattr(container, 'contours_1sigma'):
     #     for Tg in container.contours_1sigma:
-    #         Tg.SetName( 'contour_1sigma_' + GetUniqueRootName() )
+    #         Tg.SetName( 'contour_1sigma_' + get_unique_root_name() )
     #         Tg.Draw('CSAME')
     # if hasattr(container, 'contours_2sigma'):
     #     for Tg in container.contours_2sigma:
-    #         Tg.SetName( 'contour_2sigma_' + GetUniqueRootName() )
+    #         Tg.SetName( 'contour_2sigma_' + get_unique_root_name() )
     #         Tg.Draw('CSAME')
     # if not getCustomContour is None:
-    #     container.contours_custom = TheoryCommands.GetContoursFromTH2( container.H2, getCustomContour )
+    #     container.contours_custom = TheoryCommands.get_contours_from_TH2( container.H2, getCustomContour )
     #     for Tg in container.contours_custom:
-    #         Tg.SetName( 'contour_custom_' + GetUniqueRootName() )
+    #         Tg.SetName( 'contour_custom_' + get_unique_root_name() )
     #         Tg.Draw('CSAME')
 
     # if hasattr( container, 'color' ):
@@ -1853,22 +1853,22 @@ def PlotSingle2DHistogram(
     c.Update()
     c.RedrawAxis()
 
-    ContourDummyLegend(
+    contour_dummy_legend(
         c.GetLeftMargin() + 0.01,
         1. - c.GetTopMargin() - 0.1,
         1. - c.GetRightMargin() - 0.01,
         1. - c.GetTopMargin() - 0.01,
         )
 
-    Commands.GetCMSLabel()
-    Commands.GetCMSLumi()
-    SaveC( plotname + '_' + container.name, asPNG=doPNG, asROOT=doROOT )
+    Commands.get_cms_label()
+    Commands.get_cms_lumi()
+    save_c( plotname + '_' + container.name, asPNG=doPNG, asROOT=doROOT )
 
 
 #____________________________________________________________________
 ContourDummyObjectsCreated = False
 globalDummies = []
-def ContourDummyLegend(
+def contour_dummy_legend(
         x1, y1, x2, y2
         ):
 
@@ -1916,7 +1916,7 @@ def ContourDummyLegend(
     ROOT.SetOwnership( leg2, False )
     leg2.SetBorderSize(0)
     leg2.SetFillStyle(0)
-    leg2.SetNColumns(4)
+    leg2.set_n_columns(4)
     leg2.AddEntry( 'dummy1sigma',  '1 #sigma', 'l' )
     leg2.AddEntry( 'dummy2sigma',  '2 #sigma', 'l' )
     leg2.AddEntry( 'dummybestfit', 'Bestfit', 'p' )
@@ -1925,13 +1925,13 @@ def ContourDummyLegend(
 
 
 #____________________________________________________________________
-def PlotCorrelationMatrix(
+def plot_correlation_matrix(
         container
         ):
     numpy.set_printoptions( precision=2, linewidth=100 )
 
-    POIs = Commands.ListPOIs(container.ws)
-    Commands.SortPOIs(POIs)
+    POIs = Commands.list_pois(container.ws)
+    Commands.sort_pois(POIs)
     nBins = len(POIs)
 
     # Obtain correlation matrix
@@ -1950,7 +1950,7 @@ def PlotCorrelationMatrix(
     # Make plot
 
     c.Clear()
-    SetCMargins(
+    set_cmargins(
         TopMargin   = 0.08,
         RightMargin = 0.14,
         BottomMargin = 0.17,
@@ -1959,12 +1959,12 @@ def PlotCorrelationMatrix(
     titleDict = {
         'PTH' : 'p_{T}^{H} (GeV)',
         }
-    productionMode, observableName, _ = Commands.InterpretPOI(POIs[0])
+    productionMode, observableName, _ = Commands.interpret_poi(POIs[0])
     observableName = titleDict.get( observableName, observableName )
     xTitle = getattr( container, 'xTitle', observableName )
 
     # Construct the binning labels
-    def toStr( number ):
+    def to_str( number ):
         if number == '-INF':
             string = '-#infty'
         elif number == 'INF':
@@ -1977,8 +1977,8 @@ def PlotCorrelationMatrix(
 
     binningLabels = []
     for POI in POIs:
-        _1, _2, binBoundaries = Commands.InterpretPOI(POI)
-        binBoundariesAsStrs = [ toStr(i) for i in binBoundaries ]
+        _1, _2, binBoundaries = Commands.interpret_poi(POI)
+        binBoundariesAsStrs = [ to_str(i) for i in binBoundaries ]
         if len(binBoundaries) == 1:
             binningLabels.append( binBoundariesAsStrs[0] )
         elif len(binBoundaries) == 2:
@@ -1986,7 +1986,7 @@ def PlotCorrelationMatrix(
 
 
     H = ROOT.TH2D(
-        GetUniqueRootName(),
+        get_unique_root_name(),
         # '#scale[0.85]{{Bin-to-bin correlation matrix for {0}}}'.format(observableName),
         '',
         nBins, 0., nBins,
@@ -2032,11 +2032,11 @@ def PlotCorrelationMatrix(
         array('d', blues ),
         255 )
 
-    Commands.GetCMSLabel()
-    Commands.GetCMSLumi()
+    Commands.get_cms_label()
+    Commands.get_cms_lumi()
 
     plotname = 'corrMat_' + basename(container.corrRootFile).replace('/','').replace('higgsCombine_','').replace('higgsCombine','').replace('.root','').replace('.','_')
-    SaveC( plotname )
+    save_c( plotname )
 
     # Set back to default
     numpy.set_printoptions( precision=8, linewidth=75 )

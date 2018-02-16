@@ -31,34 +31,34 @@ import ROOT
 ########################################
 
 TESTMODE = False
-def TestMode( flag=True ):
+def test_mode( flag=True ):
     global TESTMODE
     TESTMODE = flag
-def IsTestMode():
+def is_test_mode():
     global TESTMODE
     return TESTMODE
 
 DISABLE_WARNINGS = False
-def DisableWarnings(flag=True):
+def disable_warnings(flag=True):
     global DISABLE_WARNINGS
     DISABLE_WARNINGS = flag
 
 TEMPJOBDIR = abspath( 'tmp' )
-def SetTempJobDir( newdirname='tmp' ):
+def set_temp_job_dir( newdirname='tmp' ):
     global TEMPJOBDIR
     TEMPJOBDIR = newdirname
-def GetTempJobDir():
+def get_temp_job_dir():
     global TEMPJOBDIR
     return TEMPJOBDIR
 
 #____________________________________________________________________
-def FormatStrToWidth(text, width):
+def format_str_to_width(text, width):
     if len(text) > width:
         text = text[:width-3] + '...'
     ret = '{0:{width}}'.format( text, width=width )
     return ret
 
-def PrintTable(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n'):
+def print_table(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n'):
     nRows = len(table)
     nCols = len(table[0])
 
@@ -68,7 +68,7 @@ def PrintTable(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n')
         for iRow in xrange(nRows):
             entry = table[iRow][iCol]
             if not isinstance( entry, basestring ):
-                ThrowError( 'Entry of a table is not a string' )
+                throw_error( 'Entry of a table is not a string' )
             # entry = escape_ansi( entry )
             if len(entry) > maxWidth:
                 maxWidth = len(entry)
@@ -79,12 +79,12 @@ def PrintTable(table, minColWidth=1, maxColWidth=20, sep='  ', newline_sep='\n')
         line = []
         for iCol in xrange(nCols):
             entry = table[iRow][iCol]
-            line.append( FormatStrToWidth( entry, maxColWidths[iCol] ) )
+            line.append( format_str_to_width( entry, maxColWidths[iCol] ) )
         out.append( sep.join(line) )
     return newline_sep.join(out)
 
 #____________________________________________________________________
-def GlobRootFiles(path):
+def glob_root_files(path):
     if path.endswith('/'):
         path += '*.root'
     else:
@@ -92,7 +92,7 @@ def GlobRootFiles(path):
     return glob(path)
 
 #____________________________________________________________________
-def AppendNumberToDirNameUntilItDoesNotExistAnymore(
+def make_unique_directory(
         dirName,
         nAttempts = 100,
         ):
@@ -108,14 +108,14 @@ def AppendNumberToDirNameUntilItDoesNotExistAnymore(
             dirName = dirName.format(iAttempt)
             break
     else:
-        ThrowError( 'Could not create a unique directory for {0}'.format(dirName.format('X')) )
+        throw_error( 'Could not create a unique directory for {0}'.format(dirName.format('X')) )
         sys.exit()
 
     print '[info] New directory: {0}'.format( dirName )
     return dirName
 
 #____________________________________________________________________
-def BasicCombineCards(
+def basic_combine_cards(
     outputFile,
     *inputList
     ):
@@ -126,17 +126,17 @@ def BasicCombineCards(
 
     cmd.append( '> {0}'.format( outputFile ) )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
 
 #____________________________________________________________________
-def ProcessMaps(datacard, smartMaps=None, manualMaps=None, verbose=True):
+def process_maps(datacard, smartMaps=None, manualMaps=None, verbose=True):
 
     if smartMaps is None and manualMaps is None:
         # raise ValueError('Supply smartMaps and/or manualMaps')
         return []
 
-    signalprocesses, processes, bins = ListProcesses( datacard )
+    signalprocesses, processes, bins = list_processes( datacard )
 
     maps = []
 
@@ -186,7 +186,7 @@ def ProcessMaps(datacard, smartMaps=None, manualMaps=None, verbose=True):
 
 
 #____________________________________________________________________
-def BasicT2WS(
+def basic_t2ws(
         datacard,
         extraOptions=None,
         outputWS=None,
@@ -215,7 +215,7 @@ def BasicT2WS(
     cmd.append( '--PO verbose' )
     cmd.append( '--PO \'higgsMassRange=123,127\'' )
 
-    maps = ProcessMaps(datacard, smartMaps, manualMaps, verbose)
+    maps = process_maps(datacard, smartMaps, manualMaps, verbose)
     for _map in maps:
         cmd.append( _map )
 
@@ -226,10 +226,10 @@ def BasicT2WS(
     else:
         cmd.extend( extraOptions )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
 #____________________________________________________________________
-def CopyPhysicsModels():
+def copy_physics_models():
     """
     Copies models to compiled directory
     (scram b takes unnecessarily long)
@@ -238,7 +238,7 @@ def CopyPhysicsModels():
     physicsModelsDir = 'physicsModels'
     dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(physicsModelsDir) )
 
-    if IsTestMode():
+    if is_test_mode():
         print 'Would now copy {0} to {1}'.format( physicsModelsDir, dst )
     else:
         print 'Copying {0} to {1}'.format( physicsModelsDir, dst )
@@ -247,7 +247,7 @@ def CopyPhysicsModels():
         shutil.copytree( physicsModelsDir, dst )
 
 #____________________________________________________________________
-def BasicT2WSwithModel(
+def basic_t2ws_with_model(
     datacard,
     pathToModel,
     modelName=None,
@@ -266,7 +266,7 @@ def BasicT2WSwithModel(
     #     dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(pathToModel) )
     #     print 'Copying\n    {0}\n    to\n    {1}'.format( pathToModel, dst )
     #     shutil.copyfile( pathToModel, dst )
-    CopyPhysicsModels()
+    copy_physics_models()
 
 
     # ======================================
@@ -300,15 +300,15 @@ def BasicT2WSwithModel(
         cmd.extend( extraOptions )
 
     # Possibility to use maps here as well
-    maps = ProcessMaps(datacard, smartMaps, manualMaps, verbose)
+    maps = process_maps(datacard, smartMaps, manualMaps, verbose)
     for _map in maps:
         cmd.append( _map )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
     
 #____________________________________________________________________
-def BasicGenericCombineCommand(
+def basic_generic_combine_command(
         cmd,
         batchJobSubDir = None,
         onBatch        = False,
@@ -320,7 +320,7 @@ def BasicGenericCombineCommand(
         if not batchJobSubDir:
             batchJobSubDir = 'job_{0}'.format( strftime( '%H%M%S' ) )
         tempdir = abspath( join( TEMPJOBDIR, batchJobSubDir ) )
-        tempdir = AppendNumberToDirNameUntilItDoesNotExistAnymore( tempdir )
+        tempdir = make_unique_directory( tempdir )
 
         if not TESTMODE:
 
@@ -350,18 +350,18 @@ def BasicGenericCombineCommand(
                 shFp.write( ' '.join(cmd) )
 
             qsubCmd = 'qsub -q short.q {0}'.format( shFile )
-            executeCommand( qsubCmd )
+            execute_command( qsubCmd )
 
         else:
             print 'TESTMODE + onBatch not implemented'
 
     else:
-        executeCommand( cmd )
+        execute_command( cmd )
 
 
 
 #____________________________________________________________________
-def BasicBestfit(
+def basic_bestfit(
         datacard,
         setPOIs = True,
         onBatch = False,
@@ -382,7 +382,7 @@ def BasicBestfit(
         ]
 
     if setPOIs:
-        if IsTestMode():
+        if is_test_mode():
             parNames = [ 'POIs', 'in', 'the', 'POI', 'set' ]
         else:
             datacardFp = ROOT.TFile.Open( datacard )
@@ -409,8 +409,8 @@ def BasicBestfit(
     if onBatch:
 
         if directory is None:
-            directory = abspath( GetTempJobDir() )            
-        # directory = AppendNumberToDirNameUntilItDoesNotExistAnymore(directory)
+            directory = abspath( get_temp_job_dir() )            
+        # directory = make_unique_directory(directory)
 
         cmsswPath = join( os.environ['CMSSW_BASE'], 'src' )
         shText = []
@@ -447,7 +447,7 @@ def BasicBestfit(
                 shFp.write( '\n'.join(shText) )
 
             qsubCmd = 'qsub -q short.q {0}'.format( shFile )
-            executeCommand( qsubCmd )
+            execute_command( qsubCmd )
 
         else:
             print '[TESTMODE] Would now create', relpath( directory, os.getcwd() )
@@ -457,11 +457,11 @@ def BasicBestfit(
 
     else:
         with EnterDirectory( directory ):
-            executeCommand( cmd )
+            execute_command( cmd )
 
 
 #____________________________________________________________________
-def ComputeCorrMatrix(
+def compute_corr_matrix(
         ws,
         redoPostfit = True,
         postfitFilename = None,
@@ -477,12 +477,12 @@ def ComputeCorrMatrix(
         postfitFilename = join( directory, 'higgsCombine_POSTFIT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
     else:
         if not isfile(postfitFilename):
-            ThrowError( 'Given ws {0} does not exist'.format(postfitFilename) )
+            throw_error( 'Given ws {0} does not exist'.format(postfitFilename) )
 
     if redoPostfit:
-        directory = AppendNumberToDirNameUntilItDoesNotExistAnymore(directory)
+        directory = make_unique_directory(directory)
         # First regular best fit
-        BasicBestfit(
+        basic_bestfit(
             ws,
             onBatch = onBatch,
             directory = directory,
@@ -496,12 +496,12 @@ def ComputeCorrMatrix(
                 ]
             )
 
-    if IsTestMode():
+    if is_test_mode():
         pdfIndicesToFreeze = [ 'some', 'pdfs' ]
     else:
-        pdfIndicesToFreeze = ListOfPDFIndicesToFreeze( postfitFilename, verbose=False )
+        pdfIndicesToFreeze = list_of_pdf_indices_to_freeze( postfitFilename, verbose=False )
 
-    BasicBestfit(
+    basic_bestfit(
         postfitFilename,
         onBatch = onBatch,
         directory = directory,
@@ -519,14 +519,14 @@ def ComputeCorrMatrix(
         )
 
 #____________________________________________________________________
-def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False, snapshotName='MultiDimFit', returnAlsoFloating=False ):
+def list_of_pdf_indices_to_freeze( postfitFile, freezeAllIndices=False, verbose=False, snapshotName='MultiDimFit', returnAlsoFloating=False ):
 
     wsFp = ROOT.TFile.Open( postfitFile )
     ws   = wsFp.Get('w')
     loadedSnapshot = ws.loadSnapshot(snapshotName)
 
     if not loadedSnapshot:
-        ThrowError( 'Could not load {0} snapshot - are you passing the post fit workspace?'.format( snapshotName ), throwException=True )
+        throw_error( 'Could not load {0} snapshot - are you passing the post fit workspace?'.format( snapshotName ), throwException=True )
 
     varsToFreeze = []
     varsToFloat = []
@@ -588,7 +588,7 @@ def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False
 
 
 #____________________________________________________________________
-def ConvertFloatToStr( number, nDecimals=None ):
+def convert_float_to_str( number, nDecimals=None ):
     number = float(number)
     if not nDecimals is None:
         string = '{:.{nDecimals}f}'.format( number, nDecimals=nDecimals ).replace('-','m').replace('.','p')
@@ -598,14 +598,14 @@ def ConvertFloatToStr( number, nDecimals=None ):
     string = str(number).replace('-','m').replace('.','p')
     return string
 #____________________________________________________________________
-def ConvertStrToFloat( string ):
+def convert_str_to_float( string ):
     string = str(string)
     number = string.replace('m','-').replace('p','.')
     number = float(number)
     return number
 
 #____________________________________________________________________
-def ListPOIs( datacardRootFile, nofilter=False ):
+def list_pois( datacardRootFile, nofilter=False ):
 
     datacardFp = ROOT.TFile.Open( datacardRootFile )
     w = datacardFp.Get('w')
@@ -623,15 +623,15 @@ def ListPOIs( datacardRootFile, nofilter=False ):
     return parNames
 
 #____________________________________________________________________
-def getRangeFromStr(text):
+def get_range_from_str(text):
     regular_match = re.search(r'([\dpm\.\-]+)_([\dpm\.\-]+)', text)
     overflow_match = re.search(r'(GE|GT)([\dpm\.\-]+)', text)
 
     if regular_match:
-        left = ConvertStrToFloat(regular_match.group(1))
-        right = ConvertStrToFloat(regular_match.group(2))
+        left = convert_str_to_float(regular_match.group(1))
+        right = convert_str_to_float(regular_match.group(2))
     elif overflow_match:
-        left = ConvertStrToFloat(overflow_match.group(2))
+        left = convert_str_to_float(overflow_match.group(2))
         right = 'INF'
     else:
         left = 'UNDEFINED'
@@ -639,8 +639,8 @@ def getRangeFromStr(text):
 
     return left, right
 
-def rangeSorter(text):
-    left, right = getRangeFromStr(text)
+def range_sorter(text):
+    left, right = get_range_from_str(text)
     if left == 'UNDEFINED':
         return 900000
     elif right == 'INF':
@@ -648,8 +648,8 @@ def rangeSorter(text):
     else:
         return left
 
-def POIsorter( POI ):
-    _1, _2, Range = InterpretPOI(POI)
+def poi_sorter( POI ):
+    _1, _2, Range = interpret_poi(POI)
     if Range[0] == '-INF':
         return -100000
     elif len(Range) > 1 and Range[1] == 'INF':
@@ -657,12 +657,12 @@ def POIsorter( POI ):
     else:
         return Range[0]
 
-def SortPOIs( POIs ):
+def sort_pois( POIs ):
     POIs.sort( key = POIsorter )
 
 
 #____________________________________________________________________
-def ListSet(
+def list_set(
         datacardRootFile,
         setName='POI',
         pattern='*',
@@ -697,7 +697,7 @@ def ListSet(
     return varNames
 
 #____________________________________________________________________
-def ReadBinBoundariesFromWS( datacardRootFile, theory = True ):
+def read_bin_boundaries_from_ws( datacardRootFile, theory = True ):
 
     if theory == True:
         setName = 'theoryBinBoundaries'
@@ -708,7 +708,7 @@ def ReadBinBoundariesFromWS( datacardRootFile, theory = True ):
     w = datacardFp.Get('w')
     argSet = w.set(setName)
     if not argSet:
-        ThrowError( 'No set \'{0}\' in {1}'.format( setName, datacardRootFile ) )
+        throw_error( 'No set \'{0}\' in {1}'.format( setName, datacardRootFile ) )
         datacardFp.Close()
         sys.exit()
     binBoundaryList = ROOT.RooArgList(argSet)
@@ -725,13 +725,13 @@ def ReadBinBoundariesFromWS( datacardRootFile, theory = True ):
     return parValues
 
 #____________________________________________________________________
-def ReadTheoryBinBoundariesFromWS( datacardRootFile ):
-    return ReadBinBoundariesFromWS( datacardRootFile, theory = True )    
-def ReadExpBinBoundariesFromWS( datacardRootFile ):
-    return ReadBinBoundariesFromWS( datacardRootFile, theory = False )
+def read_theory_bin_boundaries_from_ws( datacardRootFile ):
+    return read_bin_boundaries_from_ws( datacardRootFile, theory = True )    
+def read_exp_bin_boundaries_from_ws( datacardRootFile ):
+    return read_bin_boundaries_from_ws( datacardRootFile, theory = False )
 
 #____________________________________________________________________
-def ListProcesses( datacardFile ):
+def list_processes( datacardFile ):
 
     # shapes
     # smH_PTH_30p0_45p0 hgg_PTH_0p0_15p0_SigmaMpTTag0
@@ -782,13 +782,13 @@ def ListProcesses( datacardFile ):
     processes.sort()
 
     signalprocesses = [ p for p in processes if p.split('_')[0].endswith('H') and not p == 'nonResH' and not 'OutsideAcceptance' in p ]
-    signalprocesses.sort( key = lambda i: InterpretPOI(i)[2][0] )
+    signalprocesses.sort( key = lambda i: interpret_poi(i)[2][0] )
 
     return signalprocesses, processes, bins
 
 
 #____________________________________________________________________
-def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
+def execute_command( cmd, captureOutput=False, ignoreTestmode=False ):
 
     if not isinstance( cmd, basestring ):
         cmd = [ l for l in cmd if not len(l.strip()) == 0 ]
@@ -812,7 +812,7 @@ def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
             return output
 
 #____________________________________________________________________
-def executeCommandOnBatch( cmd ):
+def execute_command_on_batch( cmd ):
     print 'Not yet implemented'
     return
     # global TEMPJOBDIR
@@ -822,7 +822,7 @@ def executeCommandOnBatch( cmd ):
 def copyfile( src, dst, verbose=True ):
     # src = abspath(src)
     # dst = abspath(dst)
-    if IsTestMode():
+    if is_test_mode():
         print '\n[TESTMODE] Would now copy\n  {0}\n  to\n  {1}'.format( src, dst )
     else:
         if verbose: print '\n[EXECUTING] Copying\n  {0}\n  to\n  {1}'.format( src, dst )
@@ -832,14 +832,14 @@ def copyfile( src, dst, verbose=True ):
 def movefile( src, dst, verbose=True ):
     # src = relpath( src, '.' )
     # dst = relpath( dst, '.' )
-    if IsTestMode():
+    if is_test_mode():
         print '\n[TESTMODE] Would now move\n  {0}\n  to\n  {1}'.format( src, dst )
     else:
         if verbose: print '\n[EXECUTING] Moving\n  {0}\n  to\n  {1}'.format( src, dst )
         os.rename( src, dst )
 
 #____________________________________________________________________
-def MultiDimCombineTool(
+def multidim_combine_tool(
         datacard,
         nPoints       = 100,
         nPointsPerJob = 3,
@@ -856,7 +856,7 @@ def MultiDimCombineTool(
 
     scanName = basename(datacard).replace('.root','')
     scanName = re.sub( r'\W', '', scanName )
-    scanName = 'SCAN_{0}_{1}_{2}'.format( ''.join(ListPOIs(datacard,nofilter=True)), datestr, scanName )
+    scanName = 'SCAN_{0}_{1}_{2}'.format( ''.join(list_pois(datacard,nofilter=True)), datestr, scanName )
 
     currentdir = os.getcwd()
 
@@ -928,20 +928,20 @@ def MultiDimCombineTool(
 
             if not queue in [ '8nm', '1nh', '8nh', '1nd', '2nd' ]:
                 print 'Queue \'{0}\' is not available on lxplus'.format(queue)
-                if not IsTestMode():
+                if not is_test_mode():
                     return
 
             cmd.append(
                 '--job-mode lxbatch --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
                 )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
     os.chdir( currentdir )
 
 
 #____________________________________________________________________    
-def BasicCombineTool(
+def basic_combine_tool(
         datacard,
         POIpattern    = '*',
         POIRange      = None,
@@ -967,7 +967,7 @@ def BasicCombineTool(
     if POIRange is None:
         POIRange = [ -1.0, 4.0 ]
 
-    allPOIs = ListPOIs( datacard )
+    allPOIs = list_pois( datacard )
     if not POIpattern == '*':
         doPOIs = []
         for iterPOI in allPOIs:
@@ -984,7 +984,7 @@ def BasicCombineTool(
     if not jobDirectory:
         jobDirectory = TEMPJOBDIR
     if asimov: jobDirectory += '_asimov'
-    jobDirectory = AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+    jobDirectory = make_unique_directory( jobDirectory )
 
     if not TESTMODE:
         if not isdir( jobDirectory ):
@@ -1056,12 +1056,12 @@ def BasicCombineTool(
                     '--job-mode lxbatch --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName.format(POI), queue ),
                     )
 
-        executeCommand( cmd )
+        execute_command( cmd )
 
     os.chdir( currentdir )
 
 #____________________________________________________________________
-def ConvertTChainToArray(
+def convert_TChain_to_array(
     rootFileList,
     treeName = 'limit',
     variablePattern = '*',
@@ -1070,7 +1070,7 @@ def ConvertTChainToArray(
     ):
 
     if len(rootFileList) == 0:
-        ThrowError( 'rootFileList has length 0' )
+        throw_error( 'rootFileList has length 0' )
         sys.exit()
 
     if verbose: 'Looking for at least one filled root file to obtain the variable list from...'
@@ -1090,7 +1090,7 @@ def ConvertTChainToArray(
             if verbose: print '    Found tree in {0}'.format( rootFile )
             break
     else:
-        ThrowError(
+        throw_error(
             'Not a single root file had a tree called \'{0}\'; Cannot extract any data'.format(treeName)
             + '\n  First root file:\n  {0}'.format( rootFileList[0] )
             + '\n  Last root file:\n  {0}'.format( rootFileList[-1] )
@@ -1170,12 +1170,12 @@ def ConvertTChainToArray(
 
 
 #____________________________________________________________________
-def newColorCycle():
+def new_color_cycle():
     return itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
 
 
 #____________________________________________________________________
-def InterpretPOI( POI ):
+def interpret_poi( POI ):
 
     # Assume it starts with 'r_'
     if not POI.startswith('r_'):
@@ -1199,13 +1199,13 @@ def InterpretPOI( POI ):
     if len(observableRange) == 1:
         rangeStr = observableRange[0]
         if 'GT' in rangeStr or 'GE' in rangeStr :
-            Range = [ ConvertStrToFloat( rangeStr.replace('GT','').replace('GE','') ), 'INF' ]
+            Range = [ convert_str_to_float( rangeStr.replace('GT','').replace('GE','') ), 'INF' ]
         elif 'LT' in rangeStr or 'LE' in rangeStr :
-            Range = [ '-INF', ConvertStrToFloat( rangeStr.replace('LT','').replace('LE','') ) ]
+            Range = [ '-INF', convert_str_to_float( rangeStr.replace('LT','').replace('LE','') ) ]
         else:
-            Range = [ ConvertStrToFloat( rangeStr ) ]
+            Range = [ convert_str_to_float( rangeStr ) ]
     elif len(observableRange) == 2:
-        Range = [ ConvertStrToFloat(i) for i in observableRange ]
+        Range = [ convert_str_to_float(i) for i in observableRange ]
     else:
         print 'ERROR: Could not make sense of observable range \'{0}\''.format( '_'.join(observableRange) )
         return
@@ -1217,7 +1217,7 @@ def InterpretPOI( POI ):
 class AnalysisError(Exception):
     pass
 #____________________________________________________________________
-def ThrowError(
+def throw_error(
     errstr = '',
     throwException = True
     ):
@@ -1236,7 +1236,7 @@ def ThrowError(
         print 'ERROR in {0}:{1} {2}:\n    {3}'.format( modulefilename, linenumber, funcname, errstr )
 
 #____________________________________________________________________
-def Warning(
+def warning(
         warningStr,
         ):
 
@@ -1253,7 +1253,7 @@ def Warning(
     print '\n[WARNING {0}:{1} L{2}] '.format(modulefilename, funcname, linenumber) + warningStr
 
 #____________________________________________________________________
-def TagGitCommitAndModule():
+def tag_git_commit_and_module():
 
     stack = traceback.extract_stack(None, 2)
     stack = stack[0]
@@ -1282,7 +1282,7 @@ class EnterDirectory():
 
     def __enter__(self):
         if self._active:
-            if IsTestMode():
+            if is_test_mode():
                 if self.verbose: print '\n[TESTMODE] Would now create/go into \'{0}\''.format(self.subDirectory)
             else:
                 if self.verbose: print ''
@@ -1306,7 +1306,7 @@ class OpenRootFile():
 
     def __enter__(self):
         if not isfile(self._rootFile):
-            ThrowError( 'File {0} does not exist'.format(self._rootFile) )
+            throw_error( 'File {0} does not exist'.format(self._rootFile) )
         self._rootFp = ROOT.TFile.Open(self._rootFile)
         return self._rootFp
 
@@ -1332,18 +1332,18 @@ class RedirectStdout():
         pass
         
     def __enter__( self ):
-        self.debugPrint( 'Entering' )
+        self.debug_print( 'Entering' )
 
         self.captured_fd_r, self.captured_fd_w = os.pipe()
-        self.debugPrint( '  Opened read: {0}, and write: {1}'.format( self.captured_fd_r, self.captured_fd_w ) )
+        self.debug_print( '  Opened read: {0}, and write: {1}'.format( self.captured_fd_r, self.captured_fd_w ) )
 
         # Copy stdout
-        self.debugPrint( '  Copying stdout' )
+        self.debug_print( '  Copying stdout' )
         self.copied_stdout = os.fdopen( os.dup(self.stdout_fd), 'wb' )
         sys.stdout.flush() # To flush library buffers that dup2 knows nothing about
         
         # Overwrite stdout_fd with the target
-        self.debugPrint( '  Overwriting target ({0}) with stdout_fd ({1})'.format( fileno(self.captured_fd_w), self.stdout_fd ) )        
+        self.debug_print( '  Overwriting target ({0}) with stdout_fd ({1})'.format( fileno(self.captured_fd_w), self.stdout_fd ) )        
         os.dup2( fileno(self.captured_fd_w), self.stdout_fd )
         self.isRedirected = True
 
@@ -1359,7 +1359,7 @@ class RedirectStdout():
 
     def read( self ):
         sys.stdout.flush()
-        self.debugPrint( '  Draining pipe' )
+        self.debug_print( '  Draining pipe' )
 
         # Without this line the reading does not end - is that 'deadlock'?
         os.close(self.stdout_fd)
@@ -1370,15 +1370,15 @@ class RedirectStdout():
             if not data:
                 break
             captured_str += data
-            self.debugPrint( '\n  captured_str: ' + captured_str )
+            self.debug_print( '\n  captured_str: ' + captured_str )
 
-        self.debugPrint( '  Draining completed' )
+        self.debug_print( '  Draining completed' )
         
 
         return captured_str
 
 
-    def debugPrint( self, text ):
+    def debug_print( self, text ):
         if self.enableDebugPrint:
             if self.isRedirected:
                 os.write( fileno(self.copied_stdout), text + '\n' )
@@ -1389,7 +1389,7 @@ class RedirectStdout():
 
 
 #____________________________________________________________________
-def GetCMSLabel(
+def get_cms_label(
         text='Preliminary',
         x=None,
         y=None,
@@ -1399,7 +1399,7 @@ def GetCMSLabel(
         ):
 
     if not text in [ 'Preliminary', 'Supplementary' ]:
-        Commands.Warning( 'Label \'{0}\' is not a standard label!'.format(text) )
+        Commands.warning( 'Label \'{0}\' is not a standard label!'.format(text) )
     l = ROOT.TLatex()
     ROOT.SetOwnership( l, False )
     l.SetNDC()
@@ -1421,7 +1421,7 @@ def GetCMSLabel(
         l.DrawLatex( x, y, latexStr )
 
 #____________________________________________________________________
-def GetCMSLumi(
+def get_cms_lumi(
         lumi=35.9,
         x=None,
         y=None,

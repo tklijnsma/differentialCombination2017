@@ -46,7 +46,7 @@ def basic_config(args, hurry=False):
     config.onBatch       = True
     config.queue         = 'all.q'
     if hurry:
-        Commands.Warning( 'Running with quick settings' )
+        Commands.warning( 'Running with quick settings' )
         config.nPointsPerJob = 5
         config.queue         = 'short.q'
 
@@ -112,7 +112,7 @@ def scan_yukawa(args):
     config.datacard = nominal_datacard(args)
     if args.combination:
         config.datacard = LatestPaths.ws_combined_Yukawa_reweighted
-        Commands.Warning('Picking the *reweighted* ws')
+        Commands.warning('Picking the *reweighted* ws')
     run_postfit_fastscan_scan(config)
 
 @flag_as_option

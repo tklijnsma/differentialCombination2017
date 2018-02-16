@@ -81,14 +81,14 @@ def main():
 
     if args.bkg:
         pass
-    if args.test: Commands.TestMode()
+    if args.test: Commands.test_mode()
 
     if args.saveroot:
-        TheoryCommands.SaveAsRoot()
+        TheoryCommands.save_as_root()
     if args.savepng:
-        TheoryCommands.SaveAsPng()
+        TheoryCommands.save_as_png()
     if args.savepng_convert:
-        TheoryCommands.SaveAsPngThroughConvert()
+        TheoryCommands.save_as_png_through_convert()
 
 
     ########################################

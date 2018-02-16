@@ -43,7 +43,7 @@ class Observable(object):
         return xs_o_binwidth
 
     #____________________________________________________________________
-    def mergeBins( self, mergeList ):
+    def merge_bins( self, mergeList ):
         newshape   = []
         newbinning = [ self.binning[0] ]
         for bins in mergeList:
@@ -67,7 +67,7 @@ class Observable(object):
         return copy
 
     #____________________________________________________________________
-    def keepOnlyFirstNBins( self, N ):
+    def keep_only_first_nbins( self, N ):
         self.shape   = [ x for i, x in enumerate(self.shape)   if i < N ]
         self.binning = [ x for i, x in enumerate(self.binning) if i < N+1 ]
         self.nBins   = len(self.shape)
@@ -85,12 +85,12 @@ class Observable(object):
         print 'xs_over_binwidth: ' + strList(xs_over_binwidth)
 
     #____________________________________________________________________
-    def BasicHistogram( self, what=None ):
+    def basic_histogram( self, what=None ):
 
         if what is None:
             what = 'crosssection_over_binwidth'
         if not what in [ 'crosssection', 'crosssection_over_binwidth', 'shape' ]:
-            Commands.ThrowError( 'Choose from {0}'.format([ 'crosssection', 'crosssection_over_binwidth', 'shape' ]) )
+            Commands.throw_error( 'Choose from {0}'.format([ 'crosssection', 'crosssection_over_binwidth', 'shape' ]) )
 
         if what == 'crosssection':
             ys = self.crosssection()

@@ -107,30 +107,30 @@ def main( args ):
     kappabMin_global = -9.
     kappabMax_global = 11.
 
-    TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
     # ======================================
     # Dealing with theory IO
 
     if args.createDerivedTheoryFiles_YukawaQuarkInduced:
-        TheoryFileInterface.CreateDerivedTheoryFiles_YukawaQuarkInduced(
+        TheoryFileInterface.create_derived_theory_files_yukawa_quark_induced(
             verbose = True,
             )
 
     if args.createDerivedTheoryFiles_YukawaGluonInduced:
-        TheoryFileInterface.CreateDerivedTheoryFiles_YukawaGluonInduced(
+        TheoryFileInterface.create_derived_theory_files_yukawa_gluon_induced(
             verbose = True,
             mainCrossSection = 'matched',
             )
 
     if args.createDerivedTheoryFiles_YukawaQuarkInducedScaled:
-        TheoryFileInterface.ScaleQuarkInduced(
+        TheoryFileInterface.scale_quark_induced(
             LatestPaths.derivedTheoryFiles_YukawaQuarkInduced,
             verbose = True,
             )
 
     if args.mergeGluonInducedWithQuarkInduced:
-        TheoryFileInterface.SumGluonAndQuarkFiles(
+        TheoryFileInterface.sum_gluon_and_quark_files(
             gI_theoryFileDir = LatestPaths.derivedTheoryFiles_YukawaGluonInduced,
             qI_theoryFileDir = LatestPaths.derivedTheoryFiles_YukawaQuarkInducedScaled,
             verbose = True
@@ -153,15 +153,15 @@ def main( args ):
 
     #____________________________________________________________________
     if args.CorrelationMatrices_Yukawa:
-        CorrelationMatrices.SetPlotDir('correlationMatrices_Yukawa_{0}'.format(datestr))
+        CorrelationMatrices.set_plot_dir('correlationMatrices_Yukawa_{0}'.format(datestr))
 
 
-        variationFiles = TheoryFileInterface.FileFinder(
+        variationFiles = TheoryFileInterface.file_finder(
             directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             kappab = 1, kappac = 1
             )
         variations = [
-            TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+            TheoryFileInterface.read_derived_theory_file( variationFile, returnContainer=True )
                 for variationFile in variationFiles ]
         scaleCorrelation = process_variations(variations)
         # scaleCorrelation.make_scatter_plots(subdir='theory')
@@ -171,7 +171,7 @@ def main( args ):
 
         variations_expbinning = deepcopy(variations)
         for variation in variations_expbinning:
-            TheoryCommands.RebinDerivedTheoryContainer(variation, expBinBoundaries)
+            TheoryCommands.rebin_derived_theory_container(variation, expBinBoundaries)
         scaleCorrelation_exp = process_variations(variations_expbinning)
         scaleCorrelation_exp.make_scatter_plots(subdir='exp')
         scaleCorrelation_exp.plot_correlation_matrix('exp')
@@ -180,7 +180,7 @@ def main( args ):
 
     #____________________________________________________________________
     if args.CorrelationMatrices_minmax_Yukawa:
-        CorrelationMatrices.SetPlotDir('correlationMatrices_Yukawa_{0}'.format(datestr))
+        CorrelationMatrices.set_plot_dir('correlationMatrices_Yukawa_{0}'.format(datestr))
 
         kappabs = [ -2, -1, 0, 1, 2 ]
         kappacs = [ -10, -5, 0, 1, 5, 10 ]
@@ -189,12 +189,12 @@ def main( args ):
         scaleCorrelations_exp = []
         for kappab, kappac in itertools.product( kappabs, kappacs ):
             print 'Processing kappab = {0}, kappac = {1}'.format( kappab, kappac )
-            variationFiles = TheoryFileInterface.FileFinder(
+            variationFiles = TheoryFileInterface.file_finder(
                 directory = LatestPaths.derivedTheoryFiles_YukawaGluonInduced, # Not summed, only for gluon induced we have scale variations per kappa variation
                 kappab = kappab, kappac = kappac
                 )
             variations = [
-                TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+                TheoryFileInterface.read_derived_theory_file( variationFile, returnContainer=True )
                     for variationFile in variationFiles ]
 
             scaleCorrelation = process_variations(variations)
@@ -205,14 +205,14 @@ def main( args ):
             # Same for exp, variations need to be rebinned
             variations_expbinning = deepcopy(variations)
             for variation in variations_expbinning:
-                TheoryCommands.RebinDerivedTheoryContainer(variation, expBinBoundaries, lastBinIsOverflow=False)
+                TheoryCommands.rebin_derived_theory_container(variation, expBinBoundaries, lastBinIsOverflow=False)
             scaleCorrelation_exp = process_variations(variations_expbinning)
             scaleCorrelation_exp.kappab = kappab
             scaleCorrelation_exp.kappac = kappac
             scaleCorrelations_exp.append(scaleCorrelation_exp)
 
-        CorrelationMatrices.MinMaxMatrix(scaleCorrelations, tag='theory')
-        CorrelationMatrices.MinMaxMatrix(scaleCorrelations_exp, tag='exp')
+        CorrelationMatrices.min_max_matrix(scaleCorrelations, tag='theory')
+        CorrelationMatrices.min_max_matrix(scaleCorrelations_exp, tag='exp')
 
 
     #____________________________________________________________________
@@ -258,13 +258,13 @@ def main( args ):
         if args.hzz:
             datacard = LatestPaths.card_hzz_ggHxH_PTH
         if args.hbb:
-            Commands.Warning('This makes no sense, as Yukawa only goes up to 125!')
+            Commands.warning('This makes no sense, as Yukawa only goes up to 125!')
             datacard = LatestPaths.card_hbb_ggHxH_PTH
         if args.combWithHbb:
-            Commands.Warning('This makes no sense, as Yukawa only goes up to 125!')
+            Commands.warning('This makes no sense, as Yukawa only goes up to 125!')
             datacard = LatestPaths.card_combinedWithHbb_ggHxH_PTH
 
-        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_YukawaSummed )
+        TheoryFileInterface.set_file_finder_dir( LatestPaths.derivedTheoryFiles_YukawaSummed )
 
         if INCLUDE_THEORY_UNCERTAINTIES:
             correlationMatrix   = LatestPaths.correlationMatrix_Yukawa
@@ -294,7 +294,7 @@ def main( args ):
 
         extraOptions.append(
             '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
-                TheoryFileInterface.FileFinder( kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
+                TheoryFileInterface.file_finder( kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
                 )
             )
 
@@ -306,7 +306,7 @@ def main( args ):
                     possibleTheories.append(
                         '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
                             kappab, kappac,
-                            TheoryFileInterface.FileFinder( kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
+                            TheoryFileInterface.file_finder( kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
                             )
                         )
 
@@ -353,7 +353,7 @@ def main( args ):
             extraOptions.append('--PO ReweightCrossSections={0}'.format( ','.join([str(v) for v in crosssections]) ))
             suffix += '_reweighted'
 
-        Commands.BasicT2WSwithModel(
+        Commands.basic_t2ws_with_model(
             datacard,
             'physicsModels/CouplingModel.py',
             suffix = suffix,
@@ -385,9 +385,9 @@ def main( args ):
 
             container = Container()
             container.kappa = kappa
-            container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), kappa )
+            container.x, container.y = TheoryCommands.basic_read_scan( glob( scanDir + '/*.root' ), kappa )
 
-            PlotCommands.PlotMultipleScans(
+            PlotCommands.plot_multiple_scans(
                 [ container ],
                 xTitle   = kappa,
                 yTitle   = '2#DeltaNLL',
@@ -412,7 +412,7 @@ def main( args ):
         for scanDir in scans:
 
             container = Container()
-            container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), 'ratio_BR_hgg_hzz' )
+            container.x, container.y = TheoryCommands.basic_read_scan( glob( scanDir + '/*.root' ), 'ratio_BR_hgg_hzz' )
             container.color = 1
 
             xBestfit      = container.x[ container.y.index(min(container.y)) ]
@@ -427,7 +427,7 @@ def main( args ):
             lineAtSM.line.SetLineWidth(2)
             lineAtSM.line.SetLineColor(9)
 
-            PlotCommands.PlotMultipleScans(
+            PlotCommands.plot_multiple_scans(
                 [ container, lineAtSM, lineAtBestfit ],
                 xTitle   = 'BR_{H#rightarrow #gamma#gamma} / BR_{H#rightarrow ZZ}',
                 yTitle   = '2#DeltaNLL',
@@ -451,7 +451,7 @@ def main( args ):
         for scanDir in scans:
 
             container = Container()
-            container.x, container.y = TheoryCommands.BasicReadScan( glob( scanDir + '/*.root' ), 'r_totalXS' )
+            container.x, container.y = TheoryCommands.basic_read_scan( glob( scanDir + '/*.root' ), 'r_totalXS' )
             container.color = 1
 
             xBestfit      = container.x[ container.y.index(min(container.y)) ]
@@ -460,7 +460,7 @@ def main( args ):
             lineAtBestfit.line.SetLineWidth(2)
             lineAtBestfit.line.SetLineColor(2)
 
-            unc = PhysicsCommands.FindMinimaAndErrors( container.x, container.y, returnContainer=True )
+            unc = PhysicsCommands.find_minima_and_errors( container.x, container.y, returnContainer=True )
             uncLines = []
             for x in [ unc.leftBound, unc.rightBound ]:
                 uncLine = Container()
@@ -475,7 +475,7 @@ def main( args ):
             lineAtSM.line.SetLineWidth(2)
             lineAtSM.line.SetLineColor(9)
 
-            PlotCommands.PlotMultipleScans(
+            PlotCommands.plot_multiple_scans(
                 [ container, lineAtSM, lineAtBestfit ] + uncLines,
                 xTitle   = '#mu_{#sigma_{tot}}',
                 yTitle   = '2#DeltaNLL',
@@ -494,7 +494,7 @@ def main( args ):
 
         scanDir = 'out/Scan_Yukawa_Feb07_hzz_2'
 
-        res = TheoryCommands.PlotCouplingScan2D(
+        res = TheoryCommands.plot_coupling_scan_2d(
             globr(scanDir),
             xCoupling = 'kappac',
             yCoupling = 'kappab',
@@ -518,7 +518,7 @@ def main( args ):
 
         combined_rew_dir = LatestPaths.scan_combined_Yukawa_reweighted
         if args.asimov: combined_rew_dir = LatestPaths.scan_combined_Yukawa_reweighted_asimov
-        combined_rew = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined_rew = TheoryCommands.get_TH2_from_list_of_root_files(
             globr(combined_rew_dir),
             xCoupling,
             yCoupling,
@@ -531,7 +531,7 @@ def main( args ):
 
         combined_rew_inv_dir = 'out/Scan_Yukawa_Feb02'
         if args.asimov: combined_rew_inv_dir = 'out/Scan_Yukawa_Feb02_asimov'
-        combined_rew_inv = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined_rew_inv = TheoryCommands.get_TH2_from_list_of_root_files(
             globr(combined_rew_inv_dir),
             xCoupling,
             yCoupling,
@@ -544,7 +544,7 @@ def main( args ):
 
         combined_dir = LatestPaths.scan_combined_Yukawa
         if args.asimov: combined_dir = LatestPaths.scan_combined_Yukawa_asimov
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             globr(combined_dir),
             xCoupling,
             yCoupling,
@@ -557,7 +557,7 @@ def main( args ):
 
         combined_old_dir = LatestPaths.scan_combined_Yukawa_old
         if args.asimov: combined_old_dir = LatestPaths.scan_combined_Yukawa_asimov_old
-        combined_old = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined_old = TheoryCommands.get_TH2_from_list_of_root_files(
             globr(combined_old_dir),
             xCoupling,
             yCoupling,
@@ -568,7 +568,7 @@ def main( args ):
         combined_old.title = 'Combination Old'
         TH2FsToPlot.append(combined_old)
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             TH2FsToPlot,
             xMin = kappacMin_global,
             xMax = kappacMax_global,
@@ -600,7 +600,7 @@ def main( args ):
         combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa ))
         # combined_rootfiles = glob('out/Scan_Yukawa_Jan31/*.root')
         if ASIMOV: combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov))
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles,
             xCoupling,
             yCoupling,
@@ -613,7 +613,7 @@ def main( args ):
 
         # hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa ))
         # if ASIMOV: hgg_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hgg_Yukawa_asimov))
-        # hgg = TheoryCommands.GetTH2FromListOfRootFiles(
+        # hgg = TheoryCommands.get_TH2_from_list_of_root_files(
         #     hgg_rootfiles,
         #     xCoupling,
         #     yCoupling,
@@ -626,7 +626,7 @@ def main( args ):
 
         # hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa ))
         # if ASIMOV: hzz_rootfiles      = glob( '{0}/*.root'.format( LatestPaths.scan_hzz_Yukawa_asimov))
-        # hzz = TheoryCommands.GetTH2FromListOfRootFiles(
+        # hzz = TheoryCommands.get_TH2_from_list_of_root_files(
         #     hzz_rootfiles,
         #     xCoupling,
         #     yCoupling,
@@ -638,7 +638,7 @@ def main( args ):
         # TH2FsToPlot.append(hzz)
 
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             TH2FsToPlot,
             # xMin = -37.,
             # xMax = 37.,
@@ -667,7 +667,7 @@ def main( args ):
         containers = []
 
         combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles,
             xCoupling,
             yCoupling,
@@ -679,7 +679,7 @@ def main( args ):
         containers.append(combined)
 
         ratioOfBRs_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_ratioOfBRs_asimov ) )
-        ratioOfBRs = TheoryCommands.GetTH2FromListOfRootFiles(
+        ratioOfBRs = TheoryCommands.get_TH2_from_list_of_root_files(
             ratioOfBRs_rootfiles,
             xCoupling,
             yCoupling,
@@ -690,7 +690,7 @@ def main( args ):
         ratioOfBRs.title = 'floating BR_{H#gamma#gamma}/BR_{HZZ}'
         containers.append(ratioOfBRs)
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             containers,
             xMin = kappacMin_global,
             xMax = kappacMax_global,
@@ -715,7 +715,7 @@ def main( args ):
         containers = []
 
         combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_reweighted_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles,
             xCoupling,
             yCoupling,
@@ -728,7 +728,7 @@ def main( args ):
         containers.append(combined)
 
         profiledTotalXS_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_profiledTotalXS_asimov ) )
-        profiledTotalXS = TheoryCommands.GetTH2FromListOfRootFiles(
+        profiledTotalXS = TheoryCommands.get_TH2_from_list_of_root_files(
             profiledTotalXS_rootfiles,
             xCoupling,
             yCoupling,
@@ -740,7 +740,7 @@ def main( args ):
         profiledTotalXS.title = '#sigma_{tot} profiled'
         containers.append(profiledTotalXS)
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             containers,
             xMin = kappacMin_global,
             xMax = kappacMax_global,
@@ -766,7 +766,7 @@ def main( args ):
         containers = []
 
         combined_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles, xCoupling, yCoupling, verbose   = False,
             forceBestfitAtZero = True
             )
@@ -776,7 +776,7 @@ def main( args ):
         containers.append(combined)
 
         onlyNormalization_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_fitOnlyNormalization_asimov ) )
-        onlyNormalization = TheoryCommands.GetTH2FromListOfRootFiles(
+        onlyNormalization = TheoryCommands.get_TH2_from_list_of_root_files(
             onlyNormalization_rootfiles, xCoupling, yCoupling, verbose   = False, 
             forceBestfitAtZero = True
             )
@@ -785,7 +785,7 @@ def main( args ):
         onlyNormalization.title = 'Only normalization'
         containers.append(onlyNormalization)
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             containers,
             xMin = kappacMin_global,
             xMax = kappacMax_global,
@@ -810,7 +810,7 @@ def main( args ):
         containers = []
 
         combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles,
             xCoupling,
             yCoupling,
@@ -822,7 +822,7 @@ def main( args ):
         containers.append(combined)
 
         noTheoryUnc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_noTheoryUncertainties_asimov ) )
-        noTheoryUnc = TheoryCommands.GetTH2FromListOfRootFiles(
+        noTheoryUnc = TheoryCommands.get_TH2_from_list_of_root_files(
             noTheoryUnc_rootfiles,
             xCoupling,
             yCoupling,
@@ -834,7 +834,7 @@ def main( args ):
         containers.append(noTheoryUnc)
 
         uncTheoryUnc_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_uncorrelatedTheoryUncertainties_asimov ) )
-        uncTheoryUnc = TheoryCommands.GetTH2FromListOfRootFiles(
+        uncTheoryUnc = TheoryCommands.get_TH2_from_list_of_root_files(
             uncTheoryUnc_rootfiles,
             xCoupling,
             yCoupling,
@@ -845,7 +845,7 @@ def main( args ):
         uncTheoryUnc.title = 'Uncorr. unc.'
         containers.append(uncTheoryUnc)
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             containers,
             xMin = kappacMin_global,
             xMax = kappacMax_global,
@@ -871,7 +871,7 @@ def main( args ):
         titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
 
         combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles,
             xCoupling,
             yCoupling,
@@ -883,7 +883,7 @@ def main( args ):
         containers.append( combined )
 
         # scalingBR_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_asimov ) )
-        # scalingBR = TheoryCommands.GetTH2FromListOfRootFiles(
+        # scalingBR = TheoryCommands.get_TH2_from_list_of_root_files(
         #     scalingBR_rootfiles,
         #     xCoupling,
         #     yCoupling,
@@ -895,7 +895,7 @@ def main( args ):
         # containers.append( scalingBR )
 
         scalingBRfixedKappaV_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_fixedKappaV_asimov ) )
-        scalingBRfixedKappaV = TheoryCommands.GetTH2FromListOfRootFiles(
+        scalingBRfixedKappaV = TheoryCommands.get_TH2_from_list_of_root_files(
             scalingBRfixedKappaV_rootfiles,
             xCoupling,
             yCoupling,
@@ -907,7 +907,7 @@ def main( args ):
         containers.append( scalingBRfixedKappaV )
 
 
-        scalingBR_profTotalXS = TheoryCommands.GetTH2FromListOfRootFiles(
+        scalingBR_profTotalXS = TheoryCommands.get_TH2_from_list_of_root_files(
             globr('out/Scan_Yukawa_Feb07_combination_couplingDependentBR_profiledTotalXS'),
             xCoupling,
             yCoupling,
@@ -920,7 +920,7 @@ def main( args ):
 
 
         # scalingBRkappaVMaxOne_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_couplingDependentBR_kappaVMaxOne_asimov ) )
-        # scalingBRkappaVMaxOne = TheoryCommands.GetTH2FromListOfRootFiles(
+        # scalingBRkappaVMaxOne = TheoryCommands.get_TH2_from_list_of_root_files(
         #     scalingBRkappaVMaxOne_rootfiles,
         #     xCoupling,
         #     yCoupling,
@@ -932,7 +932,7 @@ def main( args ):
         # containers.append( scalingBRkappaVMaxOne )
 
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             containers,
             xMin = kappacMin_global,
             xMax = kappacMax_global,
@@ -956,7 +956,7 @@ def main( args ):
         containers = []
 
         combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles,
             xCoupling,
             yCoupling,
@@ -968,7 +968,7 @@ def main( args ):
         containers.append(combined)
 
         highLumi_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_lumiStudy_asimov ) )
-        highLumi = TheoryCommands.GetTH2FromListOfRootFiles(
+        highLumi = TheoryCommands.get_TH2_from_list_of_root_files(
             highLumi_rootfiles,
             xCoupling,
             yCoupling,
@@ -980,7 +980,7 @@ def main( args ):
         containers.append(highLumi)
 
         highLumi3000_rootfiles = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_lumiStudy_asimov ) )
-        highLumi3000 = TheoryCommands.GetTH2FromListOfRootFiles(
+        highLumi3000 = TheoryCommands.get_TH2_from_list_of_root_files(
             highLumi3000_rootfiles,
             xCoupling,
             yCoupling,
@@ -992,7 +992,7 @@ def main( args ):
         highLumi3000.title = '3000 fb^{-1}'
         containers.append(highLumi3000)
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             containers,
             xMin = kappacMin_global,
             xMax = kappacMax_global,
@@ -1019,7 +1019,7 @@ def main( args ):
 
         # combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_asimov ) )
         combined_rootfiles  = glob( '{0}/*.root'.format( LatestPaths.scan_combined_Yukawa_noTheoryUncertainties_asimov ) )
-        combined = TheoryCommands.GetTH2FromListOfRootFiles(
+        combined = TheoryCommands.get_TH2_from_list_of_root_files(
             combined_rootfiles,
             xCoupling,
             yCoupling,
@@ -1060,7 +1060,7 @@ def main( args ):
         containers.append( atfchi2 )
 
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             containers,
             xMin = kappacMin_global - 1.,
             xMax = kappacMax_global - 1.,
@@ -1097,8 +1097,8 @@ def main( args ):
 
         wsParametrization = WSParametrization( wsToCheck )
         
-        TheoryFileInterface.SetFileFinderDir( theoryDir )
-        yukawaDerivedTheoryFiles = TheoryFileInterface.FileFinder( muF=1, muR=1, Q=1 )
+        TheoryFileInterface.set_file_finder_dir( theoryDir )
+        yukawaDerivedTheoryFiles = TheoryFileInterface.file_finder( muF=1, muR=1, Q=1 )
 
 
         # Select subset of theory files (otherwise plot gets overcrowded)
@@ -1112,13 +1112,13 @@ def main( args ):
         for yukawaDerivedTheoryFile in yukawaDerivedTheoryFiles:
             color = next(colorCycle)
 
-            container = TheoryFileInterface.ReadDerivedTheoryFile( yukawaDerivedTheoryFile )
+            container = TheoryFileInterface.read_derived_theory_file( yukawaDerivedTheoryFile )
             container.name = 'kappab_{0}_kappac_{1}'.format(
-                Commands.ConvertFloatToStr( container.kappab ),
-                Commands.ConvertFloatToStr( container.kappac ),
+                Commands.convert_float_to_str( container.kappab ),
+                Commands.convert_float_to_str( container.kappac ),
                 )
 
-            container.Tg_theory = TheoryFileInterface.ReadDerivedTheoryFileToTGraph( yukawaDerivedTheoryFile, name = container.name )
+            container.Tg_theory = TheoryFileInterface.read_derived_theory_file_to_TGraph( yukawaDerivedTheoryFile, name = container.name )
             container.Tg_theory.SetLineWidth(2)
             container.Tg_theory.SetLineColor(color)
             container.Tg_theory.SetMarkerColor(color)
@@ -1126,14 +1126,14 @@ def main( args ):
             container.Tg_theory.SetMarkerStyle(8)
             container.Tg_theory.SetMarkerSize(0.8)
 
-            container.Tg_parametrization = wsParametrization.GetOutputContainer(
+            container.Tg_parametrization = wsParametrization.get_output_container(
                 kappab = container.kappab , kappac = container.kappac,
                 returnWhat='theory' ).Tg
             container.Tg_parametrization.SetLineColor(color)
             container.Tg_parametrization.SetMarkerColor(color)
             container.Tg_parametrization.SetLineStyle(1)
 
-            container.Tg_parametrization_expBinning = wsParametrization.GetOutputContainer(
+            container.Tg_parametrization_expBinning = wsParametrization.get_output_container(
                 kappab = container.kappab , kappac = container.kappac,
                 returnWhat='exp' ).Tg
             container.Tg_parametrization_expBinning.SetLineColorAlpha( color, 0.5 )
@@ -1159,14 +1159,14 @@ def main( args ):
                 )
             container.binBoundaries = containers[0].binBoundaries
 
-            container.Tg_parametrization = wsParametrization.GetOutputContainer(
+            container.Tg_parametrization = wsParametrization.get_output_container(
                 kappab = testCouplings['kappab'] , kappac = testCouplings['kappac'],
                 returnWhat='theory' ).Tg
             container.Tg_parametrization.SetLineColor(color)
             container.Tg_parametrization.SetMarkerColor(color)
             container.Tg_parametrization.SetLineStyle(1)
 
-            container.Tg_parametrization_expBinning = wsParametrization.GetOutputContainer(
+            container.Tg_parametrization_expBinning = wsParametrization.get_output_container(
                 kappab = testCouplings['kappab'] , kappac = testCouplings['kappac'],
                 returnWhat='exp' ).Tg
             container.Tg_parametrization_expBinning.SetLineColor(color)
@@ -1185,9 +1185,9 @@ def main( args ):
         c.cd()
         c.Clear()
         if doBigLegend:
-            SetCMargins( RightMargin=0.3 )
+            set_cmargins( RightMargin=0.3 )
         else:
-            SetCMargins()
+            set_cmargins()
 
         xMinAbs = min([ container.Tg_theory.xMin for container in containers ])
         xMaxAbs = max([ container.Tg_theory.xMax for container in containers ])
@@ -1199,7 +1199,7 @@ def main( args ):
         yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
         yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
 
-        base = GetPlotBase(
+        base = get_plot_base(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
@@ -1237,17 +1237,17 @@ def main( args ):
 
         if plotCombination:
             # Combination scan result
-            combinationPOIs = Commands.ListPOIs( 'workspaces_May15/combinedCard_May15.root' )
-            combinationscans = PhysicsCommands.GetScanResults(
+            combinationPOIs = Commands.list_pois( 'workspaces_May15/combinedCard_May15.root' )
+            combinationscans = PhysicsCommands.get_scan_results(
                 combinationPOIs,
                 'Scan_May15',
                 pattern = 'combinedCard'
                 )
-            TgCombination = PhysicsCommands.GetTGraphForSpectrum( combinationPOIs, combinationscans, name='Combination' )
+            TgCombination = PhysicsCommands.get_TGraph_for_spectrum( combinationPOIs, combinationscans, name='Combination' )
             TgCombination.SetLineColor(1)
             TgCombination.SetFillColorAlpha( 1, 0.2 )
 
-            CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+            CorrelationMatrices.convert_TGraph_to_lines_and_boxes(
                 TgCombination,
                 drawImmediately=True, legendObject=leg, noBoxes=False, xMaxExternal=xMax )
 
@@ -1257,7 +1257,7 @@ def main( args ):
             container.Tg_parametrization.Draw('XL')
 
             if DrawExperimentalBinLines:
-                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                CorrelationMatrices.convert_TGraph_to_lines_and_boxes(
                     container.Tg_parametrization_expBinning,
                     drawImmediately=True,
                     legendObject= leg if doBigLegend else None,
@@ -1279,14 +1279,14 @@ def main( args ):
             container.Tg_parametrization.Draw('XL')
             if DrawExperimentalBinLines:
                 container.Tg_parametrization_expBinning.SetLineStyle(2)
-                CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+                CorrelationMatrices.convert_TGraph_to_lines_and_boxes(
                     container.Tg_parametrization_expBinning,
                     drawImmediately=True, legendObject=leg, noBoxes=True, xMaxExternal=xMax )
 
         leg.Draw()
 
         outname = '{0}_parametrizationCheck'.format( basename(wsToCheck) )
-        SaveC( outname )
+        save_c( outname )
 
 
     #____________________________________________________________________
@@ -1326,7 +1326,7 @@ def main( args ):
             ]
 
 
-        PlotCommands.PlotParametrizationsOnCombination( container, OnOneCanvas=True )
+        PlotCommands.plot_parametrizations_on_combination( container, OnOneCanvas=True )
 
 
 

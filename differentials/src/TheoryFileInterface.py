@@ -30,20 +30,20 @@ from Parametrization import Parametrization
 ########################################
 
 #____________________________________________________________________
-def Div( l1, l2 ):
+def div( l1, l2 ):
     ret = [ i / j if j!=0. else 0. for i, j in zip( l1, l2 ) ]
     return ret
 
 
 #____________________________________________________________________
 FILEFINDERDIR = '.'
-def SetFileFinderDir( directory ):
+def set_file_finder_dir( directory ):
     global FILEFINDERDIR
     FILEFINDERDIR = abspath( directory )
 
 
 #____________________________________________________________________
-def FileFinder( **kwargs ):
+def file_finder( **kwargs ):
 
     # ======================================
     # Some options
@@ -108,16 +108,16 @@ def FileFinder( **kwargs ):
             elif value == '*':
                 acceptedByThisKey = True
             else:
-                valueInFile = Commands.ConvertStrToFloat(
+                valueInFile = Commands.convert_str_to_float(
                     re.search( r'{0}_([\dpm]+)'.format( key), theoryFile ).group(1)
                     )
-                if value == valueInFile or Commands.ConvertFloatToStr(value) == valueInFile:
+                if value == valueInFile or Commands.convert_float_to_str(value) == valueInFile:
                     acceptedByThisKey = True
                 else:
                     acceptedByThisKey = False
             # elif not(
             #         re.search( r'{0}_{1}\D'.format( key, value ), theoryFile )
-            #         or re.search( r'{0}_{1}\D'.format( key, Commands.ConvertFloatToStr(value) ), theoryFile )
+            #         or re.search( r'{0}_{1}\D'.format( key, Commands.convert_float_to_str(value) ), theoryFile )
             #         ):
             #     acceptedByThisKey = False
             # else:
@@ -135,14 +135,14 @@ def FileFinder( **kwargs ):
 
 
     if len(acceptedFiles) == 0:
-        Commands.ThrowError(
+        Commands.throw_error(
             'The following call to FileFinder failed to retrieve any files:\n      '
             + '\n      '.join( [ '{0} = {1}'.format(key,value) for key, value in kwargs.iteritems() ] )
             )
         sys.exit()
 
     if expectOne and len(acceptedFiles) > 1:
-        Commands.ThrowError(
+        Commands.throw_error(
             'Found more than 1 file for the following keys:'
             + '\n    ' + '\n    '.join( [ '{0} = {1}'.format(key,value) for key, value in kwargs.iteritems() ] )
             + '\n  File list:'
@@ -159,18 +159,18 @@ def FileFinder( **kwargs ):
 
     if expectOne:
         if loadImmediately:
-            return ReadDerivedTheoryFile( acceptedFiles[0] )
+            return read_derived_theory_file( acceptedFiles[0] )
         else:
             return acceptedFiles[0]
     else:
         if loadImmediately:
-            return [ ReadDerivedTheoryFile(f) for f in acceptedFiles ]
+            return [ read_derived_theory_file(f) for f in acceptedFiles ]
         else:
             return acceptedFiles
 
 
 #____________________________________________________________________
-def ReadDerivedTheoryFile(
+def read_derived_theory_file(
     derivedTheoryFile,
     returnContainer = True,
     verbose = False,
@@ -242,25 +242,25 @@ def ReadDerivedTheoryFile(
         return ret
 
 
-def ReadDerivedTheoryFileToTGraph(
+def read_derived_theory_file_to_TGraph(
         derivedTheoryFile,
         name=None,
         yAttr=None,
         ):
 
-    container = ReadDerivedTheoryFile( derivedTheoryFile )
+    container = read_derived_theory_file( derivedTheoryFile )
     outputcontainer = OutputContainer( container )
-    outputcontainer.GetTGraph( name=name, yAttr=yAttr )
+    outputcontainer.get_TGraph( name=name, yAttr=yAttr )
     return outputcontainer.Tg
 
 
-def ReadDerivedTheoryContainerToTGraph(
+def read_derived_theory_container_to_TGraph(
         derivedTheoryContainer,
         name=None,
         yAttr=None,
         ):
     outputcontainer = OutputContainer( derivedTheoryContainer )
-    outputcontainer.GetTGraph( name=name, yAttr=yAttr )
+    outputcontainer.get_TGraph( name=name, yAttr=yAttr )
     return outputcontainer.Tg
 
 
@@ -268,13 +268,13 @@ def ReadDerivedTheoryContainerToTGraph(
 # General operations
 ########################################
 
-def NormalizeToSMCrossSection(
+def normalize_to_sm_crosssection(
         container,
         SMXS = 55.70628722,
         extraCheck = False,
         ):
 
-    integralFn = TheoryCommands.GetIntegral( container.binBoundaries, container.crosssection )
+    integralFn = TheoryCommands.get_integral( container.binBoundaries, container.crosssection )
 
     rescale = SMXS / integralFn( 0., container.binBoundaries[-1]*10 )
 
@@ -285,7 +285,7 @@ def NormalizeToSMCrossSection(
         print '\nIntegral before scaling:'
         print integralFn( 0., container.binBoundaries[-1]*10 )
         print 'Integral after scaling (should be {0}):'.format( SMXS )
-        newintegralFn = TheoryCommands.GetIntegral( container.binBoundaries, container.crosssection )
+        newintegralFn = TheoryCommands.get_integral( container.binBoundaries, container.crosssection )
         print newintegralFn( 0., container.binBoundaries[-1]*10 )
 
 
@@ -294,22 +294,22 @@ def NormalizeToSMCrossSection(
 ########################################
 
 #____________________________________________________________________
-def DumpContainerToFile( container, prefix, outdir ):
+def dump_container_to_file( container, prefix, outdir ):
 
     outname = '{0}_kappab_{1}_kappac_{2}'.format(
         prefix,
-        Commands.ConvertFloatToStr( container.kappab ),
-        Commands.ConvertFloatToStr( container.kappac )
+        Commands.convert_float_to_str( container.kappab ),
+        Commands.convert_float_to_str( container.kappac )
         )
     
     if hasattr( container, 'muR' ) and hasattr( container, 'muF' ):
         outname += '_muR_{0}_muF_{1}'.format(
-            Commands.ConvertFloatToStr( container.muR ),
-            Commands.ConvertFloatToStr( container.muF )
+            Commands.convert_float_to_str( container.muR ),
+            Commands.convert_float_to_str( container.muF )
             )
 
     if hasattr( container, 'Q' ):
-        outname += '_Q_{0}'.format( Commands.ConvertFloatToStr(container.Q) )
+        outname += '_Q_{0}'.format( Commands.convert_float_to_str(container.Q) )
 
     outname += '.txt'
 
@@ -336,7 +336,7 @@ def DumpContainerToFile( container, prefix, outdir ):
 
 
 #____________________________________________________________________
-def addContainer( self, c2 ):
+def add_container( self, c2 ):
     nBinsC2 = len(c2.binBoundaries)-1
     for iBin in xrange(nBinsC2):
         self.crosssection[iBin] += c2.crosssection[iBin]
@@ -345,7 +345,7 @@ Container.addContainer = addContainer
 
 
 #____________________________________________________________________
-def ScaleQuarkInduced(
+def scale_quark_induced(
         qI_theoryFileDir,
         verbose = True,
         ):
@@ -354,8 +354,8 @@ def ScaleQuarkInduced(
     # Create the scaled non-scale-variations files
 
     # Get non-scale-variation containers
-    qI_theoryFiles = FileFinder( directory=qI_theoryFileDir, filter='muR' )
-    qI_containers = [ ReadDerivedTheoryFile(tF) for tF in qI_theoryFiles ]
+    qI_theoryFiles = file_finder( directory=qI_theoryFileDir, filter='muR' )
+    qI_containers = [ read_derived_theory_file(tF) for tF in qI_theoryFiles ]
 
     # Pointer to SM containers
     qI_SM = [ c for c in qI_containers if c.kappab == 1.0 and c.kappac == 1.0 ][0]
@@ -366,10 +366,10 @@ def ScaleQuarkInduced(
     parametrization = Parametrization()
 
 
-    parametrization.SetSM( qI_SM )
-    parametrization.ParametrizeByFitting( qI_containers, fitWithScipy=True )
+    parametrization.set_sm( qI_SM )
+    parametrization.parametrize_by_fitting( qI_containers, fitWithScipy=True )
 
-    # parametrization.ParametrizeByFitting( qI_containers )
+    # parametrization.parametrize_by_fitting( qI_containers )
 
 
     mb_old = 4.65
@@ -377,14 +377,14 @@ def ScaleQuarkInduced(
     mc_old = 1.275
     mc_new = 0.655
 
-    qI_SM.crosssection = parametrization.Evaluate(
+    qI_SM.crosssection = parametrization.evaluate(
         kappab = qI_SM.kappab * ( mb_new/mb_old ),
         kappac = qI_SM.kappac * ( mc_new/mc_old )
         )
 
     # Calculate the effect of the different masses
     for container in qI_containers:
-        container.crosssection = parametrization.Evaluate(
+        container.crosssection = parametrization.evaluate(
             kappab = container.kappab * ( mb_new/mb_old ),
             kappac = container.kappac * ( mc_new/mc_old )
             )
@@ -394,7 +394,7 @@ def ScaleQuarkInduced(
     outdir = 'derivedTheoryFiles_{0}_YukawaQuarkInducedScaled'.format( datestr )
     if not isdir( outdir ): os.makedirs( outdir )
     for container in qI_containers:
-        DumpContainerToFile( container, prefix='YukawaQuarkInducedScaled', outdir=outdir )
+        dump_container_to_file( container, prefix='YukawaQuarkInducedScaled', outdir=outdir )
 
 
     # ======================================
@@ -403,25 +403,25 @@ def ScaleQuarkInduced(
     # the SM *after* the quark mass scaling as before
 
     scaleVar_theoryFiles = [
-        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=0.5, muF=0.5, expectOneFile=True ),
-        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=0.5, muF=1.0, expectOneFile=True ),
-        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=0.5, expectOneFile=True ),
-        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=1.0, expectOneFile=True ),
-        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=2.0, muF=1.0, expectOneFile=True ),
-        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=2.0, expectOneFile=True ),
-        FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=2.0, muF=2.0, expectOneFile=True ),
+        file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=0.5, muF=0.5, expectOneFile=True ),
+        file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=0.5, muF=1.0, expectOneFile=True ),
+        file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=0.5, expectOneFile=True ),
+        file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=1.0, expectOneFile=True ),
+        file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=2.0, muF=1.0, expectOneFile=True ),
+        file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=1.0, muF=2.0, expectOneFile=True ),
+        file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, muR=2.0, muF=2.0, expectOneFile=True ),
         ]
-    scaleVar_containers = [ ReadDerivedTheoryFile(tF) for tF in scaleVar_theoryFiles ]
+    scaleVar_containers = [ read_derived_theory_file(tF) for tF in scaleVar_theoryFiles ]
 
     for scaleVar_container in scaleVar_containers:
         # Take the scaled SMXS, and multiply it by the same ratio as before the mass scaling
         scaleVar_container.crosssection = [
             ratio * SMXS for ratio, SMXS in zip( scaleVar_container.ratios, qI_SM.crosssection )
             ]
-        DumpContainerToFile( scaleVar_container, prefix='YukawaQuarkInducedScaled', outdir=outdir )
+        dump_container_to_file( scaleVar_container, prefix='YukawaQuarkInducedScaled', outdir=outdir )
 
 
-def SumGluonAndQuarkFiles(
+def sum_gluon_and_quark_files(
         gI_theoryFileDir,
         qI_theoryFileDir,
         verbose = True,
@@ -430,24 +430,24 @@ def SumGluonAndQuarkFiles(
     # ======================================
     # IO
 
-    qI_theoryFiles = FileFinder( directory=qI_theoryFileDir )
-    gI_theoryFiles = FileFinder( directory=gI_theoryFileDir )
+    qI_theoryFiles = file_finder( directory=qI_theoryFileDir )
+    gI_theoryFiles = file_finder( directory=gI_theoryFileDir )
     
-    qI_containers = [ ReadDerivedTheoryFile(tF) for tF in qI_theoryFiles ]
-    gI_containers = [ ReadDerivedTheoryFile(tF) for tF in gI_theoryFiles ]
+    qI_containers = [ read_derived_theory_file(tF) for tF in qI_theoryFiles ]
+    gI_containers = [ read_derived_theory_file(tF) for tF in gI_theoryFiles ]
 
-    qI_SMFile     = FileFinder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, Q=1.0, muF=1.0, muR=1.0, expectOneFile=True )
-    qI_SM         = ReadDerivedTheoryFile( qI_SMFile )
-    gI_SMFile     = FileFinder( directory=gI_theoryFileDir, kappab=1.0, kappac=1.0, Q=1.0, muF=1.0, muR=1.0, expectOneFile=True )
-    gI_SM         = ReadDerivedTheoryFile( gI_SMFile )
-    TheoryCommands.RebinDerivedTheoryContainer( gI_SM, qI_SM.binBoundaries )
+    qI_SMFile     = file_finder( directory=qI_theoryFileDir, kappab=1.0, kappac=1.0, Q=1.0, muF=1.0, muR=1.0, expectOneFile=True )
+    qI_SM         = read_derived_theory_file( qI_SMFile )
+    gI_SMFile     = file_finder( directory=gI_theoryFileDir, kappab=1.0, kappac=1.0, Q=1.0, muF=1.0, muR=1.0, expectOneFile=True )
+    gI_SM         = read_derived_theory_file( gI_SMFile )
+    TheoryCommands.rebin_derived_theory_container( gI_SM, qI_SM.binBoundaries )
 
     outdir = 'derivedTheoryFiles_{0}_YukawaSummed'.format( datestr )
     if not isdir( outdir ): os.makedirs( outdir )
 
     summed_SM = deepcopy( qI_SM )
     summed_SM.crosssection = [ xs_qI + xs_gI for xs_qI, xs_gI in zip( qI_SM.crosssection, gI_SM.crosssection ) ]
-    DumpContainerToFile( summed_SM, prefix='YukawaSummed', outdir=outdir )
+    dump_container_to_file( summed_SM, prefix='YukawaSummed', outdir=outdir )
 
     for qI in qI_containers:
 
@@ -473,18 +473,18 @@ def SumGluonAndQuarkFiles(
             print '    Continuing'
             continue
 
-        TheoryCommands.RebinDerivedTheoryContainer( gI, qI_SM.binBoundaries )
+        TheoryCommands.rebin_derived_theory_container( gI, qI_SM.binBoundaries )
 
         summed = deepcopy( qI )
         summed.crosssection = [ xs_qI + xs_gI for xs_qI, xs_gI in zip( qI.crosssection, gI.crosssection ) ]
         summed.ratios = [ xs / SMxs for xs, SMxs in zip( summed.crosssection, summed_SM.crosssection ) ]
 
-        DumpContainerToFile( summed, prefix='YukawaSummed', outdir=outdir )
+        dump_container_to_file( summed, prefix='YukawaSummed', outdir=outdir )
 
 
 
 #____________________________________________________________________
-def MergeGluonAndQuarkInduced(
+def merge_gluon_and_quark_induced(
         gI_theoryFileDir,
         qI_theoryFileDir,
         verbose = True,
@@ -493,11 +493,11 @@ def MergeGluonAndQuarkInduced(
     # ======================================
     # IO
 
-    qI_theoryFiles = FileFinder( directory=qI_theoryFileDir, filter='muR' )
-    gI_theoryFiles = FileFinder( directory=gI_theoryFileDir, muR=1.0, muF=1.0, Q=1.0 )
+    qI_theoryFiles = file_finder( directory=qI_theoryFileDir, filter='muR' )
+    gI_theoryFiles = file_finder( directory=gI_theoryFileDir, muR=1.0, muF=1.0, Q=1.0 )
     
-    qI_containers = [ ReadDerivedTheoryFile(tF) for tF in qI_theoryFiles ]
-    gI_containers = [ ReadDerivedTheoryFile(tF) for tF in gI_theoryFiles ]
+    qI_containers = [ read_derived_theory_file(tF) for tF in qI_theoryFiles ]
+    gI_containers = [ read_derived_theory_file(tF) for tF in gI_theoryFiles ]
 
     # Pointers to SM containers
     qI_SM = [ c for c in qI_containers if c.kappab == 1.0 and c.kappac == 1.0 ][0]
@@ -510,13 +510,13 @@ def MergeGluonAndQuarkInduced(
     # gI has much more bins - only rebin up to where qI is defined
     lastBinBoundary = qI_SM.binBoundaries[-1]
     if not lastBinBoundary in gI_SM.binBoundaries:
-        Commands.ThrowError( 'qI bin boundary {0} not found in gI; need to implement something more robust'.format( lastBinBoundary ) )
+        Commands.throw_error( 'qI bin boundary {0} not found in gI; need to implement something more robust'.format( lastBinBoundary ) )
         sys.exit()
     newBinBoundaries = gI_SM.binBoundaries[: gI_SM.binBoundaries.index(lastBinBoundary)+1 ]
 
     for container in qI_containers:
-        TheoryCommands.RebinDerivedTheoryContainer( container, newBinBoundaries )
-    TheoryCommands.RebinDerivedTheoryContainer( qI_SM, newBinBoundaries )
+        TheoryCommands.rebin_derived_theory_container( container, newBinBoundaries )
+    TheoryCommands.rebin_derived_theory_container( qI_SM, newBinBoundaries )
 
 
     # ======================================
@@ -525,8 +525,8 @@ def MergeGluonAndQuarkInduced(
 
     parametrization = Parametrization()
 
-    # parametrization.Parametrize( qI_containers )
-    parametrization.ParametrizeByFitting( qI_containers )
+    # parametrization.parametrize( qI_containers )
+    parametrization.parametrize_by_fitting( qI_containers )
 
     mb_old = 4.65
     mb_new = 2.963
@@ -534,14 +534,14 @@ def MergeGluonAndQuarkInduced(
     mc_new = 0.655
 
 
-    qI_SM.crosssection = parametrization.Evaluate(
+    qI_SM.crosssection = parametrization.evaluate(
         kappab = qI_SM.kappab * ( mb_new/mb_old ),
         kappac = qI_SM.kappac * ( mc_new/mc_old )
         )
 
     # Calculate the effect of the different masses
     for container in qI_containers:
-        container.crosssection = parametrization.Evaluate(
+        container.crosssection = parametrization.evaluate(
             kappab = container.kappab * ( mb_new/mb_old ),
             kappac = container.kappac * ( mc_new/mc_old )
             )
@@ -554,7 +554,7 @@ def MergeGluonAndQuarkInduced(
     # Sum up; start with gluon induced
     summed_containers = deepcopy( gI_containers )
     summed_SM = deepcopy( gI_SM )
-    DumpContainerToFile( summed_SM, prefix='YukawaSummed', outdir=outdir )
+    dump_container_to_file( summed_SM, prefix='YukawaSummed', outdir=outdir )
 
     for container in summed_containers:
 
@@ -566,9 +566,9 @@ def MergeGluonAndQuarkInduced(
                     and container.kappac == qI.kappac
                     ):
 
-                container.addContainer( qI )
+                container.add_container( qI )
                 container.ratios = [ xs / smxs for xs, smxs in zip( container.crosssection, summed_SM.crosssection ) ]
-                DumpContainerToFile( container, prefix='YukawaSummed', outdir=outdir )
+                dump_container_to_file( container, prefix='YukawaSummed', outdir=outdir )
                 break
 
         else:
@@ -576,7 +576,7 @@ def MergeGluonAndQuarkInduced(
 
 
 #____________________________________________________________________
-def ReadLinesOfTheoryFile_YukawaQuarkInduced( theoryFile, verbose=False, SM=None ):
+def read_lines_of_theory_file_yukawa_quark_induced( theoryFile, verbose=False, SM=None ):
 
     # Read lines
     with open( theoryFile, 'r' ) as theoryFp:
@@ -613,7 +613,7 @@ def ReadLinesOfTheoryFile_YukawaQuarkInduced( theoryFile, verbose=False, SM=None
 
 
 #____________________________________________________________________
-def CreateDerivedTheoryFiles_YukawaQuarkInduced(
+def create_derived_theory_files_yukawa_quark_induced(
         theoryDir = 'suppliedInput/fromPier/13tev-pth_quarkInduced_Aug04/',
         verbose = True,
         ):
@@ -635,7 +635,7 @@ def CreateDerivedTheoryFiles_YukawaQuarkInduced(
         print '='*80
         print 'Processing SM \'{0}\'\n'.format( SM.file )
 
-    SM.pt, SM.xs = ReadLinesOfTheoryFile_YukawaQuarkInduced( SM.file, verbose )
+    SM.pt, SM.xs = read_lines_of_theory_file_yukawa_quark_induced( SM.file, verbose )
     SM.kappab = 1
     SM.kappac = 1
 
@@ -667,8 +667,8 @@ def CreateDerivedTheoryFiles_YukawaQuarkInduced(
         if not match:
             print '[warning] Could not deduce couplings from file \'{0}\''.format( container.file )
         else:
-            container.kappab = Commands.ConvertStrToFloat( match.group(1) )
-            container.kappac = Commands.ConvertStrToFloat( match.group(2) )
+            container.kappab = Commands.convert_str_to_float( match.group(1) )
+            container.kappac = Commands.convert_str_to_float( match.group(2) )
 
         isScaleVariation = False
         match = re.search( scaleVarPat, container.file )
@@ -677,18 +677,18 @@ def CreateDerivedTheoryFiles_YukawaQuarkInduced(
             container.muR = float( match.group(1) ) / 50
             container.muF = float( match.group(2) ) / 50
 
-        container.pt, container.xs = ReadLinesOfTheoryFile_YukawaQuarkInduced( container.file, verbose, SM=SM )
+        container.pt, container.xs = read_lines_of_theory_file_yukawa_quark_induced( container.file, verbose, SM=SM )
         container.ratios = [ xs / smxs if not smxs == 0. else 0. for xs, smxs in zip( container.xs, SM.xs ) ]
         container.crosssection = container.xs
 
-        container.binCenters, container.binBoundaries, container.binWidths = TheoryCommands.BinningHeuristic(
+        container.binCenters, container.binBoundaries, container.binWidths = TheoryCommands.binning_heuristic(
             container.pt, manualSwitchAt50 = False, manualSwitchAt5 = True )
 
 
         # ======================================
         # Dump container to file
 
-        DumpContainerToFile( container, prefix='YukawaQuarkInduced', outdir=outdir )
+        dump_container_to_file( container, prefix='YukawaQuarkInduced', outdir=outdir )
 
         if verbose:
             print '\n\nContents of \'{0}\':\n'.format( relpath( container.file, '.' ) )
@@ -701,7 +701,7 @@ def CreateDerivedTheoryFiles_YukawaQuarkInduced(
 
 
 #____________________________________________________________________
-def ReadLinesOfTheoryFile_YukawaGluonInduced( theoryFile, verbose=False ):
+def read_lines_of_theory_file_yukawa_gluon_induced( theoryFile, verbose=False ):
     # Read lines
     with open( theoryFile, 'r' ) as theoryFp:
         lines = [ line.strip() for line in theoryFp.readlines() ]
@@ -731,7 +731,7 @@ def ReadLinesOfTheoryFile_YukawaGluonInduced( theoryFile, verbose=False ):
 
 
 #____________________________________________________________________
-def CreateDerivedTheoryFiles_YukawaGluonInduced(
+def create_derived_theory_files_yukawa_gluon_induced(
         theoryDir = 'suppliedInput/fromPier/histograms_ggH_May17/',
         mainCrossSection = 'matched',
         verbose = True,
@@ -770,8 +770,8 @@ def CreateDerivedTheoryFiles_YukawaGluonInduced(
                 ):
 
             smFound = True
-            pts, matched_xss, resummed_xss = ReadLinesOfTheoryFile_YukawaGluonInduced( theoryFile, verbose )
-            newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic( pts, manualSwitchAt50=False, manualSwitchAt5=True )
+            pts, matched_xss, resummed_xss = read_lines_of_theory_file_yukawa_gluon_induced( theoryFile, verbose )
+            newBinCenters, binBoundaries, binWidths = TheoryCommands.binning_heuristic( pts, manualSwitchAt50=False, manualSwitchAt5=True )
 
             SM = Container()
             SM.pts           = deepcopy(pts)
@@ -825,8 +825,8 @@ def CreateDerivedTheoryFiles_YukawaGluonInduced(
                 muR, muF, Q, kappab, kappac
                 )
 
-        pts, matched_xss, resummed_xss = ReadLinesOfTheoryFile_YukawaGluonInduced( theoryFile, verbose )
-        newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic( pts, manualSwitchAt50=False, manualSwitchAt5=True )
+        pts, matched_xss, resummed_xss = read_lines_of_theory_file_yukawa_gluon_induced( theoryFile, verbose )
+        newBinCenters, binBoundaries, binWidths = TheoryCommands.binning_heuristic( pts, manualSwitchAt50=False, manualSwitchAt5=True )
 
 
         container = Container()
@@ -835,10 +835,10 @@ def CreateDerivedTheoryFiles_YukawaGluonInduced(
 
         if mainCrossSection == 'matched':
             container.crosssection = matched_xss
-            container.ratios = Div( container.crosssection, SM.matched_xss )
+            container.ratios = div( container.crosssection, SM.matched_xss )
         elif mainCrossSection == 'resummed':
             container.crosssection = resummed_xss
-            container.ratios = Div( container.crosssection, SM.resummed_xss )
+            container.ratios = div( container.crosssection, SM.resummed_xss )
 
         container.binBoundaries = binBoundaries
 
@@ -848,7 +848,7 @@ def CreateDerivedTheoryFiles_YukawaGluonInduced(
         container.kappab = kappab
         container.kappac = kappac
 
-        DumpContainerToFile( container, prefix='YukawaGluonInduced', outdir=outdir )
+        dump_container_to_file( container, prefix='YukawaGluonInduced', outdir=outdir )
 
 
 
@@ -931,14 +931,14 @@ AgnieszkasFilenameDecoder = {
     }
 
 #____________________________________________________________________
-def DumpContainerToFile_Top( container, prefix, outdir ):
+def dump_container_to_file_top( container, prefix, outdir ):
 
     # Check if ratios, crosssection and binBoundaries have expected lenghts
     if not(
         len(container.crosssection) == len(container.binBoundaries)-1
         and len(container.ratios) == len(container.binBoundaries)-1
         ):
-        Commands.ThrowError((
+        Commands.throw_error((
             'Lists have unexpected lenghts. Found:'
             '\n  file = {3}'
             '\n  len(binBoundaries) = {0}'
@@ -951,17 +951,17 @@ def DumpContainerToFile_Top( container, prefix, outdir ):
     for coupling in [ 'ct', 'cg', 'cb' ]:
         if hasattr( container, coupling ):
             outname += '_{0}_{1}'.format(
-                coupling, Commands.ConvertFloatToStr( getattr(container, coupling) )
+                coupling, Commands.convert_float_to_str( getattr(container, coupling) )
                 )
     
     if hasattr( container, 'muR' ) and hasattr( container, 'muF' ):
         outname += '_muR_{0}_muF_{1}'.format(
-            Commands.ConvertFloatToStr( container.muR ),
-            Commands.ConvertFloatToStr( container.muF )
+            Commands.convert_float_to_str( container.muR ),
+            Commands.convert_float_to_str( container.muF )
             )
 
     if hasattr( container, 'Q' ):
-        outname += '_Q_{0}'.format( Commands.ConvertFloatToStr(container.Q) )
+        outname += '_Q_{0}'.format( Commands.convert_float_to_str(container.Q) )
 
     outname += '.txt'
 
@@ -998,7 +998,7 @@ def DumpContainerToFile_Top( container, prefix, outdir ):
 #____________________________________________________________________
 faultyBinCenters = [ 401., 410., 420., 430., 440., 450., 460., 470., 480., 490., 500., 510., 520., 530., 540., 550., 560., 570., 580., 590., 600., 610., 620., 630., 640., 650., 660., 670., 680., 690., 700., 710., 720., 730., 740., 750., 760., 770., 780., 790. ]
 correctedBinCenters = [ 405., 415., 425., 435., 445., 455., 465., 475., 485., 495., 505., 515., 525., 535., 545., 555., 565., 575., 585., 595., 605., 615., 625., 635., 645., 655., 665., 675., 685., 695., 705., 715., 725., 735., 745., 755., 765., 775., 785., 795. ]
-def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=False ):
+def read_lines_of_theory_file_top( theoryFile, verbose=False, SM=None, isSMFile=False ):
     # Read lines
     with open( theoryFile, 'r' ) as theoryFp:
         lines = [ line.strip() for line in theoryFp.readlines() ]
@@ -1033,7 +1033,7 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
     else:
 
         if SM is None:
-            Commands.ThrowError( 'SM should be specified when reading a non-SM file' )
+            Commands.throw_error( 'SM should be specified when reading a non-SM file' )
         elif theoryFile == SM.file:
             print 'This file was found to be the SM file; simply return SM values'
             return SM.pts, SM.crosssection, [ 1.0 for xs in SM.crosssection ]
@@ -1049,7 +1049,7 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
         correctingForFaultyBinCenters = False
         binCenters = [ float(line.split()[0]) for line in lines ]
         if binCenters == faultyBinCenters:
-            Commands.Warning( 'Correcting faulty bin centers to corrected bin centers' )
+            Commands.warning( 'Correcting faulty bin centers to corrected bin centers' )
             getcorrectedpt = lambda pt: correctedBinCenters[faultyBinCenters.index(pt)]
             correctingForFaultyBinCenters = True
 
@@ -1085,7 +1085,7 @@ def ReadLinesOfTheoryFile_Top( theoryFile, verbose=False, SM=None, isSMFile=Fals
 
 
 #____________________________________________________________________
-def CreateDerivedTheoryFiles_Top(
+def create_derived_theory_files_top(
         theoryDirs = [
             'suppliedInput/fromAgnieszka/HRes_SMEFT_May16',
             'suppliedInput/fromAgnieszka/SMEFTscaling_May16',
@@ -1111,14 +1111,14 @@ def CreateDerivedTheoryFiles_Top(
             smFile = theoryFile
             break
     else:
-        Commands.ThrowError( 'Could not find a SM file' )
+        Commands.throw_error( 'Could not find a SM file' )
         sys.exit()
 
     SM = Container()
     SM.file = smFile
 
-    binCenters, crosssection = ReadLinesOfTheoryFile_Top( SM.file, isSMFile=True, verbose=verbose )
-    newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+    binCenters, crosssection = read_lines_of_theory_file_top( SM.file, isSMFile=True, verbose=verbose )
+    newBinCenters, binBoundaries, binWidths = TheoryCommands.binning_heuristic(
         binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
 
     SM.pts           = binCenters
@@ -1130,7 +1130,7 @@ def CreateDerivedTheoryFiles_Top(
     for key, value in AgnieszkasFilenameDecoder[basename(SM.file).replace('/','')].iteritems():
         setattr( SM, key, value )
 
-    # DumpContainerToFile_Top( SM, prefix='PureSM', outdir=outdir )
+    # dump_container_to_file_top( SM, prefix='PureSM', outdir=outdir )
 
 
     # ======================================
@@ -1151,8 +1151,8 @@ def CreateDerivedTheoryFiles_Top(
             print 'Skipping \'{0}\''.format(shortFileName)
             continue
 
-        binCenters, crosssection, ratios = ReadLinesOfTheoryFile_Top( container.file, verbose, SM=SM )
-        newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+        binCenters, crosssection, ratios = read_lines_of_theory_file_top( container.file, verbose, SM=SM )
+        newBinCenters, binBoundaries, binWidths = TheoryCommands.binning_heuristic(
             binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
 
         container.binCenters    = newBinCenters
@@ -1171,14 +1171,14 @@ def CreateDerivedTheoryFiles_Top(
         for key, value in AgnieszkasFilenameDecoder[shortFileName].iteritems():
             setattr( container, key, value )
 
-        DumpContainerToFile_Top( container, prefix='Top', outdir=outdir )
+        dump_container_to_file_top( container, prefix='Top', outdir=outdir )
 
 
 
 
 
 #____________________________________________________________________
-def CreateDerivedTheoryFiles_Top_highPt(
+def create_derived_theory_files_top_high_pt(
         verbose = True,
         ):
 
@@ -1197,8 +1197,8 @@ def CreateDerivedTheoryFiles_Top_highPt(
     SM = Container()
     SM.file = SMfile
 
-    binCenters, crosssection = ReadLinesOfTheoryFile_Top( SM.file, isSMFile=True, verbose=verbose )
-    newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+    binCenters, crosssection = read_lines_of_theory_file_top( SM.file, isSMFile=True, verbose=verbose )
+    newBinCenters, binBoundaries, binWidths = TheoryCommands.binning_heuristic(
         binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
 
     SM.pts           = binCenters
@@ -1228,9 +1228,9 @@ def CreateDerivedTheoryFiles_Top_highPt(
         container = Container()
         container.file = theoryFile
 
-        binCenters, crosssection, ratios = ReadLinesOfTheoryFile_Top( container.file, verbose, SM=SM )
+        binCenters, crosssection, ratios = read_lines_of_theory_file_top( container.file, verbose, SM=SM )
 
-        newBinCenters, binBoundaries, binWidths = TheoryCommands.BinningHeuristic(
+        newBinCenters, binBoundaries, binWidths = TheoryCommands.binning_heuristic(
             binCenters, manualSwitchAt50=True, manualSwitchAt5=False )
 
         container.binCenters    = newBinCenters
@@ -1305,8 +1305,8 @@ def CreateDerivedTheoryFiles_Top_highPt(
         # print len(SM.crosssection)
         # print SM.crosssection
 
-        DumpContainerToFile_Top( merged, prefix='TopHighPt', outdir=outdir )
-    DumpContainerToFile_Top( SM, prefix='TopHighPt', outdir=outdir )
+        dump_container_to_file_top( merged, prefix='TopHighPt', outdir=outdir )
+    dump_container_to_file_top( SM, prefix='TopHighPt', outdir=outdir )
 
 
 

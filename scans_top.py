@@ -27,7 +27,7 @@ def basic_config(args, hurry=False):
     config.onBatch       = True
     config.queue         = 'all.q'
     if hurry:
-        Commands.Warning( 'Running with quick settings' )
+        Commands.warning( 'Running with quick settings' )
         config.nPointsPerJob = 5
         config.queue         = 'short.q'
 
@@ -93,7 +93,7 @@ def nominal_datacard(args):
 
 def assert_highpt(args):
     if not args.highpt:
-        Commands.Warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
+        Commands.warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
         args.highpt = True
 
 #____________________________________________________________________
@@ -151,10 +151,10 @@ def couplingScan_TopCtCb(args):
         )
 
     if not args.highpt:
-        Commands.Warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
+        Commands.warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
         args.highpt = True
 
-    TheoryCommands.SetPlotDir( 'plots_{0}_TopCtCb'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}_TopCtCb'.format(datestr) )
 
     scan = basic_scan_instance(args)
     scan.deltaNLLCutOff = 50.
@@ -201,4 +201,4 @@ def couplingScan_TopCtCb(args):
         print 'Pass physics option'
         return
 
-    scan.Run()
+    scan.run()

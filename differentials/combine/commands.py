@@ -1,4 +1,4 @@
-def BasicCombineCards(
+def basic_combine_cards(
     outputFile,
     *inputList
     ):
@@ -9,16 +9,16 @@ def BasicCombineCards(
 
     cmd.append( '> {0}'.format( outputFile ) )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
 
-def ProcessMaps(datacard, smartMaps=None, manualMaps=None, verbose=True):
+def process_maps(datacard, smartMaps=None, manualMaps=None, verbose=True):
 
     if smartMaps is None and manualMaps is None:
         # raise ValueError('Supply smartMaps and/or manualMaps')
         return []
 
-    signalprocesses, processes, bins = ListProcesses( datacard )
+    signalprocesses, processes, bins = list_processes( datacard )
 
     maps = []
 
@@ -67,7 +67,7 @@ def ProcessMaps(datacard, smartMaps=None, manualMaps=None, verbose=True):
     return maps
 
 
-def BasicT2WS(
+def basic_t2ws(
         datacard,
         extraOptions=None,
         outputWS=None,
@@ -96,7 +96,7 @@ def BasicT2WS(
     cmd.append( '--PO verbose' )
     cmd.append( '--PO \'higgsMassRange=123,127\'' )
 
-    maps = ProcessMaps(datacard, smartMaps, manualMaps, verbose)
+    maps = process_maps(datacard, smartMaps, manualMaps, verbose)
     for _map in maps:
         cmd.append( _map )
 
@@ -107,9 +107,9 @@ def BasicT2WS(
     else:
         cmd.extend( extraOptions )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
-def CopyPhysicsModels():
+def copy_physics_models():
     """
     Copies models to compiled directory
     (scram b takes unnecessarily long)
@@ -118,7 +118,7 @@ def CopyPhysicsModels():
     physicsModelsDir = 'physicsModels'
     dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(physicsModelsDir) )
 
-    if IsTestMode():
+    if is_test_mode():
         print 'Would now copy {0} to {1}'.format( physicsModelsDir, dst )
     else:
         print 'Copying {0} to {1}'.format( physicsModelsDir, dst )
@@ -126,7 +126,7 @@ def CopyPhysicsModels():
             shutil.rmtree(dst)
         shutil.copytree( physicsModelsDir, dst )
 
-def BasicT2WSwithModel(
+def basic_t2ws_with_model(
     datacard,
     pathToModel,
     modelName=None,
@@ -145,7 +145,7 @@ def BasicT2WSwithModel(
     #     dst = join( os.environ['CMSSW_BASE'], 'bin', os.environ['SCRAM_ARCH'], basename(pathToModel) )
     #     print 'Copying\n    {0}\n    to\n    {1}'.format( pathToModel, dst )
     #     shutil.copyfile( pathToModel, dst )
-    CopyPhysicsModels()
+    copy_physics_models()
 
 
     # ======================================
@@ -179,14 +179,14 @@ def BasicT2WSwithModel(
         cmd.extend( extraOptions )
 
     # Possibility to use maps here as well
-    maps = ProcessMaps(datacard, smartMaps, manualMaps, verbose)
+    maps = process_maps(datacard, smartMaps, manualMaps, verbose)
     for _map in maps:
         cmd.append( _map )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
     
-def BasicGenericCombineCommand(
+def basic_generic_combine_command(
         cmd,
         batchJobSubDir = None,
         onBatch        = False,
@@ -198,7 +198,7 @@ def BasicGenericCombineCommand(
         if not batchJobSubDir:
             batchJobSubDir = 'job_{0}'.format( strftime( '%H%M%S' ) )
         tempdir = abspath( join( TEMPJOBDIR, batchJobSubDir ) )
-        tempdir = AppendNumberToDirNameUntilItDoesNotExistAnymore( tempdir )
+        tempdir = make_unique_directory( tempdir )
 
         if not TESTMODE:
 
@@ -228,13 +228,13 @@ def BasicGenericCombineCommand(
                 shFp.write( ' '.join(cmd) )
 
             qsubCmd = 'qsub -q short.q {0}'.format( shFile )
-            executeCommand( qsubCmd )
+            execute_command( qsubCmd )
 
         else:
             print 'TESTMODE + onBatch not implemented'
 
     else:
-        executeCommand( cmd )
+        execute_command( cmd )
 
 
 
@@ -242,7 +242,7 @@ def BasicGenericCombineCommand(
 
 
 
-def BasicBestfit(
+def basic_bestfit(
         datacard,
         setPOIs = True,
         onBatch = False,
@@ -263,7 +263,7 @@ def BasicBestfit(
         ]
 
     if setPOIs:
-        if IsTestMode():
+        if is_test_mode():
             parNames = [ 'POIs', 'in', 'the', 'POI', 'set' ]
         else:
             datacardFp = ROOT.TFile.Open( datacard )
@@ -290,8 +290,8 @@ def BasicBestfit(
     if onBatch:
 
         if directory is None:
-            directory = abspath( GetTempJobDir() )            
-        # directory = AppendNumberToDirNameUntilItDoesNotExistAnymore(directory)
+            directory = abspath( get_temp_job_dir() )            
+        # directory = make_unique_directory(directory)
 
         cmsswPath = join( os.environ['CMSSW_BASE'], 'src' )
         shText = []
@@ -328,7 +328,7 @@ def BasicBestfit(
                 shFp.write( '\n'.join(shText) )
 
             qsubCmd = 'qsub -q short.q {0}'.format( shFile )
-            executeCommand( qsubCmd )
+            execute_command( qsubCmd )
 
         else:
             print '[TESTMODE] Would now create', relpath( directory, os.getcwd() )
@@ -338,10 +338,10 @@ def BasicBestfit(
 
     else:
         with EnterDirectory( directory ):
-            executeCommand( cmd )
+            execute_command( cmd )
 
 
-def ComputeCorrMatrix(
+def compute_corr_matrix(
         ws,
         redoPostfit = True,
         postfitFilename = None,
@@ -357,12 +357,12 @@ def ComputeCorrMatrix(
         postfitFilename = join( directory, 'higgsCombine_POSTFIT_{0}.MultiDimFit.mH125.root'.format( wsTag ) )
     else:
         if not isfile(postfitFilename):
-            ThrowError( 'Given ws {0} does not exist'.format(postfitFilename) )
+            throw_error( 'Given ws {0} does not exist'.format(postfitFilename) )
 
     if redoPostfit:
-        directory = AppendNumberToDirNameUntilItDoesNotExistAnymore(directory)
+        directory = make_unique_directory(directory)
         # First regular best fit
-        BasicBestfit(
+        basic_bestfit(
             ws,
             onBatch = onBatch,
             directory = directory,
@@ -376,12 +376,12 @@ def ComputeCorrMatrix(
                 ]
             )
 
-    if IsTestMode():
+    if is_test_mode():
         pdfIndicesToFreeze = [ 'some', 'pdfs' ]
     else:
-        pdfIndicesToFreeze = ListOfPDFIndicesToFreeze( postfitFilename, verbose=False )
+        pdfIndicesToFreeze = list_of_pdf_indices_to_freeze( postfitFilename, verbose=False )
 
-    BasicBestfit(
+    basic_bestfit(
         postfitFilename,
         onBatch = onBatch,
         directory = directory,
@@ -398,14 +398,14 @@ def ComputeCorrMatrix(
             ]
         )
 
-def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False, snapshotName='MultiDimFit', returnAlsoFloating=False ):
+def list_of_pdf_indices_to_freeze( postfitFile, freezeAllIndices=False, verbose=False, snapshotName='MultiDimFit', returnAlsoFloating=False ):
 
     wsFp = ROOT.TFile.Open( postfitFile )
     ws   = wsFp.Get('w')
     loadedSnapshot = ws.loadSnapshot(snapshotName)
 
     if not loadedSnapshot:
-        ThrowError( 'Could not load {0} snapshot - are you passing the post fit workspace?'.format( snapshotName ), throwException=True )
+        throw_error( 'Could not load {0} snapshot - are you passing the post fit workspace?'.format( snapshotName ), throwException=True )
 
     varsToFreeze = []
     varsToFloat = []
@@ -470,7 +470,7 @@ def ListOfPDFIndicesToFreeze( postfitFile, freezeAllIndices=False, verbose=False
 
 
 
-def MultiDimCombineTool(
+def multidim_combine_tool(
         datacard,
         nPoints       = 100,
         nPointsPerJob = 3,
@@ -487,7 +487,7 @@ def MultiDimCombineTool(
 
     scanName = basename(datacard).replace('.root','')
     scanName = re.sub( r'\W', '', scanName )
-    scanName = 'SCAN_{0}_{1}_{2}'.format( ''.join(ListPOIs(datacard,nofilter=True)), datestr, scanName )
+    scanName = 'SCAN_{0}_{1}_{2}'.format( ''.join(list_pois(datacard,nofilter=True)), datestr, scanName )
 
     currentdir = os.getcwd()
 
@@ -559,14 +559,14 @@ def MultiDimCombineTool(
 
             if not queue in [ '8nm', '1nh', '8nh', '1nd', '2nd' ]:
                 print 'Queue \'{0}\' is not available on lxplus'.format(queue)
-                if not IsTestMode():
+                if not is_test_mode():
                     return
 
             cmd.append(
                 '--job-mode lxbatch --task-name {0} --sub-opts=\'-q {1}\' '.format( scanName, queue ),
                 )
 
-    executeCommand( cmd )
+    execute_command( cmd )
 
     os.chdir( currentdir )
 

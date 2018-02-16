@@ -24,7 +24,7 @@ from os.path import *
 @flag_as_option
 def totalXS_scan(args):
     if args.asimov:
-        Commands.Warning('This is probably not what I want')
+        Commands.warning('This is probably not what I want')
         return
 
     config = CombineToolWrapper.CombineConfig(args)

@@ -97,14 +97,14 @@ def main():
 
 
     if args.test:
-        Commands.TestMode()
+        Commands.test_mode()
 
 
     ########################################
     # New commands
     ########################################
 
-    Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
+    Commands.set_temp_job_dir( 'plainWStests_{0}'.format(datestr) )
 
     base = abspath( join( os.environ['CMSSW_BASE'], 'src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/' ))
 
@@ -135,7 +135,7 @@ def main():
             '--setPhysicsModelParameters r_smH_PTH_0_15=1.0,r_smH_PTH_15_30=1.0,r_smH_PTH_30_45=1.0,r_smH_PTH_45_85=1.0,r_smH_PTH_85_125=1.0,r_smH_PTH_125_200=1.0,r_smH_PTH_200_350=1.0,r_smH_PTH_GT350=1.0',
             ]
 
-        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+        Commands.basic_generic_combine_command( cmd, onBatch = False, )
 
 
     if args.statonly_test:
@@ -166,7 +166,7 @@ def main():
             # ,K1Bin0,K1Bin1,K1Bin2,K1Bin3,K1Bin4,K1Bin5,K1Bin6,K1Bin7,K2Bin0,K2Bin1,K2Bin2,K2Bin3,K2Bin4,K2Bin5,K2Bin6,K2Bin7
             ]
 
-        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+        Commands.basic_generic_combine_command( cmd, onBatch = False, )
 
 
     #____________________________________________________________________
@@ -174,7 +174,7 @@ def main():
 
         card = 'suppliedInput/combinedCard_hbb_debuggingTest_Dec19.txt'
 
-        Commands.BasicT2WS(
+        Commands.basic_t2ws(
             card,
             manualMaps=[
                 '--PO \'map=.*/ggH_PTH_200_350:r_ggH_PTH_200_350[1.0,0.0,3.0]\'',
@@ -215,7 +215,7 @@ def main():
             '--saveWorkspace',
             ]
 
-        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+        Commands.basic_generic_combine_command( cmd, onBatch = False, )
 
     #____________________________________________________________________
     if args.hbb_bestfit:
@@ -256,7 +256,7 @@ def main():
             '--floatOtherPOIs=1',
             ]
 
-        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+        Commands.basic_generic_combine_command( cmd, onBatch = False, )
 
 
     #____________________________________________________________________
@@ -302,7 +302,7 @@ def main():
             # --> Note floatOtherPOIs is missing, which really should be there for a scan
             #     (otherwise all the r's not in -P are not profiled)
 
-        Commands.BasicGenericCombineCommand( cmd, onBatch = False, )
+        Commands.basic_generic_combine_command( cmd, onBatch = False, )
 
         # Literal command from svn:
         # combine comb_2017_ggHbb.root
@@ -427,7 +427,7 @@ def main():
     #____________________________________________________________________
     if args.testing2PanelCanvas:
 
-        TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
         Tg_top = ROOT.TGraph( 2, array( 'f', [ 0.1, 0.9 ] ), array( 'f', [ 0.1, 0.9 ] ) )
         ROOT.SetOwnership( Tg_top, False )
@@ -435,7 +435,7 @@ def main():
         Tg_bottom = ROOT.TGraph( 2, array( 'f', [ 0.1, 0.9 ] ), array( 'f', [ 0.1, 0.9 ] ) )
         ROOT.SetOwnership( Tg_bottom, False )
 
-        PlotCommands.PlotWithBottomPanel(
+        PlotCommands.plot_with_bottom_panel(
             'twopaneltest',
             [ ( Tg_top, 'AL' ) ],
             [ ( Tg_bottom, 'AL' ) ],
@@ -469,7 +469,7 @@ def main():
             '--doPoints 8,14,20,21,45'
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -499,7 +499,7 @@ def main():
             '--saveSpecifiedFunc r_ggH_PTH_0_15,r_ggH_PTH_15_30,r_ggH_PTH_30_45,r_ggH_PTH_45_85,r_ggH_PTH_85_125,r_ggH_PTH_125_200,r_ggH_PTH_200_350,r_ggH_PTH_GT350,theoryUncertainty_0,theoryUncertainty_1,theoryUncertainty_2,theoryUncertainty_3,theoryUncertainty_4,theoryUncertainty_5,theoryUncertainty_6,r_hgg_ggH_PTH_0_15,r_hgg_ggH_PTH_15_30,r_hgg_ggH_PTH_30_45,r_hgg_ggH_PTH_45_85,r_hgg_ggH_PTH_85_125,r_hgg_ggH_PTH_125_200,r_hgg_ggH_PTH_200_350,r_hgg_ggH_PTH_GT350,r_hgg_ggH_PTH_0_15,r_hgg_ggH_PTH_15_30,r_hgg_ggH_PTH_30_45,r_hgg_ggH_PTH_45_85,r_hgg_ggH_PTH_85_125,r_hgg_ggH_PTH_125_200,r_hgg_ggH_PTH_200_350,r_hgg_ggH_PTH_GT350,ct,kappa_b,kappa_c,kappa_V,kappa_tau,kappa_mu,hggBRmodifier,hzzBRmodifier,xH_modifier,Scaling_hgg,Scaling_hzg,Scaling_hgluglu',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -521,7 +521,7 @@ def main():
 
         hgg_debugging_out = 'suppliedInput/fromVittorio/differential_Njets2p5NNLOPS_Nov10/Datacard_13TeV_differential_Njets2p5NNLOPS_debugging_Nov10.txt'
 
-        Commands.BasicCombineCards(
+        Commands.basic_combine_cards(
             'suppliedInput/combinedCard_smH_debugging_Nov10.txt',
             'hgg=' + hgg_debugging_out,
             'hzz=' + LatestPaths.card_hzz_smH_NJ
@@ -534,7 +534,7 @@ def main():
         card = 'suppliedInput/combinedCard_smH_debugging_Nov10.txt'
         ws   = card.replace( '.txt', '.root' )
 
-        Commands.BasicT2WS(
+        Commands.basic_t2ws(
             card,
             smartMaps = [
                 ( r'.*/smH_NJ_([\d\_GE]+)', r'r_smH_NJ_\1[1.0,-1.0,4.0]' )
@@ -560,7 +560,7 @@ def main():
             # '-P kappac',
             # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
             # '--saveSpecifiedFunc {0}'.format(','.join(
-            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             '-M MultiDimFit',
             '-m 125.00',
@@ -573,7 +573,7 @@ def main():
             # '-v 3',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -612,7 +612,7 @@ def main():
                 if False else '' ),
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -647,7 +647,7 @@ def main():
             ]
 
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -680,7 +680,7 @@ def main():
             '-n debugging_{0}_BRdependency_Yukawa'.format(datestr),
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -714,7 +714,7 @@ def main():
             '-n debugging_BRdependency',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -738,7 +738,7 @@ def main():
             # '-P kappac',
             # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
             # '--saveSpecifiedFunc {0}'.format(','.join(
-            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             '-M MultiDimFit',
             '-m 125.00',
@@ -751,7 +751,7 @@ def main():
             # '-v 3',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -759,7 +759,7 @@ def main():
 
     if args.simplebestfit:
 
-        Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
+        Commands.set_temp_job_dir( 'plainWStests_{0}'.format(datestr) )
 
         datacard = ( '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/'
               # 'workspaces_Sep14/hzz4l_all_13TeV_xs_processesShifted_CouplingModel_Yukawa_withTheoryUncertainties.root'
@@ -782,7 +782,7 @@ def main():
             # '-P kappac',
             # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
             '--saveSpecifiedFunc {0}'.format(','.join(
-                Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             '-M MultiDimFit',
             '-m 125.00',
@@ -795,14 +795,14 @@ def main():
             # '-v 3',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
 
     if args.asimovtest:
 
-        Commands.SetTempJobDir( 'plainWStests_{0}'.format(datestr) )
+        Commands.set_temp_job_dir( 'plainWStests_{0}'.format(datestr) )
 
         datacard = LatestPaths.ws_combined_split_yukawa
 
@@ -821,7 +821,7 @@ def main():
             # '-P kappac',
             # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
             '--saveSpecifiedFunc {0}'.format(','.join(
-                Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             '-M MultiDimFit',
             '-m 125.00',
@@ -834,7 +834,7 @@ def main():
             # '-v 3',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -861,10 +861,10 @@ def main():
             '-P cg',
             '--setPhysicsModelParameters ct=1.0,cg=0.0',
             '--saveSpecifiedFunc {0}'.format( ','.join(
-                Commands.ListSet( datacard, 'yieldParameters' )
-                + Commands.ListSet( datacard, 'hgg_yieldParameters' )
+                Commands.list_set( datacard, 'yieldParameters' )
+                + Commands.list_set( datacard, 'hgg_yieldParameters' )
                 + [ 'Scaling_hgg' ]
-                + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]
+                + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]
                 ) ),
             '--squareDistPoiStep',
             '-M MultiDimFit',
@@ -876,7 +876,7 @@ def main():
             '-n testjob',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )

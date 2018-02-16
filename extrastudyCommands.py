@@ -103,7 +103,7 @@ def AppendParserOptions( parser ):
 
 def main( args ):
 
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    TheoryCommands.set_plot_dir( 'plots_{0}'.format(datestr) )
 
 
     #____________________________________________________________________
@@ -127,7 +127,7 @@ def main( args ):
         else:
             combinationResult = LatestPaths.scan_combined_PTH_ggH
 
-        Commands.Warning( 'The correlation matrix is not calculated on Asimov!!' )
+        Commands.warning( 'The correlation matrix is not calculated on Asimov!!' )
         correlationMatrixFile = LatestPaths.correlationMatrix_PTH_ggH
 
 
@@ -136,13 +136,13 @@ def main( args ):
 
         if DO_YUKAWA:
             couplings = [ 'kappac', 'kappab' ]
-            SM = TheoryFileInterface.FileFinder(
+            SM = TheoryFileInterface.file_finder(
                 kappab=1, kappac=1, muR=1, muF=1, Q=1,
                 expectOneFile=True,
                 directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
                 loadImmediately=True
                 )
-            derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+            derivedTheoryFileContainers = TheoryFileInterface.file_finder(
                 kappab='*', kappac='*', muR=1, muF=1, Q=1,
                 directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
                 loadImmediately=True
@@ -158,26 +158,26 @@ def main( args ):
         elif DO_TOP:
             couplings = [ 'ct', 'cg' ]
             if DO_HIGH_PT:
-                SM = TheoryFileInterface.FileFinder(
+                SM = TheoryFileInterface.file_finder(
                     ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
                     expectOneFile=True,
                     directory = LatestPaths.derivedTheoryFiles_TopHighPt,
                     loadImmediately=True
                     )
-                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                derivedTheoryFileContainers = TheoryFileInterface.file_finder(
                     ct='*', cg='*', muR=1, muF=1, Q=1, cb=1,
                     directory = LatestPaths.derivedTheoryFiles_TopHighPt,
                     loadImmediately=True
                     )
                 derivedTheoryFileContainers = [ d for d in derivedTheoryFileContainers if not (d.ct == 1. and d.cg == 0.) ]
             else:
-                SM = TheoryFileInterface.FileFinder(
+                SM = TheoryFileInterface.file_finder(
                     ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
                     expectOneFile=True,
                     directory = LatestPaths.derivedTheoryFiles_Top,
                     loadImmediately=True
                     )
-                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                derivedTheoryFileContainers = TheoryFileInterface.file_finder(
                     ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb',
                     directory = LatestPaths.derivedTheoryFiles_Top,
                     loadImmediately=True
@@ -203,23 +203,23 @@ def main( args ):
         miniCombine_allBins = MiniCombine.MiniCombine()
         miniCombine_allBins.lastBinIsOverflow = [ True if DO_TOP else False ]
 
-        Commands.Warning( 'Using the scan result of the last bin' )
-        miniCombine_allBins.SetCombinationResult( combinationResult, excludeLastBin=False )
+        Commands.warning( 'Using the scan result of the last bin' )
+        miniCombine_allBins.set_combination_result( combinationResult, excludeLastBin=False )
 
-        miniCombine_allBins.SetCorrelationMatrix(
+        miniCombine_allBins.set_correlation_matrix(
             correlationMatrixFile
             # forceDiagonalMatrix = True
             )
 
         miniCombine_allBins.couplings = couplings
-        miniCombine_allBins.SetSM(SM)
-        miniCombine_allBins.Parametrize( derivedTheoryFileContainers, includeLinearTerms )
+        miniCombine_allBins.set_sm(SM)
+        miniCombine_allBins.parametrize( derivedTheoryFileContainers, includeLinearTerms )
 
-        miniCombine_allBins.Link()
-        miniCombine_allBins.BuildChi2Function()
+        miniCombine_allBins.link()
+        miniCombine_allBins.build_chi2_function()
 
         miniCombine_allBins.name = 'MiniCombine_allBins'
-        miniCombine_allBins.ScanGrid(
+        miniCombine_allBins.scan_grid(
             NPointsX, xMin, xMax,
             NPointsY, yMin, yMax,
             )
@@ -231,41 +231,41 @@ def main( args ):
         miniCombine = MiniCombine.MiniCombine()
         miniCombine.lastBinIsOverflow = [ True if DO_TOP else False ]
 
-        Commands.Warning( 'Not using the scan result of the last bin' )
-        miniCombine.SetCombinationResult( combinationResult, excludeLastBin=True )
+        Commands.warning( 'Not using the scan result of the last bin' )
+        miniCombine.set_combination_result( combinationResult, excludeLastBin=True )
 
-        miniCombine.SetCorrelationMatrix(
+        miniCombine.set_correlation_matrix(
             correlationMatrixFile
             # forceDiagonalMatrix = True
             )
 
         miniCombine.couplings = couplings
-        miniCombine.SetSM(SM)
-        miniCombine.Parametrize( derivedTheoryFileContainers, includeLinearTerms )
+        miniCombine.set_sm(SM)
+        miniCombine.parametrize( derivedTheoryFileContainers, includeLinearTerms )
 
 
         # ======================================
         # 
 
-        miniCombine.Link()
+        miniCombine.link()
 
         # Plug in the Hgg sensitivity manually
-        # miniCombine.AddMuConstraint(         mu = 1.0, unc = 0.5*(0.98+0.76)/0.57, left = 350., right = 450. )
-        # miniCombine.AddOverflowMuConstraint( mu = 1.0, unc = 0.5*(1.54+0.97)/0.43, left = 450. )
+        # miniCombine.add_mu_constraint(         mu = 1.0, unc = 0.5*(0.98+0.76)/0.57, left = 350., right = 450. )
+        # miniCombine.add_overflow_mu_constraint( mu = 1.0, unc = 0.5*(1.54+0.97)/0.43, left = 450. )
 
-        miniCombine.AddAsymMuConstraint( 
+        miniCombine.add_asym_mu_constraint( 
             mu = 1.0,
             unc_up = 0.82/0.53, unc_down = -0.66/0.53,
             left = 350, right = 600
             )
-        miniCombine.AddAsymMuOverflowConstraint( 
+        miniCombine.add_asym_mu_overflow_constraint( 
             mu = 1.0,
             unc_up = 3.63/0.38, unc_down = -1.65/0.38,
             left = 600
             )
 
-        miniCombine.BuildChi2Function()
-        miniCombine.ScanGrid(
+        miniCombine.build_chi2_function()
+        miniCombine.scan_grid(
             NPointsX, xMin, xMax,
             NPointsY, yMin, yMax,
             )
@@ -280,24 +280,24 @@ def main( args ):
         # r2     0.3554           6.52
 
 
-        miniCombine.AddMuConstraint(         mu = 1.0, unc = sqrt(7.637), left = 350., right = 575. )
-        miniCombine.AddOverflowMuConstraint( mu = 1.0, unc = sqrt(6.520), left = 575. )
+        miniCombine.add_mu_constraint(         mu = 1.0, unc = sqrt(7.637), left = 350., right = 575. )
+        miniCombine.add_overflow_mu_constraint( mu = 1.0, unc = sqrt(6.520), left = 575. )
 
-        miniCombine.BuildChi2Function()
-        miniCombine.ScanGrid(
+        miniCombine.build_chi2_function()
+        miniCombine.scan_grid(
             NPointsX, xMin, xMax,
             NPointsY, yMin, yMax,
             )
 
 
         # Also again, using only Hbb
-        miniCombine.ClearConstraints()
+        miniCombine.clear_constraints()
 
-        miniCombine.AddMuConstraint(         mu = 1.0, unc = sqrt(7.637), left = 350., right = 575. )
-        miniCombine.AddOverflowMuConstraint( mu = 1.0, unc = sqrt(6.520), left = 575. )
+        miniCombine.add_mu_constraint(         mu = 1.0, unc = sqrt(7.637), left = 350., right = 575. )
+        miniCombine.add_overflow_mu_constraint( mu = 1.0, unc = sqrt(6.520), left = 575. )
         
-        miniCombine.BuildChi2Function()
-        miniCombine.ScanGrid(
+        miniCombine.build_chi2_function()
+        miniCombine.scan_grid(
             NPointsX, xMin, xMax,
             NPointsY, yMin, yMax,
             )
@@ -309,16 +309,16 @@ def main( args ):
         #     print '\n' + '-'*70
         #     print 'Scanning with constraint uncertainty', unc
 
-        #     miniCombine.ClearConstraints()
-        #     miniCombine.AddMuConstraint(
+        #     miniCombine.clear_constraints()
+        #     miniCombine.add_mu_constraint(
         #         mu = 1.0, unc = unc, left = 350., right = 600.
         #         )
-        #     miniCombine.AddOverflowMuConstraint(
+        #     miniCombine.add_overflow_mu_constraint(
         #         mu = 1.0, unc = unc, left = 600.
         #         )
-        #     miniCombine.BuildChi2Function()
+        #     miniCombine.build_chi2_function()
 
-        #     miniCombine.ScanGrid(
+        #     miniCombine.scan_grid(
         #         NPointsX, xMin, xMax,
         #         NPointsY, yMin, yMax,
         #         )
@@ -355,7 +355,7 @@ def main( args ):
                     ROOT.SetOwnership( obj, False )    
 
             if ret['contours_1sigma'] == 0:
-                Commands.ThrowError( 'No objects with substr \'contour_1sigma\' found in {0}'.format(rootFile) )
+                Commands.throw_error( 'No objects with substr \'contour_1sigma\' found in {0}'.format(rootFile) )
 
             return ret
 
@@ -406,7 +406,7 @@ def main( args ):
 
             print '\n1sigma contour extrema of {0}'.format( container.name )
             for Tg in container.contours_1sigma:
-                xs, ys = TheoryCommands.GetXYfromTGraph(Tg)
+                xs, ys = TheoryCommands.get_xyfrom_TGraph(Tg)
                 print ' ', Tg.GetName()
                 print '    xMin =', min(xs)
                 print '    xMax =', max(xs)
@@ -414,7 +414,7 @@ def main( args ):
                 print '    yMax =', max(ys)
 
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             [ nominal, miniCombine_hgg, miniCombine_hbb ],
             xMin = -5.0,
             xMax = 5.0,
@@ -432,7 +432,7 @@ def main( args ):
             nLegendColumns = 3
             )
 
-        PlotCommands.BasicMixedContourPlot(
+        PlotCommands.basic_mixed_contour_plot(
             [ nominal, miniCombine_hgg_hbb ],
             xMin = -5.0,
             xMax = 5.0,
@@ -451,7 +451,7 @@ def main( args ):
             )
 
         miniCombine_hgg_hbb.color = 1
-        PlotCommands.PlotSingle2DHistogram(
+        PlotCommands.plot_single_TH2(
             miniCombine_hgg_hbb,
             xMin = -5.0,
             xMax = 5.0,
@@ -465,7 +465,7 @@ def main( args ):
 
     #____________________________________________________________________
     if args.inclusive_combineCards:
-        Commands.BasicCombineCards(
+        Commands.basic_combine_cards(
             'suppliedInput/combinedCard_smH_{0}_INCLUSIVE.txt'.format(datestr),
             'hgg=' + LatestPaths.card_hgg_INC_unprocessed,
             'hzz=' + LatestPaths.card_hzz_INC_unprocessed
@@ -479,7 +479,7 @@ def main( args ):
             '--PO \'higgsMassRange=123,127\'',
             ]
 
-        Commands.BasicT2WSwithModel(
+        Commands.basic_t2ws_with_model(
             LatestPaths.card_combined_INC,
             pathToModel = 'FitBRModel.py',
             modelName   = 'fitTotalXSModel',
@@ -503,7 +503,7 @@ def main( args ):
         jobDirectory = 'Scan_TotalXS_{0}'.format( datestr )
         if STATONLY: jobDirectory += '_statonly'
         if ASIMOV: jobDirectory += '_asimov'
-        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+        jobDirectory = Commands.make_unique_directory( jobDirectory )
 
         nPoints = 55
         nPointsPerJob = 5
@@ -514,19 +514,19 @@ def main( args ):
             '-P r',
             '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
             # '--setPhysicsModelParameters {0}'.format(
-            #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
+            #     ','.join([ '{0}=1.0'.format(i) for i in Commands.list_set( datacard, 'POI' ) if i.startswith('r_') ])
             #     ),
             # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
             #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
             # '--saveSpecifiedFunc {0}'.format(','.join(
-            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             ]
 
         if STATONLY:
             extraOptions.append('--freezeNuisances rgx{.*}')
 
-        Commands.MultiDimCombineTool(
+        Commands.multidim_combine_tool(
             ws,
             nPoints       = nPoints,
             nPointsPerJob = nPointsPerJob,
@@ -561,30 +561,30 @@ def main( args ):
 
 
         if USE_HIGHPT_PARAMETRIZATION:
-            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_TopHighPt )
-            Commands.Warning( 'Correlation matrix was made using low pt spectra!!' )
+            TheoryFileInterface.set_file_finder_dir( LatestPaths.derivedTheoryFiles_TopHighPt )
+            Commands.warning( 'Correlation matrix was made using low pt spectra!!' )
         else:
-            TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_Top )
+            TheoryFileInterface.set_file_finder_dir( LatestPaths.derivedTheoryFiles_Top )
 
         extraOptions.append(
             '--PO SM=[ct=1,cg=0,file={0}]'.format(
-                TheoryFileInterface.FileFinder( ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True )
+                TheoryFileInterface.file_finder( ct=1, cg=0, cb=1, muR=1, muF=1, Q=1, expectOneFile=True )
                 )
             )
 
         if USE_HIGHPT_PARAMETRIZATION:
-            theoryFiles = TheoryFileInterface.FileFinder(
+            theoryFiles = TheoryFileInterface.file_finder(
                 ct='*', cg='*', cb=1, muR=1, muF=1, Q=1, filter='ct_1_cg_0',
                 )            
         else:
-            theoryFiles = TheoryFileInterface.FileFinder(
+            theoryFiles = TheoryFileInterface.file_finder(
                 ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb'
                 )
 
         possibleTheories = []
         for theoryFile in theoryFiles:
-            ct = Commands.ConvertStrToFloat( re.search( r'ct_([\dmp]+)', theoryFile ).group(1) )
-            cg = Commands.ConvertStrToFloat( re.search( r'cg_([\dmp]+)', theoryFile ).group(1) )
+            ct = Commands.convert_str_to_float( re.search( r'ct_([\dmp]+)', theoryFile ).group(1) )
+            cg = Commands.convert_str_to_float( re.search( r'cg_([\dmp]+)', theoryFile ).group(1) )
             possibleTheories.append(
                 '--PO theory=[ct={0},cg={1},file={2}]'.format(
                     ct, cg, theoryFile
@@ -602,7 +602,7 @@ def main( args ):
             '--PO binBoundaries={0}'.format( ','.join([ str(b) for b in expBinBoundaries ]) )
             )
 
-        Commands.BasicT2WSwithModel(
+        Commands.basic_t2ws_with_model(
             LatestPaths.card_combined_INC,
             'CouplingModel.py',
             suffix = suffix,
@@ -615,7 +615,7 @@ def main( args ):
 
         expBinBoundaries = [ 0., 15., 30., 45., 85., 125. ]
 
-        TheoryFileInterface.SetFileFinderDir( LatestPaths.derivedTheoryFiles_YukawaSummed )
+        TheoryFileInterface.set_file_finder_dir( LatestPaths.derivedTheoryFiles_YukawaSummed )
 
         extraOptions = [
             '--PO verbose=2',
@@ -630,7 +630,7 @@ def main( args ):
 
         extraOptions.append(
             '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
-                TheoryFileInterface.FileFinder( kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
+                TheoryFileInterface.file_finder( kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
                 )
             )
 
@@ -642,7 +642,7 @@ def main( args ):
                     possibleTheories.append(
                         '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
                             kappab, kappac,
-                            TheoryFileInterface.FileFinder( kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
+                            TheoryFileInterface.file_finder( kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
                             )
                         )
         # Sample only a few needed theories
@@ -660,7 +660,7 @@ def main( args ):
         suffix += '_fitOnlyNormalization'
 
 
-        Commands.BasicT2WSwithModel(
+        Commands.basic_t2ws_with_model(
             LatestPaths.card_combined_INC,
             'CouplingModel.py',
             suffix = suffix,
@@ -681,7 +681,7 @@ def main( args ):
         USE_GLOBAL_SCALES = False
 
         if USE_GLOBAL_SCALES:
-            Commands.BasicT2WSwithModel(
+            Commands.basic_t2ws_with_model(
                 LatestPaths.card_combined_INC,
                 'FitBRModel.py',
                 extraOptions = extraOptions,
@@ -691,7 +691,7 @@ def main( args ):
 
         else:
 
-            Commands.BasicT2WSwithModel(
+            Commands.basic_t2ws_with_model(
                 LatestPaths.card_combined_smH_PTH,
                 'FitBRModel.py',
                 extraOptions = extraOptions,
@@ -700,7 +700,7 @@ def main( args ):
                     ],
                 )
 
-            Commands.BasicT2WSwithModel(
+            Commands.basic_t2ws_with_model(
                 LatestPaths.card_combined_smH_NJ,
                 'FitBRModel.py',
                 extraOptions = extraOptions,
@@ -709,7 +709,7 @@ def main( args ):
                     ],
                 )
 
-            Commands.BasicT2WSwithModel(
+            Commands.basic_t2ws_with_model(
                 LatestPaths.card_combined_smH_YH,
                 'FitBRModel.py',
                 extraOptions = extraOptions,
@@ -718,7 +718,7 @@ def main( args ):
                     ],
                 )
 
-            Commands.BasicT2WSwithModel(
+            Commands.basic_t2ws_with_model(
                 LatestPaths.card_combined_smH_PTJ,
                 'FitBRModel.py',
                 extraOptions = extraOptions,
@@ -753,7 +753,7 @@ def main( args ):
             # '-P kappac',
             # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
             # '--saveSpecifiedFunc {0}'.format(','.join(
-            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             '-M MultiDimFit',
             '-m 125.00',
@@ -766,7 +766,7 @@ def main( args ):
             # '-v 3',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -797,7 +797,7 @@ def main( args ):
 
 
         if ASIMOV: jobDirectory += '_asimov'
-        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+        jobDirectory = Commands.make_unique_directory( jobDirectory )
 
         if doFastscan:
             nPoints = 42
@@ -808,7 +808,7 @@ def main( args ):
             nPointsPerJob = 3
             queue = 'short.q'
 
-        Commands.MultiDimCombineTool(
+        Commands.multidim_combine_tool(
             datacard,
             nPoints       = nPoints,
             nPointsPerJob = nPointsPerJob,
@@ -823,12 +823,12 @@ def main( args ):
                 '-P ratio_BR_hgg_hzz',
                 '--setPhysicsModelParameterRanges ratio_BR_hgg_hzz={0},{1}'.format( ratio_BR_hgg_hzz_ranges[0], ratio_BR_hgg_hzz_ranges[1] ),
                 '--setPhysicsModelParameters {0}'.format(
-                    ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
+                    ','.join([ '{0}=1.0'.format(i) for i in Commands.list_set( datacard, 'POI' ) if i.startswith('r_') ])
                     ),
                 # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
                 #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
                 # '--saveSpecifiedFunc {0}'.format(','.join(
-                #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
                 '--squareDistPoiStep',
                 ]
             )
@@ -857,21 +857,21 @@ def main( args ):
 
         for datacard in datacards:
 
-            actualJobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+            actualJobDirectory = Commands.make_unique_directory( jobDirectory )
 
             extraOptions = [
                 '-P ratio_BR_hgg_hzz',
                 '--setPhysicsModelParameterRanges ratio_BR_hgg_hzz={0},{1}'.format( ratio_BR_hgg_hzz_ranges[0], ratio_BR_hgg_hzz_ranges[1] ),
                 # '--saveSpecifiedFunc {0}'.format(','.join(
-                #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+                #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
                 '--squareDistPoiStep',
                 ]
 
-            yieldParameterSets = [ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ]
+            yieldParameterSets = [ '{0}=1.0'.format(i) for i in Commands.list_set( datacard, 'POI' ) if i.startswith('r_') ]
             if len(yieldParameterSets) > 0:
                 extraOptions.append( '--setPhysicsModelParameters {0}'.format( ','.join(yieldParameterSets) ) )
 
-            Commands.MultiDimCombineTool(
+            Commands.multidim_combine_tool(
                 datacard,
                 nPoints       = nPoints,
                 nPointsPerJob = nPointsPerJob,
@@ -923,7 +923,7 @@ def main( args ):
             
             scanContainer = OutputInterface.OutputContainer()
 
-            x_unfiltered, y_unfiltered = TheoryCommands.BasicReadScan(
+            x_unfiltered, y_unfiltered = TheoryCommands.basic_read_scan(
                 scanRootFiles,
                 xAttr = 'ratio_BR_hgg_hzz',
                 yAttr = 'deltaNLL',
@@ -943,12 +943,12 @@ def main( args ):
 
             # Do uncertainty determination before scaling
             # FindMinimaAndErrors expects deltaNLL, not 2*deltaNLL
-            scanContainer.extrema = PhysicsCommands.FindMinimaAndErrors( scanContainer.x, scanContainer.y, returnContainer=True )
+            scanContainer.extrema = PhysicsCommands.find_minima_and_errors( scanContainer.x, scanContainer.y, returnContainer=True )
 
             print '[info] Multiplying by 2: deltaNLL --> chi^2'
             scanContainer.y = [ 2.*y for y in scanContainer.y ]
 
-            scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
+            scanContainer.get_TGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
             scanContainer.Tg.SetMarkerStyle(8)
             scanContainer.Tg.SetMarkerSize(0.8)
 
@@ -957,7 +957,7 @@ def main( args ):
             # Make plot
 
             c.Clear()
-            SetCMargins( TopMargin=0.09 )
+            set_cmargins( TopMargin=0.09 )
 
             yMinAbs = min( scanContainer.y )
             yMaxAbs = max( scanContainer.y )
@@ -971,7 +971,7 @@ def main( args ):
             xMin = 0.04
             xMax = 0.15
 
-            base = GetPlotBase(
+            base = get_plot_base(
                 xMin = xMin,
                 xMax = xMax,
                 yMin = yMin,
@@ -1060,11 +1060,11 @@ def main( args ):
             TgPoints.SetMarkerColor(2)
             TgPoints.Draw('PSAME')
 
-            Commands.GetCMSLabel()
-            Commands.GetCMSLumi()
+            Commands.get_cms_label()
+            Commands.get_cms_lumi()
 
-            # SaveC( 'BRscan' + ( '_globalScales' if USE_GLOBAL_SCALES else '' ) )
-            SaveC( 'BRscan_' + basename(scanDir).replace('/','') )
+            # save_c( 'BRscan' + ( '_globalScales' if USE_GLOBAL_SCALES else '' ) )
+            save_c( 'BRscan_' + basename(scanDir).replace('/','') )
 
 
 
@@ -1077,7 +1077,7 @@ def main( args ):
             '--PO \'higgsMassRange=123,127\'',
             ]
 
-        Commands.BasicT2WSwithModel(
+        Commands.basic_t2ws_with_model(
             LatestPaths.card_combined_smH_PTH,
             pathToModel = 'FitBRModel.py',
             modelName   = 'fitTotalXSModel',
@@ -1105,7 +1105,7 @@ def main( args ):
             # '-P kappac',
             # '--setPhysicsModelParameters kappab=1.0,kappac=1.0',
             # '--saveSpecifiedFunc {0}'.format(','.join(
-            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             '-M MultiDimFit',
             '-m 125.00',
@@ -1118,7 +1118,7 @@ def main( args ):
             # '-v 3',
             ]
 
-        Commands.BasicGenericCombineCommand(
+        Commands.basic_generic_combine_command(
             cmd,
             onBatch = False,
             )
@@ -1143,7 +1143,7 @@ def main( args ):
         jobDirectory = 'Scan_TotalXS_{0}'.format( datestr )
         if STATONLY: jobDirectory += '_statonly'
         if ASIMOV: jobDirectory += '_asimov'
-        jobDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore( jobDirectory )
+        jobDirectory = Commands.make_unique_directory( jobDirectory )
 
         if doFastscan:
             nPoints = 42
@@ -1160,19 +1160,19 @@ def main( args ):
             '-P r',
             '--setPhysicsModelParameterRanges r={0},{1}'.format( totalXS_ranges[0], totalXS_ranges[1] ),
             # '--setPhysicsModelParameters {0}'.format(
-            #     ','.join([ '{0}=1.0'.format(i) for i in Commands.ListSet( datacard, 'POI' ) if i.startswith('r_') ])
+            #     ','.join([ '{0}=1.0'.format(i) for i in Commands.list_set( datacard, 'POI' ) if i.startswith('r_') ])
             #     ),
             # '--setPhysicsModelParameterRanges kappab={0},{1}:kappac={2},{3}'.format(
             #     kappab_ranges[0], kappab_ranges[1], kappac_ranges[0], kappac_ranges[1] ),
             # '--saveSpecifiedFunc {0}'.format(','.join(
-            #     Commands.ListSet( datacard, 'yieldParameters' ) + [ i for i in Commands.ListSet( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
+            #     Commands.list_set( datacard, 'yieldParameters' ) + [ i for i in Commands.list_set( datacard, 'ModelConfig_NuisParams' ) if i.startswith('theoryUnc') ]  ) ),
             '--squareDistPoiStep',
             ]
 
         if STATONLY:
             extraOptions.append('--freezeNuisances rgx{.*}')
 
-        Commands.MultiDimCombineTool(
+        Commands.multidim_combine_tool(
             ws,
             nPoints       = nPoints,
             nPointsPerJob = nPointsPerJob,
@@ -1207,8 +1207,8 @@ def main( args ):
 
         def make_container(scanDir):
 
-            x_unfiltered, y_unfiltered = TheoryCommands.BasicReadScan(
-                Commands.GlobRootFiles(scanDir),
+            x_unfiltered, y_unfiltered = TheoryCommands.basic_read_scan(
+                Commands.glob_root_files(scanDir),
                 xAttr = 'r',
                 yAttr = 'deltaNLL',
                 )
@@ -1224,16 +1224,16 @@ def main( args ):
             scanContainer.x = [ LatestBinning.YR4_totalXS*x for x in scanContainer.x ]
 
             # FindMinimaAndErrors assumes deltaNLL (not 2*deltaNLL), so compute it before scaling
-            scanContainer.extrema = PhysicsCommands.FindMinimaAndErrors( scanContainer.x, scanContainer.y, returnContainer=True )
+            scanContainer.extrema = PhysicsCommands.find_minima_and_errors( scanContainer.x, scanContainer.y, returnContainer=True )
 
             print '[info] Multiplying by 2: deltaNLL --> chi^2'
             scanContainer.y = [ 2.*y for y in scanContainer.y ]
 
-            scanContainer.GetTGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
+            scanContainer.get_TGraph( xAttr = 'x', yAttr = 'y', xAreBinBoundaries = False )
             scanContainer.Tg.SetMarkerStyle(8)
             scanContainer.Tg.SetMarkerSize(0.8)
 
-            scanContainer.Tg.SetName(TheoryCommands.GetUniqueRootName())
+            scanContainer.Tg.SetName(TheoryCommands.get_unique_root_name())
 
             return scanContainer
 
@@ -1251,7 +1251,7 @@ def main( args ):
         # Make plot
 
         c.Clear()
-        SetCMargins( TopMargin = 0.09 )
+        set_cmargins( TopMargin = 0.09 )
 
         yMinAbs = min( scanContainer.y )
         yMaxAbs = max( scanContainer.y )
@@ -1265,7 +1265,7 @@ def main( args ):
         xMin = 0.8 * LatestBinning.YR4_totalXS
         xMax = 1.4 * LatestBinning.YR4_totalXS
 
-        base = GetPlotBase(
+        base = get_plot_base(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
@@ -1377,7 +1377,7 @@ def main( args ):
             )
         leg.SetBorderSize(0)
         leg.SetFillStyle(0)
-        leg.SetNColumns(4)
+        leg.set_n_columns(4)
 
         leg.AddEntry(scanContainer.Tg.GetName(), 'Stat.+syst.', 'l')
         leg.AddEntry(scanContainer_statonly.Tg.GetName(), 'Stat. only', 'l')
@@ -1386,14 +1386,14 @@ def main( args ):
 
         leg.Draw()
 
-        Commands.GetCMSLabel()
-        Commands.GetCMSLumi()
+        Commands.get_cms_label()
+        Commands.get_cms_lumi()
 
-        SaveC( 'totalXSscan' )
+        save_c( 'totalXSscan' )
 
 
     if args.chi2fitToCombination_Yukawa:
-        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
         # Workspace to get the parametrization from
         # ws = LatestPaths.ws_combined_split_betterYukawa
@@ -1425,32 +1425,32 @@ def main( args ):
         # rootFp = ROOT.TFile.Open(ws)
         # w = rootFp.Get('w')
 
-        # yieldParameterNames = Commands.ListSet( ws, 'yieldParameters' )
+        # yieldParameterNames = Commands.list_set( ws, 'yieldParameters' )
         # yieldParameters = [ w.function(yPName) for yPName in yieldParameterNames ]
         # kappacRealVar = w.var('kappac')
         # kappabRealVar = w.var('kappab')
 
-        # binBoundaries   = [ w.var(binBoundName).getVal() for binBoundName in Commands.ListSet( ws, 'expBinBoundaries' ) ]
+        # binBoundaries   = [ w.var(binBoundName).getVal() for binBoundName in Commands.list_set( ws, 'expBinBoundaries' ) ]
         # nBins = len(binBoundaries)-1
 
 
         # ======================================
         # Load parametrization from derived theory files
 
-        SM = TheoryFileInterface.FileFinder(
+        SM = TheoryFileInterface.file_finder(
             kappab=1, kappac=1, muR=1, muF=1, Q=1,
             expectOneFile=True,
             directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             loadImmediately=True
             )
-        derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+        derivedTheoryFileContainers = TheoryFileInterface.file_finder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
             directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             loadImmediately=True
             )
         parametrization = Parametrization()
-        parametrization.SetSM(SM)
-        parametrization.Parametrize( derivedTheoryFileContainers )
+        parametrization.set_sm(SM)
+        parametrization.parametrize( derivedTheoryFileContainers )
 
         theoryBinBoundaries = SM.binBoundaries
 
@@ -1458,12 +1458,12 @@ def main( args ):
         # ======================================
         # Get the combination result (center values + uncertainties)
 
-        combinationscans = PhysicsCommands.GetScanResults(
+        combinationscans = PhysicsCommands.get_scan_results(
             yieldParameterNames,
             scanDir,
             # pattern = 'combinedCard'
             )
-        TgCombination = PhysicsCommands.GetTGraphForSpectrum( yieldParameterNames, combinationscans, name='Combination' )
+        TgCombination = PhysicsCommands.get_TGraph_for_spectrum( yieldParameterNames, combinationscans, name='Combination' )
 
         # Get relevant bins and errors from scan
         bestfitCenters  = TgCombination.POICenters[:nBinsExp]
@@ -1507,7 +1507,7 @@ def main( args ):
         def chi2_function( inputTuple ):
             kappac, kappab = inputTuple
 
-            mus_parametrization = parametrization.EvaluateForBinning(
+            mus_parametrization = parametrization.evaluate_for_binning(
                 theoryBinBoundaries, expBinning,
                 kappab = kappab, kappac = kappac,
                 returnRatios=True
@@ -1568,8 +1568,8 @@ def main( args ):
 
 
         print ''
-        contours_1sigma = TheoryCommands.GetContoursFromTH2( H2, 2.30 )
-        contours_2sigma = TheoryCommands.GetContoursFromTH2( H2, 6.18 )
+        contours_1sigma = TheoryCommands.get_contours_from_TH2( H2, 2.30 )
+        contours_2sigma = TheoryCommands.get_contours_from_TH2( H2, 6.18 )
 
 
         # ======================================
@@ -1582,7 +1582,7 @@ def main( args ):
         H2.SetMaximum(7.0)
 
         c.Clear()
-        SetCMargins(
+        set_cmargins(
             LeftMargin   = 0.12,
             RightMargin  = 0.10,
             BottomMargin = 0.12,
@@ -1612,7 +1612,7 @@ def main( args ):
         bestfitpoint.Draw('PSAME')
         bestfitpoint.SetName('bestfitpoint')
 
-        SaveC( 'AfterTheFactChi2Fit', asROOT = True )
+        save_c( 'AfterTheFactChi2Fit', asROOT = True )
 
         # rootFp.Close()
 
@@ -1624,7 +1624,7 @@ def main( args ):
     if args.PlotParametrizationShapes:
         newColorCycle = lambda: itertools.cycle( range(2,5) + range(6,10) + range(40,50) + [ 30, 32, 33, 35, 38, 39 ] )
 
-        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
         # scanDir     = LatestPaths.scan_combined_PTH_xHfixed
         scanDir     = LatestPaths.scan_combined_PTH_xHfixed_asimov
@@ -1647,28 +1647,28 @@ def main( args ):
         # ======================================
         # Load parametrization from derived theory files
 
-        SM = TheoryFileInterface.FileFinder(
+        SM = TheoryFileInterface.file_finder(
             kappab=1, kappac=1, muR=1, muF=1, Q=1,
             expectOneFile=True,
             directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             loadImmediately=True
             )
-        derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+        derivedTheoryFileContainers = TheoryFileInterface.file_finder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
             directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
             loadImmediately=True
             )
         parametrization = Parametrization()
-        # parametrization.SetSM(SM)
+        # parametrization.set_sm(SM)
 
-        # parametrization.Parametrize( derivedTheoryFileContainers )
-        parametrization.ParametrizeByFitting( derivedTheoryFileContainers, fitWithScipy=True )
+        # parametrization.parametrize( derivedTheoryFileContainers )
+        parametrization.parametrize_by_fitting( derivedTheoryFileContainers, fitWithScipy=True )
 
         theoryBinBoundaries = SM.binBoundaries
         theoryBinWidths  = [ right - left for left, right in zip( theoryBinBoundaries[:-1], theoryBinBoundaries[1:] ) ]
         theoryBinCenters = [ 0.5*( left + right ) for left, right in zip( theoryBinBoundaries[:-1], theoryBinBoundaries[1:] ) ]
 
-        SM_integralFunction = TheoryCommands.GetIntegral(
+        SM_integralFunction = TheoryCommands.get_integral(
             SM.binBoundaries,
             SM.crosssection
             )
@@ -1725,7 +1725,7 @@ def main( args ):
 
             print '\nkappac = {0}, kappab = {1}'.format( kappac, kappab )
 
-            XSs_perGeV_parametrization = parametrization.EvaluateForBinning(
+            XSs_perGeV_parametrization = parametrization.evaluate_for_binning(
                 theoryBinBoundaries, expBinBoundaries,
                 kappab = kappab, kappac = kappac,
                 returnRatios=False,
@@ -1738,7 +1738,7 @@ def main( args ):
             for derivedTheoryFileContainer in derivedTheoryFileContainers:
                 if derivedTheoryFileContainer.kappab == kappab and derivedTheoryFileContainer.kappac == kappac:
 
-                    integral = TheoryCommands.GetIntegral(
+                    integral = TheoryCommands.get_integral(
                         derivedTheoryFileContainer.binBoundaries,
                         derivedTheoryFileContainer.crosssection
                         )
@@ -1761,7 +1761,7 @@ def main( args ):
 
 
             # Also calculate shape for theory binning
-            XSs_perGeV_parametrization_theoryBinning = parametrization.Evaluate(
+            XSs_perGeV_parametrization_theoryBinning = parametrization.evaluate(
                 kappab = kappab, kappac = kappac,
                 returnRatios=False,
                 # verbose = True
@@ -1789,7 +1789,7 @@ def main( args ):
         # Make plot
 
         c.Clear()
-        SetCMargins()
+        set_cmargins()
 
         xMin = expBinBoundaries[0]
         xMax = expBinBoundaries[-1]
@@ -1798,7 +1798,7 @@ def main( args ):
         yMax = 0.5
 
 
-        base = GetPlotBase(
+        base = get_plot_base(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
@@ -1816,10 +1816,10 @@ def main( args ):
             )
         leg.SetBorderSize(0)
         leg.SetFillStyle(0)
-        leg.SetNColumns(3)
+        leg.set_n_columns(3)
 
 
-        colorCycle = newColorCycle()
+        colorCycle = new_color_cycle()
         for container in plotContainers:
             color = colorCycle.next()
 
@@ -1836,11 +1836,11 @@ def main( args ):
             Tg_theory.SetMarkerSize(0.9)
             Tg_theory.Draw('SAMEP')
 
-            Tg_theory.SetName( TheoryCommands.GetUniqueRootName() )
+            Tg_theory.SetName( TheoryCommands.get_unique_root_name() )
 
 
             # H_exp = ROOT.TH1F(
-            #     TheoryCommands.GetUniqueRootName(), '',
+            #     TheoryCommands.get_unique_root_name(), '',
 
             #     )
 
@@ -1853,13 +1853,13 @@ def main( args ):
 
         leg.Draw()
 
-        SaveC( 'ParametrizationShapes' )
+        save_c( 'ParametrizationShapes' )
 
 
 
     #____________________________________________________________________
     if args.RepeatTheoristFit:
-        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
         # scanDir     = LatestPaths.scan_combined_PTH_xHfixed
         scanDir     = LatestPaths.scan_combined_PTH_xHfixed_asimov
@@ -1888,19 +1888,19 @@ def main( args ):
         # Load parametrization from derived theory files
 
         if VARYING_HBB_UNCERTAINTY and not PUT_CONSTRAINT_ON_LAST_BIN:
-            Commands.ThrowError( 'Don\'t put VARYING_HBB_UNCERTAINTY to True and PUT_CONSTRAINT_ON_LAST_BIN to False' )
+            Commands.throw_error( 'Don\'t put VARYING_HBB_UNCERTAINTY to True and PUT_CONSTRAINT_ON_LAST_BIN to False' )
 
         if DO_YUKAWA:
             # Set up exp binning used for the fit
             expBinning = [ 0., 15., 30., 45., 85., 125. ]
 
-            SM = TheoryFileInterface.FileFinder(
+            SM = TheoryFileInterface.file_finder(
                 kappab=1, kappac=1, muR=1, muF=1, Q=1,
                 expectOneFile=True,
                 directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
                 loadImmediately=True
                 )
-            derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+            derivedTheoryFileContainers = TheoryFileInterface.file_finder(
                 kappab='*', kappac='*', muR=1, muF=1, Q=1,
                 directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
                 loadImmediately=True
@@ -1915,13 +1915,13 @@ def main( args ):
 
             if DO_HIGH_PT:
 
-                SM = TheoryFileInterface.FileFinder(
+                SM = TheoryFileInterface.file_finder(
                     ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
                     expectOneFile=True,
                     directory = LatestPaths.derivedTheoryFiles_TopHighPt,
                     loadImmediately=True
                     )
-                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                derivedTheoryFileContainers = TheoryFileInterface.file_finder(
                     ct='*', cg='*', muR=1, muF=1, Q=1, cb=1,
                     directory = LatestPaths.derivedTheoryFiles_TopHighPt,
                     loadImmediately=True
@@ -1929,13 +1929,13 @@ def main( args ):
                 derivedTheoryFileContainers = [ d for d in derivedTheoryFileContainers if not (d.ct == 1. and d.cg == 0.) ]
 
             else:
-                SM = TheoryFileInterface.FileFinder(
+                SM = TheoryFileInterface.file_finder(
                     ct=1, cg=0, cb=1, muR=1, muF=1, Q=1,
                     expectOneFile=True,
                     directory = LatestPaths.derivedTheoryFiles_Top,
                     loadImmediately=True
                     )
-                derivedTheoryFileContainers = TheoryFileInterface.FileFinder(
+                derivedTheoryFileContainers = TheoryFileInterface.file_finder(
                     ct='*', cg='*', muR=1, muF=1, Q=1, filter='cb',
                     directory = LatestPaths.derivedTheoryFiles_Top,
                     loadImmediately=True
@@ -1954,15 +1954,15 @@ def main( args ):
 
 
         parametrization = Parametrization()
-        parametrization.SetSM(SM)
-        parametrization.Parametrize( derivedTheoryFileContainers,
+        parametrization.set_sm(SM)
+        parametrization.parametrize( derivedTheoryFileContainers,
             includeLinearTerms = False,
             couplingsToParametrize = [ 'ct', 'cg' ]
             )
 
         theoryBinBoundaries = SM.binBoundaries
 
-        SM_integralFunction = TheoryCommands.GetIntegral(
+        SM_integralFunction = TheoryCommands.get_integral(
             SM.binBoundaries,
             SM.crosssection
             )
@@ -2022,12 +2022,12 @@ def main( args ):
         # ======================================
         # Get the combination result (center values + uncertainties)
 
-        combinationscans = PhysicsCommands.GetScanResults(
+        combinationscans = PhysicsCommands.get_scan_results(
             yieldParameterNames,
             scanDir,
             # pattern = 'combinedCard'
             )
-        TgCombination = PhysicsCommands.GetTGraphForSpectrum( yieldParameterNames, combinationscans, name='Combination' )
+        TgCombination = PhysicsCommands.get_TGraph_for_spectrum( yieldParameterNames, combinationscans, name='Combination' )
 
         # Get relevant bins and errors from scan
         bestfitCenters  = TgCombination.POICenters[:nBinsExp]
@@ -2106,14 +2106,14 @@ def main( args ):
             kappac, kappab = inputTuple
 
             if DO_YUKAWA:
-                XSs_perGeV_parametrization = parametrization.EvaluateForBinning(
+                XSs_perGeV_parametrization = parametrization.evaluate_for_binning(
                     theoryBinBoundaries, expBinning,
                     kappab = kappab, kappac = kappac,
                     returnRatios=False,
                     verbose = True if VERBOSITY_IN_CHI2 else False
                     )
             elif DO_TOP:
-                XSs_perGeV_parametrization = parametrization.EvaluateForBinning(
+                XSs_perGeV_parametrization = parametrization.evaluate_for_binning(
                     theoryBinBoundaries, expBinning,
                     ct=kappac, cg=kappab,
                     returnRatios=False,
@@ -2121,7 +2121,7 @@ def main( args ):
                     )
 
                 if DO_HIGH_PT:
-                    XSs_perGeV_parametrization_600boundary = parametrization.EvaluateForBinning(
+                    XSs_perGeV_parametrization_600boundary = parametrization.evaluate_for_binning(
                         theoryBinBoundaries, expBinning[:-1] + [ 600., 10000. ],
                         ct=kappac, cg=kappab,
                         returnRatios=False,
@@ -2262,8 +2262,8 @@ def main( args ):
 
 
             print ''
-            contours_1sigma = TheoryCommands.GetContoursFromTH2( H2, 2.30 )
-            contours_2sigma = TheoryCommands.GetContoursFromTH2( H2, 6.18 )
+            contours_1sigma = TheoryCommands.get_contours_from_TH2( H2, 2.30 )
+            contours_2sigma = TheoryCommands.get_contours_from_TH2( H2, 6.18 )
 
 
             # ======================================
@@ -2275,7 +2275,7 @@ def main( args ):
             H2.SetMaximum(7.0)
 
             c.Clear()
-            SetCMargins(
+            set_cmargins(
                 LeftMargin   = 0.12,
                 RightMargin  = 0.10,
                 BottomMargin = 0.12,
@@ -2311,9 +2311,9 @@ def main( args ):
             if PUT_CONSTRAINT_ON_LAST_BIN:
                 suffix += '_lastBinConstrained'
             if VARYING_HBB_UNCERTAINTY:
-                suffix += '_hbbUnc_{0}'.format( Commands.ConvertFloatToStr(hbb_uncertainty) )
+                suffix += '_hbbUnc_{0}'.format( Commands.convert_float_to_str(hbb_uncertainty) )
 
-            SaveC(
+            save_c(
                 'TheoristChi2Fit' + suffix,
                 asROOT = True, asPNG=True
                 )
@@ -2321,7 +2321,7 @@ def main( args ):
 
     #____________________________________________________________________
     if args.Make2DPlotOfVariableInWS:
-        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
 
         # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
@@ -2409,7 +2409,7 @@ def main( args ):
 
 
         c.Clear()
-        SetCMargins(
+        set_cmargins(
             LeftMargin   = 0.12,
             RightMargin  = 0.10,
             BottomMargin = 0.12,
@@ -2418,7 +2418,7 @@ def main( args ):
 
         H2.Draw('COLZ')
 
-        SaveC( '2Dplot_{0}'.format(varToPlot) )
+        save_c( '2Dplot_{0}'.format(varToPlot) )
 
 
         rootFp.Close()
@@ -2428,7 +2428,7 @@ def main( args ):
 
     #____________________________________________________________________
     if args.PlotBRsInOnePlot:
-        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
         PLOT_SCALING = False
 
@@ -2531,7 +2531,7 @@ def main( args ):
             # Plotting
 
             c.Clear()
-            SetCMargins()
+            set_cmargins()
 
             yMin = -0.1
             yMax = 5.0 if PLOT_SCALING else 1.05
@@ -2540,7 +2540,7 @@ def main( args ):
                 yMin = 0.0001
                 c.SetLogy(True)
 
-            base = GetPlotBase(
+            base = get_plot_base(
                 xMin = kappab_min,
                 xMax = kappab_max,
                 yMin = yMin,
@@ -2609,7 +2609,7 @@ def main( args ):
 
             leg.Draw()
 
-            SaveC(
+            save_c(
                 ( 'BRscalings' if PLOT_SCALING else 'BRs' )
                 + ( '_logscale' if LOGSCALE else '' )
                 + '-' + xVar
@@ -2622,7 +2622,7 @@ def main( args ):
 
     #____________________________________________________________________
     if args.PlotOfTotalXSInYukawaWS:
-        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
         # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR_profiledTotalXS
         # ws = LatestPaths.ws_combined_split_betterYukawa_couplingDependentBR
@@ -2664,7 +2664,7 @@ def main( args ):
 
 
             c.Clear()
-            SetCMargins()
+            set_cmargins()
 
 
             # yMin = min(yAxis) - 0.1*(max(yAxis)-min(yAxis)),
@@ -2673,7 +2673,7 @@ def main( args ):
             yMin = 0.7
             yMax = 2.3
 
-            base = GetPlotBase(
+            base = get_plot_base(
                 xMin = minKappab,
                 xMax = maxKappab,
                 yMin = yMin,
@@ -2699,7 +2699,7 @@ def main( args ):
             lineAtOne.Draw('L')
 
 
-            SaveC( 'kappabDependency_{0}_byEvaluatingFunctionInWorkspace'.format(yVar) )
+            save_c( 'kappabDependency_{0}_byEvaluatingFunctionInWorkspace'.format(yVar) )
 
             rootFp.Close()
 
@@ -2720,36 +2720,36 @@ def main( args ):
 
     #____________________________________________________________________
     if args.PlotOfTotalXS_FromParametrization:
-        TheoryCommands.SetPlotDir( 'plots_{0}_Yukawa'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_{0}_Yukawa'.format(datestr) )
 
 
         # ======================================
         # Gather all the theory shapes
 
-        readList = lambda theoryFiles: [ TheoryFileInterface.ReadDerivedTheoryFile( theoryFile ) for theoryFile in theoryFiles ]
+        readList = lambda theoryFiles: [ TheoryFileInterface.read_derived_theory_file( theoryFile ) for theoryFile in theoryFiles ]
 
-        theoryFiles_kappab_kappac = TheoryFileInterface.FileFinder(
+        theoryFiles_kappab_kappac = TheoryFileInterface.file_finder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
             directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed
             )
         containers_kappab_kappac = readList( theoryFiles_kappab_kappac )
 
 
-        theoryFiles_kappab_kappac_Gluon = TheoryFileInterface.FileFinder(
+        theoryFiles_kappab_kappac_Gluon = TheoryFileInterface.file_finder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
             directory = LatestPaths.derivedTheoryFilesDirectory_YukawaGluonInduced
             )
         containers_kappab_kappac_Gluon = readList( theoryFiles_kappab_kappac_Gluon )
 
 
-        theoryFiles_kappab_kappac_Quark = TheoryFileInterface.FileFinder(
+        theoryFiles_kappab_kappac_Quark = TheoryFileInterface.file_finder(
             kappab='*', kappac='*', filter='muR',
             directory = LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInduced
             )
         containers_kappab_kappac_Quark = readList( theoryFiles_kappab_kappac_Quark )
 
 
-        theoryFiles_kappab_kappac_QuarkScaled = TheoryFileInterface.FileFinder(
+        theoryFiles_kappab_kappac_QuarkScaled = TheoryFileInterface.file_finder(
             kappab='*', kappac='*', muR=1, muF=1, Q=1,
             directory = LatestPaths.derivedTheoryFilesDirectory_YukawaQuarkInducedScaled
             )
@@ -2779,9 +2779,9 @@ def main( args ):
 
             parametrization = Parametrization()
             if parametrizeByFitting:
-                parametrization.ParametrizeByFitting( containers, fitWithScipy=True )
+                parametrization.parametrize_by_fitting( containers, fitWithScipy=True )
             else:
-                parametrization.Parametrize( containers )
+                parametrization.parametrize( containers )
             parametrization.kappac = 1.0
 
             minKappab = -5.
@@ -2792,7 +2792,7 @@ def main( args ):
 
             for kappabVal in [ 0., 1. ] + kappabAxis:
                 parametrization.kappab = kappabVal
-                parametrizationResult = parametrization.GetOutputContainer()
+                parametrizationResult = parametrization.get_output_container()
 
                 # Calculate integral
                 binWidths = [ 0.5*(parametrizationResult.binBoundaries[i]+parametrizationResult.binBoundaries[i+1]) for i in xrange(len(parametrizationResult.binBoundaries)-1) ]
@@ -2809,7 +2809,7 @@ def main( args ):
 
 
             c.Clear()
-            SetCMargins()
+            set_cmargins()
 
 
             # yMin = min(totalXSaxis) - 0.1*(max(totalXSaxis)-min(totalXSaxis)),
@@ -2818,7 +2818,7 @@ def main( args ):
             yMin = 0.7
             yMax = 2.3
 
-            base = GetPlotBase(
+            base = get_plot_base(
                 xMin = minKappab,
                 xMax = maxKappab,
                 yMin = yMin,
@@ -2843,7 +2843,7 @@ def main( args ):
             lineAtOne.Draw('L')
 
 
-            SaveC( 'kappabDependency_totalXS_fromHistograms_{0}'.format(key) )
+            save_c( 'kappabDependency_totalXS_fromHistograms_{0}'.format(key) )
 
 
             if True:
@@ -2859,8 +2859,8 @@ def main( args ):
     #____________________________________________________________________
     if args.CorrelationMatrixScaleDependence_Yukawa:
 
-        CorrelationMatrices.SetPlotDir( 'plots_CorrelationMatrixCrosscheck_{0}'.format(datestr) )
-        TheoryCommands.SetPlotDir( 'plots_CorrelationMatrixCrosscheck_{0}'.format(datestr) )
+        CorrelationMatrices.set_plot_dir( 'plots_CorrelationMatrixCrosscheck_{0}'.format(datestr) )
+        TheoryCommands.set_plot_dir( 'plots_CorrelationMatrixCrosscheck_{0}'.format(datestr) )
 
         expCorrMatrices = []
         theoryCorrMatrices = []
@@ -2873,17 +2873,17 @@ def main( args ):
         for kappab, kappac in itertools.product( kappabs, kappacs ):
             print 'Processing kappab = {0}, kappac = {1}'.format( kappab, kappac )
 
-            variationFiles = TheoryFileInterface.FileFinder(
+            variationFiles = TheoryFileInterface.file_finder(
                 directory = LatestPaths.derivedTheoryFiles_YukawaGluonInduced,
                 # directory = LatestPaths.derivedTheoryFilesDirectory_YukawaSummed,
                 kappab = kappab, kappac = kappac
                 )
 
             variations = [
-                TheoryFileInterface.ReadDerivedTheoryFile( variationFile, returnContainer=True )
+                TheoryFileInterface.read_derived_theory_file( variationFile, returnContainer=True )
                     for variationFile in variationFiles ]
 
-            theoryCorrMatrices.append( CorrelationMatrices.GetCorrelationMatrix(
+            theoryCorrMatrices.append( CorrelationMatrices.get_correlation_matrix(
                 variations,
                 makeScatterPlots          = False,
                 makeCorrelationMatrixPlot = True,
@@ -2893,9 +2893,9 @@ def main( args ):
 
             variations_expbinning = deepcopy(variations)
             for variation in variations_expbinning:
-                TheoryCommands.RebinDerivedTheoryContainer( variation, [ 0., 15., 30., 45., 85., 125. ] )
+                TheoryCommands.rebin_derived_theory_container( variation, [ 0., 15., 30., 45., 85., 125. ] )
 
-            expCorrMatrices.append( CorrelationMatrices.GetCorrelationMatrix(
+            expCorrMatrices.append( CorrelationMatrices.get_correlation_matrix(
                 variations_expbinning,
                 makeScatterPlots          = False,
                 makeCorrelationMatrixPlot = True,
@@ -2955,7 +2955,7 @@ def main( args ):
             # Make a plot
 
             c.Clear()
-            SetCMargins(
+            set_cmargins(
                 LeftMargin   = 0.18,
                 RightMargin  = 0.12,
                 TopMargin    = 0.06,
@@ -3081,7 +3081,7 @@ def main( args ):
                             formatter( maxCorrMatrix[iRow][iCol] )
                             )
 
-            SaveC( '_minmax_corrMat_{0}'.format(name), asPNG=True, asROOT=True )
+            save_c( '_minmax_corrMat_{0}'.format(name), asPNG=True, asROOT=True )
 
 
     #____________________________________________________________________
@@ -3116,7 +3116,7 @@ def main( args ):
                 else:
                     return '{0:.2f}'.format(number)
 
-            texText = [ '% ' + Commands.TagGitCommitAndModule() ]
+            texText = [ '% ' + Commands.tag_git_commit_and_module() ]
             texText.append( '% Used workspace: {0}'.format(ws) )
             for iParam in xrange(nTheoryBins):
                 with Commands.RedirectStdout() as redirected:
@@ -3159,7 +3159,7 @@ def main( args ):
                         )
                     )
 
-            if Commands.IsTestMode():
+            if Commands.is_test_mode():
                 print '\n'.join(texText)
             else:
 

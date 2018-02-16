@@ -72,10 +72,10 @@ obs_pth_ggH.YR4_totalXS = YR4_ggF_n3lo
 hzz_binMerging_pth   = [ 0, 1, [2,3], [4,5], [6,7] ]
 hzz_binMerging_ptjet = [ 0, 1, 2, [3,4,5] ]
 hzz_binMerging_njets = [ 0, 1, 2, [3,4] ]
-obs_pth_hzzBinning   = obs_pth.mergeBins(hzz_binMerging_pth)
-obs_pth_ggH_hzzBinning = obs_pth_ggH.mergeBins(hzz_binMerging_pth)
-obs_ptjet_hzzBinning = obs_ptjet.mergeBins(hzz_binMerging_ptjet)
-obs_njets_hzzBinning = obs_njets.mergeBins(hzz_binMerging_njets)
+obs_pth_hzzBinning   = obs_pth.merge_bins(hzz_binMerging_pth)
+obs_pth_ggH_hzzBinning = obs_pth_ggH.merge_bins(hzz_binMerging_pth)
+obs_ptjet_hzzBinning = obs_ptjet.merge_bins(hzz_binMerging_ptjet)
+obs_njets_hzzBinning = obs_njets.merge_bins(hzz_binMerging_njets)
 
 
 # For now, create fake shapes

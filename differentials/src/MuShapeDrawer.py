@@ -47,7 +47,7 @@ class MuShapeDrawer(object):
         elif isinstance( w, ROOT.RooWorkspace ):
             self.w = deepcopy(w)
         else:
-            Commands.ThrowError( 'Pass either a path to a root file or a RooWorkspace', throwException=True )
+            Commands.throw_error( 'Pass either a path to a root file or a RooWorkspace', throwException=True )
 
         self.w.loadSnapshot('MultiDimFit')
 
@@ -71,8 +71,8 @@ class MuShapeDrawer(object):
             self.allPdfsInWorkspace.append( allPdfsArgList[iPdf].GetName() )
         self.allPdfsInWorkspace.sort()
 
-        self.yieldParameterNames = [ y for y in Commands.ListSet( self.w, 'POI' ) if y.startswith('r_') ]
-        getLeftBound = lambda y: Commands.ConvertStrToFloat( re.search( r'_[GLET]*([\dpm]+)(_|$)', y ).group(1) )
+        self.yieldParameterNames = [ y for y in Commands.list_set( self.w, 'POI' ) if y.startswith('r_') ]
+        getLeftBound = lambda y: Commands.convert_str_to_float( re.search( r'_[GLET]*([\dpm]+)(_|$)', y ).group(1) )
         self.yieldParameterNames.sort( key = getLeftBound )
         self.yieldParameterDefaultValues = [ self.w.var(yP).getVal() for yP in self.yieldParameterNames ]
 
@@ -99,7 +99,7 @@ class MuShapeDrawer(object):
             # print '\nSet category to new value {0}:'.format(val)
             # self._category.Print()
         else:
-            Commands.ThrowError( 'MuShapeDrawer.category needs an integer or a string', throwException=True )
+            Commands.throw_error( 'MuShapeDrawer.category needs an integer or a string', throwException=True )
     category = property( get_category, set_category )
 
 
@@ -116,7 +116,7 @@ class MuShapeDrawer(object):
 
 
 
-    def GetBinStr(
+    def get_bin_str(
             self,
             hggBin = None,
             hzzBin = None,
@@ -129,7 +129,7 @@ class MuShapeDrawer(object):
         if hggBin != None and hggCat != None:
 
             if not hggCat in [ 0, 1, 2 ]:
-                Commands.ThrowError( 'hggCat should be 0, 1 or 2', throwException=True )
+                Commands.throw_error( 'hggCat should be 0, 1 or 2', throwException=True )
 
             hggBinStr = {
                 0 : 'ch1_recoPt_0p0_15p0_SigmaMpTTag_{0}_13TeV'.format(hggCat),
@@ -176,13 +176,13 @@ class MuShapeDrawer(object):
             else:
                 print 'Attempt \'{0}\' is not a valid pdf'.format(hggBinStr)
 
-            Commands.ThrowError( 'No pdf available for hggBin={0}, hggCat={1}\nList of all PDFs in workspace:\n  {2}'.format( hggBin, hggCat, '\n  '.join(self.allPdfsInWorkspace) ), throwException=True )
+            Commands.throw_error( 'No pdf available for hggBin={0}, hggCat={1}\nList of all PDFs in workspace:\n  {2}'.format( hggBin, hggCat, '\n  '.join(self.allPdfsInWorkspace) ), throwException=True )
 
 
         elif hzzBin != None and hzzCat != None:
 
             if not hzzCat in [ '4mu', '4e', '2e2mu' ]:
-                Commands.ThrowError( 'hzzCat should be 4mu, 4e or 2e2mu', throwException=True )
+                Commands.throw_error( 'hzzCat should be 4mu, 4e or 2e2mu', throwException=True )
 
             hzzBinStr = {
                 0 : 'ch2_hzz_PTH_0_15_cat{0}'.format(hzzCat),
@@ -197,13 +197,13 @@ class MuShapeDrawer(object):
             else:
                 print 'Attempt \'{0}\' is not a valid pdf'.format(hzzBinStr)
 
-            Commands.ThrowError( 'No pdf available for hzzBin={0}, hzzCat={1}\nList of all PDFs in workspace:\n  {2}'.format( hzzBin, hzzCat, '\n  '.join(self.allPdfsInWorkspace) ), throwException=True )
+            Commands.throw_error( 'No pdf available for hzzBin={0}, hzzCat={1}\nList of all PDFs in workspace:\n  {2}'.format( hzzBin, hzzCat, '\n  '.join(self.allPdfsInWorkspace) ), throwException=True )
             
         else:
-            Commands.ThrowError( 'Not implemented', throwException=True )
+            Commands.throw_error( 'Not implemented', throwException=True )
 
 
-    def GetYieldParameter(
+    def get_yield_parameter(
             self,
             iBin,
             ):
@@ -223,17 +223,17 @@ class MuShapeDrawer(object):
         return self.w.var( self.yieldParameterNames[iBin] )
 
 
-    def DrawShapes( self, **kwargs ):
+    def draw_shapes( self, **kwargs ):
 
         if 'drawBestfit' in kwargs:
             self.drawBestfit = kwargs['drawBestfit']
             del kwargs['drawBestfit']
 
-        res = self.GetShapes( **kwargs )
-        self.DrawShapeResult(res)
+        res = self.get_shapes( **kwargs )
+        self.draw_shape_result(res)
 
 
-    def GetShapes(
+    def get_shapes(
             self,
             hggBin   = None,
             hggCat   = None,
@@ -249,20 +249,20 @@ class MuShapeDrawer(object):
             self.do_hgg = False
             self.do_hzz = True
         else:
-            Commands.ThrowError( 'Can\'t decide between hgg and hzz:\n    hggBin={0}, hggCat={1}, hzzBin={2}, hzzCat={3}'.format( hggBin, hggCat, hzzBin, hzzCat ), throwException=True )
+            Commands.throw_error( 'Can\'t decide between hgg and hzz:\n    hggBin={0}, hggCat={1}, hzzBin={2}, hzzCat={3}'.format( hggBin, hggCat, hzzBin, hzzCat ), throwException=True )
 
         res = Container()
 
         if self.do_hgg:
             mH = self.mH_hgg
             default_mH_range = self.default_mH_hgg_range
-            binStr = self.GetBinStr( hggBin=hggBin, hggCat=hggCat )
+            binStr = self.get_bin_str( hggBin=hggBin, hggCat=hggCat )
             iBin = hggBin
             iCat = hggCat
         elif self.do_hzz:
             mH = self.mH_hzz
             default_mH_range = self.default_mH_hzz_range
-            binStr = self.GetBinStr( hzzBin=hzzBin, hzzCat=hzzCat )
+            binStr = self.get_bin_str( hzzBin=hzzBin, hzzCat=hzzCat )
             iBin = hzzBin
             iCat = hzzCat
 
@@ -278,7 +278,7 @@ class MuShapeDrawer(object):
         Hbkg.Scale( self.binWidth ) # default is /GeV
 
         Hsigs = []
-        yieldParameter = self.GetYieldParameter(iBin)
+        yieldParameter = self.get_yield_parameter(iBin)
         for r in muValues:
             if self.drawBestfit:
                 yieldParameter.setVal( r * self.yieldParameterDefaultValues[ self.yieldParameterNames.index(yieldParameter.GetName()) ] )
@@ -293,7 +293,7 @@ class MuShapeDrawer(object):
 
         dataset = self.w.data('data_obs')
         ROOT.SetOwnership( dataset, False )
-        Hdata = GetHistFromRooDataSet( dataset, mH, self._category )
+        Hdata = get_hist_from_RooDataSet( dataset, mH, self._category )
 
 
         res.do_hgg              = self.do_hgg
@@ -318,7 +318,7 @@ class MuShapeDrawer(object):
 
 
 
-    # def GetShapes_hzz(
+    # def get_shapes_hzz(
     #         self,
     #         hzzBin   = None,
     #         hzzCat   = None,
@@ -328,7 +328,7 @@ class MuShapeDrawer(object):
     #     res = Container()
 
 
-    #     binStr = self.GetBinStr( hzzBin=hzzBin, hzzCat=hzzCat )
+    #     binStr = self.get_bin_str( hzzBin=hzzBin, hzzCat=hzzCat )
 
     #     # Set the proper category
     #     self.category = binStr
@@ -342,7 +342,7 @@ class MuShapeDrawer(object):
     #     Hbkg.Scale( self.binWidth ) # default is /GeV
 
     #     Hsigs = []
-    #     yieldParameter = self.GetYieldParameter(hzzBin)
+    #     yieldParameter = self.get_yield_parameter(hzzBin)
     #     for r in muValues:
     #         yieldParameter.setVal(r)
     #         sigPdf = self.w.pdf( 'pdf_bin{0}'.format(binStr) )
@@ -355,7 +355,7 @@ class MuShapeDrawer(object):
 
     #     ROOT.SetOwnership( dataset, False )
 
-    #     Hdata = GetHistFromRooDataSet( dataset, self.mH_hzz, self._category )
+    #     Hdata = get_hist_from_RooDataSet( dataset, self.mH_hzz, self._category )
 
     #     res.hzzBin              = hzzBin
     #     res.hzzCat              = hzzCat
@@ -373,19 +373,19 @@ class MuShapeDrawer(object):
 
 
 
-    def DrawShapeResult( self, res ):
+    def draw_shape_result( self, res ):
 
         c.Clear()
-        SetCMargins( RightMargin=0.05 )
+        set_cmargins( RightMargin=0.05 )
 
         xMin = 120.
         xMax = 130.
 
-        # yMinAbs = min( GetTH1FMinimumInRange( Hbkg, xMin, xMax ), GetTH1FMinimumInRange( Hsig, xMin, xMax ) )
+        # yMinAbs = min( get_TH1_minimum_in_range( Hbkg, xMin, xMax ), get_TH1_minimum_in_range( Hsig, xMin, xMax ) )
         yMinAbs = 0.
         # yMaxAbs = max(
-        #     GetTH1FMaximumInRange( res.Hbkg, xMin, xMax ),
-        #     max([ GetTH1FMaximumInRange( Hsig, xMin, xMax ) for Hsig in res.Hsigs ])
+        #     get_TH1_maximum_in_range( res.Hbkg, xMin, xMax ),
+        #     max([ get_TH1_maximum_in_range( Hsig, xMin, xMax ) for Hsig in res.Hsigs ])
         #     )
 
         if res.do_hgg:
@@ -394,14 +394,14 @@ class MuShapeDrawer(object):
             yMax = yMaxAbs + 0.6*(yMaxAbs-yMinAbs)
 
         elif res.do_hzz:
-            yMaxAbs = GetTGraphMaximumInRange( res.Hdata, xMin, xMax )
+            yMaxAbs = get_TGraph_maximum_in_range( res.Hdata, xMin, xMax )
             yMax = yMaxAbs + 1
             if yMax < 3.: yMax = 3.
 
         yMin = yMinAbs # - 0.6*(yMaxAbs-yMinAbs)
 
 
-        base = GetPlotBase(
+        base = get_plot_base(
             xMin = xMin,
             xMax = xMax,
             yMin = yMin,
@@ -449,12 +449,12 @@ class MuShapeDrawer(object):
             )
 
 
-        SaveC( res.binStr )
+        save_c( res.binStr )
 
 
 
 
-def GetHistFromRooDataSet( dataset, xVar, category ):
+def get_hist_from_RooDataSet( dataset, xVar, category ):
 
     ctemp = ROOT.TCanvas( 'ctemp', 'ctemp', 1000, 800 )
     ctemp.cd()
@@ -474,12 +474,12 @@ def GetHistFromRooDataSet( dataset, xVar, category ):
             H = l.At(i)
             break
     else:
-        Commands.ThrowError( 'ERROR: did not find a histogram', throwException=True )
+        Commands.throw_error( 'ERROR: did not find a histogram', throwException=True )
 
     Hcopy = ROOT.RooHist( H )
     ROOT.SetOwnership( Hcopy, False )
 
-    Hcopy.SetName( TheoryCommands.GetUniqueRootName() )
+    Hcopy.SetName( TheoryCommands.get_unique_root_name() )
 
     # ctemp.SaveAs( 'plots_{0}_onetimeplots/roodatasetplottest.pdf'.format(datestr) )
     del ctemp
@@ -491,7 +491,7 @@ def GetHistFromRooDataSet( dataset, xVar, category ):
 
 
 
-def GetTH1FExtremumInRange( H, xMin, xMax, findMinimum ):
+def get_TH1_extremum_in_range( H, xMin, xMax, findMinimum ):
     
     if findMinimum:
         res = 10e12
@@ -514,13 +514,13 @@ def GetTH1FExtremumInRange( H, xMin, xMax, findMinimum ):
                 iMinimum = iBin
     return res
 
-def GetTH1FMinimumInRange( H, xMin, xMax ):
-    return GetTH1FExtremumInRange( H, xMin, xMax, True )
-def GetTH1FMaximumInRange( H, xMin, xMax ):
-    return GetTH1FExtremumInRange( H, xMin, xMax, False )
+def get_TH1_minimum_in_range( H, xMin, xMax ):
+    return get_TH1_extremum_in_range( H, xMin, xMax, True )
+def get_TH1_maximum_in_range( H, xMin, xMax ):
+    return get_TH1_extremum_in_range( H, xMin, xMax, False )
 
 
-def GetTGraphExtremumInRange( Tg, xMin, xMax, findMinimum ):
+def get_TGraph_extremum_in_range( Tg, xMin, xMax, findMinimum ):
 
     if findMinimum:
         res = 10e12
@@ -548,10 +548,10 @@ def GetTGraphExtremumInRange( Tg, xMin, xMax, findMinimum ):
 
     return res
 
-def GetTGraphMinimumInRange( Tg, xMin, xMax ):
-    return GetTGraphExtremumInRange( Tg, xMin, xMax, True )
-def GetTGraphMaximumInRange( Tg, xMin, xMax ):
-    return GetTGraphExtremumInRange( Tg, xMin, xMax, False )
+def get_TGraph_minimum_in_range( Tg, xMin, xMax ):
+    return get_TGraph_extremum_in_range( Tg, xMin, xMax, True )
+def get_TGraph_maximum_in_range( Tg, xMin, xMax ):
+    return get_TGraph_extremum_in_range( Tg, xMin, xMax, False )
 
 
 

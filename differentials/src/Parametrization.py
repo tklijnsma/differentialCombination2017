@@ -26,7 +26,7 @@ class WSParametrization():
         self.newStyle = newStyle
 
         if not returnWhat in [ 'both', 'theory', 'exp' ]:
-            Commands.ThrowError( 'Argument \'returnWhat\' should be \'both\', \'theory\' or \'exp\'' )
+            Commands.throw_error( 'Argument \'returnWhat\' should be \'both\', \'theory\' or \'exp\'' )
             sys.exit()
         self.returnWhat = returnWhat
 
@@ -41,10 +41,10 @@ class WSParametrization():
             self.returnExp    = True
 
         if wsFile != None:
-            self.Parametrize( wsFile, verbose = self.verbose )
+            self.parametrize( wsFile, verbose = self.verbose )
 
 
-    def Parametrize( self, wsFile, verbose=False ):
+    def parametrize( self, wsFile, verbose=False ):
 
         self.file = wsFile
 
@@ -91,14 +91,14 @@ class WSParametrization():
             print '   yieldParameters :     len {0:<3}, '.format(len(self.yieldParameters)), [ i.GetName() for i in self.yieldParameters ]
             print '   parametrizations :    len {0:<3}, '.format(len(self.parametrizations)), [ i.GetName() for i in self.parametrizations ]
 
-            theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS( self.file )
-            expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
+            theoryBinBoundaries = Commands.read_theory_bin_boundaries_from_ws( self.file )
+            expBinBoundaries    = Commands.read_exp_bin_boundaries_from_ws( self.file )
             print '   theoryBinBoundaries : len {0:<3}, '.format(len(theoryBinBoundaries)), theoryBinBoundaries
             print '   expBinBoundaries :    len {0:<3}, '.format(len(expBinBoundaries)), expBinBoundaries
             print
 
 
-    def Evaluate( self, **kwargs ):
+    def evaluate( self, **kwargs ):
 
         if 'returnWhat' in kwargs:
             self.returnWhat = kwargs['returnWhat']
@@ -132,13 +132,13 @@ class WSParametrization():
                 ]
 
 
-    def GetOutputContainer( self, **kwargs ):
+    def get_output_container( self, **kwargs ):
 
-        self.theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS( self.file )
-        self.expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
+        self.theoryBinBoundaries = Commands.read_theory_bin_boundaries_from_ws( self.file )
+        self.expBinBoundaries    = Commands.read_exp_bin_boundaries_from_ws( self.file )
 
 
-        mus = self.Evaluate( **kwargs )
+        mus = self.evaluate( **kwargs )
         if self.returnWhat == 'theory': mus = mus[1:]
 
         container = OutputContainer()
@@ -161,7 +161,7 @@ class WSParametrization():
         for coupling in self.couplings:
             container.name += '_{0}_{1:.2f}'.format( coupling.GetName(), coupling.getVal() )
 
-        container.GetTGraph()
+        container.get_TGraph()
 
         return container
 
@@ -180,14 +180,14 @@ class Parametrization():
 
         self.hasSM = False
         if SM:
-            self.SetSM(SM)
+            self.set_sm(SM)
 
-    def SetSM( self, SM ):
+    def set_sm( self, SM ):
         self.SM = SM
         self.hasSM = True
 
 
-    def Parametrize(
+    def parametrize(
             self,
             containers,
             couplingsToParametrize = [ 'kappab', 'kappac' ],
@@ -208,7 +208,7 @@ class Parametrization():
         self.nComponents = nComponents
 
         if len(containers) < nComponents:
-            Commands.ThrowError( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
+            Commands.throw_error( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
             sys.exit()
         elif len(containers) > nComponents:
             print '[info] Need only {0} containers; limiting number of containers'.format( nComponents )
@@ -243,12 +243,12 @@ class Parametrization():
         # ======================================
         # Create parametrization per bin
 
-        # def make_evaluateParametrization( components ):
+        # def make_evaluate_parametrization( components ):
         #     if not len(self.couplingCombinations) == len(components):
-        #         Commands.ThrowError('Number of coupling combinations ({0}) does not agree with number of components ({1})'.format( len(couplingCombinations), len(components) ) )
+        #         Commands.throw_error('Number of coupling combinations ({0}) does not agree with number of components ({1})'.format( len(couplingCombinations), len(components) ) )
         #         sys.exit()
 
-        #     def evaluateParametrization():
+        #     def evaluate_parametrization():
         #         res = 0.
         #         for couplingCombination, component in zip( self.couplingCombinations, components ):
         #             product = 1.0
@@ -283,12 +283,12 @@ class Parametrization():
         # If a SM was set, calculate the SM cross section based on this parametrization
 
         if self.hasSM:
-            self.SMXS_fromParametrization = deepcopy( self.Evaluate(**{
+            self.SMXS_fromParametrization = deepcopy( self.evaluate(**{
                 'kappab' : 1, 'kappac' : 1, 'ct' : 1, 'cg' : 0, 'kappab' : 1,
                 }) )
 
 
-    def Evaluate( self, **kwargs ):
+    def evaluate( self, **kwargs ):
 
         self.verbose = kwargs.get( 'verbose', False )
         for key, value in kwargs.iteritems():
@@ -345,16 +345,16 @@ class Parametrization():
                 return xs
 
 
-    def EvaluateForBinning( self, theory_binning, exp_binning, returnRatios=True, lastBinIsOverflow=False, **kwargs ):
-        theory_xs = self.Evaluate(**kwargs)
+    def evaluate_for_binning( self, theory_binning, exp_binning, returnRatios=True, lastBinIsOverflow=False, **kwargs ):
+        theory_xs = self.evaluate(**kwargs)
 
         if len(theory_binning)-1 > len(theory_xs):
-            if self.THROW_EVALUATION_WARNINGS: Commands.Warning( 'Supplied binning has {0} bins, whereas the parametrization only yields {1} values; assuming the last few bins can be thrown away'.format( len(theory_binning), len(theory_xs) ) )
+            if self.THROW_EVALUATION_WARNINGS: Commands.warning( 'Supplied binning has {0} bins, whereas the parametrization only yields {1} values; assuming the last few bins can be thrown away'.format( len(theory_binning), len(theory_xs) ) )
             theory_binning = theory_binning[:len(theory_xs)+1]
         elif len(theory_binning)-1 < len(theory_xs):
-            Commands.ThrowError( 'Supplied binning has {0} bins, whereas the parametrization yields {1} values; This cannot be integrated over'.format( len(theory_binning), len(theory_xs) ) )
+            Commands.throw_error( 'Supplied binning has {0} bins, whereas the parametrization yields {1} values; This cannot be integrated over'.format( len(theory_binning), len(theory_xs) ) )
 
-        integral = TheoryCommands.GetIntegral( theory_binning, theory_xs )
+        integral = TheoryCommands.get_integral( theory_binning, theory_xs )
 
         exp_xs = []
         for left, right in zip( exp_binning[:-1], exp_binning[1:] ):
@@ -365,8 +365,8 @@ class Parametrization():
 
         if returnRatios:
             if not self.hasSM:
-                Commands.ThrowError( 'Use \'SetSM(container)\' method before calling \'Parametrize()\'', throwException=True )
-            exp_xs_SM_integral = TheoryCommands.GetIntegral( self.SM.binBoundaries, self.SM.crosssection )
+                Commands.throw_error( 'Use \'set_sm(container)\' method before calling \'parametrize()\'', throwException=True )
+            exp_xs_SM_integral = TheoryCommands.get_integral( self.SM.binBoundaries, self.SM.crosssection )
             exp_xs_SM = []
             for left, right in zip( exp_binning[:-1], exp_binning[1:] ):
                 exp_xs_SM.append( exp_xs_SM_integral( left, right ) / ( right - left ) )
@@ -381,28 +381,28 @@ class Parametrization():
             return exp_xs
 
 
-    def ParametrizeByFitting( self, *args, **kwargs ):
+    def parametrize_by_fitting( self, *args, **kwargs ):
         self.fitWithScipy = False
         if 'fitWithScipy' in kwargs:
             self.fitWithScipy = kwargs['fitWithScipy']
             del kwargs['fitWithScipy']
 
         if self.fitWithScipy:
-            self.ParametrizeByFitting_Scipy( *args, **kwargs )
+            self.parametrize_by_fitting_scipy( *args, **kwargs )
         else:
-            self.ParametrizeByFitting_RooFit( *args, **kwargs )
+            self.parametrize_by_fitting_roo_fit( *args, **kwargs )
 
         # ======================================
         # If a SM was set, calculate the SM cross section based on this parametrization
 
         if self.hasSM:
-            self.SMXS_fromParametrization = deepcopy( self.Evaluate(**{
+            self.SMXS_fromParametrization = deepcopy( self.evaluate(**{
                 'kappab' : 1, 'kappac' : 1, 'ct' : 1, 'cg' : 0, 'kappab' : 1,
                 }) )
 
 
 
-    def ParametrizeByFitting_Scipy(
+    def parametrize_by_fitting_scipy(
             self,
             containers,
             couplingsToParametrize = [ 'kappab', 'kappac' ],
@@ -428,7 +428,7 @@ class Parametrization():
         self.nComponents = nComponents
 
         if len(containers) < nComponents:
-            Commands.ThrowError( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
+            Commands.throw_error( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
             sys.exit()
 
         nBins = len(containers[0].binBoundaries) - 1
@@ -446,7 +446,7 @@ class Parametrization():
         couplingNameToIndex = { coupling : iCoupling for iCoupling, coupling in enumerate(self.couplings) }
         couplingIndexToName = { iCoupling : coupling for iCoupling, coupling in enumerate(self.couplings) }
 
-        def parabolicParametrization( C, *coefficients ):
+        def parabolic_parametrization( C, *coefficients ):
             paramValue = 0.
             for couplingList, coefficient in zip( self.couplingCombinations, coefficients ):
                 component = coefficient
@@ -501,7 +501,7 @@ class Parametrization():
                 couplings = tuple([ couplingTuple[iCoupling][i] for iCoupling in xrange(len(self.couplings)) ])
                 xs        = xsTuple[i]
 
-                xsParametrization = parabolicParametrization( couplings, *fittedCoefficients )
+                xsParametrization = parabolic_parametrization( couplings, *fittedCoefficients )
 
                 line = []
                 for iCoupling, couplingValue in enumerate(couplings):
@@ -522,7 +522,7 @@ class Parametrization():
 
 
 
-    def ParametrizeByFitting_RooFit(
+    def parametrize_by_fitting_roo_fit(
             self,
             containers,
             couplingsToParametrize = [ 'kappab', 'kappac' ],
@@ -543,7 +543,7 @@ class Parametrization():
         self.nComponents = nComponents
 
         if len(containers) < nComponents:
-            Commands.ThrowError( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
+            Commands.throw_error( 'Need at least as much input ({0}) as desired components ({1})'.format( len(containers), nComponents ) )
             sys.exit()
 
         nBins = len(containers[0].binBoundaries) - 1
@@ -750,12 +750,12 @@ class Parametrization():
 
 
 
-    def GetOutputContainer( self, **kwargs ):
+    def get_output_container( self, **kwargs ):
 
-        # self.theoryBinBoundaries = Commands.ReadTheoryBinBoundariesFromWS( self.file )
-        # self.expBinBoundaries    = Commands.ReadExpBinBoundariesFromWS( self.file )
+        # self.theoryBinBoundaries = Commands.read_theory_bin_boundaries_from_ws( self.file )
+        # self.expBinBoundaries    = Commands.read_exp_bin_boundaries_from_ws( self.file )
 
-        crosssection = self.Evaluate( **kwargs )
+        crosssection = self.evaluate( **kwargs )
 
 
         container = OutputContainer()
@@ -779,6 +779,6 @@ class Parametrization():
             setattr( container, coupling, getattr( self, coupling ) )
             container.name += '_{0}_{1:.2f}'.format( coupling, getattr( self, coupling ) )
 
-        container.GetTGraph()
+        container.get_TGraph()
 
         return container

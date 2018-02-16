@@ -35,7 +35,7 @@ LeftMargin   = 0.15
 RightMargin  = 0.03
 BottomMargin = 0.15
 TopMargin    = 0.03
-def SetCMargins(
+def set_cmargins(
     LeftMargin   = 0.15,
     RightMargin  = 0.03,
     BottomMargin = 0.15,
@@ -55,24 +55,24 @@ def SetCMargins(
 
 
 PLOTDIR = 'plots_{0}'.format(datestr)
-def SetPlotDir( newdir ):
+def set_plot_dir( newdir ):
     global PLOTDIR
     PLOTDIR = newdir
 
 SAVEROOT = False
-def SaveAsRoot( newvalue=True ):
+def save_as_root( newvalue=True ):
     global SAVEROOT
     SAVEROOT = newvalue
 SAVEPNG = False
-def SaveAsPng( newvalue=True ):
+def save_as_png( newvalue=True ):
     global SAVEPNG
     SAVEPNG = newvalue
 SAVEPNG_THROUGH_CONVERT = False
-def SaveAsPngThroughConvert( newvalue=True ):
+def save_as_png_through_convert( newvalue=True ):
     global SAVEPNG_THROUGH_CONVERT
     SAVEPNG_THROUGH_CONVERT = newvalue
 
-def SaveC( outname, asPNG=False, asROOT=False ):
+def save_c( outname, asPNG=False, asROOT=False ):
     global PLOTDIR
     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
 
@@ -91,18 +91,18 @@ def SaveC( outname, asPNG=False, asROOT=False ):
     if SAVEPNG_THROUGH_CONVERT:
         # See: https://stackoverflow.com/a/6605085/9209944
         cmd = 'convert -density 300 -quality 100 {0}.pdf {0}.png'.format(outname)
-        Commands.executeCommand(cmd)
+        Commands.execute_command(cmd)
 
 
 ROOTCOUNTER = 1000
-def GetUniqueRootName():
+def get_unique_root_name():
     global ROOTCOUNTER
     name = 'root{0}_{1}'.format( ROOTCOUNTER, Commands.__uniqueid__().next() )
     ROOTCOUNTER += 1
     return name
 
 
-def GetPlotBase(
+def get_plot_base(
     xMin = 0, xMax = 1,
     yMin = 0, yMax = 1,
     xTitle = 'x', yTitle = 'y',
@@ -111,7 +111,7 @@ def GetPlotBase(
 
     base = ROOT.TH1F()
     ROOT.SetOwnership( base, False )
-    base.SetName( GetUniqueRootName() )
+    base.SetName( get_unique_root_name() )
     base.GetXaxis().SetLimits( xMin, xMax )
     base.SetMinimum( yMin )
     base.SetMaximum( yMax )
@@ -131,11 +131,11 @@ def GetPlotBase(
 ########################################
 
 #____________________________________________________________________
-def RebinDerivedTheoryContainer( container, newBinBoundaries, lastBinIsOverflow=True, verbose=False ):
+def rebin_derived_theory_container( container, newBinBoundaries, lastBinIsOverflow=True, verbose=False ):
 
     newNBins = len(newBinBoundaries) - 1
 
-    newCrosssection = Rebin(
+    newCrosssection = rebin(
         theoryBinBoundaries = container.binBoundaries,
         theoryBinValues     = container.crosssection,
         expBinBoundaries    = newBinBoundaries,
@@ -143,7 +143,7 @@ def RebinDerivedTheoryContainer( container, newBinBoundaries, lastBinIsOverflow=
         verbose             = verbose,
         )
 
-    newRatios = Rebin(
+    newRatios = rebin(
         theoryBinBoundaries = container.binBoundaries,
         theoryBinValues     = container.ratios,
         expBinBoundaries    = newBinBoundaries,
@@ -160,7 +160,7 @@ def RebinDerivedTheoryContainer( container, newBinBoundaries, lastBinIsOverflow=
 
 #____________________________________________________________________
 # Theory files contain a somewhat non-consistent binning, turn it into a well-defined binning
-def BinningHeuristic(
+def binning_heuristic(
     binCenters,
     manualSwitchAt50 = True,
     manualSwitchAt5  = False,
@@ -202,7 +202,7 @@ def BinningHeuristic(
 
 
 #____________________________________________________________________
-def GetTheoryTGraph(
+def get_theory_TGraph(
     name,
     ptPoints,
     muPoints,
@@ -211,13 +211,13 @@ def GetTheoryTGraph(
     boundaries    = False,
     ):
     
-    print 'WARNING: Better to use OutputInterface.OutputContainer.GetTGraph()'
+    print 'WARNING: Better to use OutputInterface.OutputContainer.get_TGraph()'
 
     if not boundaries:
         # Default setting; supplied pt points are bin centers
 
         if not len(ptPoints) == len(muPoints):
-            Commands.ThrowError(
+            Commands.throw_error(
                 'Length of input lists are not set right\n'
                 '    len(ptPoints) = {0} is not equal to len(muPoints) = {1}'.format(
                     len(ptPoints), len(muPoints) )
@@ -229,14 +229,14 @@ def GetTheoryTGraph(
 
         nBins = len(ptPoints)
 
-        binCenters, binBoundaries, binWidths = BinningHeuristic( ptPoints )
+        binCenters, binBoundaries, binWidths = binning_heuristic( ptPoints )
         halfBinWidths = [ 0.5*w for w in binWidths ]
 
     else:
         # Supplied pt points are bin boundaries
 
         if not len(ptPoints)-1 == len(muPoints):
-            Commands.ThrowError(
+            Commands.throw_error(
                 'Length of input lists are not set right\n'
                 '    len(ptPoints)-1 = {0} is not equal to len(muPoints) = {1}'.format(
                     len(ptPoints)-1, len(muPoints) )
@@ -331,13 +331,13 @@ def GetTheoryTGraph(
 
 #____________________________________________________________________
 # Generic function the returns a function integral( a, b, verbose=False ), which is evaluated for binBoundaries and binValues
-def GetIntegral( binBoundaries, binValues ):
+def get_integral( binBoundaries, binValues ):
 
     if len(binBoundaries)-1 != len(binValues):
         # more_or_less = 'more' if len(binValues) > len(binBoundaries)-1 else 'less'
-        # Commands.Warning( 'Found {0} binValues[{1}] than bins[{2}]; will limit to {3} bins' )
+        # Commands.warning( 'Found {0} binValues[{1}] than bins[{2}]; will limit to {3} bins' )
         # Actually, just throw an error; the chance that this is intended is really slim
-        Commands.ThrowError( 'Found len(binBoundaries) = {0}, but len(binValues) = {1}'.format( len(binBoundaries), len(binValues) ) )
+        Commands.throw_error( 'Found len(binBoundaries) = {0}, but len(binValues) = {1}'.format( len(binBoundaries), len(binValues) ) )
 
     nBins = len(binValues)
     binCenters = [ 0.5*( binBoundaries[i+1] + binBoundaries[i] ) for i in xrange(nBins-1) ]
@@ -394,10 +394,10 @@ def GetIntegral( binBoundaries, binValues ):
                 bInterpolated = True
 
         if not aInterpolated:
-            Commands.ThrowError( 'Problem determining integration range for left bound' )
+            Commands.throw_error( 'Problem determining integration range for left bound' )
 
         if not bInterpolated:
-            Commands.ThrowError( 'Problem determining integration range for right bound' )
+            Commands.throw_error( 'Problem determining integration range for right bound' )
 
         binBoundaries_integration = [ a  ] + binBoundaries[ia+1:ib+1] + [ b  ]
         
@@ -441,20 +441,20 @@ def GetIntegral( binBoundaries, binValues ):
 
 #____________________________________________________________________
 # Rebin from any binning scheme to another using the integral function
-def Rebin(
+def rebin(
         theoryBinBoundaries,
         theoryBinValues,
         expBinBoundaries,
         lastBinIsOverflow = False,
         verbose = False,
         ):
-    # Commands.Warning( 'Calling TheoryCommands.Rebin(); This code needs to be checked!!' )
+    # Commands.warning( 'Calling TheoryCommands.rebin(); This code needs to be checked!!' )
 
     nBinsExp = len(expBinBoundaries)-1
 
     if verbose: print 'Rebinning to {0}; lastBinIsOverflow = {1}'.format( expBinBoundaries, lastBinIsOverflow )
 
-    theoryIntegralFunction = GetIntegral( theoryBinBoundaries, theoryBinValues )
+    theoryIntegralFunction = get_integral( theoryBinBoundaries, theoryBinValues )
     expBinValues = []
     for iBinExp in xrange(nBinsExp-1):
         expBinValues.append(
@@ -468,13 +468,13 @@ def Rebin(
 
     if lastBinIsOverflow:
         expBinValues.append( theoryIntegralFunction( expBinBoundaries[-2], theoryBinBoundaries[-1] ) )
-        Commands.Warning( 'Last bin uses the rightmost theory bin bound {0} instead of requested exp bin bound {1}'.format( theoryBinBoundaries[-1], expBinBoundaries[-1] ) )
+        Commands.warning( 'Last bin uses the rightmost theory bin bound {0} instead of requested exp bin bound {1}'.format( theoryBinBoundaries[-1], expBinBoundaries[-1] ) )
         if verbose: print '  Doing integral({0:7.2f}, {1:7.2f})                      : {2} (not per GeV!)'.format( expBinBoundaries[-2], theoryBinBoundaries[-1], expBinValues[-1] )
 
     else:
         if expBinBoundaries[-1] > theoryBinBoundaries[-1]:
             right = theoryBinBoundaries[-1]
-            Commands.Warning( 'Last bin uses the rightmost theory bin bound {0} instead of requested exp bin bound {1}'.format( theoryBinBoundaries[-1], expBinBoundaries[-1] ) )
+            Commands.warning( 'Last bin uses the rightmost theory bin bound {0} instead of requested exp bin bound {1}'.format( theoryBinBoundaries[-1], expBinBoundaries[-1] ) )
         else:
             right = expBinBoundaries[-1]
         # expBinBoundaries[-1] = right
@@ -484,7 +484,7 @@ def Rebin(
     return expBinValues
 
 #____________________________________________________________________
-def MergeBins( some_binned_data, binMerging, binning=None ):
+def merge_bins( some_binned_data, binMerging, binning=None ):
     """
     Use e.g. "[ 1, 2, [3,4], [5,6] ]" for the binMerging. The order matters!
     If binning is given, the binned data is assumed to be *density*, rather than an inclusive number
@@ -508,9 +508,9 @@ def MergeBins( some_binned_data, binMerging, binning=None ):
 
 #____________________________________________________________________
 # Not sure which funcion uses this
-def GetShortTheoryName( names ):
+def get_short_theory_name( names ):
 
-    print 'Notification: TheoryCommands.GetShortTheoryName() was called'
+    print 'Notification: TheoryCommands.get_short_theory_name() was called'
 
     keyStrings = [ 'ct', 'cb', 'cg' ]
 
@@ -524,7 +524,7 @@ def GetShortTheoryName( names ):
 
 
 #____________________________________________________________________
-def GetXYfromTGraph( Tg ):
+def get_xyfrom_TGraph( Tg ):
     N = Tg.GetN()
     xs = []
     ys = []
@@ -544,13 +544,13 @@ def GetXYfromTGraph( Tg ):
 ########################################
 
 #____________________________________________________________________
-def BasicReadScan(
+def basic_read_scan(
         rootfiles,
         xAttr,
         yAttr = 'deltaNLL',
         ):
     
-    containers = Commands.ConvertTChainToArray(
+    containers = Commands.convert_TChain_to_array(
         rootfiles,
         'limit',
         r'{0}|{1}'.format( xAttr, yAttr ),
@@ -581,14 +581,14 @@ def BasicReadScan(
 
 
 #____________________________________________________________________
-def WriteTH2DToFile(
+def write_TH2_to_file(
         rootfiles,
         xCoupling = 'ct',
         yCoupling = 'cg',
         verbose = True,
         ):
 
-    scan = Commands.ConvertTChainToArray(
+    scan = Commands.convert_TChain_to_array(
         rootfiles
         )
     nPoints = len(scan[xCoupling])
@@ -602,7 +602,7 @@ def WriteTH2DToFile(
         pprint.pprint( [ keys ] + ret )
 
 
-    def inferBinBoundaries( binCenters ):
+    def infer_bin_boundaries( binCenters ):
         binBoundaries = []
         for iBin in xrange(len(binCenters)-1):
             binBoundaries.append( 0.5*(binCenters[iBin]+binCenters[iBin]) )
@@ -622,13 +622,13 @@ def WriteTH2DToFile(
     xBinCenters.pop( xBinCenters.index(xBestfit) )
     xBinCenters.sort()
     xNBins = len(xBinCenters)
-    xBinBoundaries = inferBinBoundaries( xBinCenters )
+    xBinBoundaries = infer_bin_boundaries( xBinCenters )
 
     yBinCenters = list(set(scan[yCoupling]))
     yBinCenters.pop( yBinCenters.index(yBestfit) )
     yBinCenters.sort()
     yNBins = len(yBinCenters)
-    yBinBoundaries = inferBinBoundaries( yBinCenters )
+    yBinBoundaries = infer_bin_boundaries( yBinCenters )
 
 
     H2 = ROOT.TH2D(
@@ -658,14 +658,14 @@ def WriteTH2DToFile(
 
 
 #____________________________________________________________________
-def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
+def get_contours_from_TH2( TH2_original, threshold, verbose=True ):
 
     # Open a temporary canvas so the contour business does not screw up other plots
     ctemp = ROOT.TCanvas( 'ctemp', 'ctemp', 1000, 800 )
     ctemp.cd()
 
     TH2 = TH2_original.Clone()
-    TH2.SetName( GetUniqueRootName() )
+    TH2.SetName( get_unique_root_name() )
     TH2.SetContour( 1, array( 'd', [threshold] ) )
 
     if verbose:
@@ -711,7 +711,7 @@ def GetContoursFromTH2( TH2_original, threshold, verbose=True ):
 
 
 #____________________________________________________________________
-def SetExtremaOfContour( Tg ):
+def set_extrema_of_contour( Tg ):
 
     xBuffer = Tg.GetX()
     xs = [ xBuffer[i] for i in xrange( Tg.GetN() ) ]
@@ -726,7 +726,7 @@ def SetExtremaOfContour( Tg ):
 
 
 #____________________________________________________________________
-def GetTH2FromListOfRootFiles(
+def get_TH2_from_list_of_root_files(
         rootfiles,
         xCoupling = 'ct',
         yCoupling = 'cg',
@@ -742,7 +742,7 @@ def GetTH2FromListOfRootFiles(
         ):
 
     # Read values from specified rootfiles
-    scan = Commands.ConvertTChainToArray(
+    scan = Commands.convert_TChain_to_array(
         rootfiles,
         returnStyle = 'dictPerPoint'
         )
@@ -762,7 +762,7 @@ def GetTH2FromListOfRootFiles(
     #     pprint.pprint( [ keys ] + ret.scanPoints )
 
 
-    def inferBinBoundaries( binCenters ):
+    def infer_bin_boundaries( binCenters ):
         binBoundaries = []
         for iBin in xrange(len(binCenters)-1):
             binBoundaries.append( 0.5*(binCenters[iBin]+binCenters[iBin]) )
@@ -782,13 +782,13 @@ def GetTH2FromListOfRootFiles(
     xBinCenters.pop( xBinCenters.index(xBestfit) )
     xBinCenters.sort()
     xNBins = len(xBinCenters)
-    xBinBoundaries = inferBinBoundaries( xBinCenters )
+    xBinBoundaries = infer_bin_boundaries( xBinCenters )
 
     yBinCenters = list(set( GetListFromScan(yCoupling) ))
     yBinCenters.pop( yBinCenters.index(yBestfit) )
     yBinCenters.sort()
     yNBins = len(yBinCenters)
-    yBinBoundaries = inferBinBoundaries( yBinCenters )
+    yBinBoundaries = infer_bin_boundaries( yBinCenters )
 
 
     # When looping over the points, don't consider the bestfit point a part of the histogram
@@ -800,7 +800,7 @@ def GetTH2FromListOfRootFiles(
     minDeltaNLL = min(GetListFromScan('deltaNLL'))
     if minDeltaNLL < 0.0:
         scandir_heuristicly = basename(dirname(abspath(rootfiles[0])))
-        Commands.Warning( '[dir={0}] min deltaNLL = {1} - the start fit was NOT the best fit!!'.format(scandir_heuristicly, minDeltaNLL) )
+        Commands.warning( '[dir={0}] min deltaNLL = {1} - the start fit was NOT the best fit!!'.format(scandir_heuristicly, minDeltaNLL) )
         if refind_minimum_if_dnll_negative:
             # Save old bestfit values so they can be skipped when making the histogram
             old_xBestfit = xBestfit
@@ -808,18 +808,18 @@ def GetTH2FromListOfRootFiles(
             iBestfit = GetListFromScan('deltaNLL').index( minDeltaNLL )
             xBestfit = GetListFromScan(xCoupling)[iBestfit]
             yBestfit = GetListFromScan(yCoupling)[iBestfit]
-            Commands.Warning( 'Will take the ACTUAL minimum to be deltaNLL={0} ({1}={2}, {3}={4}), and will shift histogram UP by {0}'.format(
+            Commands.warning( 'Will take the ACTUAL minimum to be deltaNLL={0} ({1}={2}, {3}={4}), and will shift histogram UP by {0}'.format(
                 minDeltaNLL, xCoupling, xBestfit, yCoupling, yBestfit
                 ))
             for point in scan:
                 point['deltaNLL'] -= minDeltaNLL
         elif minDeltaNLL < -0.01:
             if ignore_deltaNLL_negativity:
-                Commands.Warning('Ignoring the fact that some points are negative!')
+                Commands.warning('Ignoring the fact that some points are negative!')
             else:
-                Commands.ThrowError('The minimum deltaNLL threshold is -0.01, but minDeltaNLL = {0}'.format(minDeltaNLL))
+                Commands.throw_error('The minimum deltaNLL threshold is -0.01, but minDeltaNLL = {0}'.format(minDeltaNLL))
 
-    H2name = GetUniqueRootName()
+    H2name = get_unique_root_name()
     H2 = ROOT.TH2D(
         H2name, '',
         xNBins, array( 'd', xBinBoundaries ),
@@ -890,7 +890,7 @@ def GetTH2FromListOfRootFiles(
 ########################################
 
 #____________________________________________________________________
-def PlotCouplingScan2D(
+def plot_coupling_scan_2d(
         # datacard,
         rootfiles,
         xCoupling    = 'ct',
@@ -906,7 +906,7 @@ def PlotCouplingScan2D(
         zMin = None, zMax = None,
         ):
 
-    res = GetTH2FromListOfRootFiles(
+    res = get_TH2_from_list_of_root_files(
         rootfiles,
         xCoupling,
         yCoupling,
@@ -939,7 +939,7 @@ def PlotCouplingScan2D(
                         )
 
     c.Clear()
-    SetCMargins(
+    set_cmargins(
         LeftMargin   = 0.12,
         RightMargin  = 0.10,
         BottomMargin = 0.12,
@@ -952,14 +952,14 @@ def PlotCouplingScan2D(
 
     if drawContours:
 
-        contourTgs_1sigma = GetContoursFromTH2( H2, 2.30 )
+        contourTgs_1sigma = get_contours_from_TH2( H2, 2.30 )
         for Tg_1sigma in contourTgs_1sigma:
             Tg_1sigma.SetLineColor(1)
             Tg_1sigma.SetLineWidth(3)
             Tg_1sigma.Draw('LSAME')
             Tg_1sigma.SetName('contour1sigma')
 
-        contourTgs_2sigma = GetContoursFromTH2( H2, 6.18 )
+        contourTgs_2sigma = get_contours_from_TH2( H2, 6.18 )
         for Tg_2sigma in contourTgs_2sigma:
             Tg_2sigma.SetLineColor(1)
             Tg_2sigma.SetLineWidth(3)
@@ -1030,7 +1030,7 @@ def PlotCouplingScan2D(
             )
         leg.SetBorderSize(0)
         leg.SetFillStyle(0)
-        leg.SetNColumns(4)
+        leg.set_n_columns(4)
         leg.AddEntry( Tg_1sigma.GetName(), '1 #sigma', 'l' )
         leg.AddEntry( Tg_2sigma.GetName(), '2 #sigma', 'l' )
         leg.AddEntry( Tpoint.GetName(),    'Best fit', 'p' )
@@ -1039,8 +1039,8 @@ def PlotCouplingScan2D(
 
     outname = 'couplingscan2D_{0}'.format( basename(dirname(rootfiles[0])).replace('/','') )
     if not zVariable == 'deltaNLL': outname = outname.replace( 'couplingscan2D_', 'couplingscan2D_{0}_'.format(zVariable) )
-    SaveC( outname )
-    SetCMargins()
+    save_c( outname )
+    set_cmargins()
 
     return res
     

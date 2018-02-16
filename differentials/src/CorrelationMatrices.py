@@ -38,7 +38,7 @@ CLeftMargin   = 0.15
 CRightMargin  = 0.03
 CBottomMargin = 0.15
 CTopMargin    = 0.03
-def SetCMargins(
+def set_cmargins(
     LeftMargin   = CLeftMargin,
     RightMargin  = CRightMargin,
     BottomMargin = CBottomMargin,
@@ -49,7 +49,7 @@ def SetCMargins(
     c.SetBottomMargin( BottomMargin )
     c.SetTopMargin( TopMargin )
 
-def GetPlotBase(
+def get_plot_base(
     xMin = 0, xMax = 1,
     yMin = 0, yMax = 1,
     xTitle = 'x', yTitle = 'y',
@@ -73,10 +73,10 @@ def GetPlotBase(
     return base
 
 CPlotDir = 'correlationMatrices_{0}'.format(datestr)
-def SetPlotDir( newdir ):
+def set_plot_dir( newdir ):
     global CPlotDir
     CPlotDir = newdir
-def SaveC( outname, subdir=None, asPDF=True, asPNG=False, asROOT=False ):
+def save_c( outname, subdir=None, asPDF=True, asPNG=False, asROOT=False ):
 
     if subdir == None:
         outdir = CPlotDir
@@ -107,10 +107,10 @@ def main():
 
     # variations = []
     # for variationFile in variationFiles:
-    #     variation = ReadVariationFile( variationFile )
+    #     variation = read_variation_file( variationFile )
     #     variations.append( variation )
 
-    # GetCorrelationMatrix(
+    # get_correlation_matrix(
     #     variations,
     #     makeScatterPlots          = True,
     #     makeCorrelationMatrixPlot = True,
@@ -232,7 +232,7 @@ class ScaleCorrelation(object):
         self.check_variation_consistency()
         
         c.Clear()
-        SetCMargins()
+        set_cmargins()
 
         values_x = self.get_values(i_bin)
         values_y = self.get_values(j_bin)
@@ -253,7 +253,7 @@ class ScaleCorrelation(object):
         else:
             y_title = '{0:.1f} < pT < {1:.1f}'.format(self.bin_boundaries[j_bin], self.bin_boundaries[j_bin+1])
 
-        base = GetPlotBase(
+        base = get_plot_base(
             x_min, x_max, y_min, y_max,
             x_title, y_title
             )
@@ -296,7 +296,7 @@ class ScaleCorrelation(object):
         else:
             subdir = '{0}/Bin{1}'.format(subdir, i_bin)
 
-        SaveC(
+        save_c(
             'Correlation_Bin{0}_Bin{1}'.format(i_bin, j_bin),
             subdir=subdir,
             asPNG=True
@@ -306,7 +306,7 @@ class ScaleCorrelation(object):
         corrMat = self.calculate_correlation_matrix()
 
         c.Clear()
-        SetCMargins(
+        set_cmargins(
             LeftMargin   = 0.21,
             RightMargin  = 0.12,
             TopMargin    = 0.12,
@@ -378,10 +378,10 @@ class ScaleCorrelation(object):
         outname = 'corrMat'
         if not(tag is None):
             outname += '_' + tag
-        SaveC(outname, asPNG=True)
+        save_c(outname, asPNG=True)
 
 
-def MinMaxMatrix(scaleCorrelations, tag=None):
+def min_max_matrix(scaleCorrelations, tag=None):
 
     n_bins = scaleCorrelations[0].n_bins
     bin_boundaries = scaleCorrelations[0].bin_boundaries
@@ -408,7 +408,7 @@ def MinMaxMatrix(scaleCorrelations, tag=None):
     print 'Plotting...'
 
     c.Clear()
-    SetCMargins(
+    set_cmargins(
         LeftMargin   = 0.18,
         RightMargin  = 0.12,
         TopMargin    = 0.06,
@@ -511,7 +511,7 @@ def MinMaxMatrix(scaleCorrelations, tag=None):
     outname = 'MinMaxMatrix'
     if not(tag is None):
         outname += '_' + tag
-    SaveC( outname, asPNG=True, asROOT=True )
+    save_c( outname, asPNG=True, asROOT=True )
 
 
 
@@ -521,7 +521,7 @@ def MinMaxMatrix(scaleCorrelations, tag=None):
 def mean( l ):
     return sum(l) / len(l)
 
-def GetCorrelationMatrix(
+def get_correlation_matrix(
         variations,
         makeScatterPlots = False,
         makeCorrelationMatrixPlot = True,
@@ -560,7 +560,7 @@ def GetCorrelationMatrix(
     binBoundaries = variations[0].binBoundaries
 
     if makeScatterPlots:
-        base = GetPlotBase()
+        base = get_plot_base()
 
     corrMatrix = [ [ 999 for jPoint in xrange(nPoints) ] for iPoint in xrange(nPoints) ]
     errors     = []
@@ -608,7 +608,7 @@ def GetCorrelationMatrix(
                 ########################################
 
                 c.Clear()
-                SetCMargins()
+                set_cmargins()
 
                 xMin = min(iBinValues) - 0.3*( max(iBinValues) - min(iBinValues) )
                 xMax = max(iBinValues) + 0.3*( max(iBinValues) - min(iBinValues) )
@@ -669,9 +669,9 @@ def GetCorrelationMatrix(
                 lbl.SetTextSize(0.06)
                 lbl.DrawLatex( 1-CRightMargin-0.01, 1-CTopMargin-0.01, '#rho = {0:.2f}'.format(corr) )
 
-                SaveC( 'Correlation_Bin{0}_Bin{1}'.format( iPoint, jPoint ), subdir = '{0}/Bin{1}'.format( outname, iPoint ), asPNG=True )
+                save_c( 'Correlation_Bin{0}_Bin{1}'.format( iPoint, jPoint ), subdir = '{0}/Bin{1}'.format( outname, iPoint ), asPNG=True )
                 if halfNumberOfPlots:
-                    SaveC( 'Correlation_Bin{0}_Bin{1}'.format( jPoint, iPoint ), subdir = '{0}/Bin{1}'.format( outname, jPoint ), asPNG=True )
+                    save_c( 'Correlation_Bin{0}_Bin{1}'.format( jPoint, iPoint ), subdir = '{0}/Bin{1}'.format( outname, jPoint ), asPNG=True )
 
                 del Tg
 
@@ -722,7 +722,7 @@ def GetCorrelationMatrix(
         # Make plot of correlation matrix
 
         c.Clear()
-        SetCMargins(
+        set_cmargins(
             LeftMargin   = 0.21,
             RightMargin  = 0.12,
             TopMargin    = 0.12,
@@ -797,14 +797,14 @@ def GetCorrelationMatrix(
         c.cd()
         c.Update()
 
-        SaveC( outname, asPNG=True )
+        save_c( outname, asPNG=True )
 
     # Return the found correlation matrix
     return corrMatrix
 
 
 
-def ReadVariationFile(
+def read_variation_file(
         variationFile,
         fromAgnieszka=False,
         fromHqT=False,
@@ -897,7 +897,7 @@ def ReadVariationFile(
 
 
     # Also get some sort of bin boundaries using the heuristic for theory binning
-    heuristicBinCenters, heuristicBinBoundaries, heuristicBinWidths = TheoryCommands.BinningHeuristic(
+    heuristicBinCenters, heuristicBinBoundaries, heuristicBinWidths = TheoryCommands.binning_heuristic(
         res.binCenters,
         manualSwitchAt50=( fromAgnieszka or fromHqT )
         )
@@ -907,13 +907,13 @@ def ReadVariationFile(
 
 
 
-def PlotVariationSpectra(
+def plot_variation_spectra(
         variations,
         suffix=None,
         ):
 
     c.Clear()
-    SetCMargins()
+    set_cmargins()
     c.SetLogy()
 
     binBoundaries = variations[0].binBoundaries
@@ -925,7 +925,7 @@ def PlotVariationSpectra(
     yMax = 2.0 * max([ max(variation.binValues) for variation in variations ])
 
 
-    base = GetPlotBase(
+    base = get_plot_base(
         xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
         xTitle = 'pT [GeV]', yTitle='d#sigma/dp_{T} [pb/GeV]'
         )
@@ -940,7 +940,7 @@ def PlotVariationSpectra(
     colorCycle = itertools.cycle( range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 ) )
     for variation in variations:
         color = next(colorCycle)
-        Tg = TheoryCommands.GetTheoryTGraph(
+        Tg = TheoryCommands.get_theory_TGraph(
             variation.variationFile,
             variation.binBoundaries,
             variation.binValues,
@@ -960,15 +960,15 @@ def PlotVariationSpectra(
     if not suffix == None:
         outname += '_' + suffix
 
-    SaveC( outname, asPNG=True )
+    save_c( outname, asPNG=True )
 
     c.SetLogy(False)
     yMax = yMax/2.0 * 1.1
     base.SetMaximum(yMax)
-    SaveC( outname + '_linear', asPNG=True )
+    save_c( outname + '_linear', asPNG=True )
 
 
-def PlotWithEnvelop(
+def plot_with_envelop(
         *args,
         **kwargs
         ):
@@ -1053,7 +1053,7 @@ def PlotWithEnvelop(
     yMin = yMinAbs - 0.1*( yMaxAbs - yMinAbs )
     yMax = yMaxAbs + 0.1*( yMaxAbs - yMinAbs )
 
-    base = GetPlotBase(
+    base = get_plot_base(
         xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
         xTitle = 'pT [GeV]', yTitle='d#sigma/dp_{T} [pb/GeV]'
         )
@@ -1072,13 +1072,13 @@ def PlotWithEnvelop(
         Tg.SetFillStyle(1001)
         Tg.SetFillColorAlpha( color, 0.4 )
 
-        # lines, legendDummy = PhysicsCommands.ConvertToLinesAndBoxes( Tg )
+        # lines, legendDummy = PhysicsCommands.convert_to_lines_and_boxes( Tg )
         # for line in lines:
         #     line.Draw()
         # legendDummy.Draw('SAME')
         # leg.AddEntry( legendDummy.GetName(), Tg.name, 'l' )
 
-        ConvertTGraphToLinesAndBoxes( Tg, drawImmediately=True, legendObject=leg )
+        convert_TGraph_to_lines_and_boxes( Tg, drawImmediately=True, legendObject=leg )
 
         # Tg.Draw('PSAME E3')
 
@@ -1090,7 +1090,7 @@ def PlotWithEnvelop(
     if 'suffix' in kwargs:
         outname += '_' + kwargs['suffix']
 
-    SaveC( outname, asPNG=True )
+    save_c( outname, asPNG=True )
 
     yMin = 0.5*yMinAbs
     yMax = 2.*yMaxAbs
@@ -1098,12 +1098,12 @@ def PlotWithEnvelop(
     base.SetMaximum(yMax)
 
     c.SetLogy()
-    SaveC( outname + '_logscale', asPNG=True )
+    save_c( outname + '_logscale', asPNG=True )
     c.SetLogy(False)
 
 
 
-def PlotRelativeUncertainty(
+def plot_relative_uncertainty(
         variations,
         suffix=None,
         ):
@@ -1140,7 +1140,7 @@ def PlotRelativeUncertainty(
 
 
     c.Clear()
-    SetCMargins()
+    set_cmargins()
 
     xMin = SMvariation.binBoundaries[0]
     xMax = SMvariation.binBoundaries[-1]
@@ -1149,7 +1149,7 @@ def PlotRelativeUncertainty(
     yMax = max(maxRelUncs) + 0.1*( max(maxRelUncs) - min(minRelUncs) )
 
 
-    base = GetPlotBase(
+    base = get_plot_base(
         xMin = xMin, xMax = xMax, yMin = yMin, yMax = yMax,
         xTitle = 'pT [GeV]', yTitle='#Delta d#sigma/dp_{T} [pb/GeV]'
         )
@@ -1173,11 +1173,11 @@ def PlotRelativeUncertainty(
     if not suffix == None:
         outname += '_' + suffix
 
-    SaveC( outname, asPNG=True )
+    save_c( outname, asPNG=True )
 
 
 
-def MergeLowHighPtFilesFromHqT(
+def merge_low_high_pt_files_from_hq_t(
         variations_lowPt,
         variations_highPt,
         ):
@@ -1200,7 +1200,7 @@ def MergeLowHighPtFilesFromHqT(
         variation.binValues  = variation_lowPt.binValues[:-1] + variation_highPt.binValues
 
         # Also get some sort of bin boundaries using the heuristic for theory binning
-        heuristicBinCenters, heuristicBinBoundaries, heuristicBinWidths = TheoryCommands.BinningHeuristic(
+        heuristicBinCenters, heuristicBinBoundaries, heuristicBinWidths = TheoryCommands.binning_heuristic(
             variation.binCenters,
             manualSwitchAt50=True
             )
@@ -1211,7 +1211,7 @@ def MergeLowHighPtFilesFromHqT(
     return HqTvariations
 
 
-def ConvertTGraphToHistogram(
+def convert_TGraph_to_histogram(
         Tg,
         drawImmediately=False,
         legendObject=None,
@@ -1222,7 +1222,7 @@ def ConvertTGraphToHistogram(
     xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
 
     if not xBand or not yBand:
-        Commands.ThrowError( 'Make sure all errors are filled' )
+        Commands.throw_error( 'Make sure all errors are filled' )
 
     nPoints = Tg.GetN()
 
@@ -1264,7 +1264,7 @@ def ConvertTGraphToHistogram(
     binBoundaries.append( rightBound )
 
 
-    Hname = TheoryCommands.GetUniqueRootName()
+    Hname = TheoryCommands.get_unique_root_name()
     H = ROOT.TH1F(
         Hname, Hname,
         nPoints,
@@ -1291,7 +1291,7 @@ def ConvertTGraphToHistogram(
 
 
 
-def ConvertTGraphToLinesAndBoxes(
+def convert_TGraph_to_lines_and_boxes(
         Tg,
         drawImmediately=False,
         legendObject=None,
@@ -1306,7 +1306,7 @@ def ConvertTGraphToLinesAndBoxes(
     xBand = ( Tg.GetErrorXhigh(0) != -1 and Tg.GetErrorXlow(0) != -1 )
 
     if not xBand or not yBand:
-        Commands.ThrowError( 'Make sure all errors are filled' )
+        Commands.throw_error( 'Make sure all errors are filled' )
 
     nPoints = Tg.GetN()
 

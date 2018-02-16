@@ -52,7 +52,7 @@ from TheoryCommands import GetPlotBase
 
 # PLOTDIR = 'plots_{0}'.format(datestr)
 
-# def SaveC( outname, PNG=False, asROOT=False ):
+# def save_c( outname, PNG=False, asROOT=False ):
 #     global PLOTDIR
 #     if not isdir(PLOTDIR): os.makedirs(PLOTDIR)
 
@@ -74,14 +74,14 @@ from TheoryCommands import GetPlotBase
 ########################################
 
 ROOTCOUNTER = 1000
-def GetUniqueRootName():
+def get_unique_root_name():
     global ROOTCOUNTER
     name = 'root{0}'.format(ROOTCOUNTER)
     ROOTCOUNTER += 1
     return name
 
 
-def GetPlotBase(
+def get_plot_base(
     xMin = 0, xMax = 1,
     yMin = 0, yMax = 1,
     xTitle = 'x', yTitle = 'y',
@@ -89,7 +89,7 @@ def GetPlotBase(
 
     base = ROOT.TH1F()
     ROOT.SetOwnership( base, False )
-    base.SetName( GetUniqueRootName() )
+    base.SetName( get_unique_root_name() )
     base.GetXaxis().SetLimits( xMin, xMax )
     base.SetMinimum( yMin )
     base.SetMaximum( yMax )
@@ -104,7 +104,7 @@ def GetPlotBase(
 # Dealing with scans in combine
 ########################################
 
-def GetScanResults(
+def get_scan_results(
     POIs,
     scanDirectory,
     pattern='*',
@@ -112,12 +112,12 @@ def GetScanResults(
     filterNegatives=False
     ):
 
-    # POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
+    # POIs.sort( key=lambda POI: Commands.interpret_poi( POI )[2][0] )
     POIs.sort( key=Commands.POIsorter )
 
     scans = []
     for POI in POIs:
-        prodMode, obsName, obsRange = Commands.InterpretPOI( POI )
+        prodMode, obsName, obsRange = Commands.interpret_poi( POI )
 
         if pattern == '*':
             rootfilepattern = '*{0}*.root'.format(POI)
@@ -126,10 +126,10 @@ def GetScanResults(
 
         scanFiles = glob.glob( join( scanDirectory, rootfilepattern ) )
         if len(scanFiles) == 0:
-            Commands.ThrowError( 'The pattern \'{0}\' yielded no results in directory {1}'.format( rootfilepattern, scanDirectory ) )
+            Commands.throw_error( 'The pattern \'{0}\' yielded no results in directory {1}'.format( rootfilepattern, scanDirectory ) )
             return
 
-        scanResultDict = Commands.ConvertTChainToArray(
+        scanResultDict = Commands.convert_TChain_to_array(
             scanFiles,
             'limit',
             r'{0}|deltaNLL'.format( POI )
@@ -138,10 +138,10 @@ def GetScanResults(
         scanResult = []
         for (POIval, deltaNLL) in sorted(zip( scanResultDict[POI], scanResultDict['deltaNLL'] )):
             if deltaNLL < 0.0:
-                Commands.Warning('Found negative deltaNLL {0} while processing {1} in {2}'.format( deltaNLL, POI, scanDirectory ))
+                Commands.warning('Found negative deltaNLL {0} while processing {1} in {2}'.format( deltaNLL, POI, scanDirectory ))
                 if deltaNLL < -0.01:
                     if filterNegatives:
-                        Commands.Warning('deltaNLL {0} is below threshold (-0.01), skipping'.format(deltaNLL))
+                        Commands.warning('deltaNLL {0} is below threshold (-0.01), skipping'.format(deltaNLL))
                         continue
                     else:
                         raise ValueError(
@@ -165,7 +165,7 @@ def GetScanResults(
 
 
 
-def FilterScan( scan ):
+def filter_scan( scan ):
     scan = list(set( scan ))
     scan.sort()
     POIvals   = []
@@ -181,7 +181,7 @@ def FilterScan( scan ):
 
 
 
-def BasicDrawScanResults(
+def basic_draw_scan_results(
     POIs,
     scans,
     POIRange = '*',
@@ -190,7 +190,7 @@ def BasicDrawScanResults(
     ):
 
     # Use first POI to get production mode and observable name
-    productionMode, observableName, dummyRange = Commands.InterpretPOI( POIs[0] )
+    productionMode, observableName, dummyRange = Commands.interpret_poi( POIs[0] )
     
     if POIRange == '*':
         allPOIvals = map( itemgetter(0), itertools.chain.from_iterable( scans ) )
@@ -232,19 +232,19 @@ def BasicDrawScanResults(
     colors = range(2,9+1) + [ 30, 38, 40, 41, 42 ] + range( 45, 48+1 )
     colorCycle = itertools.cycle( colors )
 
-    def GetColor( POI ):
+    def get_color( POI ):
         # knownPOIs = {
-        #     'r_smH_PTH_0_15'    : ROOT.TColor.GetColor( colors[0] ),
-        #     'r_smH_PTH_15_30'   : ROOT.TColor.GetColor( colors[1] ),
-        #     'r_smH_PTH_30_45'   : ROOT.TColor.GetColor( colors[2] ) - 1,
-        #     'r_smH_PTH_45_85'   : ROOT.TColor.GetColor( colors[2] ) + 1,
-        #     'r_smH_PTH_85_125'  : ROOT.TColor.GetColor( colors[3] ) - 1,
-        #     'r_smH_PTH_125_200' : ROOT.TColor.GetColor( colors[3] ) + 1,
-        #     'r_smH_PTH_200_350' : ROOT.TColor.GetColor( colors[4] ),
-        #     'r_smH_PTH_GT350'   : ROOT.TColor.GetColor( colors[5] ),
-        #     'r_smH_PTH_30_85'   : ROOT.TColor.GetColor( colors[2] ),
-        #     'r_smH_PTH_85_200'  : ROOT.TColor.GetColor( colors[3] ),
-        #     'r_smH_PTH_GT200'   : ROOT.TColor.GetColor( colors[5] ),
+        #     'r_smH_PTH_0_15'    : ROOT.TColor.get_color( colors[0] ),
+        #     'r_smH_PTH_15_30'   : ROOT.TColor.get_color( colors[1] ),
+        #     'r_smH_PTH_30_45'   : ROOT.TColor.get_color( colors[2] ) - 1,
+        #     'r_smH_PTH_45_85'   : ROOT.TColor.get_color( colors[2] ) + 1,
+        #     'r_smH_PTH_85_125'  : ROOT.TColor.get_color( colors[3] ) - 1,
+        #     'r_smH_PTH_125_200' : ROOT.TColor.get_color( colors[3] ) + 1,
+        #     'r_smH_PTH_200_350' : ROOT.TColor.get_color( colors[4] ),
+        #     'r_smH_PTH_GT350'   : ROOT.TColor.get_color( colors[5] ),
+        #     'r_smH_PTH_30_85'   : ROOT.TColor.get_color( colors[2] ),
+        #     'r_smH_PTH_85_200'  : ROOT.TColor.get_color( colors[3] ),
+        #     'r_smH_PTH_GT200'   : ROOT.TColor.get_color( colors[5] ),
         #     }
 
         knownPOIs = {
@@ -283,7 +283,7 @@ def BasicDrawScanResults(
 
     for POI, scan in zip( POIs, scans ):
 
-        POIvals, deltaNLLs = FilterScan( scan )
+        POIvals, deltaNLLs = filter_scan( scan )
 
         nPoints = len(POIvals)
 
@@ -302,7 +302,7 @@ def BasicDrawScanResults(
 
         # color = colors[iColor]
         # iColor += 1
-        color = GetColor(POI)
+        color = get_color(POI)
 
         Tg.SetLineColor(color)
         Tg.SetMarkerColor(color)
@@ -311,7 +311,7 @@ def BasicDrawScanResults(
         Tg.Draw('SAME L')
 
         # Small line at minimum
-        minimaAndUncertainties = FindMinimaAndErrors( POIvals, deltaNLLs )
+        minimaAndUncertainties = find_minima_and_errors( POIvals, deltaNLLs )
         lMin = ROOT.TLine( minimaAndUncertainties['min'], 0., minimaAndUncertainties['min'], 2.0 )
         ROOT.SetOwnership( lMin, False )
         lMin.SetLineColor( color )
@@ -350,21 +350,21 @@ def BasicDrawScanResults(
     leg.Draw()
 
 
-    Commands.GetCMSLabel()
-    Commands.GetCMSLumi()
+    Commands.get_cms_label()
+    Commands.get_cms_lumi()
 
-    SaveC( 'parabolas_{0}_{1}_{2}'.format( productionMode, observableName, name ) )
+    save_c( 'parabolas_{0}_{1}_{2}'.format( productionMode, observableName, name ) )
 
 
 
-def FigureOutBinning( POIs ):
-    # POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
+def figure_out_binning( POIs ):
+    # POIs.sort( key=lambda POI: Commands.interpret_poi( POI )[2][0] )
     # # Very ugly hack to make sure that LT30 is the first element of the sorted list
     # if '_LT' in POIs[-1] or '_LE' in POIs[-1]:
     #     POIs = [ POIs[-1] ] + POIs[:-1]
     POIs.sort( key=Commands.POIsorter )
 
-    Ranges = [ Commands.InterpretPOI( POI )[2] for POI in POIs ]
+    Ranges = [ Commands.interpret_poi( POI )[2] for POI in POIs ]
     
     rangeLengthList = list(set(map( len, Ranges[:-1] )))
     if len(rangeLengthList) != 1:
@@ -409,7 +409,7 @@ def FigureOutBinning( POIs ):
 
 
 
-def GetTGraphForSpectrum(
+def get_TGraph_for_spectrum(
     POIs,
     scans,
     name = 'unnamed',
@@ -417,18 +417,18 @@ def GetTGraphForSpectrum(
     ):
 
     if not scalePOIs is None:
-        Commands.Warning( 'scalePOIs is deprecated! Do not use it!' )
+        Commands.warning( 'scalePOIs is deprecated! Do not use it!' )
 
     # Sort by first number of observable range
-    POIs.sort( key=lambda POI: Commands.InterpretPOI( POI )[2][0] )
-    binBoundaries = FigureOutBinning( POIs )
+    POIs.sort( key=lambda POI: Commands.interpret_poi( POI )[2][0] )
+    binBoundaries = figure_out_binning( POIs )
 
     binCenters    = [ 0.5*(left+right) for left, right in zip( binBoundaries[:-1], binBoundaries[1:] ) ]
     binWidths     = [ right-left for left, right in zip( binBoundaries[:-1], binBoundaries[1:] ) ]
     halfBinWidths = [ 0.5*(right-left) for left, right in zip( binBoundaries[:-1], binBoundaries[1:] ) ]
 
     if scalePOIs and len(scalePOIs) != len(binCenters):
-        Commands.ThrowError( 'Length of scalePOIs {0} is not equal to length of binCenters {1}'.format( scalePOIs, binCenters ) )
+        Commands.throw_error( 'Length of scalePOIs {0} is not equal to length of binCenters {1}'.format( scalePOIs, binCenters ) )
         sys.exit()        
 
     POICenters  = []
@@ -438,9 +438,9 @@ def GetTGraphForSpectrum(
     POIBoundsRight = []
     for POI, scan in zip( POIs, scans ):
 
-        POIvals, deltaNLLs = FilterScan( scan )
+        POIvals, deltaNLLs = filter_scan( scan )
         nPoints = len(POIvals)
-        minimaAndUncertainties = FindMinimaAndErrors( POIvals, deltaNLLs )
+        minimaAndUncertainties = find_minima_and_errors( POIvals, deltaNLLs )
 
         POICenter   = minimaAndUncertainties['min']
         POIErrLeft  = abs(minimaAndUncertainties['leftError'])
@@ -502,18 +502,18 @@ def GetTGraphForSpectrum(
 
 
 
-def BasicDrawSpectrum(
+def basic_draw_spectrum(
     POIs,
     scans,
     name = 'unnamed'
     ):
 
     # Use first POI to get production mode and observable name
-    productionMode, observableName, dummyRange = Commands.InterpretPOI( POIs[0] )
+    productionMode, observableName, dummyRange = Commands.interpret_poi( POIs[0] )
 
     c.Clear()
 
-    Tg = GetTGraphForSpectrum( POIs, scans, name = 'unnamed' )
+    Tg = get_TGraph_for_spectrum( POIs, scans, name = 'unnamed' )
 
     base = ROOT.TH1F()
     base.Draw('P')
@@ -534,12 +534,12 @@ def BasicDrawSpectrum(
     Tg.SetLineColor(color)
     Tg.SetMarkerColor(color)
 
-    SaveC( 'spectrum_{0}_{1}_{2}'.format( productionMode, observableName, name ) )
+    save_c( 'spectrum_{0}_{1}_{2}'.format( productionMode, observableName, name ) )
 
 
 
 
-def BasicCombineSpectra(
+def basic_combine_spectra(
         *args,
         **kwargs
         ):
@@ -567,7 +567,7 @@ def BasicCombineSpectra(
 
     Tgs = []
     for name, POIList, scanList, drawoptionList in zip( names, POIs, scans, drawoptions ):
-        Tg = GetTGraphForSpectrum( POIList, scanList, name=name, scalePOIs=kwargs.get( '{0}_SMXS'.format(name), None ) )
+        Tg = get_TGraph_for_spectrum( POIList, scanList, name=name, scalePOIs=kwargs.get( '{0}_SMXS'.format(name), None ) )
 
         Tg.DrawAsBlocks = True
         for drawoption in drawoptionList:
@@ -579,7 +579,7 @@ def BasicCombineSpectra(
                 getattr( Tg, drawoption[0] )( *drawoption[1:] )
                 # print 'Successfully called \'Tg.{0}({1})\''.format( drawoption[0], drawoption[1:] )
             except:
-                Commands.ThrowError( 'Problem calling \'Tg.{0}({1})\', skipping'.format( drawoption[0], drawoption[1:] ) )
+                Commands.throw_error( 'Problem calling \'Tg.{0}({1})\', skipping'.format( drawoption[0], drawoption[1:] ) )
 
         Tgs.append( Tg )
 
@@ -625,7 +625,7 @@ def BasicCombineSpectra(
 
 
     # Use first POI to get production mode and observable name
-    productionMode, observableName, dummyRange = Commands.InterpretPOI( POIs[0][0] )
+    productionMode, observableName, dummyRange = Commands.interpret_poi( POIs[0][0] )
 
 
     xMin = min([ Tg.xMin for Tg in Tgs ])
@@ -719,7 +719,7 @@ def BasicCombineSpectra(
 
         if Tg.DrawAsBlocks:
 
-            CorrelationMatrices.ConvertTGraphToLinesAndBoxes(
+            CorrelationMatrices.convert_TGraph_to_lines_and_boxes(
                 Tg,
                 drawImmediately=True,
                 legendObject=leg,
@@ -809,7 +809,7 @@ def BasicCombineSpectra(
                 Tg.SetLineColor(color)
 
             if 'drawTheoryCurvesAsLines' in kwargs and kwargs['drawTheoryCurvesAsLines']:
-                lines, legendDummy = ConvertToLinesAndBoxes( Tg )
+                lines, legendDummy = convert_to_lines_and_boxes( Tg )
                 for line in lines:
                     line.Draw()
                 legendDummy.Draw('SAME')
@@ -823,16 +823,16 @@ def BasicCombineSpectra(
 
 
     outname = 'mspectrum_{0}_{1}_{2}'.format( productionMode, observableName, '_'.join(names) )
-    if 'theoryCurves' in kwargs: outname += '_withTheoryCurves_{0}'.format( TheoryCommands.GetShortTheoryName([Tg.name for Tg in theoryTgs]) )
+    if 'theoryCurves' in kwargs: outname += '_withTheoryCurves_{0}'.format( TheoryCommands.get_short_theory_name([Tg.name for Tg in theoryTgs]) )
     outname += kwargs.get( 'filenameSuffix', '' )
     if IsBottomRatioPlot: outname += 'bottomRatioPlot'
-    SaveC( outname, asROOT = kwargs.get( 'asROOT', False ) )
+    save_c( outname, asROOT = kwargs.get( 'asROOT', False ) )
 
     c.SetLogy(False)
     c.Clear()
 
 
-def ConvertToLinesAndBoxes(
+def convert_to_lines_and_boxes(
     Tg,
     noYerrors = True,
     ):
@@ -888,7 +888,7 @@ def ConvertToLinesAndBoxes(
 
 
 
-def BasicDrawMultipleParabolas(
+def basic_draw_multiple_parabolas(
     *args,
     **kwargs
     ):
@@ -939,7 +939,7 @@ def BasicDrawMultipleParabolas(
 
         for POI, scan in zip( POIList, scanList ):
 
-            POIvals, deltaNLLs = FilterScan( scan )
+            POIvals, deltaNLLs = filter_scan( scan )
             nPoints = len(POIvals)
 
             Tg = ROOT.TGraph(
@@ -956,10 +956,10 @@ def BasicDrawMultipleParabolas(
                     getattr( Tg, drawoption[0] )( *drawoption[1:] )
                     # print 'Successfully called \'Tg.{0}({1})\''.format( drawoption[0], drawoption[1:] )
                 except:
-                    Commands.ThrowError( 'Problem calling \'Tg.{0}({1})\', skipping'.format( drawoption[0], drawoption[1:] ) )
+                    Commands.throw_error( 'Problem calling \'Tg.{0}({1})\', skipping'.format( drawoption[0], drawoption[1:] ) )
 
             # For small line at minimum
-            minimaAndUncertainties = FindMinimaAndErrors( POIvals, deltaNLLs )
+            minimaAndUncertainties = find_minima_and_errors( POIvals, deltaNLLs )
             Tg.imin        = minimaAndUncertainties['imin']
             Tg.min         = minimaAndUncertainties['min']
             Tg.leftError   = minimaAndUncertainties['leftError']
@@ -978,8 +978,8 @@ def BasicDrawMultipleParabolas(
 
     nBins = max( map( len, POIs ) )
     finestPOIs = [ POIList for POIList in POIs if len(POIList)==nBins ][0]
-    finestBoundaries = FigureOutBinning( finestPOIs )
-    binBoundaries = { name : FigureOutBinning( POIList ) for name, POIList in zip( names, POIs ) }
+    finestBoundaries = figure_out_binning( finestPOIs )
+    binBoundaries = { name : figure_out_binning( POIList ) for name, POIList in zip( names, POIs ) }
 
     parabolasPerBin = []
 
@@ -1035,7 +1035,7 @@ def BasicDrawMultipleParabolas(
             Tg.Draw('SAME')
             leg.AddEntry( Tg.GetName(), '{0}_{1}'.format( Tg.channel, Tg.POI ), 'l' )
 
-        SaveC( 'compareScans/cparabolas_{0}'.format( finestPOIs[iBin] ) )
+        save_c( 'compareScans/cparabolas_{0}'.format( finestPOIs[iBin] ) )
 
 
 
@@ -1049,7 +1049,7 @@ def rindex( someList, val ):
     # Regular list.index() finds first instance in list, this function finds the last
     return len(someList) - someList[::-1].index(val) - 1
 
-def FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=False ):
+def find_minima_and_errors( POIvals, deltaNLLs, returnContainer=False ):
 
     minDeltaNLL   = min(deltaNLLs)
     iMin          = rindex( deltaNLLs, minDeltaNLL )
