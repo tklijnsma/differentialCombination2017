@@ -153,7 +153,10 @@ class BottomPanelPlot(object):
         if not(self.top_y_max is None): y_max = self.top_y_max
 
         if self.top_log_scale:
-            pass
+            y_max_abs = y_max
+            y_min_abs = y_min
+            y_max = y_max_abs + (y_max_abs/y_min_abs)**0.2 * y_max_abs
+            y_min = 0.5*y_min_abs
         else:
             dy = y_max - y_min
             y_min -= 0.1*dy

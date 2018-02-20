@@ -28,7 +28,7 @@ def get_range_from_str(text):
     regular_match = re.search(r'([\dpm\.\-]+)_([\dpm\.\-]+)', text)
     overflow_match = re.search(r'(GE|GT)([\dpm\.\-]+)', text)
     underflow_match = re.search(r'(LE|LT)([\dpm\.\-]+)', text)
-    single_match = re.search(r'([\dpm\.\-]+)', text)
+    single_match = re.search(r'_([\dpm\.\-]+)', text)
 
     if regular_match:
         left = str_to_float(regular_match.group(1))
@@ -38,9 +38,10 @@ def get_range_from_str(text):
         right = 'INF'
     elif underflow_match:
         left = '-INF'
-        right = str_to_float(overflow_match.group(2))
+        right = str_to_float(underflow_match.group(2))
     elif single_match:
-        left = str_to_float(regular_match.group(1))
+        logger.debug('single_match for {0}; matched text is {1}'.format(text, single_match.group(1)))
+        left = str_to_float(single_match.group(1))
         right = 'SINGLE'
     else:
         left = 'UNDEFINED'

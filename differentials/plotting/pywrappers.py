@@ -182,10 +182,11 @@ class Histogram(object):
         super(Histogram, self).__init__()
         self.name = name
         self.title = title
-        self.bin_boundaries = bin_boundaries
+
+        self.bin_values = bin_values[:]
+        self.bin_boundaries = bin_boundaries[:]
         self.n_bins = len(bin_boundaries)-1
-        self.bin_values = bin_values
-        self.bins = []
+
         self.has_uncertainties = False
         if color is None:
             self.color = self.color_cycle.next()
@@ -248,7 +249,18 @@ class Histogram(object):
                 return max([b for b in self.bin_values if b>0.])
             else:
                 return max(self.bin_values)            
-        
+
+    def drop_first_bin(self):
+        logger.debug('Dropping first bin from histogram (name={0})'.format(self.name))
+        self.bin_boundaries.pop(0)
+        self.bin_values.pop(0)
+        self.n_bins -= 1
+        if self.has_uncertainties:
+            self.errs_up.pop(0)
+            self.bounds_up.pop(0)
+            self.errs_down.pop(0)
+            self.bounds_down.pop(0)
+
     def set_err_up(self, errs_up):
         self.errs_up = [ abs(i) for i in errs_up ]
         self.bounds_up = [ c+e for c, e in zip(self.bin_values, self.errs_up) ]

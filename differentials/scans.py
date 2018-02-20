@@ -18,10 +18,13 @@ def glob_rootfiles(d):
 
 
 
-def plot_spectra(spectra, obs_name, obs_title, obs_unit=None):
-    plot = plotting.multipanel.BottomPanelPlot('spectra_' + obs_name)
+def plot_spectra(plotname, spectra, obs_name, obs_title, obs_unit=None, inplace=True):
+    plot = plotting.multipanel.BottomPanelPlot(plotname)
     plot.x_title = obs_title + (' ({0})'.format(obs_unit) if not(obs_unit is None) else '')
-    plot.y_title_top = '#Delta#sigma (pb{0})'.format('/' + obs_unit if not(obs_unit is None) else '')
+    plot.y_title_top = '#Delta#sigma/#Delta{0} (pb{1})'.format(
+        obs_title,
+        '/' + obs_unit if not(obs_unit is None) else ''
+        )
     plot.y_title_bottom = '#mu'
 
     leg = plotting.pywrappers.Legend(
@@ -50,7 +53,11 @@ def plot_spectra(spectra, obs_name, obs_title, obs_unit=None):
     plot.make_labels_for_overflow_spectra(spectra, obs_title)
 
     plot.add_top(leg, '')
-    plot.draw()
+
+    if inplace:
+        plot.draw()
+    else:
+        return plot
 
 
 class DifferentialSpectrum(object):
@@ -168,6 +175,18 @@ class DifferentialSpectrum(object):
     def last_bin_is_overflow(self):
         return core.last_bin_is_overflow(self.POIs)
 
+    def first_bin_is_underflow(self):
+        return core.first_bin_is_underflow(self.POIs)
+
+    def process_overflow_and_underflow(self, histogram):
+        if self.last_bin_is_overflow():
+            if not(self.hard_x_max is None):
+                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
+            else:
+                histogram.set_last_bin_is_overflow()
+        if self.first_bin_is_underflow():
+            histogram.drop_first_bin()
+
     def to_hist(self):
         histogram = plotting.pywrappers.Histogram(
             utils.get_unique_rootname(),
@@ -177,11 +196,7 @@ class DifferentialSpectrum(object):
             )
         histogram.set_err_up([ s.unc.right_error for s in self.scans ])
         histogram.set_err_down([ s.unc.left_error for s in self.scans ])
-        if self.last_bin_is_overflow():
-            if not(self.hard_x_max is None):
-                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
-            else:
-                histogram.set_last_bin_is_overflow()
+        self.process_overflow_and_underflow(histogram)
         if not(self.color is None): histogram.color = self.color
         return histogram
 
@@ -194,11 +209,7 @@ class DifferentialSpectrum(object):
             )
         histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
         histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
-        if self.last_bin_is_overflow(): 
-            if not(self.hard_x_max is None):
-                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
-            else:
-                histogram.set_last_bin_is_overflow()
+        self.process_overflow_and_underflow(histogram)
         if not(self.color is None): histogram.color = self.color
         return histogram
 
@@ -211,11 +222,7 @@ class DifferentialSpectrum(object):
             )
         # histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
         # histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
-        if self.last_bin_is_overflow(): 
-            if not(self.hard_x_max is None):
-                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
-            else:
-                histogram.set_last_bin_is_overflow()
+        self.process_overflow_and_underflow(histogram)
         histogram.color = 16
         return histogram
 
@@ -228,11 +235,7 @@ class DifferentialSpectrum(object):
             )
         # histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
         # histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
-        if self.last_bin_is_overflow(): 
-            if not(self.hard_x_max is None):
-                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
-            else:
-                histogram.set_last_bin_is_overflow()
+        self.process_overflow_and_underflow(histogram)
         histogram.color = 16
         return histogram
 

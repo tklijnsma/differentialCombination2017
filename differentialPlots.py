@@ -295,7 +295,7 @@ def plot_all_differentials(args):
 
 #____________________________________________________________________
 @flag_as_option
-def pth_smH_plot_new(args):
+def pth_smH_plot(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     obs_name = 'pth_smH'
     
@@ -304,14 +304,14 @@ def pth_smH_plot_new(args):
         datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
         )
     hgg.color = 2
-    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth() )
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
 
     hzz = differentials.scans.DifferentialSpectrum('hzz',
         scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
         datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
         )
     hzz.color = 4
-    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth() )
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
 
     combination = differentials.scans.DifferentialSpectrum('combination',
         scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
@@ -320,86 +320,239 @@ def pth_smH_plot_new(args):
     combination.color = 1
     combination.no_overflow_label = True
     combination.draw_method = 'repr_point_with_vertical_bar'
-    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth() )
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
 
     differentials.scans.plot_spectra(
+        'spectra_{0}'.format(obs_name),
         [ hgg, hzz, combination ],
+        obs_name, obs_title='p_{T}', obs_unit='GeV'
+        )
+
+#____________________________________________________________________
+@flag_as_option
+def pth_ggH_plot(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    obs_name = 'pth_ggH'
+
+    hgg = differentials.scans.DifferentialSpectrum('hgg',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hgg', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
+        )
+    hgg.color = 2
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
+        )
+    hzz.color = 4
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    combination = differentials.scans.DifferentialSpectrum('combination',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
+        )
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    plot = differentials.scans.plot_spectra(
+        'spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ],
+        obs_name, obs_title='p_{T}^{ggH}', obs_unit='GeV', inplace=False
+        )
+
+    l = differentials.plotting.pywrappers.Latex(
+        lambda c: 1.0 - c.GetRightMargin() - 0.01,
+        lambda c: 1.0 - c.GetTopMargin() - 0.14,
+        'gluon fusion cross section'
+        )
+    l.SetNDC()
+    l.SetTextSize(0.05)
+    l.SetTextAlign(33)
+    plot.add_top(l, '')
+
+    plot.draw()
+
+
+#____________________________________________________________________
+@flag_as_option
+def njets_plot(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    obs_name = 'njets'
+    
+    hgg = differentials.scans.DifferentialSpectrum('hgg',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hgg', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
+        )
+    hgg.color = 2
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
+        )
+    hzz.color = 4
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    combination = differentials.scans.DifferentialSpectrum('combination',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
+        )
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    differentials.scans.plot_spectra(
+        'spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ],
+        obs_name, obs_title='N_{jets}'
+        )
+
+#____________________________________________________________________
+@flag_as_option
+def ptjet_plot(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    obs_name = 'ptjet'
+    
+    hgg = differentials.scans.DifferentialSpectrum('hgg',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hgg', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
+        )
+    hgg.color = 2
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
+        )
+    hzz.color = 4
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    combination = differentials.scans.DifferentialSpectrum('combination',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
+        )
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    differentials.scans.plot_spectra(
+        'spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ],
+        obs_name, obs_title='p_{T}^{jet}', obs_unit='GeV'
+        )
+
+
+#____________________________________________________________________
+@flag_as_option
+def rapidity_plot(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    obs_name = 'rapidity'
+    
+    hgg = differentials.scans.DifferentialSpectrum('hgg',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hgg', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
+        )
+    hgg.color = 2
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
+        )
+    hzz.color = 4
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    combination = differentials.scans.DifferentialSpectrum('combination',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
+        )
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    differentials.scans.plot_spectra(
+        'spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ],
+        obs_name, obs_title='|y_{H}|'
+        )
+
+
+########################################
+# Other plots
+########################################
+
+#____________________________________________________________________
+@flag_as_option
+def pth_smH_plot_statsyst(args):
+    obs_name = 'pth_smH'
+
+    combination = differentials.scans.DifferentialSpectrum('combination',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
+        )
+    combination.color = 9
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=True),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
+        )
+    combination_statonly.color = 9
+    combination_statonly.no_overflow_label = True
+    combination_statonly.draw_method = 'repr_horizontal_bar_and_narrow_fill'
+    combination_statonly.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    differentials.scans.plot_spectra(
+        'spectra_{0}_statsyst'.format(obs_name),
+        [ combination, combination_statonly ],
         obs_name, obs_title='p_{T}', obs_unit='GeV'
         )
 
 
 #____________________________________________________________________
 @flag_as_option
-def pth_smH_plot(args):
+def pth_smH_plot_lumiscale(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    containers = []
 
-    if args.lumiScale:
-        containers = []
+    lumi35 = prepare_container('lumi35', LatestPaths.ws_combined_smH, LatestPaths.scan_combination_pth_smH_asimov)
+    lumi35.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+    lumi35.color = 1
+    containers.append(lumi35)
 
-        lumi35 = prepare_container('lumi35', LatestPaths.ws_combined_smH, LatestPaths.scan_combination_pth_smH_asimov)
-        lumi35.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-        lumi35.color = 1
-        containers.append(lumi35)
+    # lumi35_new = prepare_container('lumi35_new', LatestPaths.ws_combined_smH, 'out/Scan_pth_smH_Feb12_combination_asimov')
+    # lumi35_new.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+    # lumi35_new.color = 4
+    # containers.append(lumi35_new)
 
-        # lumi35_new = prepare_container('lumi35_new', LatestPaths.ws_combined_smH, 'out/Scan_pth_smH_Feb12_combination_asimov')
-        # lumi35_new.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-        # lumi35_new.color = 4
-        # containers.append(lumi35_new)
+    lumi300 = prepare_container('lumi300', LatestPaths.ws_hgg_smH, 'out/Scan_pth_smH_Feb12_combination_lumiScale_asimov_1')
+    lumi300.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+    lumi300.color = 2
+    containers.append(lumi300)
 
-        lumi300 = prepare_container('lumi300', LatestPaths.ws_hgg_smH, 'out/Scan_pth_smH_Feb12_combination_lumiScale_asimov_1')
-        lumi300.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-        lumi300.color = 2
-        containers.append(lumi300)
+    lumi3000 = prepare_container(
+        'lumi3000', LatestPaths.ws_hgg_smH, 'out/Scan_pth_smH_Feb12_combination_lumiScale_asimov_1',
+        scale_scans = 10.
+        )
+    lumi3000.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+    lumi3000.color = 4
+    containers.append(lumi3000)
 
-        lumi3000 = prepare_container(
-            'lumi3000', LatestPaths.ws_hgg_smH, 'out/Scan_pth_smH_Feb12_combination_lumiScale_asimov_1',
-            scale_scans = 10.
-            )
-        lumi3000.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-        lumi3000.color = 4
-        containers.append(lumi3000)
+    # lumi35 = prepare_container('lumi35', LatestPaths.ws_hgg_smH, LatestPaths.scan_hgg_PTH)
+    # lumi35.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
+    # lumi35.color = 1
+    # containers.append(lumi35)
 
-
-        # lumi35 = prepare_container('lumi35', LatestPaths.ws_hgg_smH, LatestPaths.scan_hgg_PTH)
-        # lumi35.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-        # lumi35.color = 1
-        # containers.append(lumi35)
-
-        for container in containers:
-            draw_parabolas(container)
-
-    elif args.statsyst:
-        containers = read_containers_statsyst(args, 'pth_smH', decay_channels=['combination'])
-        for container in containers: container.color = 9
-    else:
-        containers = []
-
-        hgg = prepare_container('hgg', LatestPaths.ws_hgg_smH, LatestPaths.scan_hgg_PTH)
-        hgg.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-        containers.append(hgg)
-
-        hzz = prepare_container('hzz', LatestPaths.ws_hzz_smH, LatestPaths.scan_hzz_PTH)
-        hzz.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
-        containers.append(hzz)
-
-        # Cross check to see if new scanning mechanism worked
-        # hzzNew = prepare_container('hzzNew', LatestPaths.ws_hzz_smH, 'out/Scan_pth_smH_Feb12_hzz_1')
-        # hzzNew.SMcrosssections = LatestBinning.obs_pth_hzzBinning.crosssection_over_binwidth()
-        # hzzNew.color = 9
-        # containers.append(hzzNew)
-
-        combination = prepare_container('combination', LatestPaths.ws_combined_smH, LatestPaths.scan_combined_PTH)
-        combination.SMcrosssections = LatestBinning.obs_pth.crosssection_over_binwidth()
-        containers.append(combination)
-
-        # for container in containers:
-        #     PlotCommands.WriteScansToTable(
-        #         container,
-        #         'pth',
-        #         xTitle = 'p_{T}^{H} (GeV)',
-        #         yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
-        #         lastBinIsOverflow = True,
-        #         )
+    for container in containers:
+        draw_parabolas(container)
 
     SM = prepare_SM_container(
         LatestBinning.obs_pth.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
@@ -417,60 +570,6 @@ def pth_smH_plot(args):
         # yMaxExternalTop = 110.,
         )
 
-#____________________________________________________________________
-@flag_as_option
-def pth_ggH_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-
-    if args.statsyst:
-        containers = read_containers_statsyst(args, 'pth_ggH', decay_channels=['combination'])
-        for container in containers: container.color = 9
-
-    else:
-        containers = []
-
-        hgg = prepare_container( 'hgg', LatestPaths.ws_hgg_ggH_xHfixed, LatestPaths.scan_hgg_PTH_ggH )
-        hgg.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
-        containers.append(hgg)
-
-        hzz         = prepare_container( 'hzz', LatestPaths.ws_hzz_ggH_xHfixed, LatestPaths.scan_hzz_PTH_ggH )
-        hzz.SMcrosssections = LatestBinning.obs_pth_ggH_hzzBinning.crosssection_over_binwidth()
-        containers.append(hzz)
-
-        combination = prepare_container( 'combination', LatestPaths.ws_combined_ggH_xHfixed, LatestPaths.scan_combined_PTH_ggH )
-        combination.SMcrosssections = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
-        containers.append(combination)
-
-        for container in containers:
-            PlotCommands.WriteScansToTable(
-                container,
-                'pth_ggh',
-                xTitle = 'p_{T}^{H} (GeV)',
-                yTitle = '#Delta#sigma/#Delta p_{T}^{H} (pb/GeV)',
-                lastBinIsOverflow = True,
-                )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_pth_ggH.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
-        LatestBinning.obs_pth_ggH.binning
-        )
-    containers.append(SM)
-
-    l = PlotCommands.TLatexMultiPanel(
-        lambda c: 1.0 - c.GetRightMargin() - 0.01,
-        lambda c: 1.0 - c.GetTopMargin() - 0.14,
-        '(non-ggH fixed to SM)'
-        )
-    l.SetTextSize(0.05)
-    l.SetTextAlign(33)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_pth_ggH_Spectrum' + ('_statsyst' if args.statsyst else ''),
-        containers,
-        xTitle = 'p_{T}^{H} (GeV)',
-        yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
-        topPanelObjects = [ ( l, '' ) ],
-        )
 
 #____________________________________________________________________
 @flag_as_option
@@ -542,174 +641,5 @@ def pth_ggH_hbb_plot(args):
         xTitle = 'p_{T}^{H} (GeV)',
         yTitleTop = '#Delta#sigma^{ggH}/#Deltap_{T}^{H} (pb/GeV)',
         # topPanelObjects = [ ( l, '' ) ],
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def njets_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-
-    if args.statsyst:
-        containers = read_containers_statsyst(args, 'njets', decay_channels=['combination'])
-        for container in containers: container.color = 9
-
-    else:
-        containers = []
-        hgg = prepare_container( 'hgg', LatestPaths.ws_hgg_smH_NJ,LatestPaths.scan_hgg_NJ )
-        hgg.SMcrosssections = LatestBinning.obs_njets.crosssection_over_binwidth()
-        containers.append(hgg)
-
-        hzz = prepare_container( 'hzz', LatestPaths.ws_hzz_smH_NJ,LatestPaths.scan_hzz_NJ )
-        hzz.SMcrosssections = LatestBinning.obs_njets_hzzBinning.crosssection_over_binwidth()
-        containers.append(hzz)
-
-        combination = prepare_container( 'combination', LatestPaths.ws_combined_smH_NJ,LatestPaths.scan_combined_NJ )
-        combination.SMcrosssections = LatestBinning.obs_njets.crosssection_over_binwidth()
-        containers.append(combination)
-
-        check_containers(containers)
-        for container in containers:
-            PlotCommands.WriteScansToTable(
-                container,
-                'njets',
-                xTitle = 'N_{jets}',
-                yTitle = '#Delta#sigma/#Delta N_{jets} (pb)',
-                lastBinIsOverflow = False,
-                )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_njets.crosssection_over_binwidth(),
-        LatestBinning.obs_njets.binning
-        )
-    containers.append(SM)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_nJetsSpectrum' + ('_statsyst' if args.statsyst else ''),
-        containers,
-        xTitle = 'N_{jets}',
-        # yMinLimit = 0.07,
-        # yMaxExternalTop = 500,
-        yTitleTop = '#Delta#sigma/#DeltaN_{jets} (pb)',
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def ptjet_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-
-    if args.statsyst:
-        containers = read_containers_statsyst(args, 'ptjet', decay_channels=['combination'])
-        for container in containers: container.color = 9
-
-    else:
-        containers = []
-        hgg = prepare_container('hgg', LatestPaths.ws_hgg_smH_PTJ, LatestPaths.scan_hgg_PTJ_asimov)
-        hgg.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
-        containers.append(hgg)
-
-        hzz = prepare_container('hzz', LatestPaths.ws_hzz_smH_PTJ, LatestPaths.scan_hzz_PTJ_asimov)
-        hzz.SMcrosssections = LatestBinning.obs_ptjet_hzzBinning.crosssection_over_binwidth()
-        containers.append(hzz)
-
-        combination = prepare_container('combination', LatestPaths.ws_combined_smH_PTJ, LatestPaths.scan_combined_PTJ_asimov)
-        combination.SMcrosssections = LatestBinning.obs_ptjet.crosssection_over_binwidth()
-        containers.append(combination)
-
-    Commands.Warning( 'Skipping first bin for ptjet (should be the underflow)' )
-    for container in containers:
-        container.POIs = container.POIs[1:]
-        container.Scans = container.Scans[1:]
-        container.SMcrosssections = container.SMcrosssections[1:]
-
-    if not args.statsyst:
-        check_containers(containers)
-        for container in containers:
-            PlotCommands.WriteScansToTable(
-                container,
-                'ptjet',
-                xTitle = 'p_{T}^{jet} (GeV)',
-                yTitle = '#Delta#sigma/#Delta p_{T}^{jet} (pb/GeV)',
-                lastBinIsOverflow = True,
-                )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_ptjet.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True),
-        LatestBinning.obs_ptjet.binning
-        )
-    containers.append(SM)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_ptjetSpectrum' + ('_statsyst' if args.statsyst else ''),
-        containers,
-        xTitle = 'p_{T}^{jet} (GeV)',
-        yTitleTop = '#Delta#sigma/#Deltap_{T}^{jet} (pb/GeV)',
-        # yMinLimit = 0.07,
-        yMaxExternalTop = 10,
-        xMinExternal = 30.0,
-        # yMinLimit    = 0.1
-        )
-
-#____________________________________________________________________
-@flag_as_option
-def rapidity_plot_new(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-
-    scandir = 'out/Scan_rapidity_Feb12_combination_asimov'
-
-  
-    spectrum = differentials.scans.DifferentialSpectrum(
-        scandir=scandir, auto_determine_POIs=True
-        )
-    spectrum.read()
-    spectrum.plot_scans()
-
-
-#____________________________________________________________________
-@flag_as_option
-def rapidity_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-
-    if args.statsyst:
-        containers = read_containers_statsyst(args, 'rapidity', decay_channels=['combination'])
-        for container in containers: container.color = 9
-
-    else:
-        containers = []
-        hgg = prepare_container('hgg', LatestPaths.ws_hgg_smH_YH, LatestPaths.scan_hgg_YH_asimov)
-        hgg.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
-        containers.append(hgg)
-
-        hzz = prepare_container('hzz', LatestPaths.ws_hzz_smH_YH, LatestPaths.scan_hzz_YH_asimov)
-        hzz.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
-        containers.append(hzz)
-
-        combination = prepare_container('combination', LatestPaths.ws_combined_smH_YH, LatestPaths.scan_combined_YH_asimov)
-        combination.SMcrosssections = LatestBinning.obs_yh.crosssection_over_binwidth()
-        containers.append(combination)
-
-        check_containers(containers)
-        for container in containers:
-            PlotCommands.WriteScansToTable(
-                container,
-                'rapidity',
-                xTitle = '|y_{H}|',
-                yTitle = '#Delta#sigma/#Delta|y_{H}| (pb)',
-                lastBinIsOverflow = False,
-                )
-
-    SM = prepare_SM_container(
-        LatestBinning.obs_yh.crosssection_over_binwidth(),
-        LatestBinning.obs_yh.binning
-        )
-    containers.append(SM)
-
-    PlotCommands.PlotSpectraOnTwoPanel(
-        'twoPanel_rapiditySpectrum' + ('_statsyst' if args.statsyst else ''),
-        containers,
-        xTitle = '|y_{H}|',
-        yTitleTop = '#Delta#sigma/#Delta|y_{H}| (pb)',
-        yMinExternalTop = 1.,
-        # yMaxExternalTop = 500
-        lastBinIsNotOverflow=True,
         )
 
