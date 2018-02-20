@@ -42,6 +42,7 @@ def plot_spectra(spectra, obs_name, obs_title, obs_unit=None):
         for spectrum in spectra:
             spectrum.hard_x_max = x_max
 
+    plot.make_SM_line(spectra, leg=leg)
     for spectrum in spectra:
         plot.add_bottom(spectrum.to_hist(), spectrum.draw_method)
         plot.add_top(spectrum.to_hist_xs(), spectrum.draw_method, leg=leg)
@@ -199,6 +200,40 @@ class DifferentialSpectrum(object):
             else:
                 histogram.set_last_bin_is_overflow()
         if not(self.color is None): histogram.color = self.color
+        return histogram
+
+    def to_hist_sm(self):
+        histogram = plotting.pywrappers.Histogram(
+            utils.get_unique_rootname(),
+            'SM',
+            self.binning(),
+            [1.0 for i in self.smxs]
+            )
+        # histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
+        # histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
+        if self.last_bin_is_overflow(): 
+            if not(self.hard_x_max is None):
+                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
+            else:
+                histogram.set_last_bin_is_overflow()
+        histogram.color = 16
+        return histogram
+
+    def to_hist_smxs(self):
+        histogram = plotting.pywrappers.Histogram(
+            utils.get_unique_rootname(),
+            'SM',
+            self.binning(),
+            self.smxs
+            )
+        # histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
+        # histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
+        if self.last_bin_is_overflow(): 
+            if not(self.hard_x_max is None):
+                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
+            else:
+                histogram.set_last_bin_is_overflow()
+        histogram.color = 16
         return histogram
 
 

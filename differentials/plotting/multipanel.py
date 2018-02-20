@@ -55,6 +55,13 @@ class BottomPanelPlot(object):
         obj._legend = leg
         self.bottom_objects.append((obj, draw_str))
 
+    def make_SM_line(self, spectra_original, leg=None):
+        spectra = spectra_original[:]
+        spectra.sort(key=lambda s: -len(s.scans))
+        smxs_histogram = spectra[0].to_hist_smxs()
+        self.add_top(smxs_histogram, 'repr_basic_histogram', leg)
+        sm_histogram = spectra[0].to_hist_sm()
+        self.add_bottom(sm_histogram, 'repr_basic_histogram')
 
     def make_labels_for_overflow_spectra(self, spectra, obs_name):
         x_min, y_min, x_max, y_max = self.get_top_extrema()

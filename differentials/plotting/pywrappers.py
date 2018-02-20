@@ -56,7 +56,7 @@ class Legend(object):
 
     def n_columns_heuristic(self):
         n_entries = len(self._entries)
-        return min(n_entries, 3)
+        return min(n_entries, 4)
 
     def Draw(self, drawStr=''):
         x1 = self._x1(ROOT.gPad) if callable(self._x1) else self._x1
@@ -186,7 +186,7 @@ class Histogram(object):
         self.n_bins = len(bin_boundaries)-1
         self.bin_values = bin_values
         self.bins = []
-        self._expecting_asymm_unc = False
+        self.has_uncertainties = False
         if color is None:
             self.color = self.color_cycle.next()
         else:
@@ -226,24 +226,38 @@ class Histogram(object):
         return self.bin_boundaries[-1]
 
     def y_min(self, only_positive=False):
-        if only_positive:
-            return min([b for b in self.bounds_down if b>0.])
-        return min(self.bounds_down)
+        if self.has_uncertainties:
+            if only_positive:
+                return min([b for b in self.bounds_down if b>0.])
+            else:
+                return min(self.bounds_down)
+        else:
+            if only_positive:
+                return min([b for b in self.bin_values if b>0.])
+            else:
+                return min(self.bin_values)            
 
     def y_max(self, only_positive=False):
-        if only_positive:
-            return max([b for b in self.bounds_up if b>0.])
-        return max(self.bounds_up)
+        if self.has_uncertainties:
+            if only_positive:
+                return max([b for b in self.bounds_up if b>0.])
+            else:
+                return max(self.bounds_up)
+        else:
+            if only_positive:
+                return max([b for b in self.bin_values if b>0.])
+            else:
+                return max(self.bin_values)            
         
     def set_err_up(self, errs_up):
         self.errs_up = [ abs(i) for i in errs_up ]
         self.bounds_up = [ c+e for c, e in zip(self.bin_values, self.errs_up) ]
-        self._expecting_asymm_err = True
+        self.has_uncertainties = True
 
     def set_err_down(self, errs_down):
         self.errs_down = [ abs(i) for i in errs_down ]
         self.bounds_down = [ c-abs(e) for c, e in zip(self.bin_values, self.errs_down) ]
-        self._expecting_asymm_err = True
+        self.has_uncertainties = True
 
     def get_bin_centers(self):
         return [ 0.5*(left+right) for left, right in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:]) ]
@@ -425,7 +439,7 @@ class Graph(object):
         self.xs = xs
         self.ys = ys
 
-        self._expecting_asymm_unc = False
+        self.has_uncertainties = False
         if color is None:
             self.color = self.color_cycle.next()
         else:
@@ -447,12 +461,12 @@ class Graph(object):
     def set_err_up(self, errs_up):
         self.errs_up = [ abs(i) for i in errs_up ]
         self.bounds_up = [ c+e for c, e in zip(self.bin_values, self.errs_up) ]
-        self._expecting_asymm_err = True
+        self.has_uncertainties = True
 
     def set_err_down(self, errs_down):
         self.errs_down = [ abs(i) for i in errs_down ]
         self.bounds_down = [ c+e for c, e in zip(self.bin_values, self.errs_down) ]
-        self._expecting_asymm_err = True
+        self.has_uncertainties = True
 
     def filter(self, x_min=-10e9, x_max=10e9, y_min=-10e9, y_max=10e9, inplace=True):
         passed_x = []
