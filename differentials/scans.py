@@ -1,8 +1,227 @@
+import os.path
 import glob, re, copy
 
 import core, logger
+import plotting
+from plotting.canvas import c
+import plotting.plotting_utils as utils
 
 from collections import namedtuple
+from array import array
+
+import ROOT
+
+
+def glob_rootfiles(d):
+    if not d.endswith('/'): d += '/'
+    return glob.glob(d + '*.root')
+
+
+
+def plot_spectra(spectra, obs_name, obs_title, obs_unit=None):
+    plot = plotting.multipanel.BottomPanelPlot('spectra_' + obs_name)
+    plot.x_title = obs_title + (' ({0})'.format(obs_unit) if not(obs_unit is None) else '')
+    plot.y_title_top = '#Delta#sigma (pb{0})'.format('/' + obs_unit if not(obs_unit is None) else '')
+    plot.y_title_bottom = '#mu'
+
+    leg = plotting.pywrappers.Legend(
+        lambda c: c.GetLeftMargin() + 0.01,
+        lambda c: 1 - c.GetTopMargin() - 0.10,
+        lambda c: 1 - c.GetRightMargin() - 0.01,
+        lambda c: 1 - c.GetTopMargin()
+        )
+
+    for spectrum in spectra:
+        if not spectrum.smxs_set:
+            raise RuntimeError('SM cross sections were not provided for spectrum')
+        spectrum.read() 
+
+    if spectra[0].last_bin_is_overflow():
+        # Make sure overflow bins are aligned
+        x_max = max([ 2*s.binning()[-2]-s.binning()[-3] for s in spectra ])
+        for spectrum in spectra:
+            spectrum.hard_x_max = x_max
+
+    for spectrum in spectra:
+        plot.add_bottom(spectrum.to_hist(), spectrum.draw_method)
+        plot.add_top(spectrum.to_hist_xs(), spectrum.draw_method, leg=leg)
+
+    plot.make_labels_for_overflow_spectra(spectra, obs_title)
+
+    plot.add_top(leg, '')
+    plot.draw()
+
+
+class DifferentialSpectrum(object):
+    """Essentially a collection of Scan instances, 1 per POI that was scanned"""
+    standard_titles = {
+        'hgg' : 'H#rightarrow#gamma#gamma',
+        'hzz' : 'H#rightarrowZZ',
+        'combination' : 'Combination',
+        'hbb' : 'H#rightarrowbb',
+        'combWithHbb' : 'Comb. with H#rightarrowbb',
+        }
+
+    def __init__(self, name, scandir, auto_determine_POIs=False, datacard=None):
+        self.name = name
+        self.scandir = scandir
+        self.scans = []
+        self.auto_determine_POIs = auto_determine_POIs
+        self.datacard = datacard
+        self.POIs = []
+        self.title = self.standard_titles.get(name, name)
+        self.smxs = []
+        self.smxs_set = False
+        self.color = None
+        self.draw_method = 'repr_horizontal_bar_and_narrow_fill'
+
+        self.hard_x_max = None
+
+    def set_sm(self, smxs):
+        self.smxs = smxs
+        self.smxs_set = True
+
+    def get_POIs_from_scandir(self):
+        root_files = glob_rootfiles(self.scandir)
+        POIs = []
+        for root_file in root_files:
+            match = re.search(r'bPOI_(\w+)_ePOI', os.path.basename(root_file))
+            if not match:
+                continue
+            POIs.append(match.group(1))
+        POIs = list(set(POIs))
+        POIs.sort(key=core.range_sorter)
+        return POIs
+
+    def get_POIs_from_datacard(self, datacard=None):
+        if datacard is None:
+            datacard = self.datacard
+        POIs = core.list_POIs(datacard)
+        POIs.sort(key=core.range_sorter)
+        return POIs
+
+
+    def read(self):
+        if self.auto_determine_POIs:
+            self.POIs = self.get_POIs_from_scandir()
+        else:
+            self.POIs = self.get_POIs_from_datacard()
+
+        for POI in self.POIs:
+            scan = Scan(
+                x_variable=POI,
+                y_variable='deltaNLL',
+                scandir=self.scandir,
+                globpat=POI
+                )
+            scan.read()
+            scan.create_uncertainties()
+            self.scans.append(scan)
+
+    def plot_scans(self):
+        c.Clear()
+        c.set_margins()
+        base = utils.get_plot_base(
+            x_min=-1.0, x_max=4., y_min=0.0, y_max=5.0,
+            x_title='POI', y_title='2#DeltaNLL'
+            )
+        base.Draw('P')
+
+        leg = plotting.pywrappers.Legend()
+        for scan in self.scans:
+            graph = scan.to_graph()
+            graph.filter(y_max=3.5)
+            for obj, draw_str in graph.repr_basic_line(leg):
+                obj.Draw(draw_str)
+
+            left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [1.0]))
+            ROOT.SetOwnership(left_point, False)
+            left_point.SetMarkerColor(graph.color)
+            left_point.SetMarkerSize(1.1)
+            left_point.SetMarkerStyle(8)
+            if not scan.unc.well_defined_left_bound:
+                left_point.SetMarkerStyle(5)
+            left_point.Draw('PSAME')
+
+            right_point = ROOT.TGraph(1, array('f', [scan.unc.right_bound]), array('f', [1.0]))
+            ROOT.SetOwnership(right_point, False)
+            right_point.SetMarkerColor(graph.color)
+            right_point.SetMarkerSize(1.1)
+            right_point.SetMarkerStyle(8)
+            if not scan.unc.well_defined_right_bound:
+                right_point.SetMarkerStyle(5)
+            right_point.Draw('PSAME')
+
+        leg.Draw()
+
+        plotting.pywrappers.CMS_Latex_type().Draw()
+        plotting.pywrappers.CMS_Latex_lumi().Draw()
+
+        outname = 'scans_{0}'.format(os.path.basename(self.scandir).replace('/',''))
+        c.save(outname)
+
+    def binning(self):
+        binning = core.binning_from_POIs(self.POIs)
+        return binning
+
+    def last_bin_is_overflow(self):
+        return core.last_bin_is_overflow(self.POIs)
+
+    def to_hist(self):
+        histogram = plotting.pywrappers.Histogram(
+            utils.get_unique_rootname(),
+            self.title,
+            self.binning(),
+            [ s.unc.x_min for s in self.scans ]
+            )
+        histogram.set_err_up([ s.unc.right_error for s in self.scans ])
+        histogram.set_err_down([ s.unc.left_error for s in self.scans ])
+        if self.last_bin_is_overflow():
+            if not(self.hard_x_max is None):
+                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
+            else:
+                histogram.set_last_bin_is_overflow()
+        if not(self.color is None): histogram.color = self.color
+        return histogram
+
+    def to_hist_xs(self):
+        histogram = plotting.pywrappers.Histogram(
+            utils.get_unique_rootname(),
+            self.title,
+            self.binning(),
+            [ s.unc.x_min * xs for s, xs in zip(self.scans, self.smxs) ]
+            )
+        histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
+        histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
+        if self.last_bin_is_overflow(): 
+            if not(self.hard_x_max is None):
+                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
+            else:
+                histogram.set_last_bin_is_overflow()
+        if not(self.color is None): histogram.color = self.color
+        return histogram
+
+
+    def plot_single_spectrum(self):
+        histogram = self.to_hist()
+        histogram.color = 2
+
+        c.Clear()
+        c.set_margins()
+        base = utils.get_plot_base(
+            x_min=histogram.x_min(), x_max=histogram.x_max(),
+            y_min=histogram.y_min(), y_max=histogram.y_max(),
+            x_title='Observable', y_title='#mu'
+            )
+        base.Draw('P')
+
+        for obj, draw_str in histogram.repr_uncertainties_narrow_filled_area():
+            obj.Draw(draw_str)
+        for obj, draw_str in histogram.repr_horizontal_bars():
+            obj.Draw(draw_str)
+
+        outname = 'spectrum_' + os.path.basename(self.scandir).replace('/','')
+        c.save(outname)
 
 
 class Scan(object):
@@ -17,9 +236,54 @@ class Scan(object):
         self.y_variable = y_variable
         self.scandirs = []
         if not(scandir is None): self.scandirs.append(scandir)
-        self.globpat = '*'
+
+        if globpat == '*':
+            self.globpat = '*'
+        else:
+            self.globpat = '*' + globpat + '*'
+
         self.root_files = []
         self.save_all_variables = False
+
+        logger.debug(
+            'New scan instance:'
+            '\nx_variable = {0}'
+            '\ny_variable = {1}'
+            '\nscandirs   = {2}'
+            '\nglobpat    = {3}'
+            .format(self.x_variable, self.y_variable, ', '.join(self.scandirs), self.globpat)
+            )
+
+
+    def read(self):
+        root_files = self.collect_root_files()
+        if len(root_files) == 0:
+            raise RuntimeError(
+                'Attemped to retrieve scan for x:{0} y:{1}, '
+                'but no .root files were found. Passed list of dirs to look in:\n'
+                .format(self.x_variable, self.y_variable)
+                + '\n'.join(self.scandirs)
+                )
+
+        logger.debug(
+            'Found the following root files in {0}:\n'.format(', '.join(self.scandirs))
+            + '\n'.join(root_files)
+            )
+
+        if self.save_all_variables:
+            variables = self.get_list_of_variables_in_tree(self, root_files)
+            if not(self.x_variable in variables) or not(self.y_variable in variables):
+                raise RuntimeError(
+                    'Variables x:{0} and/or y:{1} are not in the found list of variables:\n'
+                    .format(self.x_variable, self.y_variable)
+                    + '\n'.join(variables)
+                    )
+        else:
+            variables = [ self.x_variable, self.y_variable ]
+
+        self.entries = self.read_chain(root_files, variables)
+        # self.filter_entries()
+
 
     def collect_root_files(self):
         root_files = copy.copy(self.root_files)
@@ -27,6 +291,7 @@ class Scan(object):
             if not scandir.endswith('/'): scandir += '/'
             root_files.extend(glob.glob(scandir + self.globpat + '.root'))
         return root_files
+
 
     def get_list_of_variables_in_tree(self, root_files, accept_pat='*'):
         for root_file in root_files:
@@ -64,42 +329,26 @@ class Scan(object):
         for root_file in root_files:
             chain.Add(root_file)
 
-        Entry = namedtuple('Entry', variables)
+        Entry = namedtuple('Entry', variables + ['x', 'y'])
         entries = []
         for event in chain:
-            entry = {}
+            # Only allow unique values of x in the list
+            if getattr(event, self.x_variable) in [e.x for e in entries]:
+                continue
+            entry_dict = {}
             for var_name in variables:
                 entry_dict[var_name] = getattr(event, var_name)
                 if var_name == self.x_variable:
                     entry_dict['x'] = entry_dict[var_name]
+
                 if var_name == self.y_variable:
                     entry_dict['y'] = entry_dict[var_name]
             entries.append(Entry(**entry_dict))
+
+
+
+        entries.sort(key=lambda entry: entry.x)
         return entries
-
-
-    def read(self):
-        root_files = self.collect_root_files()
-        if len(root_files) == 0:
-            raise RuntimeError(
-                'Attemped to retrieve scan for x:{0} y:{1}, '
-                'but no .root files were found. Passed list of dirs to look in:\n'
-                .format(self.x_variable, self.y_variable)
-                + '\n'.join(self.scandirs)
-                )
-
-        if self.save_all_variables:
-            variables = self.get_list_of_variables_in_tree(self, root_files)
-            if not(self.x_variable in variables) or not(self.y_variable in variables):
-                raise RuntimeError(
-                    'Variables x:{0} and/or y:{1} are not in the found list of variables:\n'
-                    .format(self.x_variable, self.y_variable)
-                    + '\n'.join(variables)
-                    )
-        else:
-            variables = [ self.x_variable, self.y_variable ]
-
-        self.entries = self.read_chain(root_files, variables)
 
 
     def filter_entries(self, inplace=True):
@@ -130,8 +379,10 @@ class Scan(object):
     def deltaNLLs(self):
         return [ entry.deltaNLL for entry in self.entries ]
 
+    def two_times_deltaNLLs(self):
+        return [ 2.*entry.deltaNLL for entry in self.entries ]
 
-    def create_uncertainties(self, entries):
+    def create_uncertainties(self, inplace=True):
         xs = self.x()
         deltaNLLs = self.deltaNLLs()
 
@@ -139,19 +390,31 @@ class Scan(object):
         i_min_deltaNLL = rindex(deltaNLLs, min_deltaNLL)
         x_min          = xs[i_min_deltaNLL]
 
+        logger.debug('Determining uncertainties for scan (x={0}, y={1})'.format(self.x_variable, self.y_variable))
+        logger.debug('Found minimum at index {0}: x={1}, deltaNLL={2}'.format(i_min_deltaNLL, x_min, min_deltaNLL))
+
         unc_dict = {
             'min_deltaNLL' : min_deltaNLL,
             'i_min' : i_min_deltaNLL,
-            'x_min' : x_min
+            'x_min' : x_min,
+            'left_bound' : -999,
+            'left_error' : -999,
+            'right_bound' : 999,
+            'right_error' : 999,
+            'well_defined_left_bound' : False,
+            'well_defined_right_bound' : False,
             }
+        Unc = namedtuple('Unc', unc_dict.keys())
 
         # Process left uncertainty
-        if i_min < 3:
+        if i_min_deltaNLL < 3:
+            logger.debug('Not enough points on the left side for a well defined left bound')
             well_defined_left_bound = False
         else:
             xs_left = xs[:i_min_deltaNLL+1]
             deltaNLLs_left = deltaNLLs[:i_min_deltaNLL+1]
             if min(deltaNLLs_left) > 0.5 or max(deltaNLLs_left) < 0.5:
+                logger.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_left), max(deltaNLLs_left)))
                 well_defined_left_bound = False
             else:
                 left_bound = self.interpolate(xs_left, deltaNLLs_left, 0.5)
@@ -161,12 +424,14 @@ class Scan(object):
                     well_defined_left_bound = True
 
         # Process right uncertainty
-        if i_min > len(xs)-3:
+        if i_min_deltaNLL > len(xs)-3:
+            logger.debug('Not enough points on the right side for a well defined right bound')
             well_defined_right_bound = False
         else:
             xs_right = xs[i_min_deltaNLL:]
             deltaNLLs_right = deltaNLLs[i_min_deltaNLL:]
             if min(deltaNLLs_right) > 0.5 or max(deltaNLLs_right) < 0.5:
+                logger.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_right), max(deltaNLLs_right)))
                 well_defined_right_bound = False
             else:
                 right_bound = self.interpolate(xs_right, deltaNLLs_right, 0.5)
@@ -175,7 +440,7 @@ class Scan(object):
                 else:
                     well_defined_right_bound = True
 
-
+        is_hopeless = False
         if well_defined_left_bound and well_defined_right_bound:
             pass
         elif well_defined_left_bound and not well_defined_right_bound:
@@ -188,136 +453,52 @@ class Scan(object):
                 'x = {0}, y = {1}'
                 .format(self.x_variable, self.y_variable)
                 )
-            unc_dict['left_bound'] = -999
-            unc_dict['left_error'] = -999
-            unc_dict['right_bound'] = 999
-            unc_dict['right_error'] = 999
+            is_hopeless = True
+
+        if not is_hopeless:
+            unc_dict['well_defined_left_bound'] = well_defined_left_bound
+            unc_dict['well_defined_right_bound'] = well_defined_right_bound
+            left_error = abs(x_min - left_bound)
+            right_error = abs(x_min - right_bound)
+            unc_dict['left_bound']  = left_bound
+            unc_dict['left_error']  = left_error
+            unc_dict['right_bound'] = right_bound
+            unc_dict['right_error'] = right_error
+
+        unc = Unc(**unc_dict)
+        if inplace:
+            self.unc = unc
+        else:
+            return unc
 
 
+    def interpolate(self, ys, xs, x_value):
+        logger.debug('Interpolating for x_value={0}'.format(x_value))
+        logger.debug('  x  /  y:')
+        for x, y in zip(xs, ys): logger.debug('    {0:+7.2f}  /  {1:+7.2f}'.format(x, y))
 
-        # Unc = namedtuple('Unc', )
-
-
-    def interpolate(self, xs, ys, x_value):
-        if min(ys) > y_value or max(ys) < y_value:
+        if min(xs) > x_value or max(xs) < x_value:
+            logger.debug('  Requested interpolation {0} is outside the range: {1} to {2}'.format(x_value, min(xs), max(xs)))
             return False
         Tg = ROOT.TGraph(len(xs), array('f', xs), array('f', ys))
         y_value = Tg.Eval(x_value)
         # if y_value < min(ys) or y_value > max(ys):
         #     return False
+        if y_value is False:
+            logger.debug('  Could not interpolate properly')
+        else:
+            logger.debug('  Interpolated y_value {0} for x_value {1}'.format(y_value, x_value))
         return y_value
 
 
-
-
-
-
+    def to_graph(self):
+        name = utils.get_unique_rootname()
+        title = self.x_variable
+        graph = plotting.pywrappers.Graph(name, title, self.x(), self.two_times_deltaNLLs())
+        return graph
 
 
         
 def rindex( someList, val ):
     # Regular list.index() finds first instance in list, this function finds the last
     return len(someList) - someList[::-1].index(val) - 1
-
-def FindMinimaAndErrors( POIvals, deltaNLLs, returnContainer=False ):
-
-    minDeltaNLL   = min(deltaNLLs)
-    iMin          = rindex( deltaNLLs, minDeltaNLL )
-    minimumPOIval = POIvals[iMin]
-
-    # Dict that is returned in case of a total error
-    errReturn = {
-        'imin'       : iMin,
-        'min'        : minimumPOIval,
-        'leftError'  : -999,
-        'leftBound'  : -999,
-        'rightError' : 999,
-        'rightBound' : 999,
-        'symmError'  : 999,
-        'symmBound'  : 999,
-        'wellDefinedRightBound' : False,
-        'wellDefinedLeftBound'  : False,
-        }
-    if returnContainer:
-        errReturnContainer = TheoryCommands.Container()
-        for key, value in errReturn.iteritems():
-            setattr( errReturnContainer, key, value )
-        errReturn = errReturnContainer
-
-    if iMin > 2:
-        # Find left minimum
-        POIvalsLeft   = POIvals[:iMin+1]
-        deltaNLLsLeft = deltaNLLs[:iMin+1]
-        if min(deltaNLLsLeft) > 0.5 or max(deltaNLLsLeft) < 0.5:
-            wellDefinedLeftBound = False
-
-        Tg_left = ROOT.TGraph(
-            iMin+1,
-            array( 'd', deltaNLLsLeft[:iMin+1] ),
-            array( 'd', POIvalsLeft[:iMin+1] )
-            )
-        ROOT.SetOwnership( Tg_left, False )
-
-        leftBound = Tg_left.Eval( 0.5 )
-        if leftBound <= POIvals[0]:
-            wellDefinedLeftBound = False
-        else:
-            wellDefinedLeftBound = True
-    else:
-        wellDefinedLeftBound = False
-
-    if iMin < len(POIvals)-2:
-        # Find right minimum
-        Tg_right = ROOT.TGraph(
-            len(POIvals)-iMin+1,
-            array( 'd', deltaNLLs[iMin:] ),
-            array( 'd', POIvals[iMin:] )
-            )
-        ROOT.SetOwnership( Tg_right, False )
-
-        rightBound = Tg_right.Eval( 0.5 )
-        if rightBound >= POIvals[-1]:
-            wellDefinedRightBound = False
-        else:
-            wellDefinedRightBound = True
-    else:
-        wellDefinedRightBound = False
-
-
-    if wellDefinedLeftBound and wellDefinedRightBound:
-        pass
-    # Symmetrize if one of the bounds was poorly defined
-    elif wellDefinedLeftBound and not wellDefinedRightBound:
-        rightBound = minimumPOIval + ( minimumPOIval - leftBound )
-    elif wellDefinedRightBound and not wellDefinedLeftBound:
-        leftBound  = minimumPOIval - ( rightBound - minimumPOIval )
-    else:
-        print 'Hopeless interpolation case; unable to determine uncertainties.'
-        return errReturn
-
-    leftError = abs(minimumPOIval - leftBound)
-    rightError = abs(minimumPOIval - rightBound)
-
-
-    returnDict = {
-        'imin'       : iMin,
-        'min'        : minimumPOIval,
-        'leftError'  : leftError,
-        'leftBound'  : leftBound,
-        'rightError' : rightError,
-        'rightBound' : rightBound,
-        'symmError'  : 0.5*( abs(leftError) + abs(rightError) ),
-        'symmBound'  : minimumPOIval + 0.5*( abs(leftError) + abs(rightError) ),
-        'wellDefinedRightBound' : wellDefinedRightBound,
-        'wellDefinedLeftBound'  : wellDefinedLeftBound,
-        }
-
-    if returnContainer:
-        container = TheoryCommands.Container()
-        for key, value in returnDict.iteritems():
-            setattr( container, key, value )
-        return container
-    else:
-        return returnDict
-
-

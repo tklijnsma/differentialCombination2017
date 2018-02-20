@@ -26,6 +26,9 @@ import PlotCommands
 import DifferentialTable
 from differentialTools import *
 
+import differentials
+# import differentials.plotting
+
 from time import strftime
 datestr = strftime( '%b%d' )
 
@@ -288,6 +291,41 @@ def plot_all_differentials(args):
     njets_plot(args)
     ptjet_plot(args)
     rapidity_plot(args)
+
+
+#____________________________________________________________________
+@flag_as_option
+def pth_smH_plot_new(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    obs_name = 'pth_smH'
+    
+    hgg = differentials.scans.DifferentialSpectrum('hgg',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hgg', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
+        )
+    hgg.color = 2
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth() )
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
+        )
+    hzz.color = 4
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth() )
+
+    combination = differentials.scans.DifferentialSpectrum('combination',
+        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
+        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
+        )
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth() )
+
+    differentials.scans.plot_spectra(
+        [ hgg, hzz, combination ],
+        obs_name, obs_title='p_{T}', obs_unit='GeV'
+        )
 
 
 #____________________________________________________________________
@@ -610,6 +648,21 @@ def ptjet_plot(args):
         xMinExternal = 30.0,
         # yMinLimit    = 0.1
         )
+
+#____________________________________________________________________
+@flag_as_option
+def rapidity_plot_new(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+
+    scandir = 'out/Scan_rapidity_Feb12_combination_asimov'
+
+  
+    spectrum = differentials.scans.DifferentialSpectrum(
+        scandir=scandir, auto_determine_POIs=True
+        )
+    spectrum.read()
+    spectrum.plot_scans()
+
 
 #____________________________________________________________________
 @flag_as_option

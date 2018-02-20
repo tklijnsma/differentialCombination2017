@@ -1,20 +1,47 @@
+import itertools
+
 import ROOT
 import plotting_utils as utils
-from canvas import c
+from canvas import c, global_color_cycle
+
+import differentials.logger as logger
+
+from array import array
 
 class Legend(object):
     """Wrapper for TLegend class that allows flexible drawing of a legend on a multi panel plot"""
     def __init__(
             self,
-            x1, y1, x2, y2
+            x1=None, y1=None, x2=None, y2=None,
             ):
-        self._x1 = x1
-        self._y1 = y1
-        self._x2 = x2
-        self._y2 = y2
+
+        if x1 is None:
+            self._x1 = lambda c: c.GetLeftMargin()
+        else:
+            self._x1 = x1
+
+        if x2 is None:
+            self._x2 = lambda c: 1. - c.GetRightMargin()
+        else:
+            self._x2 = x2
+
+        if y1 is None:
+            self._y1 = lambda c: 1. - c.GetTopMargin() - 0.15
+        else:
+            self._y1 = y1
+
+        if y2 is None:
+            self._y2 = lambda c: 1. - c.GetTopMargin()
+        else:
+            self._y2 = y2
+
         self._entries = []
         self.legend = ROOT.TLegend(0., 1., 0., 1.)
+        self.legend.SetBorderSize(0)
+        self.legend.SetFillStyle(0)
+
         ROOT.SetOwnership(self.legend, False)
+
 
     def __getattr__(self, name):
         """
@@ -27,16 +54,22 @@ class Legend(object):
         """Save entries in a python list, but add them to the actual legend later"""
         self._entries.append( args )
 
+    def n_columns_heuristic(self):
+        n_entries = len(self._entries)
+        return min(n_entries, 3)
+
     def Draw(self, drawStr=''):
         x1 = self._x1(ROOT.gPad) if callable(self._x1) else self._x1
         y1 = self._y1(ROOT.gPad) if callable(self._y1) else self._y1
         x2 = self._x2(ROOT.gPad) if callable(self._x2) else self._x2
         y2 = self._y2(ROOT.gPad) if callable(self._y2) else self._y2
 
-        self.legend.SetX1NDC(x1)
-        self.legend.SetY1NDC(y1)
-        self.legend.SetX2NDC(x2)
-        self.legend.SetY2NDC(y2)
+        self.legend.SetX1(x1)
+        self.legend.SetY1(y1)
+        self.legend.SetX2(x2)
+        self.legend.SetY2(y2)
+
+        self.legend.SetNColumns(self.n_columns_heuristic())
 
         for args in self._entries:
             self.legend.AddEntry(*args)
@@ -50,7 +83,7 @@ class Latex(object):
         self.y = y
         self.text = text
         self.tlatex = ROOT.TLatex()
-        ROOT.SetOwnership( self.tlatex, False )
+        ROOT.SetOwnership(self.tlatex, False)
 
     def __getattr__(self, name):
         """
@@ -62,10 +95,10 @@ class Latex(object):
     def Draw(self, draw_str=None):
         x = self.x(ROOT.gPad) if callable(self.x) else self.x
         y = self.y(ROOT.gPad) if callable(self.y) else self.y
-        print 'In Draw():'
-        print '  x    = ', self.x
-        print '  y    = ', self.y
-        print '  text = ', self.text
+        logger.debug('In Draw():')
+        logger.debug('  x    = {0}'.format(x))
+        logger.debug('  y    = {0}'.format(y))
+        logger.debug('  text = {0}'.format(self.text))
         self.tlatex.DrawLatex(x, y, self.text)
 
 
@@ -140,13 +173,13 @@ class CMS_Latex_lumi(Latex):
 
 
 class Histogram(object):
-    """docstring for GenericHistogram"""
+    """docstring for Histogram"""
 
-    colorCycle = Commands.newColorCycle()
-    fillStyleCycle = itertools.cycle([ 3245, 3254, 3205 ])
+    color_cycle = global_color_cycle
+    fill_style_cycle = itertools.cycle([ 3245, 3254, 3205 ])
 
     def __init__(self, name, title, bin_boundaries, bin_values, color=None):
-        super(GenericHistogram, self).__init__()
+        super(Histogram, self).__init__()
         self.name = name
         self.title = title
         self.bin_boundaries = bin_boundaries
@@ -155,18 +188,52 @@ class Histogram(object):
         self.bins = []
         self._expecting_asymm_unc = False
         if color is None:
-            self.color = self.colorCycle.next()
+            self.color = self.color_cycle.next()
         else:
             self.color = color
 
-        self.fill_style = fillStyleCycle.next()
+        self.fill_style = self.fill_style_cycle.next()
         self.fill_color = self.color
-        self.marker_style
-        self.marker_size
+        self.marker_style = 8
+        self.marker_size = 0
         self.marker_color = self.color
         self.line_color = self.color
-        self.line_width
+        self.line_width = 2
 
+        self.last_bin_is_overflow = False
+        self._legend = None
+
+
+    def set_last_bin_is_overflow(self, flag=True, method='SECONDTOLASTBINWIDTH', hard_value=None):
+        logger.debug('Last bin is specified to be overflow, so the last bin boundary will be modified')
+        self.last_bin_is_overflow = True
+        if method == 'SECONDTOLASTBINWIDTH':
+            new_last_bin_boundary = self.bin_boundaries[-2] + (self.bin_boundaries[-2] - self.bin_boundaries[-3])
+        elif method == 'HARDVALUE':
+            if hard_value is None:
+                raise TypeError('method \'HARDVALUE\' expects argument hard_value to be passed')
+            new_last_bin_boundary = hard_value
+        else:
+            raise ValueError('Method \'{0}\' is not implemented'.format(method))
+        logger.debug('Will replace last bin boundary {0} by {1}'.format(self.bin_boundaries[-1], new_last_bin_boundary))
+        self.bin_boundaries[-1] = new_last_bin_boundary
+
+
+    def x_min(self):
+        return self.bin_boundaries[0]
+
+    def x_max(self):
+        return self.bin_boundaries[-1]
+
+    def y_min(self, only_positive=False):
+        if only_positive:
+            return min([b for b in self.bounds_down if b>0.])
+        return min(self.bounds_down)
+
+    def y_max(self, only_positive=False):
+        if only_positive:
+            return max([b for b in self.bounds_up if b>0.])
+        return max(self.bounds_up)
         
     def set_err_up(self, errs_up):
         self.errs_up = [ abs(i) for i in errs_up ]
@@ -175,7 +242,7 @@ class Histogram(object):
 
     def set_err_down(self, errs_down):
         self.errs_down = [ abs(i) for i in errs_down ]
-        self.bounds_down = [ c+e for c, e in zip(self.bin_values, self.errs_down) ]
+        self.bounds_down = [ c-abs(e) for c, e in zip(self.bin_values, self.errs_down) ]
         self._expecting_asymm_err = True
 
     def get_bin_centers(self):
@@ -193,7 +260,7 @@ class Histogram(object):
 
     def repr_basic_histogram(self, leg=None):
         H = ROOT.TH1F(
-            GetUniqueRootName(), '',
+            utils.get_unique_rootname(), '',
             len(self.bin_boundaries)-1, array( 'f', self.bin_boundaries)
             )
         ROOT.SetOwnership( H, False )
@@ -208,6 +275,10 @@ class Histogram(object):
         return [ (H, 'HISTSAME') ]
 
 
+    def repr_horizontal_bar_and_narrow_fill(self, leg=None):
+        return self.repr_horizontal_bars() + self.repr_uncertainties_narrow_filled_area(leg)
+
+
     def repr_horizontal_bars(self):
         Tg = ROOT.TGraphErrors(
             self.n_bins,
@@ -217,8 +288,10 @@ class Histogram(object):
             array( 'f', self.get_zeroes() ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( utils.get_unique_rootname() )
 
+        Tg.SetMarkerSize(0)
+        Tg.SetMarkerColor(self.color)
         Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
         # Tg.SetLineWidth(   getattr(self, 'setLineWidth',   2 ) )
 
@@ -236,7 +309,7 @@ class Histogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( utils.get_unique_rootname() )
     
         Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
@@ -262,7 +335,7 @@ class Histogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( utils.get_unique_rootname() )
     
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
         Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
@@ -290,7 +363,7 @@ class Histogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( utils.get_unique_rootname() )
     
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
         Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
@@ -319,7 +392,7 @@ class Histogram(object):
             array( 'f', self.errs_up ),
             )
         ROOT.SetOwnership( Tg, False )
-        Tg.SetName( GetUniqueRootName() )
+        Tg.SetName( utils.get_unique_rootname() )
 
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
         Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
@@ -333,5 +406,84 @@ class Histogram(object):
 
 
     def Draw(self, draw_style):
-        for obj, draw_str in getattr(self, draw_style):
+        for obj, draw_str in getattr(self, draw_style)(self._legend):
             obj.Draw(draw_str)
+
+
+
+class Graph(object):
+    """docstring for Graph"""
+
+    color_cycle = global_color_cycle
+    fill_style_cycle = itertools.cycle([ 3245, 3254, 3205 ])
+
+    def __init__(self, name, title, xs, ys, color=None):
+        super(Graph, self).__init__()
+        self.name = name
+        self.title = title
+
+        self.xs = xs
+        self.ys = ys
+
+        self._expecting_asymm_unc = False
+        if color is None:
+            self.color = self.color_cycle.next()
+        else:
+            self.color = color
+
+        self.fill_style = self.fill_style_cycle.next()
+        self.line_width = 2
+
+        # self.marker_style
+        # self.marker_size
+
+        # # self.fill_color = self.color
+        # # self.marker_color = self.color
+        # # self.line_color = self.color
+
+        self._legend = None
+
+        
+    def set_err_up(self, errs_up):
+        self.errs_up = [ abs(i) for i in errs_up ]
+        self.bounds_up = [ c+e for c, e in zip(self.bin_values, self.errs_up) ]
+        self._expecting_asymm_err = True
+
+    def set_err_down(self, errs_down):
+        self.errs_down = [ abs(i) for i in errs_down ]
+        self.bounds_down = [ c+e for c, e in zip(self.bin_values, self.errs_down) ]
+        self._expecting_asymm_err = True
+
+    def filter(self, x_min=-10e9, x_max=10e9, y_min=-10e9, y_max=10e9, inplace=True):
+        passed_x = []
+        passed_y = []
+        for x, y in zip(self.xs, self.ys):
+            if (x < x_min or x > x_max) or (y < y_min or y > y_max):
+                continue
+            else:
+                passed_x.append(x)
+                passed_y.append(y)
+        if inplace:
+            self.xs = passed_x
+            self.ys = passed_y
+        else:
+            return passed_x, passed_y
+
+    def repr_basic_line(self, leg=None):
+        Tg = ROOT.TGraph(len(self.xs), array('f', self.xs), array('f', self.ys))
+        ROOT.SetOwnership(Tg, False)
+        Tg.SetName(utils.get_unique_rootname())
+
+        Tg.SetLineColor(self.color)
+        Tg.SetLineWidth(self.line_width)
+
+        if not(leg is None):
+            leg.AddEntry( Tg.GetName(), self.title, 'L' )
+
+        return [(Tg, 'SAMEL')]
+
+
+    def Draw(self, draw_style):
+        for obj, draw_str in getattr(self, draw_style)(self._legend):
+            obj.Draw(draw_str)
+

@@ -32,7 +32,7 @@ class Canvas(object):
             LeftMargin   = 0.15,
             RightMargin  = 0.03,
             BottomMargin = 0.15,
-            TopMargin    = 0.03,
+            TopMargin    = 0.09,
             for2Dhist    = False
             ):
         if for2Dhist:
@@ -59,7 +59,7 @@ class Canvas(object):
             outdir = os.path.join(outdir, subdir)
 
         if not os.path.isdir(outdir): os.makedirs(outdir)
-        outname = os.path.join(outdir, basename(outname).replace('.pdf','').replace('.png',''))
+        outname = os.path.join(outdir, os.path.basename(outname).replace('.pdf','').replace('.png',''))
 
         if (pdf or self.save_pdf) or (png_through_convert or self.save_png_through_convert):
             self.canvas.SaveAs(outname+'.pdf')
@@ -74,3 +74,4 @@ class Canvas(object):
 
 # Create one instance that can be called from anywhere
 c = Canvas()
+global_color_cycle = utils.new_color_cycle()

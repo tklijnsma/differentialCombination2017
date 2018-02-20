@@ -1,3 +1,4 @@
+import itertools
 import differentials.core
 import ROOT
 
@@ -15,17 +16,17 @@ def get_plot_base(
         set_title_sizes = True,
         ):
     base = ROOT.TH1F()
-    ROOT.SetOwnership( base, False )
-    base.SetName( get_unique_rootname() )
-    base.GetXaxis().SetLimits( x_min, x_max )
-    base.SetMinimum( y_min )
-    base.SetMaximum( y_max )
+    ROOT.SetOwnership(base, False)
+    base.SetName(get_unique_rootname())
+    base.GetXaxis().SetLimits(x_min, x_max)
+    base.SetMinimum(y_min)
+    base.SetMaximum(y_max)
     base.SetMarkerColor(0)
-    base.GetXaxis().SetTitle( x_title )
-    base.GetYaxis().SetTitle( y_title )
+    base.GetXaxis().SetTitle(x_title)
+    base.GetYaxis().SetTitle(y_title)
     if set_title_sizes:
-        base.GetXaxis().SetTitleSize( 0.06 )
-        base.GetYaxis().SetTitleSize( 0.06 )
+        base.GetXaxis().SetTitleSize(0.06)
+        base.GetYaxis().SetTitleSize(0.06)
     return base
 
 def set_color_palette(option=None):
@@ -61,3 +62,10 @@ def set_color_palette(option=None):
         array('d', greens ),
         array('d', blues ),
         255 )
+
+def new_color_cycle():
+    return itertools.cycle(
+        range(2,5) + range(6,10)
+        + range(40,50)
+        + [ 30, 32, 33, 35, 38, 39 ]
+        )

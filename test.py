@@ -9,19 +9,17 @@ Thomas Klijnsma
 
 import argparse
 
-import combineCommands
-import plotCommands
 import yukawaCommands
 import topCommands
-import onetimeplotsCommands
 import extrastudyCommands
 import crosscheckCommands
-import differentialCombinations
 
 import sys
 sys.path.append('src')
 import Commands
 import TheoryCommands
+
+import differentials.logger
 
 # New style option handling
 from OptionHandler import OptionHandler
@@ -43,6 +41,7 @@ def main():
 
     parser.add_argument( '--bkg',                             action='store_true' )
     parser.add_argument( '--test',                            action='store_true' )
+    parser.add_argument( '--debug',                           action='store_true' )
 
     parser.add_argument( '--fastscan',                        action='store_true' )
     parser.add_argument( '--asimov',                          action='store_true' )
@@ -82,6 +81,9 @@ def main():
     if args.bkg:
         pass
     if args.test: Commands.TestMode()
+
+    if args.debug:
+        differentials.logger.set_level_debug()
 
     if args.saveroot:
         TheoryCommands.SaveAsRoot()
