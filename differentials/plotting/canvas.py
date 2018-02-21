@@ -33,18 +33,23 @@ class Canvas(object):
             RightMargin  = 0.03,
             BottomMargin = 0.15,
             TopMargin    = 0.09,
-            for2Dhist    = False
             ):
-        if for2Dhist:
-            self.canvas.SetLeftMargin(   0.12 )
-            self.canvas.SetRightMargin(  0.10 )
-            self.canvas.SetBottomMargin( 0.12 )
-            self.canvas.SetTopMargin(    0.09 )
-        else:
-            self.canvas.SetLeftMargin( LeftMargin )
-            self.canvas.SetRightMargin( RightMargin )
-            self.canvas.SetBottomMargin( BottomMargin )
-            self.canvas.SetTopMargin( TopMargin )
+        self.canvas.SetLeftMargin( LeftMargin )
+        self.canvas.SetRightMargin( RightMargin )
+        self.canvas.SetBottomMargin( BottomMargin )
+        self.canvas.SetTopMargin( TopMargin )
+
+    def set_margins_2D(
+            self,
+            LeftMargin   = 0.12,
+            RightMargin  = 0.10,
+            BottomMargin = 0.12,
+            TopMargin    = 0.09, # Maybe 0.08
+            ):
+        self.canvas.SetLeftMargin( LeftMargin )
+        self.canvas.SetRightMargin( RightMargin )
+        self.canvas.SetBottomMargin( BottomMargin )
+        self.canvas.SetTopMargin( TopMargin )
 
     def set_plotdir(self, newdir):
         self.plotdir = newdir

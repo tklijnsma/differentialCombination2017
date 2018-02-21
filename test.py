@@ -74,6 +74,8 @@ def main():
         'differentialPlots',
         'lumiStudyPlots',
         'onetimeplotsCommands',
+        # 
+        'yukawa_plots',
         ])
 
     args = parser.parse_args()

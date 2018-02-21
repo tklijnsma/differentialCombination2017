@@ -11,5 +11,8 @@ def debug(text):
 def warning(text):
     logging.warning(text)
 
+def error(text):
+    logging.error(text)
+
 def set_level_debug():
     logging.getLogger().setLevel(logging.DEBUG)

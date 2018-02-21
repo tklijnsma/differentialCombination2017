@@ -26,6 +26,17 @@ class Observable(object):
         self.nBins = len(self.shape)
 
     #____________________________________________________________________
+    def drop_last_bin(self):
+        self.shape = self.shape[:-1]
+        self.binning = self.binning[:-1]
+        self.nBins -= 1
+
+    #____________________________________________________________________
+    def drop_bins_up_to_value(self, value):
+        while self.binning[-1] > value:
+            self.drop_last_bin()
+
+    #____________________________________________________________________
     def crosssection(self):
         return [ s * self.YR4_totalXS for s in self.shape ]
 

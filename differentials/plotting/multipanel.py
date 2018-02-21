@@ -4,8 +4,10 @@ import pywrappers
 from canvas import c
 
 import differentials.logger as logger
+import differentials.parametrization
 
 from math import isnan, isinf, log10
+from array import array
 
 
 class BottomPanelPlot(object):
@@ -194,12 +196,12 @@ class BottomPanelPlot(object):
         return x_min, y_min, x_max, y_max
 
 
-    def draw(self):
+    def draw(self, inplace=True):
         c.cd()
         c.Clear()
 
-        _width = c.GetWindowWidth()
-        _height = c.GetWindowHeight()
+        self._tmp_width = c.GetWindowWidth()
+        self._tmp_height = c.GetWindowHeight()
         c.SetCanvasSize( 800, 900 )
 
         toppad_bottom    = self.pad_split_point
@@ -311,6 +313,127 @@ class BottomPanelPlot(object):
             pywrappers.CMS_Latex_type(text_size=0.08).Draw()
             pywrappers.CMS_Latex_lumi(text_size=0.07).Draw()
 
+        if inplace:
+            self.wrapup()
+        else:
+            self.bottompad = bottompad
+            self.toppad = toppad
+
+
+    def wrapup(self):
         c.save(self.name)
-        c.SetCanvasSize( _width, _height )
+        c.SetCanvasSize(self._tmp_width, self._tmp_height)
+
+
+
+class BottomPanelPlotWithParametrizations(BottomPanelPlot):
+    """docstring for BottomPanelPlotWithParametrizations"""
+    def __init__(self, *args, **kwargs):
+        super(BottomPanelPlotWithParametrizations, self).__init__(*args, **kwargs)
+        self.scan2D = None
+        self.pt_scan = None
+        self.ws_file = None
+        self.obs = None
+        self.points = []
+        self.parametrized_graphs = []
+        self.color_cycle = utils.new_color_cycle()
+
+
+    def get_points(self):
+        contour = self.scan2D.to_hist().get_most_probable_1sigma_contour()
+        self.points.append(pywrappers.Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y, color=self.color_cycle.next()))
+        self.points.append(pywrappers.Point(contour.x_min, contour.y[contour.x.index(contour.x_min)], color=self.color_cycle.next()))
+        self.points.append(pywrappers.Point(contour.x_max, contour.y[contour.x.index(contour.x_max)], color=self.color_cycle.next()))
+        self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_min)], contour.y_min, color=self.color_cycle.next()))
+        self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_max)], contour.y_max, color=self.color_cycle.next()))
+
+
+    def draw(self):
+        self.top_x_min    = self.obs.binning[0]
+        self.bottom_x_min = self.obs.binning[0]
+        self.top_x_max    = self.obs.binning[-1]
+        self.bottom_x_max = self.obs.binning[-1]
+
+        self.bottom_y_min = 0.0
+        self.bottom_y_max = 2.0
+
+        self.get_points()
+        self.draw_parametrizations()
+
+        super(BottomPanelPlotWithParametrizations, self).draw(inplace=False)
+
+        self.draw_small_pad()
+
+        c.Update()
+        self.wrapup()
+
+
+    def draw_parametrizations(self):
+        parametrization = differentials.parametrization.WSParametrization(self.ws_file)
+        for point in self.points:
+            parametrization.set(self.scan2D.x_variable, point.x)
+            parametrization.set(self.scan2D.y_variable, point.y)
+            mus = parametrization.get_mus_exp()
+
+            mu_histogram = pywrappers.Histogram(
+                utils.get_unique_rootname(),
+                'title',
+                self.obs.binning,
+                mus
+                )
+
+            for obj, draw_str in mu_histogram.repr_basic_histogram():
+                self.add_bottom(obj, draw_str)
+
+
+    def draw_small_pad(self):
+        # Contour finding switches to c, slightly confusing... gather objects before
+        histogram2D = self.scan2D.to_hist()
+        small_pad_objs = histogram2D.repr_2D_with_contours_no_bestfit()
+
+        # Draw the subplot
+        self.toppad.cd()
+        # c.cd()
+        cw = 1.0 - self.toppad.GetLeftMargin() - self.toppad.GetRightMargin()
+        ch = 1.0 - self.toppad.GetBottomMargin() - self.toppad.GetTopMargin()
+        small_pad = ROOT.TPad(
+            utils.get_unique_rootname(), '',
+            self.toppad.GetLeftMargin() + 0.50*cw, self.toppad.GetBottomMargin() + 0.50*ch,
+            self.toppad.GetLeftMargin() + 0.99*cw, self.toppad.GetBottomMargin() + 0.99*ch,
+            )
+        ROOT.SetOwnership(small_pad, False)
+        small_pad.SetBottomMargin( 0.14 )
+        small_pad.SetTopMargin(    0.03 )
+        small_pad.SetLeftMargin(   0.12 )
+        # small_pad.SetRightMargin(  0.10 )
+        small_pad.SetRightMargin(  0.10 )
+        small_pad.Draw()
+        small_pad.cd()
+
+        for obj, draw_str in small_pad_objs:
+            obj.Draw(draw_str)
+
+        for point in self.points:
+            point.SetMarkerSize(2.0)
+            point.Draw('repr_diamond_with_border')
+
+            # point_edges = point.Clone() # This will be a TGraph then, not a wrapper
+            # point_edges.SetMarkerSize(4.5)
+            # point_edges.SetMarkerStyle(27)
+            # point_edges.SetMarkerColor(1)
+            # point_edges.Draw('PSAME')
+
+        dummy_legend = pywrappers.ContourDummyLegend(
+            small_pad.GetLeftMargin() + 0.01,
+            1. - small_pad.GetTopMargin() - 0.1,
+            1. - small_pad.GetRightMargin() - 0.01,
+            1. - small_pad.GetTopMargin() - 0.01,
+            )
+        dummy_legend.disable_bestfit = True
+        dummy_legend.disable_SM = True
+        dummy_legend.Draw()
+
+
+
+
 

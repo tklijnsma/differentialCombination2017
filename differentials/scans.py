@@ -16,48 +16,9 @@ def glob_rootfiles(d):
     if not d.endswith('/'): d += '/'
     return glob.glob(d + '*.root')
 
-
-
-def plot_spectra(plotname, spectra, obs_name, obs_title, obs_unit=None, inplace=True):
-    plot = plotting.multipanel.BottomPanelPlot(plotname)
-    plot.x_title = obs_title + (' ({0})'.format(obs_unit) if not(obs_unit is None) else '')
-    plot.y_title_top = '#Delta#sigma/#Delta{0} (pb{1})'.format(
-        obs_title,
-        '/' + obs_unit if not(obs_unit is None) else ''
-        )
-    plot.y_title_bottom = '#mu'
-
-    leg = plotting.pywrappers.Legend(
-        lambda c: c.GetLeftMargin() + 0.01,
-        lambda c: 1 - c.GetTopMargin() - 0.10,
-        lambda c: 1 - c.GetRightMargin() - 0.01,
-        lambda c: 1 - c.GetTopMargin()
-        )
-
-    for spectrum in spectra:
-        if not spectrum.smxs_set:
-            raise RuntimeError('SM cross sections were not provided for spectrum')
-        spectrum.read() 
-
-    if spectra[0].last_bin_is_overflow():
-        # Make sure overflow bins are aligned
-        x_max = max([ 2*s.binning()[-2]-s.binning()[-3] for s in spectra ])
-        for spectrum in spectra:
-            spectrum.hard_x_max = x_max
-
-    plot.make_SM_line(spectra, leg=leg)
-    for spectrum in spectra:
-        plot.add_bottom(spectrum.to_hist(), spectrum.draw_method)
-        plot.add_top(spectrum.to_hist_xs(), spectrum.draw_method, leg=leg)
-
-    plot.make_labels_for_overflow_spectra(spectra, obs_title)
-
-    plot.add_top(leg, '')
-
-    if inplace:
-        plot.draw()
-    else:
-        return plot
+def rindex( someList, val ):
+    # Regular list.index() finds first instance in list, this function finds the last
+    return len(someList) - someList[::-1].index(val) - 1
 
 
 class DifferentialSpectrum(object):
@@ -262,65 +223,33 @@ class DifferentialSpectrum(object):
         c.save(outname)
 
 
-class Scan(object):
-    """docstring for Scan"""
+
+class ScanPrimitive(object):
+
+    standard_titles = {
+        'hgg' : 'H#rightarrow#gamma#gamma',
+        'hzz' : 'H#rightarrowZZ',
+        'combination' : 'Combination',
+        'hbb' : 'H#rightarrowbb',
+        'combWithHbb' : 'Comb. with H#rightarrowbb',
+        # 
+        'kappac' : '#kappa_{c}',
+        'kappab' : '#kappa_{b}',
+        'kappat' : '#kappa_{t}',
+        'ct' : '#kappa_{t}',
+        'cg' : 'c_{g}',
+        }
 
     tree_name = 'limit'
     filter_negatives = True
     deltaNLL_threshold = -0.01
 
-    def __init__(self, x_variable, y_variable='deltaNLL', scandir=None, globpat='*'):
-        self.x_variable = x_variable
-        self.y_variable = y_variable
+    def __init__(self):
         self.scandirs = []
-        if not(scandir is None): self.scandirs.append(scandir)
-
-        if globpat == '*':
-            self.globpat = '*'
-        else:
-            self.globpat = '*' + globpat + '*'
-
         self.root_files = []
         self.save_all_variables = False
-
-        logger.debug(
-            'New scan instance:'
-            '\nx_variable = {0}'
-            '\ny_variable = {1}'
-            '\nscandirs   = {2}'
-            '\nglobpat    = {3}'
-            .format(self.x_variable, self.y_variable, ', '.join(self.scandirs), self.globpat)
-            )
-
-
-    def read(self):
-        root_files = self.collect_root_files()
-        if len(root_files) == 0:
-            raise RuntimeError(
-                'Attemped to retrieve scan for x:{0} y:{1}, '
-                'but no .root files were found. Passed list of dirs to look in:\n'
-                .format(self.x_variable, self.y_variable)
-                + '\n'.join(self.scandirs)
-                )
-
-        logger.debug(
-            'Found the following root files in {0}:\n'.format(', '.join(self.scandirs))
-            + '\n'.join(root_files)
-            )
-
-        if self.save_all_variables:
-            variables = self.get_list_of_variables_in_tree(self, root_files)
-            if not(self.x_variable in variables) or not(self.y_variable in variables):
-                raise RuntimeError(
-                    'Variables x:{0} and/or y:{1} are not in the found list of variables:\n'
-                    .format(self.x_variable, self.y_variable)
-                    + '\n'.join(variables)
-                    )
-        else:
-            variables = [ self.x_variable, self.y_variable ]
-
-        self.entries = self.read_chain(root_files, variables)
-        # self.filter_entries()
+        self.entries = []
+        self.globpat = '*'
 
 
     def collect_root_files(self):
@@ -328,13 +257,24 @@ class Scan(object):
         for scandir in self.scandirs:
             if not scandir.endswith('/'): scandir += '/'
             root_files.extend(glob.glob(scandir + self.globpat + '.root'))
-        return root_files
 
+        if len(root_files) == 0:
+            raise RuntimeError(
+                'Attemped to retrieve scan for x:{0} y:{1}, '
+                'but no .root files were found. Passed list of dirs to look in:\n'
+                .format(self.x_variable, self.y_variable)
+                + '\n'.join(self.scandirs)
+                )
+        logger.debug(
+            'Found the following root files in {0}:\n'.format(', '.join(self.scandirs))
+            + '\n'.join(root_files)
+            )
+        return root_files
 
     def get_list_of_variables_in_tree(self, root_files, accept_pat='*'):
         for root_file in root_files:
             with core.openroot(root_file) as root_fp:
-                if not root_fp.GetListOfKeys().Contains('limit'):
+                if not root_fp.GetListOfKeys().Contains(self.tree_name):
                     found_tree = False
                 else:
                     variables = []
@@ -361,33 +301,33 @@ class Scan(object):
                 )
         return variables                            
 
-
-    def read_chain(self, root_files, variables):
+    def read_chain(self, root_files, variables, filter_x=False):
         chain = ROOT.TChain(self.tree_name)
         for root_file in root_files:
             chain.Add(root_file)
 
-        Entry = namedtuple('Entry', variables + ['x', 'y'])
+        Entry = namedtuple('Entry', variables + ['x', 'y'] + (['z'] if hasattr(self, 'z_variable') else []))
         entries = []
         for event in chain:
-            # Only allow unique values of x in the list
-            if getattr(event, self.x_variable) in [e.x for e in entries]:
-                continue
+            if filter_x and getattr(event, self.x_variable) in [e.x for e in entries]: continue
             entry_dict = {}
             for var_name in variables:
                 entry_dict[var_name] = getattr(event, var_name)
                 if var_name == self.x_variable:
                     entry_dict['x'] = entry_dict[var_name]
-
                 if var_name == self.y_variable:
                     entry_dict['y'] = entry_dict[var_name]
+                if hasattr(self, 'z_variable') and var_name == self.z_variable:
+                    entry_dict['z'] = entry_dict[var_name]
             entries.append(Entry(**entry_dict))
 
+        if len(entries) == 0:
+            raise RuntimeError(
+                'No entries were found'
+                )
 
-
-        entries.sort(key=lambda entry: entry.x)
+        entries.sort(key=lambda entry: (entry.x, entry.y))
         return entries
-
 
     def filter_entries(self, inplace=True):
         passed_entries = []
@@ -414,15 +354,64 @@ class Scan(object):
     def y(self):
         return [ entry.y for entry in self.entries ]
 
-    def deltaNLLs(self):
+    def z(self):
+        return [ entry.z for entry in self.entries ]
+
+    def deltaNLL(self):
         return [ entry.deltaNLL for entry in self.entries ]
 
-    def two_times_deltaNLLs(self):
+    def two_times_deltaNLL(self):
         return [ 2.*entry.deltaNLL for entry in self.entries ]
+
+    def bestfit(self):
+        return self.entries[self.deltaNLL().index(0.0)]
+
+
+class Scan(ScanPrimitive):
+    """docstring for Scan"""
+
+    def __init__(self, x_variable, y_variable='deltaNLL', scandir=None, globpat=None):
+        super(Scan, self).__init__()
+        self.x_variable = x_variable
+        self.y_variable = y_variable
+        if not(scandir is None): self.scandirs.append(scandir)
+
+        if not(globpat is None):
+            self.globpat = '*' + globpat + '*'
+
+        self.x_title = self.standard_titles.get(x_variable, x_variable)
+        self.y_title = '2#DeltaNLL'
+
+        logger.debug(
+            'New scan instance:'
+            '\nx_variable = {0}'
+            '\ny_variable = {1}'
+            '\nscandirs   = {2}'
+            '\nglobpat    = {3}'
+            .format(self.x_variable, self.y_variable, ', '.join(self.scandirs), self.globpat)
+            )
+
+    def read(self):
+        root_files = self.collect_root_files()
+
+        if self.save_all_variables:
+            variables = self.get_list_of_variables_in_tree(self, root_files)
+            if not(self.x_variable in variables) or not(self.y_variable in variables):
+                raise RuntimeError(
+                    'Variables x:{0} and/or y:{1} are not in the found list of variables:\n'
+                    .format(self.x_variable, self.y_variable)
+                    + '\n'.join(variables)
+                    )
+        else:
+            variables = [ self.x_variable, self.y_variable ]
+
+        self.entries = self.read_chain(root_files, variables)
+        self.filter_entries()
+
 
     def create_uncertainties(self, inplace=True):
         xs = self.x()
-        deltaNLLs = self.deltaNLLs()
+        deltaNLLs = self.deltaNLL()
 
         min_deltaNLL   = min(deltaNLLs)
         i_min_deltaNLL = rindex(deltaNLLs, min_deltaNLL)
@@ -509,7 +498,6 @@ class Scan(object):
         else:
             return unc
 
-
     def interpolate(self, ys, xs, x_value):
         logger.debug('Interpolating for x_value={0}'.format(x_value))
         logger.debug('  x  /  y:')
@@ -535,8 +523,106 @@ class Scan(object):
         graph = plotting.pywrappers.Graph(name, title, self.x(), self.two_times_deltaNLLs())
         return graph
 
-
         
-def rindex( someList, val ):
-    # Regular list.index() finds first instance in list, this function finds the last
-    return len(someList) - someList[::-1].index(val) - 1
+
+
+class Scan2D(ScanPrimitive):
+    """docstring for Scan2D"""
+
+    def __init__(self, name, x_variable, y_variable, z_variable='deltaNLL', scandir=None, globpat='*', color=None):
+        super(Scan2D, self).__init__()
+        self.x_variable = x_variable
+        self.y_variable = y_variable
+        self.z_variable = z_variable
+        if not(scandir is None): self.scandirs.append(scandir)
+
+        self.name = name
+        self.title = self.standard_titles.get(self.name, self.name)
+
+        self.x_title = self.standard_titles.get(x_variable, x_variable)
+        self.y_title = self.standard_titles.get(y_variable, y_variable)
+        self.z_title = '2#DeltaNLL'
+
+        if globpat == '*':
+            self.globpat = '*'
+        else:
+            self.globpat = '*' + globpat + '*'
+        self.color = color
+
+        logger.debug(
+            'New scan instance:'
+            '\nx_variable = {0}'
+            '\ny_variable = {1}'
+            '\nz_variable = {2}'
+            '\nscandirs   = {3}'
+            '\nglobpat    = {4}'
+            .format(self.x_variable, self.y_variable, self.z_variable, ', '.join(self.scandirs), self.globpat)
+            )
+
+    def read(self):
+        root_files = self.collect_root_files()
+
+        if self.save_all_variables:
+            variables = self.get_list_of_variables_in_tree(self, root_files)
+            if not(self.x_variable in variables) or not(self.y_variable in variables) or not(self.z_variable in variables):
+                raise RuntimeError(
+                    'Variables x:{0} and/or y:{1} and/or z:{2} are not in the found list of variables:\n'
+                    .format(self.x_variable, self.y_variable, self.z_variable)
+                    + '\n'.join(variables)
+                    )
+        else:
+            variables = [ self.x_variable, self.y_variable, self.z_variable ]
+
+        self.entries = self.read_chain(root_files, variables)
+        self.filter_entries()
+
+    # def bestfit(self):
+    #     return self.entries[self.deltaNLL().index(0.0)]
+
+    def to_hist(self):
+        histogram2D = plotting.pywrappers.Histogram2D(
+            utils.get_unique_rootname(), getattr(self, 'title', ''), self.color
+            )
+        histogram2D.x_title = self.x_title
+        histogram2D.y_title = self.y_title
+        histogram2D.z_title = self.z_title
+        histogram2D.fill_from_entries(self.entries)
+        return histogram2D
+
+
+    def plot(self, plotname):
+        c.Clear()
+        c.set_margins_2D()
+
+        # leg = plotting.pywrappers.Legend(
+        #     c.GetLeftMargin() + 0.01,
+        #     c.GetBottomMargin() + 0.02,
+        #     1 - c.GetRightMargin() - 0.01,
+        #     c.GetBottomMargin() + 0.09
+        #     )
+        histogram2D = self.to_hist()
+        # histogram2D._legend = leg
+        histogram2D.Draw('repr_2D_with_contours')
+
+        base = histogram2D.H2
+        base.GetXaxis().SetTitle(self.x_title)
+        base.GetYaxis().SetTitle(self.y_title)
+        base.GetXaxis().SetTitleSize(0.06)
+        base.GetXaxis().SetLabelSize(0.05)
+        base.GetYaxis().SetTitleSize(0.06)
+        base.GetYaxis().SetLabelSize(0.05)
+
+        plotting.pywrappers.CMS_Latex_type().Draw()
+        plotting.pywrappers.CMS_Latex_lumi().Draw()
+
+        plotting.pywrappers.ContourDummyLegend(
+            c.GetLeftMargin() + 0.01,
+            1. - c.GetTopMargin() - 0.1,
+            1. - c.GetRightMargin() - 0.01,
+            1. - c.GetTopMargin() - 0.01,
+            ).Draw()
+
+        c.Update()
+        c.RedrawAxis()
+        c.save(plotname)
+
