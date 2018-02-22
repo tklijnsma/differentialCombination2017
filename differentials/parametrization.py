@@ -1,11 +1,11 @@
 import core
-import logger
 import ROOT
+import logging
 
 class WSParametrization(object):
     """docstring for WSParametrization"""
     def __init__(self, ws_file):
-        logger.debug('Initializing parametrization with file {0}'.format(ws_file))
+        logging.debug('Initializing parametrization with file {0}'.format(ws_file))
         self.ws_file = ws_file
         with core.openroot(ws_file) as ws_fp:
             self.w = ws_fp.Get('w')
@@ -18,24 +18,24 @@ class WSParametrization(object):
         for i in xrange(yp_list.getSize()):
             yp = yp_list[i]
             yp_name = yp.GetName()
-            logger.debug('Found yield parameter: '.format(yp))
+            logging.debug('Found yield parameter: '.format(yp))
 
             if not(self.old_style) and yp_name.startswith('r_'):
                 new_yp_name = yp_name.replace('r_', 'parametrization_')
-                logger.info('Taking {0} instead of {1}'.format(new_yp_name, yp_name))
+                logging.info('Taking {0} instead of {1}'.format(new_yp_name, yp_name))
                 new_yp = self.w.function(new_yp_name)
                 if new_yp == None:
-                    logger.error('Variable {0} does not exist in ws; taking {1} instead'.format(new_yp_name, yp_name))
+                    logging.error('Variable {0} does not exist in ws; taking {1} instead'.format(new_yp_name, yp_name))
                 else:
                     yp = new_yp
             self.yield_parameters.append(yp)
 
     def get_yield_parameter_arglist(self):
         if self.set_exists('all_ggH_yieldParameters'):
-            logger.debug('Found set called all_ggH_yieldParameters')
+            logging.debug('Found set called all_ggH_yieldParameters')
             argset = self.w.set('all_ggH_yieldParameters')
         elif self.set_exists('yieldParameters'):
-            logger.debug('Found set called yieldParameters')
+            logging.debug('Found set called yieldParameters')
             self.old_style = True
             argset = self.w.set('yieldParameters')
         else:
@@ -53,16 +53,16 @@ class WSParametrization(object):
         return arglist
 
     def set_exists(self, set_name):
-        logger.debug('Checking if set {0} exists'.format(set_name))
+        logging.debug('Checking if set {0} exists'.format(set_name))
         s = self.w.set(set_name)
-        logger.debug('  Raw repr of w.set: {0}'.format(s))
+        logging.debug('  Raw repr of w.set: {0}'.format(s))
         if s == None:
             return False
         else:
             return True
 
     def set(self, name, value):
-        logger.debug('Setting {0} to {1}'.format(name, value))
+        logging.debug('Setting {0} to {1}'.format(name, value))
         roovar = self.w.var(name)
         if roovar == None:
             raise RuntimeError(

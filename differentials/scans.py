@@ -1,7 +1,8 @@
 import os.path
 import glob, re, copy
 
-import core, logger
+import logging
+import core
 import plotting
 from plotting.canvas import c
 import plotting.plotting_utils as utils
@@ -46,6 +47,9 @@ class DifferentialSpectrum(object):
 
         self.hard_x_max = None
 
+        self.get_POIs()
+
+
     def set_sm(self, smxs):
         self.smxs = smxs
         self.smxs_set = True
@@ -69,12 +73,16 @@ class DifferentialSpectrum(object):
         POIs.sort(key=core.range_sorter)
         return POIs
 
-
-    def read(self):
+    def get_POIs(self):
         if self.auto_determine_POIs:
             self.POIs = self.get_POIs_from_scandir()
         else:
             self.POIs = self.get_POIs_from_datacard()
+
+
+    def read(self):
+        if len(self.POIs)==0:
+            self.get_POIs()
 
         for POI in self.POIs:
             scan = Scan(
@@ -132,6 +140,18 @@ class DifferentialSpectrum(object):
     def binning(self):
         binning = core.binning_from_POIs(self.POIs)
         return binning
+
+    def drop_bins_up_to_value(self, value):
+        _POIs_before = self.POIs[:]
+        while self.binning()[-1] > value:
+            logging.debug('Bin bound {0} > {1}; dropping POI {2}'.format(self.binning()[-1], value, self.POIs[-1]))
+            self.POIs = self.POIs[:-1]
+        logging.info(
+            'Dropped POIs after {0}'
+            '\nOld POIs: {1}'
+            '\nNew POIs: {2}'
+            .format(value, _POIs_before, self.POIs)
+            )
 
     def last_bin_is_overflow(self):
         return core.last_bin_is_overflow(self.POIs)
@@ -265,10 +285,9 @@ class ScanPrimitive(object):
                 .format(self.x_variable, self.y_variable)
                 + '\n'.join(self.scandirs)
                 )
-        logger.debug(
-            'Found the following root files in {0}:\n'.format(', '.join(self.scandirs))
-            + '\n'.join(root_files)
-            )
+
+        logging.debug('Found {0} root files in {1}'.format(len(root_files), ', '.join(self.scandirs)))
+        logging.trace('List of root files:\n' + '\n'.join(root_files))
         return root_files
 
     def get_list_of_variables_in_tree(self, root_files, accept_pat='*'):
@@ -334,7 +353,7 @@ class ScanPrimitive(object):
         for entry in self.entries:
             if entry.deltaNLL < self.deltaNLL_threshold:
                 if self.filter_negatives:
-                    logger.warning(
+                    logging.warning(
                         'Dropping entry (deltaNLL<{0}:'.format(self.deltaNLL_threshold)
                         + entry.__repr__()
                         )
@@ -382,7 +401,7 @@ class Scan(ScanPrimitive):
         self.x_title = self.standard_titles.get(x_variable, x_variable)
         self.y_title = '2#DeltaNLL'
 
-        logger.debug(
+        logging.debug(
             'New scan instance:'
             '\nx_variable = {0}'
             '\ny_variable = {1}'
@@ -417,8 +436,8 @@ class Scan(ScanPrimitive):
         i_min_deltaNLL = rindex(deltaNLLs, min_deltaNLL)
         x_min          = xs[i_min_deltaNLL]
 
-        logger.debug('Determining uncertainties for scan (x={0}, y={1})'.format(self.x_variable, self.y_variable))
-        logger.debug('Found minimum at index {0}: x={1}, deltaNLL={2}'.format(i_min_deltaNLL, x_min, min_deltaNLL))
+        logging.debug('Determining uncertainties for scan (x={0}, y={1})'.format(self.x_variable, self.y_variable))
+        logging.debug('Found minimum at index {0}: x={1}, deltaNLL={2}'.format(i_min_deltaNLL, x_min, min_deltaNLL))
 
         unc_dict = {
             'min_deltaNLL' : min_deltaNLL,
@@ -435,13 +454,13 @@ class Scan(ScanPrimitive):
 
         # Process left uncertainty
         if i_min_deltaNLL < 3:
-            logger.debug('Not enough points on the left side for a well defined left bound')
+            logging.debug('Not enough points on the left side for a well defined left bound')
             well_defined_left_bound = False
         else:
             xs_left = xs[:i_min_deltaNLL+1]
             deltaNLLs_left = deltaNLLs[:i_min_deltaNLL+1]
             if min(deltaNLLs_left) > 0.5 or max(deltaNLLs_left) < 0.5:
-                logger.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_left), max(deltaNLLs_left)))
+                logging.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_left), max(deltaNLLs_left)))
                 well_defined_left_bound = False
             else:
                 left_bound = self.interpolate(xs_left, deltaNLLs_left, 0.5)
@@ -452,13 +471,13 @@ class Scan(ScanPrimitive):
 
         # Process right uncertainty
         if i_min_deltaNLL > len(xs)-3:
-            logger.debug('Not enough points on the right side for a well defined right bound')
+            logging.debug('Not enough points on the right side for a well defined right bound')
             well_defined_right_bound = False
         else:
             xs_right = xs[i_min_deltaNLL:]
             deltaNLLs_right = deltaNLLs[i_min_deltaNLL:]
             if min(deltaNLLs_right) > 0.5 or max(deltaNLLs_right) < 0.5:
-                logger.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_right), max(deltaNLLs_right)))
+                logging.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_right), max(deltaNLLs_right)))
                 well_defined_right_bound = False
             else:
                 right_bound = self.interpolate(xs_right, deltaNLLs_right, 0.5)
@@ -475,7 +494,7 @@ class Scan(ScanPrimitive):
         elif well_defined_right_bound and not well_defined_left_bound:
             left_bound  = x_min - (right_bound - x_min)
         else:
-            logger.error(
+            logging.error(
                 'Hopeless interpolation case; unable to determine uncertainties for '
                 'x = {0}, y = {1}'
                 .format(self.x_variable, self.y_variable)
@@ -499,21 +518,21 @@ class Scan(ScanPrimitive):
             return unc
 
     def interpolate(self, ys, xs, x_value):
-        logger.debug('Interpolating for x_value={0}'.format(x_value))
-        logger.debug('  x  /  y:')
-        for x, y in zip(xs, ys): logger.debug('    {0:+7.2f}  /  {1:+7.2f}'.format(x, y))
+        logging.debug('Interpolating for x_value={0}'.format(x_value))
+        logging.trace('  x  /  y:')
+        for x, y in zip(xs, ys): logging.trace('    {0:+7.2f}  /  {1:+7.2f}'.format(x, y))
 
         if min(xs) > x_value or max(xs) < x_value:
-            logger.debug('  Requested interpolation {0} is outside the range: {1} to {2}'.format(x_value, min(xs), max(xs)))
+            logging.debug('  Requested interpolation {0} is outside the range: {1} to {2}'.format(x_value, min(xs), max(xs)))
             return False
         Tg = ROOT.TGraph(len(xs), array('f', xs), array('f', ys))
         y_value = Tg.Eval(x_value)
         # if y_value < min(ys) or y_value > max(ys):
         #     return False
         if y_value is False:
-            logger.debug('  Could not interpolate properly')
+            logging.debug('  Could not interpolate properly')
         else:
-            logger.debug('  Interpolated y_value {0} for x_value {1}'.format(y_value, x_value))
+            logging.debug('  Interpolated y_value {0} for x_value {1}'.format(y_value, x_value))
         return y_value
 
 
@@ -549,7 +568,7 @@ class Scan2D(ScanPrimitive):
             self.globpat = '*' + globpat + '*'
         self.color = color
 
-        logger.debug(
+        logging.debug(
             'New scan instance:'
             '\nx_variable = {0}'
             '\ny_variable = {1}'

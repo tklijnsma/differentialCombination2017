@@ -30,6 +30,7 @@ class Observable(object):
         self.shape = self.shape[:-1]
         self.binning = self.binning[:-1]
         self.nBins -= 1
+        self.lastBinIsOverflow=False
 
     #____________________________________________________________________
     def drop_bins_up_to_value(self, value):

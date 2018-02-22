@@ -57,6 +57,7 @@ def plot_multi_contour(
         plotname, scans,
         x_min=None, x_max=None, y_min=None, y_max=None,
         x_SM=1.0, y_SM=1.0,
+        draw_individual_contours=True,
         inplace=True
         ):
 
@@ -114,108 +115,6 @@ def plot_multi_contour(
     c.RedrawAxis()
     if inplace:
         c.save(plotname)
-
-
-
-
-def plot_spectra_for_points_on_contour(
-        plotname,
-        scan2D,
-        ws_file,
-        pt_scan,
-        obs
-        ):
-    plot = multipanel.BottomPanelPlotWithParametrizations(plotname)
-    plot.scan2D = scan2D
-    plot.pt_scan = pt_scan
-    plot.ws_file = ws_file
-    plot.obs = obs
-
-    obs_title = 'p_{T}'
-    obs_unit  = 'GeV'
-    plot.x_title = obs_title + (' ({0})'.format(obs_unit) if not(obs_unit is None) else '')
-    plot.y_title_top = '#Delta#sigma/#Delta{0} (pb{1})'.format(
-        obs_title,
-        '/' + obs_unit if not(obs_unit is None) else ''
-        )
-    plot.y_title_bottom = '#mu'
-
-    # leg = pywrappers.Legend(
-    #     lambda c: c.GetLeftMargin() + 0.01,
-    #     lambda c: 1 - c.GetTopMargin() - 0.10,
-    #     lambda c: 1 - c.GetRightMargin() - 0.01,
-    #     lambda c: 1 - c.GetTopMargin()
-    #     )
-
-    contour = scan2D.to_hist().get_most_probable_1sigma_contour()
-
-
-
-
-
-
-
-    # SetColorPalette()
-
-    # combined.H2.GetXaxis().SetLabelSize(0.045)
-    # combined.H2.GetYaxis().SetLabelSize(0.045)
-
-    # combined.H2.GetXaxis().SetTitleSize(0.055)
-    # combined.H2.GetYaxis().SetTitleSize(0.055)
-
-    # # combined.H2.GetXaxis().SetTitleOffset(1.2)
-    # # combined.H2.GetYaxis().SetTitleOffset(1.2)
-
-    # combined.H2.GetXaxis().SetTitle( xCouplingTitle )
-    # combined.H2.GetYaxis().SetTitle( yCouplingTitle )
-
-    # combined.H2.Draw('COLZ')
-    # combined.H2.SetMaximum(7.0)
-
-    # contour.SetLineColor(1)
-    # contour.SetLineWidth(3)
-    # if OnOneCanvas: contour.SetLineWidth(2)
-    # contour.Draw('SAMEL')
-
-
-    # colorCycle = newColorCycle()
-    # for xPoint, yPoint in points:
-    #     color = next(colorCycle)
-
-    #     point = ROOT.TGraph( 1, array( 'f', [xPoint] ), array( 'f', [yPoint] ) )
-    #     ROOT.SetOwnership( point, False )
-
-    #     point.SetMarkerStyle(33)
-    #     point.SetMarkerColor(color)
-    #     point.SetMarkerSize( 4.5 if not hasattr( container, 'MarkerSize' ) else container.MarkerSize )
-    #     if OnOneCanvas: point.SetMarkerSize( 3.0 )
-    #     point.Draw('SAMEP')
-
-    #     point2 = ROOT.TGraph( point )
-    #     ROOT.SetOwnership( point2, False )
-    #     point2.SetMarkerStyle( 27 )
-    #     point2.SetMarkerColor(1)
-    #     point2.Draw('SAMEP')
-
-    # xMinAbs = min([ x for x,y in points ])
-    # xMaxAbs = max([ x for x,y in points ])
-    # yMinAbs = min([ y for x,y in points ])
-    # yMaxAbs = max([ y for x,y in points ])
-
-    # xMin = xMinAbs - 0.15*(xMaxAbs-xMinAbs)
-    # xMax = xMaxAbs + 0.15*(xMaxAbs-xMinAbs)
-    # yMin = yMinAbs - 0.15*(yMaxAbs-yMinAbs)
-    # yMax = yMaxAbs + 0.15*(yMaxAbs-yMinAbs)
-
-    # # combined.H2.SetMinimum( yMin )
-    # # combined.H2.SetMaximum( yMax )
-    # combined.H2.GetXaxis().SetRangeUser( xMin, xMax )
-    # combined.H2.GetYaxis().SetRangeUser( yMin, yMax )
-
-    # c.Update()
-
-
-
-    plot.draw()
-
-    
+        if draw_individual_contours:
+            for scan in scans:
+                scan.plot(plotname + '_' + scan.name)

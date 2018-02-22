@@ -42,6 +42,7 @@ def main():
     parser.add_argument( '--bkg',                             action='store_true' )
     parser.add_argument( '--test',                            action='store_true' )
     parser.add_argument( '--debug',                           action='store_true' )
+    parser.add_argument( '--trace',                           action='store_true' )
 
     parser.add_argument( '--fastscan',                        action='store_true' )
     parser.add_argument( '--asimov',                          action='store_true' )
@@ -76,6 +77,7 @@ def main():
         'onetimeplotsCommands',
         # 
         'yukawa_plots',
+        'top_plots',
         ])
 
     args = parser.parse_args()
@@ -86,6 +88,8 @@ def main():
 
     if args.debug:
         differentials.logger.set_level_debug()
+    if args.trace:
+        differentials.logger.set_level_trace()
 
     if args.saveroot:
         TheoryCommands.SaveAsRoot()

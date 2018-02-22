@@ -4,7 +4,8 @@ import ROOT
 import plotting_utils as utils
 from canvas import c, global_color_cycle
 
-import differentials.logger as logger
+import logging
+import differentials.logger
 
 from array import array
 
@@ -42,6 +43,8 @@ class Legend(object):
 
         ROOT.SetOwnership(self.legend, False)
 
+        self.auto_n_columns = True
+
 
     def __getattr__(self, name):
         """
@@ -54,22 +57,29 @@ class Legend(object):
         """Save entries in a python list, but add them to the actual legend later"""
         self._entries.append( args )
 
+    def SetNColumns(self, value):
+        self.auto_n_columns = False
+        self.legend.SetNColumns(value)
+
     def n_columns_heuristic(self):
         n_entries = len(self._entries)
         return min(n_entries, 4)
 
     def Draw(self, drawStr=''):
+        logging.debug('Drawing Legend {0} on gPad {1} with {2} entries'.format(self, ROOT.gPad.GetName(), len(self._entries)))
         x1 = self._x1(ROOT.gPad) if callable(self._x1) else self._x1
         y1 = self._y1(ROOT.gPad) if callable(self._y1) else self._y1
         x2 = self._x2(ROOT.gPad) if callable(self._x2) else self._x2
         y2 = self._y2(ROOT.gPad) if callable(self._y2) else self._y2
+        logging.debug('Coordinates: x1 = {0}, y1 = {1}, x2 = {2}, y2 = {3}'.format(x1, y1, x2, y2))
 
         self.legend.SetX1(x1)
         self.legend.SetY1(y1)
         self.legend.SetX2(x2)
         self.legend.SetY2(y2)
 
-        self.legend.SetNColumns(self.n_columns_heuristic())
+        if self.auto_n_columns:
+            self.legend.SetNColumns(self.n_columns_heuristic())
 
         for args in self._entries:
             self.legend.AddEntry(*args)
@@ -93,7 +103,7 @@ class ContourDummyLegend(Legend):
     dummySM = ROOT.TGraph( 1, array( 'f' , [-999.] ), array( 'f' , [-999.] )  )
     dummySM.SetMarkerSize(2)
     dummySM.SetMarkerStyle(21)
-    dummySM.SetMarkerColor(12)
+    dummySM.SetMarkerColor(16)
     dummySM.SetName('dummySM')
     ROOT.SetOwnership( dummySM, False )
 
@@ -145,10 +155,10 @@ class Latex(object):
     def Draw(self, draw_str=None):
         x = self.x(ROOT.gPad) if callable(self.x) else self.x
         y = self.y(ROOT.gPad) if callable(self.y) else self.y
-        logger.debug('In Draw():')
-        logger.debug('  x    = {0}'.format(x))
-        logger.debug('  y    = {0}'.format(y))
-        logger.debug('  text = {0}'.format(self.text))
+        logging.debug(
+            'Drawing {0}; x={1}, y={2}, text={3}'
+            .format(self, x, y, self.text)
+            )
         self.tlatex.DrawLatex(x, y, self.text)
 
 
@@ -316,7 +326,7 @@ class Histogram(object):
 
 
     def set_last_bin_is_overflow(self, flag=True, method='SECONDTOLASTBINWIDTH', hard_value=None):
-        logger.debug('Last bin is specified to be overflow, so the last bin boundary will be modified')
+        logging.debug('Last bin is specified to be overflow, so the last bin boundary will be modified')
         self.last_bin_is_overflow = True
         if method == 'SECONDTOLASTBINWIDTH':
             new_last_bin_boundary = self.bin_boundaries[-2] + (self.bin_boundaries[-2] - self.bin_boundaries[-3])
@@ -326,7 +336,7 @@ class Histogram(object):
             new_last_bin_boundary = hard_value
         else:
             raise ValueError('Method \'{0}\' is not implemented'.format(method))
-        logger.debug('Will replace last bin boundary {0} by {1}'.format(self.bin_boundaries[-1], new_last_bin_boundary))
+        logging.debug('Will replace last bin boundary {0} by {1}'.format(self.bin_boundaries[-1], new_last_bin_boundary))
         self.bin_boundaries[-1] = new_last_bin_boundary
 
 
@@ -361,7 +371,7 @@ class Histogram(object):
                 return max(self.bin_values)            
 
     def drop_first_bin(self):
-        logger.debug('Dropping first bin from histogram (name={0})'.format(self.name))
+        logging.debug('Dropping first bin from histogram (name={0})'.format(self.name))
         self.bin_boundaries.pop(0)
         self.bin_values.pop(0)
         self.n_bins -= 1
@@ -542,6 +552,7 @@ class Histogram(object):
 
 
     def Draw(self, draw_style):
+        logging.debug('Drawing Histogram {0} with draw_style {1}; legend: {2}'.format(self, draw_style, self._legend))
         for obj, draw_str in getattr(self, draw_style)(self._legend):
             obj.Draw(draw_str)
 
@@ -679,6 +690,13 @@ class Point(object):
         ROOT.SetOwnership(Tg_copy, False)
         return [(Tg_copy, 'PSAME')]
 
+    def repr_SM_point(self, leg=None):
+        self.Tg.SetMarkerStyle(21)
+        self.Tg.SetMarkerColor(16)
+        Tg_copy = self.Tg.Clone()
+        ROOT.SetOwnership(Tg_copy, False)
+        return [(Tg_copy, 'PSAME')]
+
     def repr_empty_diamond(self, leg=None):
         self.Tg.SetMarkerStyle(27)
         self.Tg.SetMarkerColor(1)
@@ -770,8 +788,8 @@ class Histogram2D(object):
         self.x_bin_boundaries = self.infer_bin_boundaries(self.x_bin_centers)
         self.y_bin_boundaries = self.infer_bin_boundaries(self.y_bin_centers)
 
-        logger.debug('Found the following x_bin_boundaries: {0}'.format(self.x_bin_boundaries))
-        logger.debug('Found the following y_bin_boundaries: {0}'.format(self.y_bin_boundaries))
+        logging.trace('Found the following x_bin_boundaries:\n{0}'.format(self.x_bin_boundaries))
+        logging.trace('Found the following y_bin_boundaries:\n{0}'.format(self.y_bin_boundaries))
 
         self.H2 = ROOT.TH2D(
             utils.get_unique_rootname(), '',
@@ -784,28 +802,28 @@ class Histogram2D(object):
             for i_y in xrange(self.n_bins_y):
                 self.H2.SetBinContent(i_x+1, i_y+1, self.default_value)
 
-
+        logging.debug('Filling {0} entries'.format(len(self.entries)))
         for entry in self.entries:
             if entry.x == bestfit.x and entry.y == bestfit.y: continue
             try:
                 i_bin_x = self.x_bin_centers.index(entry.x)
             except ValueError:
-                logger.error(
+                logging.error(
                     '{0} could not be filled - x={1} does not match any bin'
                     .format(entry, entry.x)
                     )
             try:
                 i_bin_y = self.y_bin_centers.index(entry.y)
             except ValueError:
-                logger.error(
+                logging.error(
                     '{0} could not be filled - y={1} does not match any bin'
                     .format(entry, entry.y)
                     )
 
-            # logger.debug(
-            #     'Filling i_x={0} (x={1}) / i_y={2} (y={3}) with 2*deltaNLL={4}'
-            #     .format(i_bin_x, entry.x, i_bin_y, entry.y, 2.*entry.deltaNLL)
-            #     )
+            logging.trace(
+                'Filling i_x={0} (x={1}) / i_y={2} (y={3}) with 2*deltaNLL={4}'
+                .format(i_bin_x, entry.x, i_bin_y, entry.y, 2.*entry.deltaNLL)
+                )
 
             self.H2.SetBinContent(i_bin_x+1, i_bin_y+1, 2.*entry.deltaNLL)
 
@@ -893,7 +911,6 @@ class Histogram2D(object):
             # if abs(Tg.distRatio) > 0.8: continue
 
             candidatecontours.append( Tg )
-        # debug('Filtered contours')
 
         if len(candidatecontours) == 0:
             raise RuntimeError('Can\'t find contour')

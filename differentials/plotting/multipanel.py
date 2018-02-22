@@ -3,11 +3,13 @@ import plotting_utils as utils
 import pywrappers
 from canvas import c
 
-import differentials.logger as logger
+# import differentials.logger as logger
 import differentials.parametrization
 
-from math import isnan, isinf, log10
+import logging
+from math import isnan, isinf, log10, sqrt
 from array import array
+from collections import namedtuple
 
 
 class BottomPanelPlot(object):
@@ -28,12 +30,12 @@ class BottomPanelPlot(object):
 
         self.top_bottom_margin = 0.02
         self.top_top_margin    = 0.10
-        self.top_left_margin   = 0.12
+        self.top_left_margin   = 0.14
         self.top_right_margin  = 0.02
 
         self.bottom_bottom_margin = 0.30
         self.bottom_top_margin    = 0.00
-        self.bottom_left_margin   = 0.12
+        self.bottom_left_margin   = 0.14
         self.bottom_right_margin  = 0.02
 
         self.top_log_scale = True
@@ -50,11 +52,13 @@ class BottomPanelPlot(object):
 
 
     def add_top(self, obj, draw_str=None, leg=None):
-        obj._legend = leg
+        if not(leg is None):
+            obj._legend = leg
         self.top_objects.append((obj, draw_str))
 
     def add_bottom(self, obj, draw_str=None, leg=None):
-        obj._legend = leg
+        if not(leg is None):
+            obj._legend = leg
         self.bottom_objects.append((obj, draw_str))
 
     def make_SM_line(self, spectra_original, leg=None):
@@ -99,102 +103,69 @@ class BottomPanelPlot(object):
             self.add_top(l, '')
             i_label += 1
 
-
-    def get_obj_extrema(self, obj, only_positive=False):
-        x_min = None
-        x_max = None
-        y_min = None
-        y_max = None
-        if hasattr(obj, 'x_min'):
-            x_min = obj.x_min()
-        if hasattr(obj, 'x_max'):
-            x_max = obj.x_max()
-        if hasattr(obj, 'y_min'):
+    def get_obj_extremum(self, obj, extremum_fn, only_positive=False):
+        logging.trace('Gettting extremum \'{0}\' for {2}; only_positive={1}'.format(extremum_fn, only_positive, obj))
+        if hasattr(obj, extremum_fn):
+            logging.trace('Method \'{0}()\' found'.format(extremum_fn))
             if only_positive:
+                logging.trace('Trying to pass \'only_positive=True\'...')
                 try:
-                    y_min = obj.y_min(only_positive=True)
+                    extremum = getattr(obj, extremum_fn)(only_positive=True)
+                    logging.trace('Trying to pass \'only_positive=True\' succeeded')
                 except TypeError:
-                    y_min = obj.y_min()
-                    if y_min < 0.0:
-                        y_min = None
+                    logging.trace('Trying to pass \'only_positive=True\' failed; calling without')
+                    extremum = getattr(obj, extremum_fn)()
+                    if extremum < 0.0:
+                        logging.trace(
+                            'Found {0}={1}; Overwriting with None as positive is required'
+                            .format(extremum_fn, extremum)
+                            )
+                        extremum = None
             else:
-                y_min = obj.y_min()
-        if hasattr(obj, 'y_max'):
-            if only_positive:
-                try:
-                    y_max = obj.y_max(only_positive=True)
-                except TypeError:
-                    y_max = obj.y_max()
-                    if y_max < 0.0:
-                        y_max = None
-            else:
-                y_max = obj.y_max()
-        return x_min, x_max, y_min, y_max
+                extremum = getattr(obj, extremum_fn)()
+        else:
+            logging.trace('No method \'{0}()\' found'.format(extremum_fn))
+            extremum = None
+        logging.debug('Found {0}={1}'.format(extremum_fn, extremum))
+        return extremum
 
+    def get_extremum(self, extremum_fn, default_value, objs, possible_overwrite_key='non_existing999', minimum=True, only_positive=False):
+        logging.debug('Getting {0}'.format(extremum_fn))
+        if getattr(self, possible_overwrite_key, None) is None:
+            logging.debug('No pre-supplied value detected; looping over objects')
+            extrema = []
+            for obj in objs:
+                extremum = self.get_obj_extremum(obj, extremum_fn, only_positive)
+                if extremum is None: continue
+                extrema.append(extremum)
+            if len(extrema) == 0:
+                logging.debug('Found no valid object extrema; passing default {0}'.format(default_value))
+                extremum = default_value
+            else:
+                extremum = (min if minimum else max)(extrema)
+        else:
+            extremum = getattr(self, possible_overwrite_key)
+            logging.debug('Using self.{2}: {0}={1}'.format(extremum_fn, extremum, possible_overwrite_key))
+        logging.debug('Found overal {0}={1}'.format(extremum_fn, extremum))
+        return extremum
 
     def get_top_extrema(self):
-        xs_min = []
-        xs_max = []
-        ys_min = []
-        ys_max = []
-        for obj in [obj for obj, _ in self.top_objects]:
-            x_min, x_max, y_min, y_max = self.get_obj_extrema(obj, only_positive=self.top_log_scale)
-            if not(x_min is None): xs_min.append(x_min)
-            if not(x_max is None): xs_max.append(x_max)
-            if not(y_min is None): ys_min.append(y_min)
-            if not(y_max is None): ys_max.append(y_max)
-
-        y_min = min(ys_min) if len(ys_min) else 0.001
-        x_min = min(xs_min) if len(xs_min) else 0.001
-        y_max = max(ys_max) if len(ys_max) else 1.0
-        x_max = max(xs_max) if len(xs_max) else 1.0
-
-        if not(self.top_x_min is None): x_min = self.top_x_min
-        if not(self.top_y_min is None): y_min = self.top_y_min
-        if not(self.top_x_max is None): x_max = self.top_x_max
-        if not(self.top_y_max is None): y_max = self.top_y_max
-
-        if self.top_log_scale:
-            y_max_abs = y_max
-            y_min_abs = y_min
-            y_max = y_max_abs + (y_max_abs/y_min_abs)**0.2 * y_max_abs
-            y_min = 0.5*y_min_abs
-        else:
-            dy = y_max - y_min
-            y_min -= 0.1*dy
-            y_max += 0.1*dy
-
+        logging.debug('Getting extrema for top objects')
+        objs = [obj for obj, _ in self.top_objects]
+        x_min = self.get_extremum('x_min', 0.001, objs, possible_overwrite_key='top_x_min', minimum=True)
+        x_max = self.get_extremum('x_max', 1.000, objs, possible_overwrite_key='top_x_max', minimum=False)
+        y_min = self.get_extremum('y_min', 0.001, objs, possible_overwrite_key='top_y_min', minimum=True, only_positive=True)
+        y_max = self.get_extremum('y_max', 1.000, objs, possible_overwrite_key='top_y_max', minimum=False, only_positive=True)
         return x_min, y_min, x_max, y_max
-
 
     def get_bottom_extrema(self):
-        xs_min = []
-        xs_max = []
-        ys_min = []
-        ys_max = []
-        for obj in [obj for obj, _ in self.bottom_objects]:
-            x_min, x_max, y_min, y_max = self.get_obj_extrema(obj)
-            if not(x_min is None): xs_min.append(x_min)
-            if not(x_max is None): xs_max.append(x_max)
-            if not(y_min is None): ys_min.append(y_min)
-            if not(y_max is None): ys_max.append(y_max)
-
-        y_min = min(ys_min) if len(ys_min) else 0.001
-        x_min = min(xs_min) if len(xs_min) else 0.001
-        y_max = max(ys_max) if len(ys_max) else 1.0
-        x_max = max(xs_max) if len(xs_max) else 1.0
-
-        if not(self.bottom_x_min is None): x_min = self.bottom_x_min
-        if not(self.bottom_y_min is None): y_min = self.bottom_y_min
-        if not(self.bottom_x_max is None): x_max = self.bottom_x_max
-        if not(self.bottom_y_max is None): y_max = self.bottom_y_max
-
-        dy = y_max - y_min
-        y_min -= 0.1*dy
-        y_max += 0.1*dy
-
+        logging.debug('Getting extrema for bottom objects')
+        objs = [obj for obj, _ in self.bottom_objects]
+        x_min = self.get_extremum('x_min', 0.001, objs,  possible_overwrite_key='bottom_x_min', minimum=True)
+        x_max = self.get_extremum('x_max', 1.000, objs,  possible_overwrite_key='bottom_x_max', minimum=False)
+        y_min = self.get_extremum('y_min', 0.001, objs,  possible_overwrite_key='bottom_y_min', minimum=True, only_positive=False)
+        y_max = self.get_extremum('y_max', 1.000, objs,  possible_overwrite_key='bottom_y_max', minimum=False, only_positive=False)
         return x_min, y_min, x_max, y_max
-
 
     def draw(self, inplace=True):
         c.cd()
@@ -252,6 +223,18 @@ class BottomPanelPlot(object):
         # Create bases for top and bottom
         toppad.cd()
         top_x_min, top_y_min, top_x_max, top_y_max = self.get_top_extrema()
+
+        # Add some margins
+        if self.top_log_scale:
+            y_max_abs = top_y_max
+            y_min_abs = top_y_min
+            top_y_max = y_max_abs + (y_max_abs/y_min_abs)**0.2 * y_max_abs
+            top_y_min = 0.5*y_min_abs
+        else:
+            dy = top_y_max - top_y_min
+            top_y_min -= 0.1*dy
+            top_y_max += 0.1*dy
+
         base_top = utils.get_plot_base(
             x_min=top_x_min, x_max=top_x_max, y_min=top_y_min, y_max=top_y_max,
             x_title='Observable', y_title='#sigma (unit)'
@@ -260,6 +243,12 @@ class BottomPanelPlot(object):
 
         bottompad.cd()
         bottom_x_min, bottom_y_min, bottom_x_max, bottom_y_max = self.get_bottom_extrema()
+
+        # Add some margins
+        dy = bottom_y_max - bottom_y_min
+        bottom_y_min -= 0.1*dy
+        bottom_y_max += 0.1*dy
+
         base_bottom = utils.get_plot_base(
             x_min=bottom_x_min, x_max=bottom_x_max, y_min=bottom_y_min, y_max=bottom_y_max,
             x_title='Observable', y_title='#mu'
@@ -271,18 +260,18 @@ class BottomPanelPlot(object):
         if self.top_log_scale:
             toppad.SetLogy()
 
-        logger.debug('top_objects: {0}'.format(self.top_objects))
+        logging.debug('top_objects: {0}'.format(self.top_objects))
         for obj, drawStr in self.top_objects:
-            logger.debug('Attempting to draw obj: {0}, drawStr: {1}'.format(obj, drawStr))
+            logging.debug('Attempting to draw obj: {0}, drawStr: {1}'.format(obj, drawStr))
             if drawStr is None:
                 obj.Draw()
             else:
                 obj.Draw(drawStr)
 
         bottompad.cd()
-        logger.debug('bottom_objects: {0}'.format(self.bottom_objects))
+        logging.debug('bottom_objects: {0}'.format(self.bottom_objects))
         for obj, drawStr in self.bottom_objects:
-            logger.debug('Attempting to draw obj: {0}, drawStr: {1}'.format(obj, drawStr))
+            logging.debug('Attempting to draw obj: {0}, drawStr: {1}'.format(obj, drawStr))
             if drawStr is None:
                 obj.Draw()
             else:
@@ -331,34 +320,83 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
     def __init__(self, *args, **kwargs):
         super(BottomPanelPlotWithParametrizations, self).__init__(*args, **kwargs)
         self.scan2D = None
-        self.pt_scan = None
+        self.ptspectrum = None
         self.ws_file = None
         self.obs = None
         self.points = []
         self.parametrized_graphs = []
         self.color_cycle = utils.new_color_cycle()
+        self.last_bin_is_overflow = False
 
+        self.x_SM = 1.0
+        self.y_SM = 1.0
+
+        self.default_points_xy_maxima = True
+
+        self.legend = pywrappers.Legend(
+            lambda c: c.GetLeftMargin()+0.01,
+            lambda c: 1.-c.GetTopMargin()-0.40,
+            lambda c: c.GetLeftMargin()+0.42,
+            lambda c: 1.-c.GetTopMargin()-0.01,
+            )
+        self.legend.SetNColumns(1)
+        # self.legend.SetBorderSize(1)
 
     def get_points(self):
         contour = self.scan2D.to_hist().get_most_probable_1sigma_contour()
-        self.points.append(pywrappers.Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y, color=self.color_cycle.next()))
-        self.points.append(pywrappers.Point(contour.x_min, contour.y[contour.x.index(contour.x_min)], color=self.color_cycle.next()))
-        self.points.append(pywrappers.Point(contour.x_max, contour.y[contour.x.index(contour.x_max)], color=self.color_cycle.next()))
-        self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_min)], contour.y_min, color=self.color_cycle.next()))
-        self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_max)], contour.y_max, color=self.color_cycle.next()))
+        if self.default_points_xy_maxima:
+            self.points.append(pywrappers.Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y, color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(contour.x_min, contour.y[contour.x.index(contour.x_min)], color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(contour.x_max, contour.y[contour.x.index(contour.x_max)], color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_min)], contour.y_min, color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_max)], contour.y_max, color=self.color_cycle.next()))
+        else:
+            Point = namedtuple('Point', ['x', 'y'])
+
+            bestfit = Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y)
+            points = [ Point(x, y) for x, y in zip(contour.x, contour.y) ]
+
+            # Function that returns distance between two points in x-y plane
+            d = lambda p1, p2: sqrt( (p1.x-p2.x)**2 + (p1.y-p2.y)**2 )
+
+            # Sort according to decreasing distance to bestfit
+            points.sort(key=lambda p: -d(p, bestfit))
+            # First selected point is point furthest away from bestfit
+            p1 = points.pop(0)
+
+            # Sort according to decreasing distance to first selected point
+            points.sort(key=lambda p: -d(p, p1))
+            p2 = points.pop(0)
+
+            p3 = Point(
+                x = bestfit.x+0.5*(p1.x-bestfit.x),
+                y = bestfit.y+0.5*(p1.y-bestfit.y),
+                )
+
+            self.points.append(pywrappers.Point(bestfit.x, bestfit.y, color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(p1.x, p1.y, color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(p2.x, p2.y, color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(p3.x, p3.y, color=self.color_cycle.next()))
 
 
     def draw(self):
+        self.last_bin_is_overflow = self.ptspectrum.last_bin_is_overflow()
+        logging.info('Determined that last_bin_is_overflow={0} based on the ptspectrum {1}'.format(self.last_bin_is_overflow, self.ptspectrum))
+
         self.top_x_min    = self.obs.binning[0]
         self.bottom_x_min = self.obs.binning[0]
-        self.top_x_max    = self.obs.binning[-1]
-        self.bottom_x_max = self.obs.binning[-1]
 
-        self.bottom_y_min = 0.0
-        self.bottom_y_max = 2.0
+        if self.last_bin_is_overflow:
+            self.top_x_max    = 2.*self.obs.binning[-2] - self.obs.binning[-3]
+            self.bottom_x_max = 2.*self.obs.binning[-2] - self.obs.binning[-3]
+        else:
+            self.top_x_max    = self.obs.binning[-1]
+            self.bottom_x_max = self.obs.binning[-1]
 
         self.get_points()
         self.draw_parametrizations()
+        self.draw_ptscan()
+        self.add_top(self.legend, '')
 
         super(BottomPanelPlotWithParametrizations, self).draw(inplace=False)
 
@@ -369,21 +407,65 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
 
 
     def draw_parametrizations(self):
+
+        SM_mu = pywrappers.Histogram(
+            utils.get_unique_rootname(),
+            'SM',
+            self.obs.binning,
+            [1.0 for i in xrange(len(self.obs.binning)-1)],
+            color=16
+            )
+        self.add_bottom(SM_mu, 'repr_basic_histogram', self.legend)
+        SM_xs = pywrappers.Histogram(
+            utils.get_unique_rootname(),
+            'SM',
+            self.obs.binning,
+            self.obs.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=self.last_bin_is_overflow),
+            color=16
+            )
+        self.add_top(SM_xs, 'repr_basic_histogram', self.legend)
+
         parametrization = differentials.parametrization.WSParametrization(self.ws_file)
         for point in self.points:
             parametrization.set(self.scan2D.x_variable, point.x)
             parametrization.set(self.scan2D.y_variable, point.y)
             mus = parametrization.get_mus_exp()
 
-            mu_histogram = pywrappers.Histogram(
-                utils.get_unique_rootname(),
-                'title',
-                self.obs.binning,
-                mus
+            title = '{0}={1:.1f}, {2}={3:.1f}'.format(
+                self.scan2D.x_title, point.x, self.scan2D.y_title, point.y
                 )
 
-            for obj, draw_str in mu_histogram.repr_basic_histogram():
-                self.add_bottom(obj, draw_str)
+            mu_histogram = pywrappers.Histogram(
+                utils.get_unique_rootname(),
+                title,
+                self.obs.binning,
+                mus,
+                color=point.color
+                )
+            self.add_bottom(mu_histogram, 'repr_basic_histogram')
+
+            xs_histogram = pywrappers.Histogram(
+                utils.get_unique_rootname(),
+                title,
+                self.obs.binning,
+                [ mu * xs for mu, xs in zip(mus, self.obs.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=self.last_bin_is_overflow)) ],
+                color=point.color
+                )
+            logging.trace('Setting {0}._legend to {1}'.format(xs_histogram, self.legend))
+            xs_histogram._legend = self.legend
+            self.add_top(xs_histogram, 'repr_basic_histogram')
+
+    def draw_ptscan(self):
+        if self.ptspectrum.last_bin_is_overflow():
+            binning = self.ptspectrum.binning()
+            self.ptspectrum.hard_x_max = 2.*binning[-2] - binning[-3]
+
+        ptscan_histogram = self.ptspectrum.to_hist()
+        self.add_bottom(ptscan_histogram, 'repr_point_with_vertical_bar')
+
+        ptscan_histogram_xs = self.ptspectrum.to_hist_xs()
+        ptscan_histogram_xs.title = 'p_{T} combination'
+        self.add_top(ptscan_histogram_xs, 'repr_point_with_vertical_bar', self.legend)
 
 
     def draw_small_pad(self):
@@ -404,7 +486,7 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
         ROOT.SetOwnership(small_pad, False)
         small_pad.SetBottomMargin( 0.14 )
         small_pad.SetTopMargin(    0.03 )
-        small_pad.SetLeftMargin(   0.12 )
+        small_pad.SetLeftMargin(   0.14 )
         # small_pad.SetRightMargin(  0.10 )
         small_pad.SetRightMargin(  0.10 )
         small_pad.Draw()
@@ -413,24 +495,32 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
         for obj, draw_str in small_pad_objs:
             obj.Draw(draw_str)
 
+        axis_holder = small_pad_objs[0][0]
+        axis_holder.GetXaxis().SetTitle(self.scan2D.x_title)
+        axis_holder.GetYaxis().SetTitle(self.scan2D.y_title)
+
+        axis_holder.GetXaxis().SetLabelSize(0.06)
+        axis_holder.GetYaxis().SetLabelSize(0.06)
+        axis_holder.GetXaxis().SetTitleSize(0.07)
+        axis_holder.GetYaxis().SetTitleSize(0.07)
+
+
         for point in self.points:
             point.SetMarkerSize(2.0)
             point.Draw('repr_diamond_with_border')
 
-            # point_edges = point.Clone() # This will be a TGraph then, not a wrapper
-            # point_edges.SetMarkerSize(4.5)
-            # point_edges.SetMarkerStyle(27)
-            # point_edges.SetMarkerColor(1)
-            # point_edges.Draw('PSAME')
+        sm_point = pywrappers.Point(self.x_SM, self.y_SM)
+        sm_point.SetMarkerSize(1.0)
+        sm_point.Draw('repr_SM_point')
 
         dummy_legend = pywrappers.ContourDummyLegend(
-            small_pad.GetLeftMargin() + 0.01,
+            small_pad.GetLeftMargin() + 0.11,
             1. - small_pad.GetTopMargin() - 0.1,
             1. - small_pad.GetRightMargin() - 0.01,
             1. - small_pad.GetTopMargin() - 0.01,
             )
         dummy_legend.disable_bestfit = True
-        dummy_legend.disable_SM = True
+        # dummy_legend.disable_SM = True
         dummy_legend.Draw()
 
 

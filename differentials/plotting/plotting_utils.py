@@ -1,8 +1,9 @@
 import itertools, copy
 import differentials.core
-import differentials.logger as logger
+# import differentials.logger as logger
 import ROOT
 
+import logging
 from array import array
 
 ROOTCOUNTER = 1000
@@ -84,7 +85,7 @@ def get_contours_from_H2(H2_original, threshold):
     H2.SetName(get_unique_rootname())
     H2.SetContour(1, array('d', [threshold]))
 
-    logger.info(
+    logging.debug(
         'Trying to get contours from \'{0}\''
         .format(H2.GetName())
         + (' ({0})'.format(H2_original.name) if hasattr(H2_original, 'name') else '')
@@ -105,7 +106,7 @@ def get_contours_from_H2(H2_original, threshold):
             ROOT.SetOwnership(TgClone, False)
             Tgs.append(TgClone)
 
-    logger.info('    {0} contours found for threshold {1}'.format(len(Tgs), threshold))
+    logging.debug('{0} contours found for threshold {1}'.format(len(Tgs), threshold))
     for i_Tg, Tg in enumerate(Tgs):
         N = Tg.GetN()
         xList = [ Tg.GetX()[iPoint] for iPoint in xrange(N) ]
@@ -114,8 +115,8 @@ def get_contours_from_H2(H2_original, threshold):
         xMax = max(xList)
         yMin = min(yList)
         yMax = max(yList)
-        logger.debug(
-            '  Contour {0} ({1} points): '
+        logging.debug(
+            'Contour {0} ({1} points): '
             'xMin = {2:+9.4f}, xMax = {3:+9.4f}, yMin = {4:+9.4f}, yMax = {5:+9.4f}'
             .format(i_Tg, N, xMin, xMax, yMin, yMax)
             )

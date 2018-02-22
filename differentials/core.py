@@ -2,7 +2,7 @@ import re, random, copy
 from os.path import *
 from datetime import datetime
 
-import logger
+import logging
 
 import ROOT
 
@@ -40,7 +40,7 @@ def get_range_from_str(text):
         left = '-INF'
         right = str_to_float(underflow_match.group(2))
     elif single_match:
-        logger.debug('single_match for {0}; matched text is {1}'.format(text, single_match.group(1)))
+        logging.debug('single_match for {0}; matched text is {1}'.format(text, single_match.group(1)))
         left = str_to_float(single_match.group(1))
         right = 'SINGLE'
     else:
@@ -126,12 +126,11 @@ def list_POIs(root_file, only_r_=True):
 def last_bin_is_overflow(POIs):
     """Checks if the last bin is an overflow bin. Assumes POIs are pre-sorted"""
     left, right = get_range_from_str(POIs[-1])
-    logger.debug('Checking if POI \'{0}\' is overflow: found right {1}'.format(POIs[-1], right))
+    is_overflow = False
     if right == 'INF':
-        logger.debug('    last_bin_is_overflow = True')
-        return True
-    logger.debug('    last_bin_is_overflow = False')
-    return False
+        is_overflow = True
+    logging.debug('Checking if POI \'{0}\' is overflow: found right {1}; overflow={2}'.format(POIs[-1], right, is_overflow))
+    return is_overflow
 
 def first_bin_is_underflow(POIs):
     """Checks if the first bin is an underflow bin. Assumes POIs are pre-sorted"""
@@ -143,14 +142,12 @@ def first_bin_is_underflow(POIs):
 def binning_from_POIs(POIs_original):
     POIs = copy.copy(POIs_original)
     POIs.sort(key=range_sorter)
-    logger.debug(
+    logging.debug(
         'Determining bin boundaries of the following (sorted) POIs:\n    '
         + '\n    '.join(POIs)
         )
-
     is_underflow = first_bin_is_underflow(POIs)
     is_overflow  = last_bin_is_overflow(POIs)
-
     binning = []
     if is_underflow:
         POIs = POIs[1:]
@@ -160,5 +157,8 @@ def binning_from_POIs(POIs_original):
         binning.append(left)
     if is_overflow:
         binning.append(10000)
+    else:
+        binning.append(right)
+    logging.debug('Determined the following binning: {0}'.format(binning))
     return binning
 
