@@ -113,21 +113,45 @@ def set_decay_channel(args, given_channel):
         setattr(args, decay_channel, False)
     setattr(args, given_channel, True)
 
+
+import traceback
+def try_call_function_with_args(fn, args):
+    try:
+        fn(args)
+    except Exception as exc:
+        print traceback.format_exc()
+        print exc
+        pass
+
 @flag_as_option
 def all_t2ws_Yukawa(args_original):
     args = copy.deepcopy(args_original)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         set_decay_channel(args, decay_channel)
-        t2ws_Yukawa_nominal(args)
+        # t2ws_Yukawa_nominal(args)
+        try_call_function_with_args(t2ws_Yukawa_nominal, args)
 
     set_decay_channel(args, 'combination')
-    t2ws_Yukawa_noTheoryUnc(args)
-    t2ws_Yukawa_uncorrelatedTheoryUnc(args)
-    t2ws_Yukawa_lumiScale(args)
-    t2ws_Yukawa_BRcouplingDependency(args)
-    t2ws_Yukawa_profiledTotalXS(args)
-    t2ws_Yukawa_fitRatioOfBRs(args)
-    t2ws_Yukawa_fitOnlyNormalization(args)
+
+    fns = [
+        t2ws_Yukawa_noTheoryUnc,
+        t2ws_Yukawa_uncorrelatedTheoryUnc,
+        t2ws_Yukawa_lumiScale,
+        t2ws_Yukawa_BRcouplingDependency,
+        t2ws_Yukawa_profiledTotalXS,
+        t2ws_Yukawa_fitRatioOfBRs,
+        t2ws_Yukawa_fitOnlyNormalization,
+        ]
+    for fn in fns:
+        try_call_function_with_args(fn, args)
+
+    # t2ws_Yukawa_noTheoryUnc(args)
+    # t2ws_Yukawa_uncorrelatedTheoryUnc(args)
+    # t2ws_Yukawa_lumiScale(args)
+    # t2ws_Yukawa_BRcouplingDependency(args)
+    # t2ws_Yukawa_profiledTotalXS(args)
+    # t2ws_Yukawa_fitRatioOfBRs(args)
+    # t2ws_Yukawa_fitOnlyNormalization(args)
 
 #____________________________________________________________________
 @flag_as_option
