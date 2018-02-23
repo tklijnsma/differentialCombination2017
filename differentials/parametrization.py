@@ -31,9 +31,12 @@ class WSParametrization(object):
             self.yield_parameters.append(yp)
 
     def get_yield_parameter_arglist(self):
-        if self.set_exists('all_ggH_yieldParameters'):
-            logging.debug('Found set called all_ggH_yieldParameters')
-            argset = self.w.set('all_ggH_yieldParameters')
+        # if self.set_exists('all_ggH_yieldParameters'):
+            # logging.debug('Found set called all_ggH_yieldParameters')
+            # argset = self.w.set('all_ggH_yieldParameters')
+        if self.set_exists('parametrizations_exp'):
+            logging.debug('Found set called parametrizations_exp')
+            argset = self.w.set('parametrizations_exp')
         elif self.set_exists('yieldParameters'):
             logging.debug('Found set called yieldParameters')
             self.old_style = True
