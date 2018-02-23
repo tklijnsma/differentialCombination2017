@@ -14,6 +14,7 @@ import LatestPathsGetters
 import LatestBinning
 
 import differentials
+import logging
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -25,7 +26,6 @@ datestr = strftime( '%b%d' )
 x_coupling = 'kappac'
 y_coupling = 'kappab'
 titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
-
 
 @flag_as_option
 def multicont_Yukawa_nominal(args):

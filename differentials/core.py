@@ -1,10 +1,47 @@
-import re, random, copy
+import os, re, random, copy
 from os.path import *
 from datetime import datetime
 
 import logging
+import logger
 
 import ROOT
+
+from time import strftime
+GLOBAL_DATESTR = strftime( '%b%d' )
+
+def datestr():
+    return GLOBAL_DATESTR
+
+TESTMODE = False
+def testmode(flag=True):
+    global TESTMODE
+    TESTMODE = flag
+    logger.enable_testmode()
+    logging.info('Test mode enabled')
+
+def is_testmode():
+    global TESTMODE
+    return TESTMODE
+
+
+def execute(cmd, capture_output=False, ignore_testmode=False):
+    # Allow both lists and strings to be passed as the cmd
+    if not isinstance(cmd, basestring):
+        cmd = [ l for l in cmd if not len(l.strip()) == 0 ]
+        cmd_str = '\n    '.join( cmd )
+        cmd_exec = ' '.join(cmd)
+    else:
+        cmd_str = cmd
+        cmd_exec = cmd
+
+    logging.info('Executing the following command:\n{0}'.format(cmd_str))
+    logging.trace('Actual passed command: {0}'.format(cmd_exec))
+    if not(is_testmode()) and not(ignore_testmode):
+        if capture_output:
+            raise NotImplementedError('Re-implement using the capture output context manager')
+        else:
+            os.system(cmd_exec)
 
 
 def float_to_str(number, nDecimals=None):
@@ -161,4 +198,27 @@ def binning_from_POIs(POIs_original):
         binning.append(right)
     logging.debug('Determined the following binning: {0}'.format(binning))
     return binning
+
+
+class DecayChannelNotFoundError(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'Could not determine the decay channel') 
+
+def get_decay_channel_tag(args, allow_default=False):
+    if args.combination:
+        tag = 'combination'
+    elif args.hgg:
+        tag = 'hgg'
+    elif args.hzz:
+        tag = 'hzz'
+    elif args.hbb:
+        tag = 'hbb'
+    elif args.combWithHbb:
+        tag = 'combWithHbb'
+    else:
+        if allow_default:
+            tag = 'combination'
+        else:
+            raise DecayChannelNotFoundError()
+    return tag
 

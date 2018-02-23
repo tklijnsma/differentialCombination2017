@@ -227,8 +227,8 @@ def main( args ):
         # UNCORRELATED_THEORY_UNCERTAINTIES = True
         UNCORRELATED_THEORY_UNCERTAINTIES = False
 
-        MAKELUMISCALABLE                  = True
-        # MAKELUMISCALABLE                  = False
+        # MAKELUMISCALABLE                  = True
+        MAKELUMISCALABLE                  = False
 
         # INCLUDE_BR_COUPLING_DEPENDENCY    = True
         INCLUDE_BR_COUPLING_DEPENDENCY    = False

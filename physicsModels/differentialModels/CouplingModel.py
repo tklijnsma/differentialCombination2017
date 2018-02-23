@@ -28,9 +28,7 @@ class CouplingModel( PhysicsModel ):
         self.verbose = 1
 
         self.Persistence = []
-
         self.theories = []
-
         self.SMbinBoundaries = []
         self.SMXS = []
 
@@ -55,7 +53,6 @@ class CouplingModel( PhysicsModel ):
         self.manualExpBinBoundaries = []
         self.skipBins = []
         self.skipOverflowBin = False
-        
 
         self.SM_HIGG_DECAYS = [ "hww", "hzz", "hgg", "htt", "hbb", 'hzg', 'hmm', 'hcc', 'hgluglu' ]
         self.SM_HIGG_DECAYS.append( 'hss' )
@@ -65,68 +62,57 @@ class CouplingModel( PhysicsModel ):
     # Standard methods
     ################################################################################
 
-    #____________________________________________________________________
     def setPhysicsOptions( self, physOptions ):
         self.chapter( 'Starting model.setPhysicsOptions()' )
 
         for physOption in physOptions:
             optionName, optionValue = physOption.split('=',1)
+            if False: pass
+            elif optionName == 'splitggH':
+                self.splitggH = eval(optionValue)
+            elif optionName == 'isOnlyHZZ':
+                self.isOnlyHZZ = eval(optionValue)
+            elif optionName == 'isOnlyHgg':
+                self.isOnlyHgg = eval(optionValue)
+            elif optionName == 'binBoundaries':
+                self.manualExpBinBoundaries = [ float(i) for i in optionValue.split(',') ]
+            elif optionName == 'verbose':
+                self.verbose = int(optionValue)
+            elif optionName == 'linearTerms':
+                self.includeLinearTerms = eval(optionValue)
+            elif optionName == 'higgsMassRange':
+                self.mHRange = [ float(v) for v in optionValue.split(',') ]
 
-            if False:
-                pass
+            elif optionName == 'theoryUncertainties':
+                self.theoryUncertainties = self.readErrorFile( optionValue )
+                self.theoryUncertaintiesPassed = True
+            elif optionName == 'correlationMatrix':
+                self.correlationMatrix = self.readCorrelationMatrixFile( optionValue )
+                self.correlationMatrixPassed = True
+            elif optionName == 'covarianceMatrix':
+                self.covarianceMatrix = self.readCorrelationMatrixFile( optionValue )
+                self.covarianceMatrixPassed = True
 
             elif optionName == 'lumiScale':
                 self.MakeLumiScalable = eval(optionValue)
-
             elif optionName == 'ReweightCrossSections':
                 self.ReweightedXS = [ float(v) for v in optionValue.split(',') ]
-
             elif optionName == 'FitBR':
                 self.FitBR = eval(optionValue)
-
             elif optionName == 'ProfileTotalXS':
                 self.ProfileTotalXS = eval(optionValue)
-
             elif optionName == 'FitOnlyNormalization':
                 self.FitOnlyNormalization = eval(optionValue)
-
             elif optionName == 'FitRatioOfBRs':
                 self.FitRatioOfBRs = eval(optionValue)
-
-            elif optionName == 'splitggH':
-                self.splitggH = eval(optionValue)
-
-            elif optionName == 'isOnlyHZZ':
-                self.isOnlyHZZ = eval(optionValue)
-
-            elif optionName == 'isOnlyHgg':
-                self.isOnlyHgg = eval(optionValue)
-
             elif optionName == 'DoBRUncertainties':
                 self.DoBRUncertainties = eval(optionValue)
 
-            elif optionName == 'binBoundaries':
-                self.manualExpBinBoundaries = [ float(i) for i in optionValue.split(',') ]
-
-            elif optionName == 'verbose':
-                self.verbose = int(optionValue)
-
-            elif optionName == 'skipBins':
-                self.skipBins = optionValue.split(',')
-
-                for skipBin in self.skipBins:
-                    if 'GT' in skipBin:
-                        self.skipOverflowBin = True
-                        break
-
-
             elif optionName == 'theory':
                 # Syntax: --PO theory=[ct=1,cg=1,file=some/path/.../] , brackets optional
-
                 # Delete enclosing brackets if present
                 if optionValue.startswith('['): optionValue = optionValue[1:]
                 if optionValue.endswith(']'): optionValue = optionValue[:-1]
-
                 theoryDict = {                
                     'couplings'      : {},
                     'binBoundaries'  : [],
@@ -137,18 +123,15 @@ class CouplingModel( PhysicsModel ):
                     couplingName, couplingValue = component.split('=',1)
                     # Only exception is file, which is the file to read the shape from
                     if couplingName == 'file':
-                        theoryDict['binBoundaries'], theoryDict['ratios'], theoryDict['crosssection'] = self.readTheoryFile( couplingValue )
+                        theoryFile = couplingValue
+                        theoryDict['binBoundaries'], theoryDict['ratios'], theoryDict['crosssection'] = self.readTheoryFile(theoryFile)
                         continue
                     theoryDict['couplings'][couplingName] = float(couplingValue)
-
                 self.theories.append( theoryDict )
-                
             elif optionName == 'SM':
-
                 # Delete enclosing brackets if present
                 if optionValue.startswith('['): optionValue = optionValue[1:]
                 if optionValue.endswith(']'): optionValue = optionValue[:-1]
-
                 self.SMDict = {                
                     'couplings'      : {},
                     'binBoundaries'  : [],
@@ -161,57 +144,25 @@ class CouplingModel( PhysicsModel ):
                         self.SMDict['binBoundaries'], dummy, self.SMDict['crosssection'] = self.readTheoryFile( couplingValue )
                         continue
                     self.SMDict['couplings'][couplingName] = float(couplingValue)
-
                 # SM cross section extended with underflow and overflow bin
                 # self.SMXS = [ self.SMDict['crosssection'][0] ] + self.SMDict['crosssection'] + [ self.SMDict['crosssection'][-1] ]
                 self.SMXS = [ 0.0 ] + self.SMDict['crosssection']
-
-
-            elif optionName == 'higgsMassRange':
-                self.mHRange = [ float(v) for v in optionValue.split(',') ]
-
-
-            elif optionName == 'linearTerms':
-                self.includeLinearTerms = eval(optionValue)
-
-
-            # ======================================
-            # Options to pass the theory uncertainties
-
-            elif optionName == 'theoryUncertainties':
-                self.theoryUncertainties = self.readErrorFile( optionValue )
-                self.theoryUncertaintiesPassed = True
-
-            elif optionName == 'correlationMatrix':
-                self.correlationMatrix = self.readCorrelationMatrixFile( optionValue )
-                self.correlationMatrixPassed = True
-
-            elif optionName == 'covarianceMatrix':
-                self.covarianceMatrix = self.readCorrelationMatrixFile( optionValue )
-                self.covarianceMatrixPassed = True
-
-            elif optionName == 'skipOverflowBinTheoryUncertainty':
-                self.skipOverflowBinTheoryUncertainty = eval(optionValue)
 
             else:
                 print 'Unknown option \'{0}\'; skipping'.format(optionName)
                 continue
 
-
+        # Minor checks before continuing
         if self.FitBR and self.FitRatioOfBRs:
             raise self.CouplingModelError( 'Options FitBR and FitRatioOfBRs are exclusive!' )
-
         if not(self.ReweightedXS is None):
             if not( len(self.ReweightedXS) == len(self.manualExpBinBoundaries)-1 ):
                 raise self.CouplingModelError('Dim mismatch: len(ReweightCrossSections)={0}, but len(binBoundaries)-1={1}'.format(len(self.ReweightedXS), len(self.manualExpBinBoundaries)-1 ))
 
 
-    #____________________________________________________________________
     def doParametersOfInterest(self):
         self.chapter( 'Starting model.doParametersOfInterest()' )
-
         self.setMH()
-
         if self.FitOnlyNormalization:
             self.makeParametrizationsFromTheory()
             self.MakeTotalXSExpressions()
@@ -221,25 +172,17 @@ class CouplingModel( PhysicsModel ):
             self.modelBuilder.out.var('hgg_xH_modifier').setConstant(True)
             self.modelBuilder.doVar('hzz_xH_modifier[1.0]')
             self.modelBuilder.out.var('hzz_xH_modifier').setConstant(True)
-
             self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
-
         else:
             self.figureOutBinning()
-
             self.makeParametrizationsFromTheory()
-
             if self.FitBR:
                 self.MakeWidthExpressions()
-        
             if self.ProfileTotalXS:
                 self.MakeTotalXSExpressions()
-
             if self.FitRatioOfBRs:
                 self.MakeRatioOfBRsExpressions()
-
             self.defineYieldParameters()
-
             self.addTheoryUncertaintyNuisances()
 
         self.chapter( 'Starting model.getYieldScale()' )
@@ -249,9 +192,7 @@ class CouplingModel( PhysicsModel ):
     # Split parts of doParametersOfInterest
     ################################################################################
 
-    #____________________________________________________________________
     def setMH( self ):
-
         if self.modelBuilder.out.var("MH"):
             if len(self.mHRange):
                 print 'MH will be left floating within', self.mHRange[0], 'and', self.mHRange[1]
@@ -270,43 +211,26 @@ class CouplingModel( PhysicsModel ):
                 self.modelBuilder.doVar("MH[%g]" % self.mass)
 
 
-    #____________________________________________________________________
     def figureOutBinning( self ):
-
         bins    = self.DC.bins
         signals = self.DC.signals
         signals = [ s for s in signals if not 'OutsideAcceptance' in s ]
-        
-        # Determine all available production modes
         productionModes = list(set([ s.split('_')[0] for s in signals ]))
-
-        if self.splitggH:
-            signals = [ s for s in signals if 'ggH' in s ]
-
+        if self.splitggH: signals = [ s for s in signals if 'ggH' in s ]
         signals.sort( key = lambda n: float(
             n.split('_')[2].replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','') ) )
-
-
-        # ======================================
-        # Figure out experimental binning from signals
-
         productionMode, observableName = signals[0].split('_')[:2]
 
-        if len(self.manualExpBinBoundaries) > 0:
-            expBinBoundaries = self.manualExpBinBoundaries
-            # Overflow bin should be added on command line, is safer
-            # expBinBoundaries.append( 500. )
-            nExpBins = len(expBinBoundaries) - 1
-            if self.verbose:
-                print 'Taking manually specified bin boundaries:', expBinBoundaries
-
-        else:
+        if len(self.manualExpBinBoundaries) == 0:
             raise self.CouplingModelError(
                 'Specify \'--PO binBoundaries=0,15,...\' on the command line.'
                 'Automatic boundary determination no longer supported.'
                 )
+        expBinBoundaries = self.manualExpBinBoundaries
+        nExpBins = len(expBinBoundaries)-1
+        if self.verbose: print 'Taking manually specified bin boundaries:', expBinBoundaries
 
-        self.allProcessBinBoundaries = []
+         self.allProcessBinBoundaries = []
         for signal in signals:
             if 'OutsideAcceptance' in signal: continue
             for bound in signal.split('_')[2:]:
@@ -316,11 +240,9 @@ class CouplingModel( PhysicsModel ):
         # Attach to class so they are accesible in other methods
         self.expBinBoundaries = expBinBoundaries
         self.nExpBins         = nExpBins
-
         self.signals          = signals
         self.productionMode   = productionMode
         self.observableName   = observableName
-
 
         expBinBoundarySet = []
         for i, expBinBoundary in enumerate(self.expBinBoundaries):
@@ -856,14 +778,12 @@ class CouplingModel( PhysicsModel ):
 
 
     #____________________________________________________________________
-    def readTheoryFile( self, theoryFile ):
+    def readTheoryFile(self, theoryFile):
         with open( theoryFile, 'r' ) as theoryFp:
             lines = [ l.strip() for l in theoryFp.readlines() if len(l.strip()) > 0 and not l.strip().startswith('#') ]
-
         couplings    = {}
         ratios       = []
         crosssection = []
-
         for line in lines:
             key, value = line.split('=',1)
             key = key.strip()
@@ -883,9 +803,7 @@ class CouplingModel( PhysicsModel ):
                     # print value
                     # sys.exit()
                     continue
-
         return binBoundaries, ratios, crosssection
-
 
     #____________________________________________________________________
     def readCorrelationMatrixFile( self, correlationMatrixFile ):

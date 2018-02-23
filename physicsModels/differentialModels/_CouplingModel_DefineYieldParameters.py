@@ -105,8 +105,8 @@ def defineYieldParameters(self):
     self.SMXSInsideExperimentalBins = []
 
     # Define a constant 1.0
-    # self.modelBuilder.doVar('one[1]')
-    # self.modelBuilder.out.var('one').setConstant(True)
+    self.modelBuilder.doVar('one[1]')
+    self.modelBuilder.out.var('one').setConstant(True)
 
 
     # ======================================
@@ -172,10 +172,10 @@ def defineYieldParameters(self):
         self.yieldParameters = c
 
     # bkg modifier is the same for all
-    one_yieldParameter = RooFactoryInterface.RooProduct('one')
+    # one_yieldParameter = RooFactoryInterface.RooProduct('one')
     bkg_yieldParameter = RooFactoryInterface.RooProduct('r_bkg')
     YieldParameterContainer.bkg_yieldParameter = bkg_yieldParameter
-    YieldParameterContainer.one_yieldParameter = one_yieldParameter
+    # YieldParameterContainer.one_yieldParameter = one_yieldParameter
 
 
     # ======================================
@@ -185,7 +185,7 @@ def defineYieldParameters(self):
         self.modelBuilder.doVar('lumiScale[8.356546]')
         # Luminosity modifier works on all parameters
         bkg_yieldParameter.add_variable('lumiScale')
-        one_yieldParameter.add_variable('lumiScale')
+        # one_yieldParameter.add_variable('lumiScale')
         for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
             ggH_yieldParameter.add_variable('lumiScale')
         for xH_yieldParameter in YieldParameterContainer.all_xH_yieldParameters():
@@ -228,8 +228,8 @@ def defineYieldParameters(self):
         print '\n' + '- '*30
         print 'Importing in ws and checking\n'
 
+    # self.commit_parseable_to_ws(one_yieldParameter)
     self.commit_parseable_to_ws(bkg_yieldParameter)
-    self.commit_parseable_to_ws(one_yieldParameter)
     for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
         self.commit_parseable_to_ws(ggH_yieldParameter)
     for xH_yieldParameter in YieldParameterContainer.all_xH_yieldParameters():

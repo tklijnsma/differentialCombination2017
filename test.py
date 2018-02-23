@@ -19,7 +19,7 @@ sys.path.append('src')
 import Commands
 import TheoryCommands
 
-import differentials.logger
+import differentials
 
 # New style option handling
 from OptionHandler import OptionHandler
@@ -76,6 +76,7 @@ def main():
         'lumiStudyPlots',
         'onetimeplotsCommands',
         # 
+        'yukawa_t2ws',
         'yukawa_plots',
         'top_plots',
         ])
@@ -84,7 +85,9 @@ def main():
 
     if args.bkg:
         pass
-    if args.test: Commands.TestMode()
+    if args.test:
+        Commands.TestMode()
+        differentials.core.testmode()
 
     if args.debug:
         differentials.logger.set_level_debug()
