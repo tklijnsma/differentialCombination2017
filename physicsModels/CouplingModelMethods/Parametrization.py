@@ -1,7 +1,10 @@
-import numpy, itertools, sys
-import RooFactoryInterface
+from physicsModels.MethodHandler import flag_as_method
+import physicsModels.RooFactoryInterface as RooFactoryInterface
 
-def makeParametrizationsFromTheory( self ):
+import numpy, itertools, sys
+
+@flag_as_method
+def makeParametrizationsFromTheory(self):
 
     ########################################
     # Handling theory
