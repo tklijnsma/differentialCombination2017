@@ -7,10 +7,12 @@ Thomas Klijnsma
 # Imports
 ########################################
 
+import logging
 import os, sys, re
 from os.path import *
 from glob import glob
 from copy import deepcopy
+from math import sqrt
 
 from OptionHandler import flag_as_option
 
@@ -30,7 +32,7 @@ import differentials
 # import differentials.plotting
 
 from time import strftime
-datestr = strftime( '%b%d' )
+datestr = strftime('%b%d')
 
 
 ########################################
@@ -160,6 +162,7 @@ def read_containers_statsyst(args, obs_name, decay_channels=['combination']):
 # Plotting
 ########################################
 
+
 def get_obs(obs_name, decay_channel):
     return {
         'pth_smH'  : pth_smH_obs,
@@ -207,83 +210,6 @@ def rapidity_obs(decay_channel):
 
 #____________________________________________________________________
 @flag_as_option
-def all_tables(args):
-    Commands.DisableWarnings()
-    pth_smH_tables(args)
-    pth_ggH_tables(args)
-    ptjet_tables(args)
-    njets_tables(args)
-    rapidity_tables(args)
-    Commands.DisableWarnings(False)
-
-@flag_as_option
-def pth_smH_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    differentialTable = DifferentialTable.DifferentialTable(name='pth_smH', last_bin_is_overflow=True)
-    for decay_channel in ['hgg', 'hzz', 'combination']:
-        statsyst = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
-        statonly = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
-        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
-    print differentialTable.repr_twiki_symm()
-    print
-    # differentialTable.do_xs = True
-    # print differentialTable.repr_twiki_symm()
-
-@flag_as_option
-def pth_ggH_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    differentialTable = DifferentialTable.DifferentialTable(name='pth_ggH', last_bin_is_overflow=True)
-    for decay_channel in ['hgg', 'hzz', 'combination']:
-        statsyst = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
-        statonly = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
-        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
-    print differentialTable.repr_twiki_symm()
-    print
-    # differentialTable.do_xs = True
-    # print differentialTable.repr_twiki_symm()
-
-@flag_as_option
-def ptjet_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    differentialTable = DifferentialTable.DifferentialTable(name='ptjet', last_bin_is_overflow=True)
-    for decay_channel in ['hgg', 'hzz', 'combination']:
-        statsyst = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
-        statonly = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
-        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
-    print differentialTable.repr_twiki_symm()
-    print
-    # differentialTable.do_xs = True
-    # print differentialTable.repr_twiki_symm()
-
-@flag_as_option
-def njets_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    differentialTable = DifferentialTable.DifferentialTable(name='njets', last_bin_is_overflow=True)
-    for decay_channel in ['hgg', 'hzz', 'combination']:
-        statsyst = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
-        statonly = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
-        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
-    print differentialTable.repr_twiki_symm()
-    print
-    # differentialTable.do_xs = True
-    # print differentialTable.repr_twiki_symm()
-
-@flag_as_option
-def rapidity_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
-    differentialTable = DifferentialTable.DifferentialTable(name='rapidity', last_bin_is_overflow=False)
-    for decay_channel in ['hgg', 'hzz', 'combination']:
-        statsyst = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
-        statonly = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
-        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
-    print differentialTable.repr_twiki_symm()
-    print
-    # differentialTable.do_xs = True
-    # print differentialTable.repr_twiki_symm()
-
-
-#____________________________________________________________________
-@flag_as_option
 def plot_all_differentials(args):
     pth_smH_plot(args)
     pth_ggH_plot(args)
@@ -292,26 +218,26 @@ def plot_all_differentials(args):
     ptjet_plot(args)
     rapidity_plot(args)
 
-
 #____________________________________________________________________
 @flag_as_option
 def pth_smH_plot(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     obs_name = 'pth_smH'
+    obstuple = LatestBinning.obstuple_pth_smH
     
     hgg = differentials.scans.DifferentialSpectrum('hgg',
         scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hgg', statonly=False),
         datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
         )
     hgg.color = 2
-    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
 
     hzz = differentials.scans.DifferentialSpectrum('hzz',
         scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
         datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
         )
     hzz.color = 4
-    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
 
     combination = differentials.scans.DifferentialSpectrum('combination',
         scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
@@ -320,13 +246,16 @@ def pth_smH_plot(args):
     combination.color = 1
     combination.no_overflow_label = True
     combination.draw_method = 'repr_point_with_vertical_bar'
-    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
 
-    differentials.scans.plot_spectra(
-        'spectra_{0}'.format(obs_name),
-        [ hgg, hzz, combination ],
-        obs_name, obs_title='p_{T}', obs_unit='GeV'
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ]
         )
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.draw()
+    plot.wrapup()
+
 
 #____________________________________________________________________
 @flag_as_option
@@ -357,12 +286,6 @@ def pth_ggH_plot(args):
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
 
-    plot = differentials.scans.plot_spectra(
-        'spectra_{0}'.format(obs_name),
-        [ hgg, hzz, combination ],
-        obs_name, obs_title='p_{T}^{ggH}', obs_unit='GeV', inplace=False
-        )
-
     l = differentials.plotting.pywrappers.Latex(
         lambda c: 1.0 - c.GetRightMargin() - 0.01,
         lambda c: 1.0 - c.GetTopMargin() - 0.14,
@@ -371,9 +294,15 @@ def pth_ggH_plot(args):
     l.SetNDC()
     l.SetTextSize(0.05)
     l.SetTextAlign(33)
-    plot.add_top(l, '')
 
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ]
+        )
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.add_top(l, '')
     plot.draw()
+    plot.wrapup()
 
 
 #____________________________________________________________________
@@ -405,11 +334,13 @@ def njets_plot(args):
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
 
-    differentials.scans.plot_spectra(
-        'spectra_{0}'.format(obs_name),
-        [ hgg, hzz, combination ],
-        obs_name, obs_title='N_{jets}'
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ]
         )
+    plot.obsname = obs_name
+    plot.draw()
+    plot.wrapup()
+
 
 #____________________________________________________________________
 @flag_as_option
@@ -440,11 +371,13 @@ def ptjet_plot(args):
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
 
-    differentials.scans.plot_spectra(
-        'spectra_{0}'.format(obs_name),
-        [ hgg, hzz, combination ],
-        obs_name, obs_title='p_{T}^{jet}', obs_unit='GeV'
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ]
         )
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.draw()
+    plot.wrapup()
 
 
 #____________________________________________________________________
@@ -476,11 +409,13 @@ def rapidity_plot(args):
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
 
-    differentials.scans.plot_spectra(
-        'spectra_{0}'.format(obs_name),
-        [ hgg, hzz, combination ],
-        obs_name, obs_title='|y_{H}|'
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ]
         )
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.draw()
+    plot.wrapup()
 
 
 ########################################
@@ -492,29 +427,85 @@ def rapidity_plot(args):
 def pth_smH_plot_statsyst(args):
     obs_name = 'pth_smH'
 
+    sm_crosssections = get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)
+
     combination = differentials.scans.DifferentialSpectrum('combination',
         scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
         datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
         )
     combination.color = 9
     combination.no_overflow_label = True
-    combination.draw_method = 'repr_point_with_vertical_bar'
-    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    combination.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
+    combination.set_sm(sm_crosssections)
+    combination.title = 'Total unc.'
+    combination.read()
 
     combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly',
         scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=True),
         datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
         )
-    combination_statonly.color = 9
-    combination_statonly.no_overflow_label = True
-    combination_statonly.draw_method = 'repr_horizontal_bar_and_narrow_fill'
-    combination_statonly.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    combination_statonly.set_sm(sm_crosssections)
+    combination_statonly.read()
 
-    differentials.scans.plot_spectra(
-        'spectra_{0}_statsyst'.format(obs_name),
-        [ combination, combination_statonly ],
-        obs_name, obs_title='p_{T}', obs_unit='GeV'
-        )
+    # Calculate the syst-only errors
+    combination_histogram = combination.to_hist()
+    statonly_histogram = combination_statonly.to_hist()
+
+    systonly_histogram = deepcopy(combination_histogram)
+    systonly_histogram.title = 'Syst. unc.'
+    systonly_histogram.draw_method = 'repr_uncertainties_fully_filled_area'
+    systonly_histogram_xs = combination.to_hist_xs()
+    systonly_histogram_xs.title = 'Syst. unc.'
+    systonly_histogram_xs.draw_method = 'repr_uncertainties_fully_filled_area'
+
+    syst_err_up = []
+    syst_err_down = []
+    syst_err_up_xs = []
+    syst_err_down_xs = []
+    for i in xrange(combination_histogram.n_bins):
+        up_tot = abs(combination_histogram.errs_up[i])
+        down_tot = abs(combination_histogram.errs_down[i])
+        symm_tot = 0.5*(up_tot+down_tot)
+        symm_stat = 0.5*(abs(statonly_histogram.errs_up[i]) + abs(statonly_histogram.errs_down[i]))
+        sm_crosssection = sm_crosssections[i]
+
+        if symm_tot>symm_stat:
+            symm_syst = sqrt(symm_tot**2-symm_stat**2)
+        else:
+            logging.warning(
+                'For bin {0}, symm_tot={1} > symm_stat={2}. '
+                'Taking sqrt(symm_stat**2-symm_tot**2) instead'
+                .format(i, symm_tot, symm_stat)
+                )
+            symm_syst = sqrt(symm_stat**2-symm_tot**2)
+        syst_err_up.append(up_tot * symm_syst/symm_tot)
+        syst_err_down.append(down_tot * symm_syst/symm_tot)
+        syst_err_up_xs.append(up_tot * symm_syst/symm_tot * sm_crosssection)
+        syst_err_down_xs.append(down_tot * symm_syst/symm_tot * sm_crosssection)
+    systonly_histogram.set_err_up(syst_err_up)
+    systonly_histogram.set_err_down(syst_err_down)
+    systonly_histogram_xs.set_err_up(syst_err_up_xs)
+    systonly_histogram_xs.set_err_down(syst_err_down_xs)
+
+    # combination_histogram_xs = combination.to_hist_xs()
+    # statonly_histogram_xs = combination_statonly.to_hist_xs()
+    # systonly_histogram_xs = deepcopy(combination_histogram_xs)
+    # systonly_histogram_xs.title = 'Syst. only'
+    # systonly_histogram_xs.set_err_up([ 
+    #     sqrt(tot**2-stat**2) for tot, stat in zip(combination_histogram_xs.errs_up, statonly_histogram_xs.errs_up)
+    #     ])
+    # systonly_histogram_xs.set_err_down([ 
+    #     sqrt(tot**2-stat**2) for tot, stat in zip(combination_histogram_xs.errs_down, statonly_histogram_xs.errs_down)
+    #     ])
+    # systonly_histogram_xs.draw_method = 'repr_horizontal_bar_and_narrow_fill'
+
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}_statsyst'.format(obs_name), [combination])
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+    plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+    plot.draw()
+    plot.wrapup()
 
 
 #____________________________________________________________________
@@ -643,3 +634,79 @@ def pth_ggH_hbb_plot(args):
         # topPanelObjects = [ ( l, '' ) ],
         )
 
+
+#____________________________________________________________________
+@flag_as_option
+def all_tables(args):
+    Commands.DisableWarnings()
+    pth_smH_tables(args)
+    pth_ggH_tables(args)
+    ptjet_tables(args)
+    njets_tables(args)
+    rapidity_tables(args)
+    Commands.DisableWarnings(False)
+
+@flag_as_option
+def pth_smH_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='pth_smH', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def pth_ggH_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='pth_ggH', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def ptjet_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='ptjet', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def njets_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='njets', last_bin_is_overflow=True)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()
+
+@flag_as_option
+def rapidity_tables(args):
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    differentialTable = DifferentialTable.DifferentialTable(name='rapidity', last_bin_is_overflow=False)
+    for decay_channel in ['hgg', 'hzz', 'combination']:
+        statsyst = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
+        statonly = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=True )
+        differentialTable.calculate_stat_syst(statsyst.name, statsyst, statonly)
+    print differentialTable.repr_twiki_symm()
+    print
+    # differentialTable.do_xs = True
+    # print differentialTable.repr_twiki_symm()

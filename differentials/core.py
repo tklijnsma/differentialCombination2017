@@ -24,6 +24,25 @@ def is_testmode():
     global TESTMODE
     return TESTMODE
 
+standard_titles = {
+    'hgg' : 'H#rightarrow#gamma#gamma',
+    'hzz' : 'H#rightarrowZZ',
+    'combination' : 'Combination',
+    'hbb' : 'H#rightarrowbb',
+    'combWithHbb' : 'Comb. with H#rightarrowbb',
+    # 
+    'kappac' : '#kappa_{c}',
+    'kappab' : '#kappa_{b}',
+    'kappat' : '#kappa_{t}',
+    'ct' : '#kappa_{t}',
+    'cg' : 'c_{g}',
+    # 
+    'pth_smH'  : 'p_{T}^{H}',
+    'pth_ggH'  : 'p_{T}^{H (ggH)}',
+    'njets'    : 'N_{jets}',
+    'ptjet'    : 'p_{T}^{jet}',
+    'rapidity' : '|y_{H}|',
+    }
 
 def execute(cmd, capture_output=False, ignore_testmode=False):
     # Allow both lists and strings to be passed as the cmd

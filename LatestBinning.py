@@ -1,6 +1,7 @@
 import sys
 sys.path.append('src')
 from Observable import Observable
+from collections import namedtuple
 
 ########################################
 # Physical quantities
@@ -114,5 +115,15 @@ obs_pth_ggH_combWithHbbBinning = Observable(
     )
 obs_pth_ggH_combWithHbbBinning.YR4_totalXS = YR4_ggF_n3lo
 
+
+#____________________________________________________________________
+# Convenience tuples
+
+ObsTuple = namedtuple('ObsTuple', ['hgg', 'hzz', 'combination'])
+obstuple_pth_smH  = ObsTuple(hgg=obs_pth,     hzz=obs_pth_hzzBinning,     combination=obs_pth)
+obstuple_pth_smH  = ObsTuple(hgg=obs_pth_ggH, hzz=obs_pth_ggH_hzzBinning, combination=obs_pth_ggH)
+obstuple_njets    = ObsTuple(hgg=obs_njets,   hzz=obs_njets_hzzBinning,   combination=obs_njets)
+obstuple_ptjet    = ObsTuple(hgg=obs_ptjet,   hzz=obs_ptjet_hzzBinning,   combination=obs_ptjet)
+obstuple_rapidity = ObsTuple(hgg=obs_yh,      hzz=obs_yh,                 combination=obs_yh)
 
 

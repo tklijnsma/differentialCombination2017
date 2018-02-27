@@ -12,6 +12,7 @@ datestr = strftime( '%b%d' )
 
 import os
 from os.path import *
+import copy
 
 #____________________________________________________________________
 @flag_as_parser_options
@@ -112,6 +113,47 @@ def assert_asimov(args):
             )
 
 #____________________________________________________________________
+def set_decay_channel(args, given_channel):
+    for decay_channel in ['hgg', 'hzz', 'combination', 'hbb', 'combWithHbb']:
+        setattr(args, decay_channel, False)
+    setattr(args, given_channel, True)
+
+import traceback
+def try_call_function_with_args(fn, args):
+    try:
+        fn(args)
+    except Exception as exc:
+        print traceback.format_exc()
+        print exc
+        pass
+
+@flag_as_option
+def all_scans_Yukawa(args_original):
+    args = copy.deepcopy(args_original)
+
+    # for asimov in [ False, True ]:
+    #     args.asimov = asimov
+    #     for decay_channel in ['hgg', 'hzz', 'combination']:
+    #         set_decay_channel(args, decay_channel)
+    #         # t2ws_Yukawa_nominal(args)
+    #         try_call_function_with_args(scan_yukawa, args)
+
+    set_decay_channel(args, 'combination')
+    args.asimov = True
+
+    fns = [
+        scan_yukawa_uncorrelatedTheoryUnc,
+        # scan_yukawa_fitOnlyNormalization,
+        # scan_yukawa_oneKappa,
+        scan_yukawa_lumiScale,
+        scan_yukawa_BRdependent,
+        # scan_yukawa_BRdependent_and_profiledTotalXS,
+        scan_yukawa_profiledTotalXS,
+        ]
+    for fn in fns:
+        try_call_function_with_args(fn, args)
+
+
 
 @flag_as_option
 def scan_yukawa(args):
@@ -178,7 +220,13 @@ def scan_yukawa_BRdependent(args):
     config.subDirectory += '_couplingDependentBR'
    
     config.PhysicsModelParameters.append('kappa_V=0.999')
-    config.freezeNuisances.append('kappa_V')
+
+    # config.freezeNuisances.append('kappa_V')
+
+    config.floatNuisances.append('kappa_V')
+    config.PhysicsModelParameterRanges.append('kappa_V=-1000.0:1.0')
+    config.subDirectory += '_floatKappaV'
+
     run_postfit_fastscan_scan(config)
 
 @flag_as_option

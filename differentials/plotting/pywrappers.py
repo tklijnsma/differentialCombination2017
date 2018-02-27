@@ -55,7 +55,7 @@ class Legend(object):
 
     def AddEntry(self, *args):
         """Save entries in a python list, but add them to the actual legend later"""
-        self._entries.append( args )
+        self._entries.append(args)
 
     def SetNColumns(self, value):
         self.auto_n_columns = False
@@ -550,6 +550,8 @@ class Histogram(object):
 
         return [(Tg, 'PSAME')]
 
+    def repr_point_with_vertical_bar_and_horizontal_bar(self, leg=None):
+        return self.repr_point_with_vertical_bar(leg) + self.repr_horizontal_bars()
 
     def Draw(self, draw_style):
         logging.debug('Drawing Histogram {0} with draw_style {1}; legend: {2}'.format(self, draw_style, self._legend))
@@ -616,7 +618,21 @@ class Graph(object):
         else:
             return passed_x, passed_y
 
+    def check_input_sanity(self):
+        if len(self.xs) == 0:
+            raise ValueError(
+                'Graph {0} ({1}) has zero entries in self.xs'
+                .format(self.name, self.title)
+                )
+        if len(self.xs) != len(self.ys):
+            raise ValueError(
+                'Graph {0} ({1}) has unidentical lengths xs and ys: xs={2}, ys={3}'
+                .format(self.name, self.title, len(self.xs), len(self.ys))
+                )
+
     def repr_basic_line(self, leg=None):
+        self.check_input_sanity()
+
         Tg = ROOT.TGraph(len(self.xs), array('f', self.xs), array('f', self.ys))
         ROOT.SetOwnership(Tg, False)
         Tg.SetName(utils.get_unique_rootname())
@@ -629,6 +645,26 @@ class Graph(object):
 
         return [(Tg, 'SAMEL')]
 
+
+    def repr_smooth_line(self, leg=None):
+        Tg, _ = self.repr_basic_line(leg)[0]
+        return [(Tg, 'SAMEC')]
+
+    def repr_vertical_line_at_minimum(self, leg=None):
+        x_at_minimum = self.xs[self.ys.index(min(self.ys))]
+        logging.info('Vertical line: x minimum = {0}'.format(x_at_minimum))
+        Tg = ROOT.TGraph(1,
+            array('f', [x_at_minimum, x_at_minimum]),
+            array('f', [0.0, 3.0])
+            )
+        ROOT.SetOwnership(Tg, False)
+        Tg.SetName(utils.get_unique_rootname())
+        Tg.SetLineColor(self.color)
+        Tg.SetLineWidth(1)
+        return [(Tg, 'LSAME')]
+
+    def repr_smooth_and_vertical_line(self, leg=None):
+        return self.repr_smooth_line(leg) + self.repr_vertical_line_at_minimum()
 
     def Draw(self, draw_style):
         for obj, draw_str in getattr(self, draw_style)(self._legend):

@@ -2,6 +2,7 @@ import Commands
 from copy import deepcopy
 from array import array
 import ROOT
+import logging
 
 #____________________________________________________________________
 class Observable(object):
@@ -31,11 +32,20 @@ class Observable(object):
         self.binning = self.binning[:-1]
         self.nBins -= 1
         self.lastBinIsOverflow=False
+        logging.debug(
+            'Obs {0}: Last bin dropped, remaining bins: {1}'
+            .format(self.name, self.binning)
+            )
 
     #____________________________________________________________________
     def drop_bins_up_to_value(self, value):
+        logging.info(
+            'Obs {0}: Dropping bins up to value {1}; current binning is {2}'
+            .format(self.name, value, self.binning)
+            )
         while self.binning[-1] > value:
             self.drop_last_bin()
+        logging.info('Obs {0}: Final binning: {1}'.format(self.name, self.binning))
 
     #____________________________________________________________________
     def crosssection(self):

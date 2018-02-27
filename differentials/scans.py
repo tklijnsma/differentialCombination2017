@@ -44,11 +44,9 @@ class DifferentialSpectrum(object):
         self.smxs_set = False
         self.color = None
         self.draw_method = 'repr_horizontal_bar_and_narrow_fill'
-
         self.hard_x_max = None
-
         self.get_POIs()
-
+        self._is_read = False
 
     def set_sm(self, smxs):
         self.smxs = smxs
@@ -79,21 +77,23 @@ class DifferentialSpectrum(object):
         else:
             self.POIs = self.get_POIs_from_datacard()
 
-
     def read(self):
-        if len(self.POIs)==0:
-            self.get_POIs()
-
-        for POI in self.POIs:
-            scan = Scan(
-                x_variable=POI,
-                y_variable='deltaNLL',
-                scandir=self.scandir,
-                globpat=POI
-                )
-            scan.read()
-            scan.create_uncertainties()
-            self.scans.append(scan)
+        if self._is_read:
+            raise RuntimeError('Scan {0} is already read'.format(self.name))
+        else:
+            if len(self.POIs)==0:
+                self.get_POIs()
+            for POI in self.POIs:
+                scan = Scan(
+                    x_variable=POI,
+                    y_variable='deltaNLL',
+                    scandir=self.scandir,
+                    globpat=POI
+                    )
+                scan.read()
+                scan.create_uncertainties()
+                self.scans.append(scan)
+            self._is_read = True
 
     def plot_scans(self):
         c.Clear()
@@ -398,8 +398,10 @@ class Scan(ScanPrimitive):
         if not(globpat is None):
             self.globpat = '*' + globpat + '*'
 
-        self.x_title = self.standard_titles.get(x_variable, x_variable)
+        # self.x_title = self.standard_titles.get(x_variable, x_variable)
+        self.x_title = core.standard_titles.get(x_variable, x_variable)
         self.y_title = '2#DeltaNLL'
+        self.title   = self.x_title
 
         logging.debug(
             'New scan instance:'
@@ -538,8 +540,9 @@ class Scan(ScanPrimitive):
 
     def to_graph(self):
         name = utils.get_unique_rootname()
-        title = self.x_variable
-        graph = plotting.pywrappers.Graph(name, title, self.x(), self.two_times_deltaNLLs())
+        graph = plotting.pywrappers.Graph(name, self.title, self.x(), self.two_times_deltaNLL())
+        if hasattr(self, 'color'): graph.color = self.color
+        if hasattr(self, 'draw_style'): graph.draw_style = self.draw_style
         return graph
 
         
@@ -547,6 +550,9 @@ class Scan(ScanPrimitive):
 
 class Scan2D(ScanPrimitive):
     """docstring for Scan2D"""
+
+    x_sm = 1.0
+    y_sm = 1.0
 
     def __init__(self, name, x_variable, y_variable, z_variable='deltaNLL', scandir=None, globpat='*', color=None):
         super(Scan2D, self).__init__()
@@ -633,6 +639,7 @@ class Scan2D(ScanPrimitive):
 
         plotting.pywrappers.CMS_Latex_type().Draw()
         plotting.pywrappers.CMS_Latex_lumi().Draw()
+        plotting.pywrappers.Point(self.x_sm, self.y_sm).Draw('repr_SM_point')
 
         plotting.pywrappers.ContourDummyLegend(
             c.GetLeftMargin() + 0.01,

@@ -65,15 +65,23 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
     if args.hgg:
         t2ws.extra_options.append('--PO isOnlyHgg=True' )
 
-    t2ws.extra_options.append('--PO binBoundaries={0}'.format(','.join([ str(b) for b in yukawa_exp_binning ]) ))
+    obs = LatestBinning.obs_pth_ggH
+    obs.drop_bins_up_to_value(yukawa_exp_binning[-1]+1.0)
+
+    t2ws.extra_options.append(
+        '--PO binBoundaries={0}'
+        .format(','.join([str(b) for b in obs.binning]))
+        )
 
     if apply_reweighting:
-        crosssections = LatestBinning.obs_pth_ggH.crosssection()[:len(yukawa_exp_binning)-1]
-        t2ws.extra_options.append('--PO ReweightCrossSections={0}'.format( ','.join([str(v) for v in crosssections]) ))
+        crosssections = obs.crosssection()
+        crosssections_str = ','.join([str(v) for v in crosssections])
+        t2ws.extra_options.append('--PO ReweightCrossSections={0}'.format(crosssections_str))
         t2ws.tags.append('reweighted')
     if apply_theory_uncertainties:
         add_theory_uncertainties(t2ws)
     return t2ws
+
 
 def add_theory_uncertainties(t2ws, uncorrelated=False):
     TheoryFileInterface.SetFileFinderDir(LatestPaths.derivedTheoryFiles_YukawaSummed)
