@@ -62,6 +62,18 @@ class MultiScanPlot(PlotBase):
             )
         base.Draw('P')
 
+        sigma1_line = ROOT.TLine(self.x_min, 1.0, self.x_max, 1.0)
+        ROOT.SetOwnership(sigma1_line, False)
+        sigma1_line.SetLineColor(14)
+        sigma1_line.SetLineStyle(2)
+        sigma1_line.Draw()
+
+        sigma2_line = ROOT.TLine(self.x_min, 2.0, self.x_max, 2.0)
+        ROOT.SetOwnership(sigma2_line, False)
+        sigma2_line.SetLineColor(14)
+        sigma2_line.SetLineStyle(2)
+        sigma2_line.Draw()
+
         for scan in self.scans:
             graph = scan.to_graph()
             graph.filter(y_max=3.5)

@@ -5,6 +5,7 @@ from datetime import datetime
 import logging
 import logger
 
+import differentials
 import ROOT
 
 from time import strftime
@@ -23,6 +24,13 @@ def testmode(flag=True):
 def is_testmode():
     global TESTMODE
     return TESTMODE
+
+def save_png():
+    differentials.plotting.canvas.Canvas.save_png = True
+
+def save_png_through_convert():
+    differentials.plotting.canvas.Canvas.save_png_through_convert = True
+
 
 standard_titles = {
     'hgg' : 'H#rightarrow#gamma#gamma',

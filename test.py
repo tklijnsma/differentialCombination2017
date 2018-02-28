@@ -98,8 +98,10 @@ def main():
         TheoryCommands.SaveAsRoot()
     if args.savepng:
         TheoryCommands.SaveAsPng()
+        differentials.core.save_png()
     if args.savepng_convert:
         TheoryCommands.SaveAsPngThroughConvert()
+        differentials.core.save_png_through_convert()
 
 
     ########################################

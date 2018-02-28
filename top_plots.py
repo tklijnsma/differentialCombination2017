@@ -56,7 +56,7 @@ def points_on_contour_Top(args):
     # ======================================
     # Load into plot
 
-    plot = differentials.plotting.multipanel.BottomPanelPlotWithParametrizations('points_on_contour_Top')
+    plot = differentials.plotting.plots.BottomPanelPlotWithParametrizations('points_on_contour_Top')
     plot.scan2D = combination
     plot.ws_file = ws
     plot.ptspectrum = pth_smH_combination

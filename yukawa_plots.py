@@ -352,7 +352,7 @@ def points_on_contour_Yukawa(args):
     # ======================================
     # Load into plot
 
-    plot = differentials.plotting.multipanel.BottomPanelPlotWithParametrizations('points_on_contour_Yukawa')
+    plot = differentials.plotting.plots.BottomPanelPlotWithParametrizations('points_on_contour_Yukawa')
     plot.scan2D = combination
     plot.ws_file = ws
     plot.ptspectrum = pth_smH_combination
@@ -382,6 +382,7 @@ def one_kappa_scan(args):
 
 @flag_as_option
 def one_kappa_scan_kappab(args):
+    differentials.plotting.canvas.c.resize_temporarily(850, 800)
 
     observed = differentials.scans.Scan('kappab', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappab)
     observed.color = 4
@@ -412,6 +413,7 @@ def one_kappa_scan_kappab(args):
 
 @flag_as_option
 def one_kappa_scan_kappac(args):
+    differentials.plotting.canvas.c.resize_temporarily(850, 800)
 
     observed = differentials.scans.Scan('kappac', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappac)
     observed.color = 4

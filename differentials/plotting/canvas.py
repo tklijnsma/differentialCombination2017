@@ -15,10 +15,14 @@ class Canvas(object):
     save_root = False
     save_png_through_convert = False
 
+    default_width = 1000
+    default_height = 800
+
     def __init__(self):
         self.name = utils.get_unique_rootname()
-        self.canvas = ROOT.TCanvas( 'ctc', 'ctc', 1000, 800 )
+        self.canvas = ROOT.TCanvas('ctc', 'ctc', self.default_width, self.default_height)
         self.plotdir = 'plots_{0}'.format(datestr)
+        self._is_resized_temporarily = False
 
     def __getattr__(self, name):
         """
@@ -26,6 +30,19 @@ class Canvas(object):
         This method should only be called if the attribute could not be found in Canvas
         """
         return getattr(self.canvas, name)
+
+    def resize(self, width=None, height=None):
+        if width is None:
+            width = c.GetWindowWidth()
+        if height is None:
+            height = c.GetWindowHeight()
+        self.canvas.SetCanvasSize(width, height)
+
+    def resize_temporarily(self, width=None, height=None):
+        self._tmp_width = c.GetWindowWidth()
+        self._tmp_height = c.GetWindowHeight()
+        self.resize(width, height)
+        self._is_resized_temporarily = True
 
     def set_margins(
             self,
@@ -74,8 +91,11 @@ class Canvas(object):
             self.canvas.SaveAs(outname+'.root')
         if png_through_convert or self.save_png_through_convert:
             # See: https://stackoverflow.com/a/6605085/9209944
-            cmd = 'convert -density 300 -quality 100 {0}.pdf {0}.png'.format(outname)
+            cmd = 'convert -density 300 -quality 100 {0}.pdf -trim {0}.png'.format(outname)
             os.system(cmd)
+
+        if self._is_resized_temporarily:
+            self.resize(self._tmp_width, self._tmp_height)
 
 # Create one instance that can be called from anywhere
 c = Canvas()
