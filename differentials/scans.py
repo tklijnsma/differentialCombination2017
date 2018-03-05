@@ -32,12 +32,18 @@ class DifferentialSpectrum(object):
         'combWithHbb' : 'Comb. with H#rightarrowbb',
         }
 
-    def __init__(self, name, scandir, auto_determine_POIs=False, datacard=None):
+    def __init__(self, name, scandir, auto_determine_POIs=True, datacard=None):
         self.name = name
         self.scandir = scandir
         self.scans = []
+
         self.auto_determine_POIs = auto_determine_POIs
         self.datacard = datacard
+        if not(datacard is None):
+            self.auto_determine_POIs = False
+        elif not(auto_determine_POIs) and datacard is None:
+            raise ValueError('Either auto_determine_POIs must be True, or a workspace must be passed')
+
         self.POIs = []
         self.title = self.standard_titles.get(name, name)
         self.smxs = []
@@ -95,47 +101,16 @@ class DifferentialSpectrum(object):
                 self.scans.append(scan)
             self._is_read = True
 
-    def plot_scans(self):
-        c.Clear()
-        c.set_margins()
-        base = utils.get_plot_base(
-            x_min=-1.0, x_max=4., y_min=0.0, y_max=5.0,
-            x_title='POI', y_title='2#DeltaNLL'
-            )
-        base.Draw('P')
-
-        leg = plotting.pywrappers.Legend()
-        for scan in self.scans:
-            graph = scan.to_graph()
-            graph.filter(y_max=3.5)
-            for obj, draw_str in graph.repr_basic_line(leg):
-                obj.Draw(draw_str)
-
-            left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [1.0]))
-            ROOT.SetOwnership(left_point, False)
-            left_point.SetMarkerColor(graph.color)
-            left_point.SetMarkerSize(1.1)
-            left_point.SetMarkerStyle(8)
-            if not scan.unc.well_defined_left_bound:
-                left_point.SetMarkerStyle(5)
-            left_point.Draw('PSAME')
-
-            right_point = ROOT.TGraph(1, array('f', [scan.unc.right_bound]), array('f', [1.0]))
-            ROOT.SetOwnership(right_point, False)
-            right_point.SetMarkerColor(graph.color)
-            right_point.SetMarkerSize(1.1)
-            right_point.SetMarkerStyle(8)
-            if not scan.unc.well_defined_right_bound:
-                right_point.SetMarkerStyle(5)
-            right_point.Draw('PSAME')
-
-        leg.Draw()
-
-        plotting.pywrappers.CMS_Latex_type().Draw()
-        plotting.pywrappers.CMS_Latex_lumi().Draw()
-
-        outname = 'scans_{0}'.format(os.path.basename(self.scandir).replace('/',''))
-        c.save(outname)
+    def plot_scans(self, plotname=None):
+        if plotname is None:
+            plotname = 'scans_{0}'.format(self.name)
+        plot = plotting.plots.MultiScanPlot(plotname)
+        plot.scans = self.scans
+        if 'hbb' in self.name:
+            plot.x_min = -10.0
+            plot.x_max = 10.0
+        plot.draw()
+        plot.wrapup()
 
     def binning(self):
         binning = core.binning_from_POIs(self.POIs)
@@ -154,6 +129,8 @@ class DifferentialSpectrum(object):
             )
 
     def last_bin_is_overflow(self):
+        if self.binning()[-1] == 10000.:
+            return True
         return core.last_bin_is_overflow(self.POIs)
 
     def first_bin_is_underflow(self):
@@ -338,6 +315,14 @@ class ScanPrimitive(object):
                     entry_dict['y'] = entry_dict[var_name]
                 if hasattr(self, 'z_variable') and var_name == self.z_variable:
                     entry_dict['z'] = entry_dict[var_name]
+
+            if self.y_variable == 'deltaNLL' and entry_dict['y'] == 9990.0 or entry_dict['y']>1e9:
+                logging.trace(
+                    'Found deltaNLL=={3}, which indicates a misfit ({0}={1}, {2}={3}). '
+                    'Skipping point.'
+                    .format(self.x_variable, entry_dict['x'], self.y_variable, entry_dict['y'])
+                    )
+                continue
             entries.append(Entry(**entry_dict))
 
         if len(entries) == 0:
@@ -445,10 +430,10 @@ class Scan(ScanPrimitive):
             'min_deltaNLL' : min_deltaNLL,
             'i_min' : i_min_deltaNLL,
             'x_min' : x_min,
-            'left_bound' : -999,
-            'left_error' : -999,
-            'right_bound' : 999,
-            'right_error' : 999,
+            'left_bound' : -0,
+            'left_error' : -0,
+            'right_bound' : 0,
+            'right_error' : 0,
             'well_defined_left_bound' : False,
             'well_defined_right_bound' : False,
             }

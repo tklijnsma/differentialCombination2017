@@ -1,4 +1,5 @@
 import os.path
+import logging
 
 import ROOT
 import plotting_utils as utils
@@ -100,3 +101,9 @@ class Canvas(object):
 # Create one instance that can be called from anywhere
 c = Canvas()
 global_color_cycle = utils.new_color_cycle()
+
+def reset_global_color_cyle():
+    global global_color_cycle
+    logging.debug('Resetting the global color cycle; old cycle: {0}'.format(global_color_cycle))
+    global_color_cycle = utils.new_color_cycle()
+    logging.debug('Resetting the global color cycle; new cycle: {0}'.format(global_color_cycle))

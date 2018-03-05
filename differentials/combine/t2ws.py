@@ -4,6 +4,7 @@ from os.path import *
 import glob, re, copy
 from collections import namedtuple
 
+import differentials
 import differentials.core as core
 
 import combine_utils as utils
@@ -89,7 +90,7 @@ class T2WS(object):
         return cmd
 
     def run(self):
-        logging.info('Creating {0}'.format(self.get_outdir()))
+        logging.info('Creating {0} if not yet existing'.format(self.get_outdir()))
         if not core.is_testmode():
             if not isdir(self.get_outdir()):
                 os.makedirs(self.get_outdir())

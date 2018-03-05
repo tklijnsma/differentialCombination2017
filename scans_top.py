@@ -13,6 +13,8 @@ sys.path.append('src')
 import Commands
 import CombineToolWrapper
 import differentialTools
+import differentials
+from copy import deepcopy
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -22,12 +24,12 @@ from os.path import *
 
 #____________________________________________________________________
 def basic_config(args, hurry=False):
-    assert_highpt(args)
+    # assert_highpt(args)
     config = CombineToolWrapper.CombineConfig(args)
     config.onBatch       = True
     config.queue         = 'all.q'
     if hurry:
-        Commands.Warning( 'Running with quick settings' )
+        Commands.Warning('Running with quick settings')
         config.nPointsPerJob = 5
         config.queue         = 'short.q'
 
@@ -43,9 +45,9 @@ def basic_config(args, hurry=False):
     config.decay_channel = differentialTools.get_decay_channel_tag(args)
 
     if args.combWithHbb or args.hbb:
-        raise NotImplementedError(
-            'combWithHbb and hbb need workspaces with new binning first.'
-            )
+        # raise NotImplementedError(
+        #     'combWithHbb and hbb need workspaces with new binning first.'
+        #     )
         config.default_minimizer_settings = False
         config.extraOptions.extend([
             '--minimizerStrategy 2',
@@ -65,8 +67,8 @@ def basic_config(args, hurry=False):
         'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
         'cg={0},{1}'.format( cg_ranges[0], cg_ranges[1] )
         ]
-    config.subDirectory = 'out/Scan_Top_{0}_{1}'.format(datestr, config.decay_channel)
-    if config.args.highpt: config.subDirectory = 'out/Scan_TopHighPt_{0}_{1}'.format(datestr, config.decay_channel)
+    config.subDirectory = 'out/Scan_{0}_Top_{1}'.format(datestr, config.decay_channel)
+    # if config.args.highpt: config.subDirectory = 'out/Scan_TopHighPt_{0}_{1}'.format(datestr, config.decay_channel)
 
     return config
 
@@ -91,16 +93,33 @@ def nominal_datacard(args):
             dc = LatestPaths.ws_combined_Top
     return dc
 
-def assert_highpt(args):
-    if not args.highpt:
-        Commands.Warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
-        args.highpt = True
+# def assert_highpt(args):
+#     if not args.highpt:
+#         Commands.Warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
+#         args.highpt = True
 
 #____________________________________________________________________
+
+@flag_as_option
+def scan_top_nominal_all(real_args):
+    args = deepcopy(real_args)
+    for asimov in [
+        True,
+        False
+        ]:
+        args.asimov = asimov
+        for dc in [
+            # 'combWithHbb',
+            'combination',
+            # 'hgg'
+            ]:
+            differentials.core.set_one_decay_channel(args, dc)
+            scan_top(args)
+
 @flag_as_option
 def scan_top(args):
     config = basic_config(args)
-    config.datacard = nominal_datacard(args)
+    config.datacard = LatestPaths.ws.top.nominal[differentials.core.get_decay_channel_tag(args)]
     run_postfit_fastscan_scan(config)
 
 @flag_as_option

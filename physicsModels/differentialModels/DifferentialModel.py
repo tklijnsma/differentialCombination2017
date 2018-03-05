@@ -41,20 +41,23 @@ class DifferentialModel(MultiSignalModel):
             self.modelBuilder.doVar(expr)
         self.modelBuilder.out.defineSet('yieldParameters', ','.join(self.yield_parameters))
         self.modelBuilder.out.defineSet('POI', ','.join(self.yield_parameters))
-        self.modelBuilder.doVar('one[1.0]')
-
+        # self.modelBuilder.doVar('one[1.0]')
         # MultiSignalModel.doParametersOfInterest(self)
+        print 'Leaving doParametersOfInterest'
 
-    def getYieldScale(self, bin, process, verbose=False):
+    def getYieldScale(self, bin, process):
         if process in self.get_processes():
             if self.binning is None:
                 y = 'r_' + process
             else:
                 i_bin = find_i_bin(process, self.binning)
-                y = self.yield_parameters[i_bin]
+                if i_bin == -1:
+                    y = 1
+                else:
+                    y = self.yield_parameters[i_bin]
         else:
-            y = 'one'
-        if verbose: print 'Scaling proc:{0}/bin:{1} with {2}'.format(process, bin, y)
+            y = 1
+        if self.verbose: print 'Scaling proc:{0}/bin:{1} with {2}'.format(process, bin, y)
         return y
 
 
@@ -77,7 +80,7 @@ class LumiScaleDifferentialModel(DifferentialModel):
 
     def getYieldScale(self, bin, process):
         y = DifferentialModel.getYieldScale(self, bin, process, verbose=False)
-        if y == 'one':
+        if y == 1:
             y = 'lumiScale'
         elif y in self.yield_parameters:
             y = self.map_to_new_y[y]

@@ -27,6 +27,16 @@ class Observable(object):
         self.nBins = len(self.shape)
 
     #____________________________________________________________________
+    def drop_first_bin(self):
+        self.shape = self.shape[1:]
+        self.binning = self.binning[1:]
+        self.nBins -= 1
+        logging.debug(
+            'Obs {0}: First bin dropped, remaining bins: {1}'
+            .format(self.name, self.binning)
+            )
+
+    #____________________________________________________________________
     def drop_last_bin(self):
         self.shape = self.shape[:-1]
         self.binning = self.binning[:-1]
@@ -87,13 +97,6 @@ class Observable(object):
         copy.binning = newbinning
         copy.nBins = len(newshape)
         return copy
-
-    #____________________________________________________________________
-    def keepOnlyFirstNBins( self, N ):
-        self.shape   = [ x for i, x in enumerate(self.shape)   if i < N ]
-        self.binning = [ x for i, x in enumerate(self.binning) if i < N+1 ]
-        self.nBins   = len(self.shape)
-        self.lastBinIsOverflow = False
 
     #____________________________________________________________________
     def Print( self ):

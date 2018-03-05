@@ -36,131 +36,89 @@ datestr = strftime('%b%d')
 
 
 ########################################
-# Helpers
-########################################
-
-def check_containers(containers):
-    for container in containers:
-        if not len(container.POIs) == len(container.SMcrosssections):
-            Commands.ThrowError(
-                'For container {2}, found {0} POIs, but {1} SM cross sections; something is misaligned.'.format(
-                    len(container.POIs), len(container.SMcrosssections), container.name )
-                + '\n  POIs:  {0}'.format(container.POIs)
-                + '\n  SM xs: {0}'.format(container.SMcrosssections)
-                )
-
-def draw_parabolas(container):
-    PhysicsCommands.BasicDrawScanResults(container.POIs, container.Scans, name=container.name)
-
-def prepare_container(
-        name,
-        ws, scandir,
-        title=None,
-        verbose=False,
-        draw_parabolas=False,
-        scale_scans=None
-        ):
-    POIs = Commands.ListPOIs( ws )
-    POIs.sort( key=Commands.POIsorter )
-    if verbose: print 'Sorted POIs:', POIs
-
-    scans = PhysicsCommands.GetScanResults(
-        POIs,
-        scandir,
-        # pattern = pattern,
-        filterNegatives = True
-        )
-    if scale_scans:
-        for scan in scans:
-            for i in xrange(len(scan)):
-                scan[i] = ( scan[i][0], scale_scans*scan[i][1] )
-
-    if draw_parabolas:
-        draw_parabolas(container)
-
-    container = Container(name=name)
-    if title is None:
-        title = name
-    container.title = title
-
-    container.POIs = POIs
-    container.Scans = scans
-
-    if name == 'hgg':
-        container.color = 2
-        container.title = 'H#rightarrow#gamma#gamma'
-    if name == 'hzz':
-        container.color = 4
-        container.title = 'H#rightarrowZZ'
-    if name == 'combination':
-        container.color = 1
-        container.title = 'Combination'
-    if name == 'hbb':
-        container.color = 8
-        container.title = 'H#rightarrowbb'
-    if name == 'combWithHbb':
-        container.color = 14
-        container.title = 'Comb. with H#rightarrowbb'
-
-    return container
-
-def prepare_SM_container(crosssection, binBoundaries):
-    SM = Container()
-    SM.name = 'SM'
-    SM.title = 'SM'
-    SM.color = 16
-    SM.crosssection = crosssection
-    SM.binBoundaries = binBoundaries
-    SM.ratios = [ 1.0 for i in xrange(len(crosssection)) ]
-    return SM
-
-def get_scan_dir(args, obs_name):
-    decay_channel = get_decay_channel_tag(args)
-    key = 'scan_{0}_{1}'.format(decay_channel, obs_name)
-    if args.statonly:
-        key += '_statonly'
-    if args.asimov:
-        key += '_asimov'
-    return getattr(LatestPaths, key)
-
-def read_container_base(args, obs_name, SMcrosssections, decay_channel, statonly=False):
-    ws = LatestPathsGetters.get_ws(obs_name, args, decay_channel=decay_channel)
-    scan = LatestPathsGetters.get_scan(obs_name, args, decay_channel=decay_channel, statonly=statonly)
-    container = prepare_container(decay_channel, ws, scan)
-    container.name += '_statonly' if statonly else ''
-    container.SMcrosssections = SMcrosssections
-    container.statonly = statonly
-    container.suppress_text = statonly
-    container.error_line = not(statonly)
-    return container
-
-def read_container(args, obs_name, decay_channel=['combination']):
-    SMcrosssections = get_obs(obs_name, decay_channel).crosssection_over_binwidth()
-    container = read_container_base(args, obs_name, SMcrosssections, decay_channel)
-    return container
-
-def read_containers_statsyst(args, obs_name, decay_channels=['combination']):
-    containers = []
-    for statonly in [False, True]:
-        for decay_channel in decay_channels:
-            container = read_container_base(
-                args,
-                obs_name,
-                get_obs(obs_name, decay_channel).crosssection_over_binwidth(),
-                decay_channel,
-                statonly
-                )
-            container.suppress_text = False
-            container.title = 'stat.' + ( ' #oplus syst.' if not statonly else '' )
-            containers.append(container)
-    # for container in containers:
-    #     draw_parabolas(container)
-    return containers
-
-
-########################################
 # Plotting
 ########################################
+
+
+@flag_as_option
+def plot_Feb28(args):
+    spectra = []
+    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
+    obs_name = 'pth_ggH'
+    obstuple = LatestBinning.obstuple_pth_ggH
+
+    if args.asimov:
+        dir_combWithHbb = 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov'
+        dir_combination = 'out/Scan_Mar02_pth_ggH_combination_asimov'
+        dir_hbb = 'out/Scan_Mar02_pth_ggH_hbb_asimov'
+        dir_hgg = 'out/Scan_Mar02_pth_ggH_hgg_asimov'
+        dir_hzz = 'out/Scan_Mar02_pth_ggH_hzz_asimov'
+    else:
+        dir_combWithHbb = 'out/Scan_Mar02_pth_ggH_combWithHbb'
+        dir_combination = 'out/Scan_Mar02_pth_ggH_combination'
+        dir_hbb = 'out/Scan_Mar02_pth_ggH_hbb'
+        dir_hgg = 'out/Scan_Mar02_pth_ggH_hgg'
+        dir_hzz = 'out/Scan_Mar02_pth_ggH_hzz'
+    
+    hgg = differentials.scans.DifferentialSpectrum('hgg', dir_hgg)
+    hgg.color = 2
+    hgg.no_overflow_label = True
+    hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    hgg.read()
+    spectra.append(hgg)
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz', dir_hzz)
+    hzz.color = 4
+    hzz.no_overflow_label = True
+    hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    hzz.read()
+    spectra.append(hzz)
+
+    hbb = differentials.scans.DifferentialSpectrum('hbb', dir_hbb)
+    hbb.color = 30
+    hbb.no_overflow_label = True
+    hbb.set_sm(obstuple.hbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    hbb.read()
+    spectra.append(hbb)
+
+    combination = differentials.scans.DifferentialSpectrum('combination', dir_combination)
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combination.read()
+    spectra.append(combination)
+
+    combWithHbb_scandir = 'out/Scan_Mar01_pth_ggH_combWithHbb_asimov_0'
+    combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', dir_combWithHbb)
+    combWithHbb.color = 47
+    combWithHbb.no_overflow_label = True
+    combWithHbb.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb.read()
+    spectra.append(combWithHbb)
+
+
+    l = differentials.plotting.pywrappers.Latex(
+        lambda c: 1.0 - c.GetRightMargin() - 0.01,
+        lambda c: 1.0 - c.GetTopMargin() - 0.14,
+        'gluon fusion cross section'
+        )
+    l.SetNDC()
+    l.SetTextSize(0.05)
+    l.SetTextAlign(33)
+
+    plot = differentials.plotting.plots.SpectraPlot(
+        'debugspectra_{0}'.format(obs_name) + ('_asimov' if args.asimov else ''),
+        spectra
+        )
+    plot.draw_multiscans = True
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.add_top(l, '')
+    plot.leg.SetNColumns(3)
+    plot.draw()
+    plot.wrapup()
 
 
 def get_obs(obs_name, decay_channel):

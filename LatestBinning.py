@@ -2,6 +2,16 @@ import sys
 sys.path.append('src')
 from Observable import Observable
 from collections import namedtuple
+from copy import deepcopy
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+def normalize(l, normalization=1.0):
+    s = float(sum(l))
+    return [ e/s*normalization for e in l ]
 
 ########################################
 # Physical quantities
@@ -34,96 +44,94 @@ Observable.YR4_totalXS = YR4_totalXS
 # Binning and SM differentials
 ########################################
 
+# ----------------
+# Observables other than pth
 binning_ptjet = [ -1000.0, 30.0, 55.0, 95.0, 120.0, 200.0, 13000.0 ]
 binning_yh    = [ 0.0, 0.15, 0.3, 0.6, 0.9, 1.2, 2.5 ]
-binning_pth   = [ 0.0, 15.0, 30.0, 45.0, 85.0, 125.0, 200.0, 350.0, 10000.0 ]
-# binning_njets = [ -0.5, 0.5, 1.5, 2.5, 3.5, 100.0 ]
 binning_njets = [ 0., 1.0, 2.0, 3.0, 4.0, 100.0 ]
 
-shape_ptjet   = [ 78.53302819,  20.52882251,  13.40260032,   3.79521629, 4.44346963, 1.62691503]
-shape_yh      = [ 8.88641092, 8.86086463, 17.34621208, 16.38134718, 15.14497828, 51.87741436 ]
-shape_pth     = [ 27.46607434,  29.44961617,  19.6934684,   26.59903008,  10.46543842, 6.31602595, 2.0582112, 0.28218741 ]
-shape_njets   = [ 78.53302819, 30.8512632, 9.1331588, 2.41446376, 1.39813801 ]
+shape_ptjet   = normalize([ 78.53302819,  20.52882251,  13.40260032,   3.79521629, 4.44346963, 1.62691503])
+shape_yh      = normalize([ 8.88641092, 8.86086463, 17.34621208, 16.38134718, 15.14497828, 51.87741436 ])
+shape_njets   = normalize([ 78.53302819, 30.8512632, 9.1331588, 2.41446376, 1.39813801 ])
 
-# Normalize to 1.0
-shape_njets = [ i/sum(shape_njets) for i in shape_njets ]
-shape_pth   = [ i/sum(shape_pth) for i in shape_pth ]
-shape_ptjet = [ i/sum(shape_ptjet) for i in shape_ptjet ]
-shape_yh    = [ i/sum(shape_yh) for i in shape_yh ]
-
-obs_pth   = Observable( name = 'pth', title = 'p_{T}^{H}', shape = shape_pth, binning = binning_pth )
 obs_njets = Observable( name = 'njets', title = 'N_{jets}', shape = shape_njets, binning = binning_njets )
 obs_yh    = Observable( name = 'yh', title = '|y_{H}|', shape = shape_yh, binning = binning_yh, lastBinIsOverflow=False )
 obs_ptjet = Observable( name = 'ptjet', title = 'p_{T}^{jet}', shape = shape_ptjet, binning = binning_ptjet )
 
-# Split xH and ggH parts
-shape_pth_xH  = [ 0.46093135, 1.25292978, 1.72672486, 4.69269541, 3.0887882, 2.33949677, 0.86423866, 0.13488074 ]
-shape_pth_xH = [ i/sum(shape_pth_xH) for i in shape_pth_xH ]
-obs_pth_xH = Observable( name = 'pth_xH', title = 'p_{T}^{H} (xH)', shape = shape_pth_xH, binning = binning_pth )
-obs_pth_xH.YR4_totalXS = YR4_xH
-
-shape_pth_ggH = [ xs_total - xs_xH for xs_total, xs_xH in zip( obs_pth.crosssection(), obs_pth_xH.crosssection() ) ]
-shape_pth_ggH = [ i/sum(shape_pth_ggH) for i in shape_pth_ggH ]
-obs_pth_ggH = Observable( name = 'pth_ggH', title = 'p_{T}^{H} (ggH)', shape = shape_pth_ggH, binning = binning_pth )
-obs_pth_ggH.YR4_totalXS = YR4_ggF_n3lo
-
-# ======================================
-# Create different binnings for hzz and hbb
-
-hzz_binMerging_pth   = [ 0, 1, [2,3], [4,5], [6,7] ]
 hzz_binMerging_ptjet = [ 0, 1, 2, [3,4,5] ]
 hzz_binMerging_njets = [ 0, 1, 2, [3,4] ]
-obs_pth_hzzBinning   = obs_pth.mergeBins(hzz_binMerging_pth)
-obs_pth_ggH_hzzBinning = obs_pth_ggH.mergeBins(hzz_binMerging_pth)
 obs_ptjet_hzzBinning = obs_ptjet.mergeBins(hzz_binMerging_ptjet)
 obs_njets_hzzBinning = obs_njets.mergeBins(hzz_binMerging_njets)
 
 
-# For now, create fake shapes
-# Wait for Vittorio to produce numbers in new binning
-binning_pth_hbb = [ 350., 600., 10000. ]
-binning_pth_combWithHbb = [ 0.0, 15.0, 30.0, 45.0, 85.0, 125.0, 200.0, 350.0, 600.0, 10000.0 ]
+# ----------------
+# pth
+binning_pth   = [ 0.0, 15.0, 30.0, 45.0, 80.0, 120.0, 200.0, 350.0, 600., 10000.0 ]
 
-shape_pth_hbb             = [ 0.9*shape_pth[-1], 0.1*shape_pth[-1] ]
-shape_pth_combWithHbb     = shape_pth[:-1] + [ 0.9*shape_pth[-1], 0.1*shape_pth[-1] ]
+shape_pth_smH = [
+    2.74660743e+01, 2.94496162e+01, 1.96934684e+01, 2.44876793e+01,
+    1.17284547e+01, 7.16436043e+00, 2.05821120e+00, 2.63714145e-01,
+    1.84732619e-02]
+shape_pth_ggH = [
+    2.70051430e+01, 2.81966864e+01, 1.79667435e+01, 2.03254009e+01,
+    8.39956789e+00, 4.53454528e+00, 1.19397255e+00, 1.39795879e-01,
+    7.51079245e-03
+    ]
+shape_pth_xH  = [ s_tot-s_ggH for s_tot, s_ggH in zip(shape_pth_smH, shape_pth_ggH) ]
 
-obs_pth_hbbBinning = Observable(
-    name = 'pth', title = 'p_{T}^{H}',
-    shape = shape_pth_hbb,
-    binning = binning_pth_hbb
-    )
-obs_pth_combWithHbbBinning = Observable(
-    name = 'pth', title = 'p_{T}^{H}',
-    shape = shape_pth_combWithHbb,
-    binning = binning_pth_combWithHbb
-    )
+shape_pth_smH = normalize(shape_pth_smH)
+shape_pth_ggH = normalize(shape_pth_ggH)
+shape_pth_xH  = normalize(shape_pth_xH)
 
-shape_pth_ggH_hbb         = [ 0.9*shape_pth_ggH[-1], 0.1*shape_pth_ggH[-1] ]
-shape_pth_ggH_combWithHbb = shape_pth_ggH[:-1] + [ 0.9*shape_pth_ggH[-1], 0.1*shape_pth_ggH[-1] ]
+obs_pth_smH = Observable( name = 'pth_smH', title = 'p_{T}^{H}', shape = shape_pth_smH, binning = binning_pth )
+obs_pth_ggH = Observable( name = 'pth_ggH', title = 'p_{T}^{H} (ggH)', shape = shape_pth_ggH, binning = binning_pth )
+obs_pth_ggH.YR4_totalXS = YR4_ggF_n3lo
+obs_pth_xH = Observable( name = 'pth_xH', title = 'p_{T}^{H} (xH)', shape = shape_pth_xH, binning = binning_pth )
+obs_pth_xH.YR4_totalXS = YR4_xH
 
-obs_pth_ggH_hbbBinning = Observable(
-    name = 'pth_ggH', title = 'p_{T}^{H} (ggH)',
-    shape = shape_pth_ggH_hbb,
-    binning = binning_pth_hbb
-    )
-obs_pth_ggH_hbbBinning.YR4_totalXS = YR4_ggF_n3lo
+hzz_binMerging_pth   = [ 0, 1, [2,3], [4,5], [6,7,8] ]
+obs_pth_smH_hzzBinning = obs_pth_smH.mergeBins(hzz_binMerging_pth)
+obs_pth_ggH_hzzBinning = obs_pth_ggH.mergeBins(hzz_binMerging_pth)
 
-obs_pth_ggH_combWithHbbBinning = Observable(
-    name = 'pth_ggH', title = 'p_{T}^{H} (ggH)',
-    shape = shape_pth_ggH_combWithHbb,
-    binning = binning_pth_combWithHbb
-    )
-obs_pth_ggH_combWithHbbBinning.YR4_totalXS = YR4_ggF_n3lo
+obs_pth_smH_hbbBinning = deepcopy(obs_pth_smH)
+obs_pth_ggH_hbbBinning = deepcopy(obs_pth_ggH)
+for i in xrange(6):
+    obs_pth_smH_hbbBinning.drop_first_bin()
+    obs_pth_ggH_hbbBinning.drop_first_bin()
 
 
 #____________________________________________________________________
 # Convenience tuples
 
-ObsTuple = namedtuple('ObsTuple', ['hgg', 'hzz', 'combination'])
-obstuple_pth_smH  = ObsTuple(hgg=obs_pth,     hzz=obs_pth_hzzBinning,     combination=obs_pth)
-obstuple_pth_smH  = ObsTuple(hgg=obs_pth_ggH, hzz=obs_pth_ggH_hzzBinning, combination=obs_pth_ggH)
-obstuple_njets    = ObsTuple(hgg=obs_njets,   hzz=obs_njets_hzzBinning,   combination=obs_njets)
-obstuple_ptjet    = ObsTuple(hgg=obs_ptjet,   hzz=obs_ptjet_hzzBinning,   combination=obs_ptjet)
-obstuple_rapidity = ObsTuple(hgg=obs_yh,      hzz=obs_yh,                 combination=obs_yh)
-
-
+obstuple_pth_smH  = AttrDict(
+    hgg         = obs_pth_smH,
+    hzz         = obs_pth_smH_hzzBinning,
+    combination = obs_pth_smH,
+    combWithHbb = obs_pth_smH,
+    hbb         = obs_pth_smH_hbbBinning
+    )
+obstuple_pth_ggH  = AttrDict(
+    hgg         = obs_pth_ggH,
+    hzz         = obs_pth_ggH_hzzBinning,
+    combination = obs_pth_ggH,
+    combWithHbb = obs_pth_ggH,
+    hbb         = obs_pth_ggH_hbbBinning
+    )
+obstuple_njets    = AttrDict(
+    hgg         = obs_njets,
+    hzz         = obs_njets_hzzBinning,
+    combination = obs_njets,
+    combWithHbb = obs_njets,
+    )
+obstuple_ptjet    = AttrDict(
+    hgg         = obs_ptjet,
+    hzz         = obs_ptjet_hzzBinning,
+    combination = obs_ptjet,
+    combWithHbb = obs_ptjet,
+    )
+obstuple_rapidity = AttrDict(
+    hgg         = obs_yh,
+    hzz         = obs_yh,
+    combination = obs_yh,
+    combWithHbb = obs_yh,
+    )

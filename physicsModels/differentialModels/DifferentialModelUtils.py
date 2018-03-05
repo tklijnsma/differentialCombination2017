@@ -112,9 +112,12 @@ def find_i_bin(process, binning):
             if left >= binning[i] and right <= binning[i+1]:
                 return i
         else:
-            raise ValueError(
-                'Could not find corresponding bin for {0} in {1}'
-                .format(process, binning)
-                )
+            # raise ValueError(
+            #     'Could not find corresponding bin for {0} in {1}'
+            #     .format(process, binning)
+            #     )
+            print 'Could not find corresponding bin for {0} in {1}; Assuming it is meant to be unscaled'.format(process, binning)
+            return -1
+
 
 

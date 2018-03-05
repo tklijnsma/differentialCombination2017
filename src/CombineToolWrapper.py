@@ -252,6 +252,27 @@ class CombinePostfit(BaseCombineScan):
 
         return cmd
 
+#____________________________________________________________________
+class CombineOnlyPostfit(BaseCombineScan):
+
+    def __init__(self, *args, **kwargs):
+        super(CombineOnlyPostfit, self).__init__(*args, **kwargs)
+        self.subDirectory = 'out/postfits_{0}'.format(datestr)
+        self.onBatch = True
+
+    def get_task_name(self):
+        return '_POSTFIT_' + ( 'ASIMOV_' if self.input.asimov else '' ) + self.input.get_name()
+
+    def parse_command(self):
+        cmd = super(CombineOnlyPostfit, self).parse_command()
+
+        if self.input.asimov and len(self.input.PhysicsModelParameters)==0:
+            Commands.ThrowError('PhysicsModelParameters *have* to be set when running asimov, or the best fit may make no sense')
+
+        # For the postfit: Hard-coded saving the workspace
+        cmd.append( '--saveWorkspace' )
+
+        return cmd
 
 #____________________________________________________________________
 class CombineScan(BaseCombineScan):

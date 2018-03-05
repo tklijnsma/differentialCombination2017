@@ -3,8 +3,8 @@ import plotting_utils as utils
 import pywrappers
 from canvas import c
 
+import differentials
 import differentials.core as core
-import differentials.parametrization
 
 import logging
 from math import isnan, isinf, log10, sqrt
@@ -48,6 +48,7 @@ class MultiScanPlot(PlotBase):
         self.leg = pywrappers.Legend()
         self.scans = []
         self.x_title = 'POI'
+        differentials.plotting.canvas.reset_global_color_cyle()
 
     def add_scan(self, scan):
         self.scans.append(scan)
@@ -103,7 +104,7 @@ class MultiScanPlot(PlotBase):
                 array('f', [0.0, 3.0]),
                 )
             ROOT.SetOwnership(line_bestfit, False)
-            line_bestfit.SetLineColor(scan.color)
+            line_bestfit.SetLineColor(graph.color)
             line_bestfit.Draw('SAMEL')
 
         pywrappers.CMS_Latex_type().Draw()
@@ -468,6 +469,8 @@ class SpectraPlot(BottomPanelPlot):
         self.obsname = 'obs_name'
         self.obsunit = None
 
+        self.draw_multiscans = False
+
         self.leg = pywrappers.Legend(
             lambda c: c.GetLeftMargin() + 0.01,
             lambda c: 1 - c.GetTopMargin() - 0.10,
@@ -518,6 +521,12 @@ class SpectraPlot(BottomPanelPlot):
             i_label += 1
 
     def draw(self):
+        if self.draw_multiscans:
+            for spectrum in self.spectra:
+                differentials.plotting.canvas.reset_global_color_cyle()
+                differentials.plotting.pywrappers.Graph.color_cycle = differentials.plotting.canvas.global_color_cycle
+                spectrum.plot_scans(self.plotname + '_scans_' + spectrum.name)
+
         self.obstitle = core.standard_titles.get(self.obsname, self.obsname)
 
         self.x_title = self.obstitle 

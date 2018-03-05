@@ -79,6 +79,10 @@ def main():
         'yukawa_t2ws',
         'yukawa_plots',
         'top_plots',
+        'top_t2ws',
+        # 
+        'datacard_preprocessing',
+        'debug',
         ])
 
     args = parser.parse_args()

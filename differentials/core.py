@@ -3,6 +3,7 @@ from os.path import *
 from datetime import datetime
 
 import logging
+logging.getLogger().setLevel(logging.INFO)
 import logger
 
 import differentials
@@ -69,6 +70,12 @@ def execute(cmd, capture_output=False, ignore_testmode=False):
             raise NotImplementedError('Re-implement using the capture output context manager')
         else:
             os.system(cmd_exec)
+
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 
 def float_to_str(number, nDecimals=None):
@@ -248,4 +255,42 @@ def get_decay_channel_tag(args, allow_default=False):
         else:
             raise DecayChannelNotFoundError()
     return tag
+
+def set_one_decay_channel(args, decay_channel):
+    for dc in [ 'hgg', 'hzz', 'hbb', 'combination', 'combWithHbb' ]:
+        setattr(args, dc, False)
+    setattr(args, decay_channel, True)
+
+
+
+
+def read_data(f, sep=' ', columns=False, make_float=False):
+    with open(f, 'r') as fp:
+        text = fp.read()
+
+    lines = []
+    for line in text.split('\n'):
+        line = line.strip()
+        if line.startswith('#') or len(line) == 0: continue
+        components = line.split(sep) if not sep == ' ' else line.split()
+        if make_float:
+            components = [float(c) for c in components]
+        lines.append(components)
+
+    if columns:
+        n_cols = len(lines[0])
+        logging.debug('Determined {0} columns from the following line: {1}'.format(n_cols, lines[0]))
+        cols = []
+        for i_col in xrange(n_cols):
+            col = []
+            for line in lines:
+                try:
+                    col.append(line[i_col])
+                except IndexError:
+                    logging.error('Problem with i_col={0}, line {1}'.format(i_col, line))
+                    raise
+            cols.append(col)
+        return cols
+
+    return lines
 

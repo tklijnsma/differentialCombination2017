@@ -25,6 +25,54 @@ datestr = strftime( '%b%d' )
 x_coupling = 'ct'
 y_coupling = 'cg'
 
+
+@flag_as_option
+def multicont_Top_nominal(args):
+    scans = []
+
+    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar03_Top_hgg_asimov'  if args.asimov else 'out/Scan_Mar03_Top_hgg'
+        )
+    hgg.color = 2
+    hgg.read()
+    scans.append(hgg)
+
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar03_Top_combination_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combination'
+        )
+    combination.color = 1
+    combination.read()
+    scans.append(combination)
+
+    combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar03_Top_combWithHbb_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combWithHbb'
+        )
+    combWithHbb.color = 9
+    combWithHbb.read()
+    scans.append(combWithHbb)
+
+
+    
+    # hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
+    #     scandir = get_nominal(args).hgg
+    #     )
+    # hgg.color = 2
+    # hgg.read()
+
+    # hzz = differentials.scans.Scan2D('hzz', x_coupling, y_coupling,
+    #     scandir = get_nominal(args).hzz
+    #     )
+    # hzz.color = 4
+    # hzz.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Top_nominal' + ('_asimov' if args.asimov else ''),
+        scans,
+        x_min=None, x_max=None, y_min=None, y_max=None
+        )
+    plot.draw()
+
+
 @flag_as_option
 def points_on_contour_Top(args):
 
