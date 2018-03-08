@@ -35,6 +35,13 @@ datestr = strftime('%b%d')
 ########################################
 
 @flag_as_option
+def debug_test_kappabkappac_files(args):
+    interp = differentials.theory.kappabkappac_interpreter.KappabKappacInterpreter()
+    # interp.dump_gluon_induced()
+    interp.scale_quark_induced()
+
+
+@flag_as_option
 def debug_test_job_registering(args):
 
     output = """
