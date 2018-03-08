@@ -13,10 +13,6 @@ def addTheoryUncertaintyNuisances( self ):
         print '\n' + '='*80
         print 'Inserting theory uncertainties\n'
 
-    def printMatrix( matrix, indent = '    ', scientific=True ):
-        for row in matrix:
-            print indent + ' '.join([ '{0:<+10.2{1}}'.format( number, 'E' if scientific else 'f' ) for number in row ])
-
     # First check if given input makes sense
     doDecorrelation = False
     if (
@@ -194,6 +190,11 @@ def readCorrelationMatrixFile( self, correlationMatrixFile ):
         print corrMat
         raise self.CouplingModelError( '[ERROR] inputted matrix is not square - Found ^ ' )
 
+    # N = len(corrMat)
+    # print '[WARNING] Adding 1e-12 to the diagonal of the correlation matrix in order to protect against non-positive-definiteness'
+    # for i in xrange(N):
+    #     corrMat[i][i] += 1e-12
+
     return corrMat
 
 @flag_as_method
@@ -232,9 +233,22 @@ def Decorrelate( self, covarianceMatrix ):
     eigenVectors = eigenObject.GetEigenVectors()
     eigenValues  = eigenObject.GetEigenValues()
 
+    print '[Decorrelating]: Found Eigenvalues: {0}'.format([eigenValues(i) for  i in xrange(N)])
+    print '[Decorrelating]: Found Eigenvectors:'
+    printMatrix([[eigenVectors(i,j) for j in xrange(N)] for i in xrange(N)])
+
     decorrelatedMatrix = [ [ 999 for j in xrange(N) ] for i in xrange(N) ]
     for i in xrange(N):
         for j in xrange(N):
-            decorrelatedMatrix[i][j] = eigenVectors(i,j) * sqrt( eigenValues(j) )
+            eigen_value = eigenValues(j)
+            if abs(eigen_value) < 1e-9:
+                print '[WARNING] Found abs(eigen_value) = {0} < 1e-6; rounding to 0.0'.format(eigen_value)
+                eigen_value = 0.0
+            decorrelatedMatrix[i][j] = eigenVectors(i,j) * sqrt(eigen_value)
 
     return decorrelatedMatrix
+
+
+def printMatrix( matrix, indent = '    ', scientific=True ):
+    for row in matrix:
+        print indent + ' '.join([ '{0:<+10.2{1}}'.format( number, 'E' if scientific else 'f' ) for number in row ])

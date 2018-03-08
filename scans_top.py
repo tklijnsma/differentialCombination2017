@@ -1,35 +1,29 @@
-from scans_yukawa import (
-    run_postfit_fastscan_scan,
-    scan_directly,
-    assert_decay_channel,
-    assert_asimov
-    )
-
 from OptionHandler import flag_as_option, flag_as_parser_options
 
-import LatestPaths
-import sys
-sys.path.append('src')
-import Commands
-import CombineToolWrapper
-import differentialTools
-import differentials
+import logging
 from copy import deepcopy
-
-from time import strftime
-datestr = strftime( '%b%d' )
-
 import os
 from os.path import *
 
+import sys
+sys.path.append('src')
+import CombineToolWrapper
+
+import differentials
+import differentialutils
+import LatestPaths
+
+
 #____________________________________________________________________
+datestr = differentials.core.datestr()
+
 def basic_config(args, hurry=False):
     # assert_highpt(args)
     config = CombineToolWrapper.CombineConfig(args)
     config.onBatch       = True
     config.queue         = 'all.q'
     if hurry:
-        Commands.Warning('Running with quick settings')
+        logging.warning('Running with quick settings')
         config.nPointsPerJob = 5
         config.queue         = 'short.q'
 
@@ -59,8 +53,26 @@ def basic_config(args, hurry=False):
     config.deltaNLLCutOff = 70.
     config.nPoints = 200**2
 
+    # default ranges; should cover general usecases
     ct_ranges = [ -8.5, 8.5 ]
     cg_ranges = [ -0.65, 0.65 ]
+
+    # Overwrite with some optimized ranges to reduce the number of jobs
+    # Can only be done with a priori knowledge
+    if args.asimov:
+        if args.hgg:
+            ct_ranges = [ -6.0, 6.0 ]
+            cg_ranges = [ -0.45, 0.45 ]
+            config.nPointsPerJob = 32
+        elif args.combination:
+            ct_ranges = [ -6.0, 6.0 ]
+            cg_ranges = [ -0.45, 0.45 ]
+            config.nPointsPerJob = 20
+        elif args.combWithHbb:
+            ct_ranges = [ -5.0, 5.0 ]
+            cg_ranges = [ -0.35, 0.35 ]
+            config.nPointsPerJob = 12
+
     config.POIs = [ 'ct', 'cg' ]
     config.PhysicsModelParameters = [ 'ct=1.0', 'cg=0.0' ]
     config.PhysicsModelParameterRanges = [
@@ -72,34 +84,8 @@ def basic_config(args, hurry=False):
 
     return config
 
-def nominal_datacard(args):
-    if args.highpt:
-        if args.hgg:
-            dc = LatestPaths.ws_hgg_TopHighPt
-        elif args.hzz:
-            dc = LatestPaths.ws_hzz_TopHighPt
-        elif args.combWithHbb:
-            dc = LatestPaths.ws_combWithHbb_TopHighPt
-        else:
-            dc = LatestPaths.ws_combined_TopHighPt
-    else:
-        if args.hgg:
-            dc = LatestPaths.ws_hgg_Top
-        elif args.hzz:
-            dc = LatestPaths.ws_hzz_Top
-        elif args.combWithHbb:
-            raise LookupError('No datacard defined yet')
-        else:
-            dc = LatestPaths.ws_combined_Top
-    return dc
-
-# def assert_highpt(args):
-#     if not args.highpt:
-#         Commands.Warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
-#         args.highpt = True
 
 #____________________________________________________________________
-
 @flag_as_option
 def scan_top_nominal_all(real_args):
     args = deepcopy(real_args)
@@ -117,14 +103,38 @@ def scan_top_nominal_all(real_args):
             scan_top(args)
 
 @flag_as_option
+def scan_top_hzz_testrun(real_args):
+    args = deepcopy(real_args)
+    differentials.core.set_one_decay_channel(args, 'hzz')
+    args.asimov = True
+    config = basic_config(args)
+    config.datacard = LatestPaths.ws.top.nominal[differentials.core.get_decay_channel_tag(args)]
+    config.nPoints = 10*10
+    config.nPointsPerJob = 50
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
 def scan_top(args):
     config = basic_config(args)
     config.datacard = LatestPaths.ws.top.nominal[differentials.core.get_decay_channel_tag(args)]
-    run_postfit_fastscan_scan(config)
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_top_lastBinDropped(real_args):
+    args = deepcopy(real_args)
+    args.asimov = True
+    config = basic_config(args)
+    if args.combination:
+        config.datacard = 'out/workspaces_Mar07/combination_Top_reweighted_lastBinDroppedHgg.root'
+    elif args.combWithHbb:
+        config.datacard = 'out/workspaces_Mar07/combWithHbb_Top_reweighted_lastBinDroppedHgg.root'
+    else:
+        raise NotImplementedError('Run with --combination or --combWithHbb')
+    differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
 def scan_top_lumiStudy(args):
-    assert_asimov(args)
+    differentialutils.assert_asimov(args)
     config.datacard = LatestPaths.ws_combined_Top_lumiScalable
     config.freezeNuisances.append('lumiScale')
     config.hardPhysicsModelParameters.append( 'lumiScale=8.356546' )
@@ -134,29 +144,29 @@ def scan_top_lumiStudy(args):
 
 @flag_as_option
 def scan_top_profiledTotalXS(args):
-    assert_asimov(args)
+    differentialutils.assert_asimov(args)
     config.datacard = LatestPaths.ws_combined_Top_profiledTotalXS
     config.tags.append('profiledTotalXS')
-    run_postfit_fastscan_scan(config)
+    differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
 def scan_top_fitOnlyNormalization(args):
-    assert_asimov(args)
+    differentialutils.assert_asimov(args)
     config.datacard =(
         LatestPaths.ws_combined_Top_profiledTotalXS_fitOnlyNormalization
         if not args.highpt else
         LatestPaths.ws_combined_TopHighPt_profiledTotalXS_fitOnlyNormalization
         )
     config.tags.append('fitOnlyNormalization')
-    run_postfit_fastscan_scan(config)
+    differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
 def scan_top_BRdependent_and_profiledTotalXS(args):
-    assert_asimov(args)
+    differentialutils.assert_asimov(args)
     config.datacard = LatestPaths.ws_combined_Top_couplingDependentBR_profiledTotalXS
     config.subDirectory += '_couplingDependentBR_profiledTotalXS'
     config.fix_parameter_at_value('kappa_V', 0.999)
-    run_postfit_fastscan_scan(config)
+    differentialutils.run_postfit_fastscan_scan(config)
 
 
 
@@ -164,13 +174,12 @@ def scan_top_BRdependent_and_profiledTotalXS(args):
 @flag_as_option
 def couplingScan_TopCtCb(args):
     print 'Now in couplingScan_TopCtCb'
-
     raise NotImplementedError(
         'Re-implement this properly!'
         )
 
     if not args.highpt:
-        Commands.Warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
+        logging.warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
         args.highpt = True
 
     TheoryCommands.SetPlotDir( 'plots_{0}_TopCtCb'.format(datestr) )

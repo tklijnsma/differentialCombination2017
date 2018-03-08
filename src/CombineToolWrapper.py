@@ -11,6 +11,7 @@ import os, tempfile, shutil, re, subprocess, sys, traceback
 from os.path import *
 from copy import deepcopy, copy
 from glob import glob
+import tempfile
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -73,6 +74,7 @@ class CombineConfig(Container):
 
         self.extraOptions                = []
 
+        self.nPoints                     = 100
         self.nPointsPerJob               = 8
 
         self.minimizer_settings = [
@@ -124,6 +126,8 @@ class BaseCombineScan(Container):
 
         self.freezeNuisances = self.input.freezeNuisances[:]
 
+    def get_task_name(self):
+        return '_UNSPECIFIED_' + ( 'ASIMOV_' if self.input.asimov else '' ) + self.input.get_name()
 
     def print_debug(self, txt):
         if self.debug:
@@ -170,7 +174,7 @@ class BaseCombineScan(Container):
 
         cmd = []
 
-        if self.input.onBatch:
+        if self.onBatch:
             cmd.append( 'combineTool.py' )
         else:
             cmd.append( 'combine' )
@@ -224,10 +228,54 @@ class BaseCombineScan(Container):
         return cmd
 
 
+    def execute_command(self, cmd):
+        if self.onBatch:
+            output = Commands.executeCommand(cmd, captureOutput=True)
+            print output
+        else:
+            Commands.executeCommand(cmd)
+            output = ''
+        return output
+
     def run(self):
         cmd = self.parse_command()
         with Commands.EnterDirectory(self.subDirectory):
-            Commands.executeCommand(cmd)
+            output = self.execute_command(cmd)
+        self.register_jobids_in_jobmanager(output)
+
+    def register_jobids_in_jobmanager(self, submission_output):
+        if Commands.IsTestMode():
+            print '[TESTMODE] Not writing any jobmanager files'
+            return
+        if not self.onBatch:
+            print '{0} was not on batch; not registering jobs.'.format(self)
+            return
+
+        # Your job 8086766 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_148_0.sh") has been submitted
+        jobids = re.findall(r'Your job (\d+)', submission_output)
+        if len(jobids) == 0:
+            print '\nNo jobids were found in the passed submission output; nothing to register for the jobmanager'
+
+        header = [
+            basename(self.subDirectory),
+            'datacard: {0}'.format(self.datacard),
+            'subDirectory: {0}'.format(self.subDirectory),
+            'registration time: {0}'.format(strftime('%y-%m-%d %H:%M:%S')),
+            'example cmd:\n\n{0}\n'.format(
+                '\n    '.join(self.parse_command())
+                )
+            ]
+        contents = '\n'.join(header) + '\n' + '\n'.join(jobids) + '\n'
+
+        _, jobman_file = tempfile.mkstemp(
+            prefix = 'tklijnsm_queuegroup_',
+            suffix = '.jobman',
+            dir    = '/tmp'
+            )
+        print 'Dumping following jobmanager contents to {0}:\n'.format(jobman_file)
+        print contents + '\n'
+        with open(jobman_file, 'w') as jobman_fp:
+            jobman_fp.write(contents)
 
 
 #____________________________________________________________________
@@ -358,6 +406,7 @@ class CombinePointwiseScan(BaseCombineScan):
             self.deltaNLLCutOff = 50.
         self._outputs = []
         self.set_only_hard_physics_model_parameters = True
+        self.onBatch = True
 
     def get_task_name_without_number(self):
         return '_SCAN_' + ( 'ASIMOV_' if self.input.asimov else '' ) + self.input.get_name()
@@ -381,14 +430,16 @@ class CombinePointwiseScan(BaseCombineScan):
 
         accepted_points = self.list_accepted_points(self.fastscanFile)
 
+        submission_outputs = ''
         with Commands.EnterDirectory(self.subDirectory):
             for iChunk, chunk in enumerate(chunks(accepted_points, self.nPointsPerJob)):
                 print '\nJob', iChunk
                 self.extraOptions = _extraOptions + [ '--doPoints ' + ','.join([ str(i) for i in chunk ]) ]
                 self.get_task_name = lambda: self.get_task_name_without_number() + '_' + str(iChunk)
-
                 cmd = self.parse_command()
-                Commands.executeCommand( cmd )
+                output = self.execute_command(cmd)
+                submission_outputs += '\n' + output
+        self.register_jobids_in_jobmanager(submission_outputs)
 
 
     def list_accepted_points(self, fastscanFile):

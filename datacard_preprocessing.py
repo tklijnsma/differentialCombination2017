@@ -3,14 +3,15 @@
 Thomas Klijnsma
 """
 
-import os, re
+import os, re, copy
 from os.path import *
-from copy import deepcopy
 
 import logging
+import differentials
 import differentials.core as core
 from OptionHandler import flag_as_option, flag_as_parser_options
 import LatestPaths
+import differentialutils
 
 #____________________________________________________________________
 # Text changes to datacards
@@ -74,6 +75,29 @@ def combine_pth_ggH_hbb(args):
         'hbb=' + LatestPaths.card.pth_ggH.hbb
         )
 
+@flag_as_option
+def combine_cards_pth_ggH_lastBinDroppedHgg(args):
+    out_card = 'suppliedInput/combination_pth_ggH_lastBinDroppedHgg_{0}.txt'.format(core.datestr())
+    combine_cards(
+        out_card,
+        'hgg=' + LatestPaths.card.pth_ggH.hgg,
+        'hzz=' + LatestPaths.card.pth_ggH.hzz,
+        '--xc=recoPt_600p0_10000p0_.*'
+        )
+    drop_pdfindices(out_card)
+    
+@flag_as_option
+def combine_cards_pth_ggH_lastBinDroppedHgg_hbb(args):
+    out_card = 'suppliedInput/combWithHbb_pth_ggH_lastBinDroppedHgg_{0}.txt'.format(core.datestr())
+    combine_cards(
+        out_card,
+        'hgg=' + LatestPaths.card.pth_ggH.hgg,
+        'hzz=' + LatestPaths.card.pth_ggH.hzz,
+        'hbb=' + LatestPaths.card.pth_ggH.hbb,
+        '--xc=recoPt_600p0_10000p0_.*'
+        )
+    drop_pdfindices(out_card)
+
 def combine_cards_for_observable(obsname):
     combine_cards(
         'suppliedInput/combination_{0}_{1}.txt'.format(obsname, core.datestr()),
@@ -88,6 +112,49 @@ def combine_cards_for_observable_with_hbb(obsname):
         'hbb=' + LatestPaths.card[obsname].hbb
         )
 
+@flag_as_option
+def combine_all_cards_Yukawa(real_args):
+    args = copy.deepcopy(real_args)
+    for dc in ['hgg', 'hzz', 'combination']:
+        differentialutils.set_one_decay_channel(args, dc)
+        combine_cards_Yukawa(args)
+
+@flag_as_option
+def combine_cards_Yukawa(args):
+    hgg_cat_pats = [
+        'recoPt_120p0_200p0',
+        'recoPt_200p0_350p0',
+        'recoPt_350p0_600p0',
+        'recoPt_600p0_10000p0',
+        ]
+    hzz_cat_pats = [
+        'hzz_PTH_GT200_cat2e2mu',
+        'hzz_PTH_GT200_cat4e',
+        'hzz_PTH_GT200_cat4mu',
+        ]
+
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+    out_card = 'suppliedInput/Yukawa_{0}_pth_ggH_{1}.txt'.format(
+            decay_channel, core.datestr()
+            )
+
+    cmd = []
+    if args.combination or args.hzz:
+        cmd.append('hzz=' + LatestPaths.card.pth_ggH.hzz)
+        for cat_pat in hzz_cat_pats:
+            cmd.append('--xc={0}.*'.format(cat_pat))
+    if args.combination or args.hgg:
+        cmd.append('hgg=' + LatestPaths.card.pth_ggH.hgg)
+        for cat_pat in hgg_cat_pats:
+            cmd.append('--xc={0}.*'.format(cat_pat))
+
+    combine_cards(out_card, *cmd)
+
+    # Have to manually remove the 
+    if args.combWithHbb or args.combination or args.hgg:
+        drop_pdfindices(out_card, hgg_cat_pats)
+
+
 #____________________________________________________________________
 # Helper functions
 
@@ -100,6 +167,35 @@ def combine_cards(
         cmd.append(datacard)
     cmd.append( '> {0}'.format( output_file ) )
     core.execute(cmd)
+
+def drop_pdfindices(card_file, category_pats=None):
+    if differentials.core.is_testmode():
+        return
+    with open(card_file, 'r') as card_fp:
+        card = card_fp.read()
+
+    if category_pats is None:
+        category_pats = ['recoPt_600p0_10000p0']
+
+    lines = []
+    for line in card.split('\n'):
+        for category_pat in category_pats:
+            if re.match(r'pdfindex_.*{0}'.format(category_pat), line):
+                logging.debug(
+                    'Dropping following line from {0} (matched to {2}):\n{1}'
+                    .format(card_file, line, category_pat)
+                    )
+                break
+        else:
+            lines.append(line)
+
+    new_card = '\n'.join(lines)
+    logging.trace('Datacard after removing lines:\n{0}'.format(new_card))
+    logging.info('Writing new card after deleting lines to {0}'.format(card_file))
+    if not core.is_testmode():
+        with open(card_file, 'w') as card_fp:
+            card_fp.write(new_card)
+
 
 def sub(pat, repl, text, ntimes=3):
     """Does a replacement 3 times to process matches next to each other as well"""

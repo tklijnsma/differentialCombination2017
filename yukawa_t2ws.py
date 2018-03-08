@@ -31,28 +31,16 @@ datestr = strftime('%b%d')
 # Main
 ########################################
 
-yukawa_exp_binning = [ 0., 15., 30., 45., 85., 125. ]
+yukawa_exp_binning = [ 0., 15., 30., 45., 80., 120. ]
 
-def get_nominal_card_Yukawa(args):
-    datacard = LatestPaths.card_combined_ggHxH_PTH
-    if args.hgg:
-        datacard = LatestPaths.card_hgg_ggHxH_PTH
-    if args.hzz:
-        datacard = LatestPaths.card_hzz_ggHxH_PTH
-    if args.hbb:
-        raise NotImplementedError('This makes no sense, as Yukawa only goes up to 125!')
-        datacard = LatestPaths.card_hbb_ggHxH_PTH
-    if args.combWithHbb:
-        raise NotImplementedError('This makes no sense, as Yukawa only goes up to 125!')
-        datacard = LatestPaths.card_combinedWithHbb_ggHxH_PTH
-    return datacard
 
 def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
     t2ws = differentials.combine.t2ws.T2WS(get_nominal_card_Yukawa(args))
-    t2ws.model_file = 'physicsModels/CouplingModel.py'
-    t2ws.model_name = 'couplingModel'
 
     decay_channel = differentials.core.get_decay_channel_tag(args, allow_default=True)
+    t2ws.card = LatestBinning.yukawa[decay_channel]
+    t2ws.model_file = 'physicsModels/CouplingModel.py'
+    t2ws.model_name = 'couplingModel'
     t2ws.name = decay_channel + '_Yukawa'
 
     t2ws.extra_options.extend([

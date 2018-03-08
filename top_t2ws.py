@@ -25,6 +25,8 @@ import sys
 sys.path.append('src')
 import TheoryFileInterface
 
+from differentials.theory.theory_utils import FileFinder
+
 from time import strftime
 datestr = strftime('%b%d')
 
@@ -34,21 +36,8 @@ datestr = strftime('%b%d')
 
 top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600. ]
 
-def get_nominal_card_Yukawa(args):
-    datacard = LatestPaths.card_combined_ggHxH_PTH
-    if args.hgg:
-        datacard = LatestPaths.card_hgg_ggHxH_PTH
-    if args.hzz:
-        datacard = LatestPaths.card_hzz_ggHxH_PTH
-    if args.hbb:
-        raise NotImplementedError('This makes no sense, as Yukawa only goes up to 125!')
-        datacard = LatestPaths.card_hbb_ggHxH_PTH
-    if args.combWithHbb:
-        raise NotImplementedError('This makes no sense, as Yukawa only goes up to 125!')
-        datacard = LatestPaths.card_combinedWithHbb_ggHxH_PTH
-    return datacard
 
-def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
+def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, drop_last_bin=False):
     decay_channel = differentials.core.get_decay_channel_tag(args)
     card = LatestPaths.card.pth_ggH[decay_channel]
     t2ws = differentials.combine.t2ws.T2WS(card)
@@ -67,6 +56,9 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
         t2ws.extra_options.append('--PO isOnlyHgg=True' )
 
     obs = LatestBinning.obstuple_pth_ggH[decay_channel]
+    # if drop_last_bin:
+    #     obs.drop_last_bin()
+    #     t2ws.tags.append('lastBinDropped')
 
     t2ws.extra_options.append(
         '--PO binBoundaries={0}'
@@ -82,40 +74,31 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
         add_theory_uncertainties(t2ws)
     return t2ws
 
-
 def add_theory_uncertainties(t2ws, uncorrelated=False):
-    TheoryFileInterface.SetFileFinderDir(LatestPaths.theory.top.filedir)
+    coupling_variations = FileFinder(
+        cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory='out/theories_Mar05_tophighpt'
+        ).get()
+    sm = [ v for v in coupling_variations if v.ct==1.0 and v.cg==0.0 ][0]
+    coupling_variations.pop(coupling_variations.index(sm))
 
-    t2ws.extra_options.append(
-        '--PO SM=[ct=1,cg=0,file={0}]'.format(
-            TheoryFileInterface.FileFinder(ct=1, cg=0, muR=1, muF=1, Q=1, expectOneFile=True)
+    t2ws.extra_options.append('--PO SM=[ct=1,cg=0,file={0}]'.format(sm.theory_file))
+    for variation in coupling_variations:
+        if variation.ct == 1.0 or variation.cg == 0.0: continue
+        t2ws.extra_options.append(
+            '--PO theory=[ct={0},cg={1},file={2}]'
+            .format(variation.ct, variation.cg, variation.theory_file)
             )
-        )
-
-    theoryFiles = TheoryFileInterface.FileFinder(
-        ct='*', cg='*', cb=1, muR=1, muF=1, Q=1, filter='ct_1_cg_0',
-        )            
-    possible_theories = []
-    for theoryFile in theoryFiles:
-        ct = differentials.core.str_to_float(re.search(r'ct_([\dmp]+)', theoryFile ).group(1))
-        cg = differentials.core.str_to_float(re.search(r'cg_([\dmp]+)', theoryFile ).group(1))
-        possible_theories.append(
-            '--PO theory=[ct={0},cg={1},file={2}]'.format(
-                ct, cg, theoryFile
-                )                
-            )
-    t2ws.extra_options.extend(possible_theories)
 
     # Theory uncertainties
-    correlationMatrix   = LatestPaths.theory.top.correlation_matrix
-    theoryUncertainties = LatestPaths.theory.top.uncertainties
+    correlation_matrix   = 'out/scalecorrelations_Mar06/corrMat_tophighpt.txt'
+    theory_uncertainties = 'out/scalecorrelations_Mar06/errors_tophighpt.txt'
     if uncorrelated:
-        correlationMatrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated # Uncorrelated
+        correlation_matrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated # Uncorrelated
         t2ws.tags.append('uncorrelatedTheoryUnc')
 
-    t2ws.extra_options.append('--PO correlationMatrix={0}'.format(correlationMatrix))
-    t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theoryUncertainties))
-    # t2ws.tags.append('withTheoryUncertainties') # Pretty much the default anyway
+    t2ws.extra_options.append('--PO correlationMatrix={0}'.format(correlation_matrix))
+    t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theory_uncertainties))
+
 
 #____________________________________________________________________
 def set_decay_channel(args, given_channel):
@@ -161,6 +144,18 @@ def all_t2ws_Top(args_original):
 def t2ws_Top_nominal(args):
     t2ws = base_t2ws(args)
     t2ws.tags.append('nominal')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Top_lastBinDroppedHgg(args):
+    t2ws = base_t2ws(args)
+    if args.combination:
+        t2ws.card = 'suppliedInput/combination_pth_ggH_lastBinDroppedHgg_Mar07.txt'
+    elif args.combWithHbb:
+        t2ws.card = 'suppliedInput/combWithHbb_pth_ggH_lastBinDroppedHgg_Mar07.txt'
+    else:
+        raise NotImplementedError('Use --combination or --combWithHbb')
+    t2ws.tags.append('lastBinDroppedHgg')
     t2ws.run()
 
 @flag_as_option

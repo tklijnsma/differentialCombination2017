@@ -35,6 +35,7 @@ class DifferentialSpectrum(object):
     def __init__(self, name, scandir, auto_determine_POIs=True, datacard=None):
         self.name = name
         self.scandir = scandir
+        self.scandirs = []
         self.scans = []
 
         self.auto_determine_POIs = auto_determine_POIs
@@ -96,6 +97,7 @@ class DifferentialSpectrum(object):
                     scandir=self.scandir,
                     globpat=POI
                     )
+                scan.scandirs.extend(self.scandirs)
                 scan.read()
                 scan.create_uncertainties()
                 self.scans.append(scan)
@@ -127,6 +129,10 @@ class DifferentialSpectrum(object):
             '\nNew POIs: {2}'
             .format(value, _POIs_before, self.POIs)
             )
+
+    def drop_first_bin(self):
+        dropped_POI = self.POIs.pop(0)
+        logging.info('Dropped POI {0}'.format(dropped_POI))
 
     def last_bin_is_overflow(self):
         if self.binning()[-1] == 10000.:
@@ -251,9 +257,12 @@ class ScanPrimitive(object):
 
     def collect_root_files(self):
         root_files = copy.copy(self.root_files)
-        for scandir in self.scandirs:
-            if not scandir.endswith('/'): scandir += '/'
-            root_files.extend(glob.glob(scandir + self.globpat + '.root'))
+
+        if len(self.scandirs)>0:
+            for scandir in self.scandirs:
+                if not scandir.endswith('/'): scandir += '/'
+                root_files.extend(glob.glob(scandir + self.globpat + '.root'))
+            logging.debug('Found {0} root files in {1}'.format(len(root_files), ', '.join(self.scandirs)))
 
         if len(root_files) == 0:
             raise RuntimeError(
@@ -263,7 +272,6 @@ class ScanPrimitive(object):
                 + '\n'.join(self.scandirs)
                 )
 
-        logging.debug('Found {0} root files in {1}'.format(len(root_files), ', '.join(self.scandirs)))
         logging.trace('List of root files:\n' + '\n'.join(root_files))
         return root_files
 
@@ -600,7 +608,7 @@ class Scan2D(ScanPrimitive):
         return histogram2D
 
 
-    def plot(self, plotname):
+    def plot(self, plotname, draw_style='repr_2D_with_contours'):
         c.Clear()
         c.set_margins_2D()
 
@@ -612,7 +620,7 @@ class Scan2D(ScanPrimitive):
         #     )
         histogram2D = self.to_hist()
         # histogram2D._legend = leg
-        histogram2D.Draw('repr_2D_with_contours')
+        histogram2D.Draw(draw_style)
 
         base = histogram2D.H2
         base.GetXaxis().SetTitle(self.x_title)

@@ -10,9 +10,9 @@ Thomas Klijnsma
 
 from OptionHandler import flag_as_option
 
-import LatestPaths
-import LatestPathsGetters
-import LatestBinning
+# import LatestPaths
+# import LatestPathsGetters
+# import LatestBinning
 
 import differentials
 
@@ -24,10 +24,11 @@ random.seed(1002)
 
 import sys
 sys.path.append('src')
-import TheoryFileInterface
+# import TheoryFileInterface
+import TheoryCommands
 
-from time import strftime
-datestr = strftime('%b%d')
+# from time import strftime
+# datestr = strftime('%b%d')
 
 ########################################
 # Main
@@ -35,32 +36,38 @@ datestr = strftime('%b%d')
 
 top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600., 10000 ]
 
+
+
 @flag_as_option
 def top_scalecorrelations(args):
 
-    # HIER VERDER
-    # Variation files moeten nog gemaakt worden...
+    variations = differentials.theory.theory_utils.FileFinder(
+        ct=1.0, cg=0.0, cb=1.0,
+        directory='out/theories_Mar05_tophighpt/'
+        ).get()
+    sm = [v for v in variations if v.muR==1.0 and v.muF==1.0 and v.Q==1.0][0]
+    # variations.pop(variations.index(sm))
 
-    variation_files = TheoryFileInterface.FileFinder(
-        directory = LatestPaths.derivedTheoryFiles_YukawaSummed,
-        kappab = 1, kappac = 1
-        )
-    variations = [
-        TheoryFileInterface.ReadDerivedTheoryFile( variation_file, returnContainer=True )
-            for variation_file in variation_files ]
+    scalecorrelation = differentials.theory.scalecorrelation.ScaleCorrelation()
 
+    bin_boundaries = top_exp_binning[:]
+    if 10000. in bin_boundaries:
+        logging.warning('Treating 10000. as overflow in {0}'.format(bin_boundaries))
+        bin_boundaries.pop(bin_boundaries.index(10000.))
+    logging.warning('Limiting binning to the maximum of the theory calculations: {0}'.format(sm.binBoundaries[-1]))
+    bin_boundaries.append(sm.binBoundaries[-1])
 
-    scaleCorrelation = process_variations(variations)
-    # scaleCorrelation.make_scatter_plots(subdir='theory')
-    scaleCorrelation.plot_correlation_matrix('theory')
-    scaleCorrelation.write_correlation_matrix_to_file('theory')
-    scaleCorrelation.write_errors_to_file('theory')
+    scalecorrelation.set_bin_boundaries(bin_boundaries, add_overflow=False)
 
-    variations_expbinning = deepcopy(variations)
-    for variation in variations_expbinning:
-        TheoryCommands.RebinDerivedTheoryContainer(variation, top_exp_binning)
-    scaleCorrelation_exp = process_variations(variations_expbinning)
-    scaleCorrelation_exp.make_scatter_plots(subdir='exp')
-    scaleCorrelation_exp.plot_correlation_matrix('exp')
-    scaleCorrelation_exp.write_correlation_matrix_to_file('exp')
-    scaleCorrelation_exp.write_errors_to_file('exp')
+    for variation in variations:
+        scalecorrelation.add_variation(
+            TheoryCommands.Rebin(variation.binBoundaries, variation.crosssection, top_exp_binning),
+            {},
+            is_central=(variation is sm),
+            )
+
+    scalecorrelation.plot_correlation_matrix('tophighpt')
+    scalecorrelation.make_scatter_plots(subdir='scatterplots_tophighpt')
+    scalecorrelation.write_correlation_matrix_to_file('tophighpt')
+    scalecorrelation.write_errors_to_file('tophighpt')
+

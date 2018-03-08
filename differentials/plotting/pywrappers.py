@@ -349,7 +349,10 @@ class Histogram(object):
     def y_min(self, only_positive=False):
         if self.has_uncertainties:
             if only_positive:
-                return min([b for b in self.bounds_down if b>0.])
+                try:
+                    return min([b for b in self.bounds_down if b>0.])
+                except ValueError:
+                    return 99999.
             else:
                 return min(self.bounds_down)
         else:
@@ -868,6 +871,42 @@ class Histogram2D(object):
         utils.set_color_palette()
         self.H2.SetMaximum(7.0)
         return [(self.H2, 'COLZ')]
+
+    def repr_2D_rainbow(self, leg=None):
+        utils.set_color_palette('rainbow')
+        self.H2.SetMaximum(300.0)
+        return [(self.H2, 'COLZ')]
+
+    def repr_high_contours(self, leg=None):
+        ret = []
+
+        color_cycle = itertools.cycle([1, 2, 4])
+        for level in [ 20., 50., 70., 100, 200. ]:
+            Tgs = utils.get_contours_from_H2(self.H2, level)
+            labels = []
+            color = color_cycle.next()
+            for Tg in Tgs:
+                Tg.SetLineColor(color)
+                Tg.SetLineWidth(2)
+
+                xs, ys = utils.get_x_y_from_TGraph(Tg)
+                y = max(ys)
+                x = xs[ys.index(y)]
+                l = Latex(x, y, '{0:.1f}'.format(level))
+                l.SetTextSize(0.02)
+                l.SetTextColor(color)
+                labels.append(l)
+
+            # if not(leg is None):
+            #     Tg = Tgs[0]
+            #     Tg.SetName(utils.get_unique_rootname())
+            #     leg.AddEntry(Tg.GetName(), self.title, 'l')
+            ret.extend([ (Tg, 'LSAME') for Tg in Tgs ])
+            ret.extend([ (l, '') for l in labels ])
+        return ret
+
+    def repr_2D_rainbow_high_contours(self, leg=None):
+        return self.repr_2D_rainbow(leg) + self.repr_high_contours(leg)
 
     def repr_bestfitpoint(self, leg=None):
         bestfit = self.bestfit()

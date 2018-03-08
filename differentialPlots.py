@@ -41,7 +41,7 @@ datestr = strftime('%b%d')
 
 
 @flag_as_option
-def plot_Feb28(args):
+def plot_pt_combination(args):
     spectra = []
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     obs_name = 'pth_ggH'
@@ -75,6 +75,7 @@ def plot_Feb28(args):
     spectra.append(hzz)
 
     hbb = differentials.scans.DifferentialSpectrum('hbb', dir_hbb)
+    hbb.drop_first_bin()
     hbb.color = 30
     hbb.no_overflow_label = True
     hbb.set_sm(obstuple.hbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
@@ -87,17 +88,25 @@ def plot_Feb28(args):
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     combination.read()
-    spectra.append(combination)
+    # spectra.append(combination)
 
-    combWithHbb_scandir = 'out/Scan_Mar01_pth_ggH_combWithHbb_asimov_0'
     combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', dir_combWithHbb)
-    combWithHbb.color = 47
+    combWithHbb.scandirs.append('out/Scan_Mar07_pth_ggH_combWithHbb_asimov')
+    # combWithHbb.color = 47
+    combWithHbb.color = 1
     combWithHbb.no_overflow_label = True
     combWithHbb.draw_method = 'repr_point_with_vertical_bar'
     combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     combWithHbb.read()
     spectra.append(combWithHbb)
 
+    if args.table:
+        table = differentials.plotting.tables.SpectraTable('pth_ggH', [s for s in spectra if not s is hbb])
+        table.add_symm_improvement_row(hgg, combWithHbb)
+        table.add_symm_improvement_row(hgg, combination)
+        table.add_symm_improvement_row(combination, combWithHbb)
+        logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+        return
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: 1.0 - c.GetRightMargin() - 0.01,
@@ -263,34 +272,76 @@ def pth_ggH_plot(args):
     plot.wrapup()
 
 
+
+# out/Scan_njets_Feb06_combination_asimov
+# out/Scan_njets_Feb06_hgg_asimov
+# out/Scan_njets_Feb06_hzz_asimov
+# out/Scan_pth_ggH_Feb06_combination_asimov
+# out/Scan_pth_ggH_Feb06_hgg_asimov
+# out/Scan_pth_ggH_Feb06_hzz_asimov
+# out/Scan_pth_smH_Feb06_combination_asimov
+# out/Scan_pth_smH_Feb06_hgg_asimov
+# out/Scan_pth_smH_Feb06_hzz_asimov
+# out/Scan_ptjet_Feb06_combination_asimov
+# out/Scan_ptjet_Feb06_hgg_asimov
+# out/Scan_ptjet_Feb06_hzz_asimov
+# out/Scan_rapidity_Feb06_combination_asimov
+# out/Scan_rapidity_Feb06_hgg_asimov
+# out/Scan_rapidity_Feb06_hzz_asimov
+
+def get_POIs_oldstyle_scandir(scandir):
+    root_files = glob(join(scandir, '*.root'))
+    POIs = []
+    for root_file in root_files:
+        POI = basename(root_file).split('_')[1:6]
+        try:
+            differentials.core.str_to_float(POI[-1])
+        except ValueError:
+            POI = POI[:-1]
+        POI = '_'.join(POI)
+        POIs.append(POI)
+    POIs = list(set(POIs))
+    POIs.sort(key=differentials.core.range_sorter)
+    logging.info('Retrieved following POIs from oldstyle {0}:\n{1}'.format(scandir, POIs))
+    return POIs
+
 #____________________________________________________________________
 @flag_as_option
 def njets_plot(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     obs_name = 'njets'
-    
-    hgg = differentials.scans.DifferentialSpectrum('hgg',
-        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hgg', statonly=False),
-        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hgg')
-        )
+
+    if args.asimov:
+        combination_dir = 'out/Scan_njets_Feb06_combination_asimov'
+        hgg_dir = 'out/Scan_njets_Feb06_hgg_asimov'
+        hzz_dir = 'out/Scan_njets_Feb06_hzz_asimov'
+    else:
+        raise NotImplementedError
+
+    hgg = differentials.scans.DifferentialSpectrum('hgg', scandir=hgg_dir)
+    hgg.POIs = get_POIs_oldstyle_scandir(hgg_dir)
     hgg.color = 2
     hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    hgg.read()
 
-    hzz = differentials.scans.DifferentialSpectrum('hzz',
-        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='hzz', statonly=False),
-        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='hzz')
-        )
+    hzz = differentials.scans.DifferentialSpectrum('hzz', scandir=hzz_dir)
+    hzz.POIs = get_POIs_oldstyle_scandir(hzz_dir)
     hzz.color = 4
     hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    hzz.read()
 
-    combination = differentials.scans.DifferentialSpectrum('combination',
-        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
-        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
-        )
+    combination = differentials.scans.DifferentialSpectrum('combination', scandir=combination_dir)
+    combination.POIs = get_POIs_oldstyle_scandir(combination_dir)
     combination.color = 1
     combination.no_overflow_label = True
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+    combination.read()
+
+    if args.table:
+        table = differentials.plotting.tables.SpectraTable('njets', [ hgg, hzz, combination ])
+        table.add_symm_improvement_row(hgg, combination)
+        logging.info('Table:\n{0}'.format(table.repr_terminal()))
+        return
 
     plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
         [ hgg, hzz, combination ]
@@ -303,6 +354,83 @@ def njets_plot(args):
 #____________________________________________________________________
 @flag_as_option
 def ptjet_plot(args):
+    obs_name = 'ptjet'
+
+    if args.asimov:
+        combination_dir = 'out/Scan_ptjet_Feb06_combination_asimov'
+        hgg_dir = 'out/Scan_ptjet_Feb06_hgg_asimov'
+        hzz_dir = 'out/Scan_ptjet_Feb06_hzz_asimov'
+    else:
+        raise NotImplementedError
+
+    hgg = differentials.scans.DifferentialSpectrum('hgg', scandir=hgg_dir)
+    hgg.POIs = get_POIs_oldstyle_scandir(hgg_dir)
+    hgg.color = 2
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz', scandir=hzz_dir)
+    hzz.POIs = get_POIs_oldstyle_scandir(hzz_dir)
+    hzz.color = 4
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    combination = differentials.scans.DifferentialSpectrum('combination', scandir=combination_dir)
+    combination.POIs = get_POIs_oldstyle_scandir(combination_dir)
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True) )
+
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ]
+        )
+    plot.top_y_max = 10.
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.draw()
+    plot.wrapup()
+
+
+#____________________________________________________________________
+@flag_as_option
+def rapidity_plot(args):
+    obs_name = 'rapidity'
+
+    if args.asimov:
+        combination_dir = 'out/Scan_rapidity_Feb06_combination_asimov'
+        hgg_dir = 'out/Scan_rapidity_Feb06_hgg_asimov'
+        hzz_dir = 'out/Scan_rapidity_Feb06_hzz_asimov'
+    else:
+        raise NotImplementedError
+
+    hgg = differentials.scans.DifferentialSpectrum('hgg', scandir=hgg_dir)
+    hgg.POIs = get_POIs_oldstyle_scandir(hgg_dir)
+    hgg.color = 2
+    hgg.set_sm( get_obs(obs_name, 'hgg').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False) )
+
+    hzz = differentials.scans.DifferentialSpectrum('hzz', scandir=hzz_dir)
+    hzz.POIs = get_POIs_oldstyle_scandir(hzz_dir)
+    hzz.color = 4
+    hzz.set_sm( get_obs(obs_name, 'hzz').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False) )
+
+    combination = differentials.scans.DifferentialSpectrum('combination', scandir=combination_dir)
+    combination.POIs = get_POIs_oldstyle_scandir(combination_dir)
+    combination.color = 1
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm( get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False) )
+
+    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}'.format(obs_name),
+        [ hgg, hzz, combination ]
+        )
+    plot.top_y_max = 300
+    plot.obsname = obs_name
+    plot.draw()
+    plot.wrapup()
+
+
+#____________________________________________________________________
+@flag_as_option
+def ptjet_plot_old(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     obs_name = 'ptjet'
     
@@ -340,7 +468,7 @@ def ptjet_plot(args):
 
 #____________________________________________________________________
 @flag_as_option
-def rapidity_plot(args):
+def rapidity_plot_old(args):
     TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     obs_name = 'rapidity'
     

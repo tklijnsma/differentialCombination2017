@@ -36,7 +36,27 @@ datestr = strftime( '%b%d' )
 ########################################
 # Main
 ########################################
-        
+
+@flag_as_option
+def pth_ggH_rescan(real_args):
+    args = deepcopy(real_args)
+
+    args.asimov = True
+    differentials.core.set_one_decay_channel(args, 'combWithHbb')
+    ws = LatestPaths.ws.pth_ggH.combWithHbb
+    config = differential_config(args, ws, 'pth_ggH')
+
+    config.POIs = ['r_ggH_PTH_350_600']
+    config.nPoints = 40
+    for i in xrange(len(config.PhysicsModelParameterRanges)):
+        range_str = config.PhysicsModelParameterRanges[i]
+        if range_str.startswith('r_ggH_PTH_350_600'):
+            config.PhysicsModelParameterRanges[i] = 'r_ggH_PTH_350_600=-1.0,3.0'
+
+    scan_directly(args, config)
+    
+
+
 @flag_as_option
 def pth_smH_scan(args):
     ws = LatestPathsGetters.get_ws('pth_smH', args)

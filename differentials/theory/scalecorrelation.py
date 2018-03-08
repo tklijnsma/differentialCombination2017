@@ -7,41 +7,19 @@ Thomas Klijnsma
 # Imports
 ########################################
 
-# import os, re, itertools, sys
-# from os.path import *
-# from glob import glob
-# from sys import exit
-# from copy import deepcopy
-# from numpy import corrcoef, var, std
+from numpy import corrcoef, var, std
+import os
+import os.path
+import logging
 
-# from time import strftime
-# datestr = strftime( '%b%d' )
+import ROOT
+from array import array
 
-# datestr_detailed = strftime( '%y-%m-%d %H:%M:%S' )
-# src = os.path.basename(__file__)
-# from subprocess import check_output
-# currentcommit = check_output(['git', 'log', '-1', '--oneline' ])
-
-# import Commands
-# import TheoryCommands
-# from Container import Container
-
-# import ROOT
-# from array import array
-
-
+from differentials.plotting.canvas import c
 import differentials.plotting as plotting
 import differentials.core as core
 
 from collections import namedtuple
-
-# class Variation(Container):
-#     """docstring for Variation"""
-#     def __init__(self, values, parameters, is_central=False):
-#         self.values = values
-#         self.parameters = parameters
-#         self.is_central = is_central 
-
 Variation = namedtuple('Variation', ['values', 'parameters', 'is_central'])
 Variation.is_central = False
 
@@ -52,11 +30,25 @@ class ScaleCorrelation(object):
         self.do_wrt_central = False
         self.last_bin_is_overflow = False
 
+        self.outdir = None
+        self.default_outdir = 'out/scalecorrelations_{0}'.format(core.datestr())
+
+    def get_outdir(self):
+        if self.outdir is None:
+            outdir = self.default_outdir
+        else:
+            outdir = self.outdir
+        if not core.is_testmode() and not os.path.isdir(outdir):
+            os.makedirs(outdir)
+        return outdir
+
     def set_bin_boundaries(self, bin_boundaries, add_overflow=False):
         self.bin_boundaries = bin_boundaries
+        logging.info('Bin boundaries set: {0}'.format(self.bin_boundaries))
         if add_overflow:
             self.n_bins = len(self.bin_boundaries)
             self.last_bin_is_overflow = True
+            logging.info('Taking an overflow bin into account')
         else:
             self.n_bins = len(self.bin_boundaries)-1
 
@@ -98,6 +90,13 @@ class ScaleCorrelation(object):
         for i_row in xrange(self.n_bins):
             for i_col in xrange(self.n_bins):
                 corrMatrix[i_row][i_col] = self.get_correlation(i_row, i_col)
+        logging.debug(
+            'Found the following correlation matrix:\n{0}'
+            .format(
+                '\n'.join(
+                [ '  '.join([ '{0:+6.3f}'.format(corrMatrix[i_row][i_col]) for i_col in xrange(self.n_bins) ]) for i_row in xrange(self.n_bins) ]
+                ))
+            )
         return corrMatrix
 
     def calculate_errors(self):
@@ -107,31 +106,43 @@ class ScaleCorrelation(object):
             values = self.get_values(i)
             e_min = abs( self.get_bin_center(i) - min(values) )
             e_max = abs( self.get_bin_center(i) - max(values) )
-            errors.append([e_min, e_max])
+            width = self.bin_boundaries[i+1]-self.bin_boundaries[i]
+            logging.info(
+                'Multiplying errors in pb/GeV by bin width {0} to get errors in pb ({1}-{2})'
+                .format(width, self.bin_boundaries[i], self.bin_boundaries[i+1])
+                )
+            e_min *= width
+            e_max *= width
+            errors.append([e_max, e_min])
+        logging.debug('Found the following errors:\n{0}'.format('\n'.join([ '{0:+.5f} / {1:+.5f}'.format(l,r) for r,l in errors ])))
         return errors
 
     def write_correlation_matrix_to_file(self, tag=None):
         corrMatrix = self.calculate_correlation_matrix()
-        outname = join( CPlotDir, 'corrMat' )
+        outname = os.path.join( self.get_outdir(), 'corrMat' )
         if not(tag is None):
             outname += '_' + tag
         outname += '.txt'
-        with open(outname, 'w') as outFp:
+        with open(outname, 'w') as out_fp:
+            out_fp.write('# ' + core.gittag()+'\n')
             for i_row in xrange(self.n_bins):
-                outFp.write(
+                out_fp.write(
                     ' '.join([ '{0:+.4f}'.format(corrMatrix[i_row][i_col]) for i_col in xrange(self.n_bins) ])
                     + '\n'
                     )
 
     def write_errors_to_file(self, tag=None):
         errors = self.calculate_errors()
-        outname = join( CPlotDir, 'errors' )
+        outname = os.path.join( self.get_outdir(), 'errors' )
         if not(tag is None):
             outname += '_' + tag
         outname += '.txt'
-        with open(outname, 'w') as outFp:
+        with open(outname, 'w') as out_fp:
+            out_fp.write('# ' + core.gittag()+'\n')
+            out_fp.write('# Uncertainties in pb (*not* pb/GeV)\n')
+            out_fp.write('# Up        Down\n')
             for up, down in errors:
-                outFp.write('{0:+.8f} {1:+.8f}\n'.format( up, down ))
+                out_fp.write('{0:+.8f} {1:+.8f}\n'.format( up, down ))
 
 
     def make_scatter_plots(self, subdir=None):
@@ -144,7 +155,7 @@ class ScaleCorrelation(object):
         self.check_variation_consistency()
         
         c.Clear()
-        SetCMargins()
+        c.set_margins(RightMargin=0.1)
 
         values_x = self.get_values(i_bin)
         values_y = self.get_values(j_bin)
@@ -165,11 +176,11 @@ class ScaleCorrelation(object):
         else:
             y_title = '{0:.1f} < pT < {1:.1f}'.format(self.bin_boundaries[j_bin], self.bin_boundaries[j_bin+1])
 
-        base = GetPlotBase(
-            x_min, x_max, y_min, y_max,
-            x_title, y_title
+        base = plotting.pywrappers.Base(
+            x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max,
+            x_title=x_title, y_title=y_title
             )
-        base.Draw('P')
+        base.Draw()
 
         Tg = ROOT.TGraph( self.n_bins, array('d', values_x), array('d', values_y) )
         ROOT.SetOwnership( Tg, False )
@@ -197,28 +208,29 @@ class ScaleCorrelation(object):
         corr_line.SetLineColor(2)
         corr_line.Draw()
 
-        lbl = ROOT.TLatex()
-        lbl.SetNDC()
-        lbl.SetTextAlign(33)
-        lbl.SetTextSize(0.06)
-        lbl.DrawLatex( 1-CRightMargin-0.01, 1-CTopMargin-0.01, '#rho = {0:.2f}'.format(corr) )
+        l = plotting.pywrappers.Latex(
+            lambda c: c.GetLeftMargin() + 0.02,
+            lambda c: 1.0 - c.GetTopMargin() - 0.01,
+            '#rho = {0:.2f}'.format(corr)
+            )
+        l.SetNDC()
+        l.SetTextSize(0.06)
+        l.SetTextAlign(13)
+        l.Draw()
 
         if subdir is None:
             subdir = 'Bin{0}'.format(i_bin)
         else:
             subdir = '{0}/Bin{1}'.format(subdir, i_bin)
+        outname = os.path.join(subdir, 'Correlation_Bin{0}_Bin{1}'.format(i_bin, j_bin))
+        c.save(outname)
 
-        SaveC(
-            'Correlation_Bin{0}_Bin{1}'.format(i_bin, j_bin),
-            subdir=subdir,
-            asPNG=True
-            )
 
     def plot_correlation_matrix(self, tag=None):
         corrMat = self.calculate_correlation_matrix()
 
         c.Clear()
-        SetCMargins(
+        c.set_margins(
             LeftMargin   = 0.21,
             RightMargin  = 0.12,
             TopMargin    = 0.12,
@@ -290,4 +302,5 @@ class ScaleCorrelation(object):
         outname = 'corrMat'
         if not(tag is None):
             outname += '_' + tag
-        SaveC(outname, asPNG=True)
+        # SaveC(outname, asPNG=True)
+        c.save(outname)

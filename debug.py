@@ -15,14 +15,17 @@ import LatestBinning
 
 import differentials
 
+import os.path
 import logging
 import copy
 import random
+import glob
 random.seed(1002)
 
 import sys
 sys.path.append('src')
 import TheoryFileInterface
+import CombineToolWrapper
 
 from time import strftime
 datestr = strftime('%b%d')
@@ -31,10 +34,49 @@ datestr = strftime('%b%d')
 # Main
 ########################################
 
+@flag_as_option
+def debug_test_job_registering(args):
+
+    output = """
+Your job 8086673 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_68_0.sh") has been submitted
+Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_68_0.sh
+>> qsub -q all.q /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_Mar06_Top_hgg_asimov/job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_68_0.sh
+Your job 8086674 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_69_0.sh") has been submitted
+Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_69_0.sh
+>> qsub -q all.q /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_Mar06_Top_hgg_asimov/job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_69_0.sh
+Your job 8086675 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_70_0.sh") has been submitted
+Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_70_0.sh
+>> qsub -q all.q /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_Mar06_Top_hgg_asimov/job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_70_0.sh
+Your job 8086677 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_71_0.sh") has been submitted
+Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_71_0.sh
+>> qsub -q all.q /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_Mar06_Top_hgg_asimov/job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_71_0.sh
+Your job 8086685 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_72_0.sh") has been submitted
+Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_72_0.sh
+>> qsub -q all.q /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_Mar06_Top_hgg_asimov/job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_72_0.sh
+Your job 8086691 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_73_0.sh") has been submitted
+Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_73_0.sh
+>> qsub -q all.q /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_Mar06_Top_hgg_asimov/job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_73_0.sh
+Your job 8086692 ("job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_74_0.sh") has been submitted
+Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_74_0.sh
+>> qsub -q all.q /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_Mar06_Top_hgg_asimov/job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_74_0.sh"""
+
+    testconfig = CombineToolWrapper.CombineConfig(args)
+    testscan = CombineToolWrapper.BaseCombineScan(testconfig)
+
+    testscan.register_jobids_in_jobmanager(output)
+    
+
 
 @flag_as_option
-def debug_theoryfiles_top(args):
-    differentials.theory.ctcg_interpreter.create_all_ctcg()
+def debug_draw_fastscans(args):
+    
+    all_fastscans = glob.glob('out/Scan*Mar03*Top*/postfit_and_fastscan/*FASTSCAN*.root')
+    for fastscan_file in all_fastscans:
+        name = os.path.basename(fastscan_file).replace('.root','')
+        fastscan = differentials.scans.Scan2D(name, 'ct', 'cg')
+        fastscan.root_files = [fastscan_file]
+        fastscan.read()
+        fastscan.plot(name, draw_style='repr_2D_rainbow_high_contours')
 
 
 @flag_as_option

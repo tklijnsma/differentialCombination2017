@@ -1,6 +1,8 @@
-import os, re, random, copy
+import os, re, random, copy, glob
 from os.path import *
 from datetime import datetime
+import traceback
+import subprocess
 
 import logging
 logging.getLogger().setLevel(logging.INFO)
@@ -12,8 +14,38 @@ import ROOT
 from time import strftime
 GLOBAL_DATESTR = strftime( '%b%d' )
 
+def get_POIs_oldstyle_scandir(scandir):
+    root_files = glob.glob(join(scandir, '*.root'))
+    POIs = []
+    for root_file in root_files:
+        POI = basename(root_file).split('_')[1:6]
+        try:
+            differentials.core.str_to_float(POI[-1])
+        except ValueError:
+            POI = POI[:-1]
+        POI = '_'.join(POI)
+        POIs.append(POI)
+    POIs = list(set(POIs))
+    POIs.sort(key=differentials.core.range_sorter)
+    logging.info('Retrieved following POIs from oldstyle {0}:\n{1}'.format(scandir, POIs))
+    return POIs
+
+
 def datestr():
     return GLOBAL_DATESTR
+
+def gittag():
+    stack = traceback.extract_stack(None, 2)
+    stack = stack[0]
+    linenumber = stack[1]
+    funcname = stack[2]
+    cwd = abspath(os.getcwd())
+    modulefilename = relpath(stack[0], cwd)
+
+    datestr_detailed = strftime('%y-%m-%d %H:%M:%S')
+    currentcommit = execute(['git', 'log', '-1', '--oneline' ], py_capture_output=True)
+    ret = 'Generated on {0} by {1}; current git commit: {2}'.format(datestr_detailed, modulefilename, currentcommit.replace('\n',''))
+    return ret
 
 TESTMODE = False
 def testmode(flag=True):
@@ -53,7 +85,7 @@ standard_titles = {
     'rapidity' : '|y_{H}|',
     }
 
-def execute(cmd, capture_output=False, ignore_testmode=False):
+def execute(cmd, capture_output=False, ignore_testmode=False, py_capture_output=False):
     # Allow both lists and strings to be passed as the cmd
     if not isinstance(cmd, basestring):
         cmd = [ l for l in cmd if not len(l.strip()) == 0 ]
@@ -66,11 +98,15 @@ def execute(cmd, capture_output=False, ignore_testmode=False):
     logging.info('Executing the following command:\n{0}'.format(cmd_str))
     logging.trace('Actual passed command: {0}'.format(cmd_exec))
     if not(is_testmode()) and not(ignore_testmode):
-        if capture_output:
-            raise NotImplementedError('Re-implement using the capture output context manager')
+        if py_capture_output:
+            return subprocess.check_output(cmd_exec, shell=True)
+        elif capture_output:
+            with RedirectStdout() as redirected:
+                os.system(cmd_exec)
+                output = redirected.read()
+            return output
         else:
             os.system(cmd_exec)
-
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
@@ -234,36 +270,6 @@ def binning_from_POIs(POIs_original):
     return binning
 
 
-class DecayChannelNotFoundError(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'Could not determine the decay channel') 
-
-def get_decay_channel_tag(args, allow_default=False):
-    if args.combination:
-        tag = 'combination'
-    elif args.hgg:
-        tag = 'hgg'
-    elif args.hzz:
-        tag = 'hzz'
-    elif args.hbb:
-        tag = 'hbb'
-    elif args.combWithHbb:
-        tag = 'combWithHbb'
-    else:
-        if allow_default:
-            tag = 'combination'
-        else:
-            raise DecayChannelNotFoundError()
-    return tag
-
-def set_one_decay_channel(args, decay_channel):
-    for dc in [ 'hgg', 'hzz', 'hbb', 'combination', 'combWithHbb' ]:
-        setattr(args, dc, False)
-    setattr(args, decay_channel, True)
-
-
-
-
 def read_data(f, sep=' ', columns=False, make_float=False):
     with open(f, 'r') as fp:
         text = fp.read()
@@ -294,3 +300,64 @@ def read_data(f, sep=' ', columns=False, make_float=False):
 
     return lines
 
+
+def fileno(file_or_fd):
+    fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
+    if not isinstance(fd, int):
+        raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
+    return fd
+
+class RedirectStdout():
+    """Context manager to capture stdout from ROOT/C++ prints"""
+    def __init__( self, verbose=False ):
+        self.stdout_fd = fileno(sys.stdout)
+        self.enableDebugPrint = verbose
+        self._is_redirected = False
+        pass
+        
+    def __enter__( self ):
+        self.debug_redirected_logging('Entering RedirectStdout')
+        self.captured_fd_r, self.captured_fd_w = os.pipe()
+        self.debug_redirected_logging('Opened read: {0}, and write: {1}'.format( self.captured_fd_r, self.captured_fd_w ))
+
+        self.debug_redirected_logging('  Copying stdout')
+        self.copied_stdout = os.fdopen( os.dup(self.stdout_fd), 'wb' )
+        sys.stdout.flush() # To flush library buffers that dup2 knows nothing about
+        
+        # Overwrite stdout_fd with the target
+        self.debug_redirected_logging('Overwriting target ({0}) with stdout_fd ({1})'.format(fileno(self.captured_fd_w), self.stdout_fd))
+        os.dup2(fileno(self.captured_fd_w), self.stdout_fd)
+        self._is_redirected = True
+
+        os.close( self.captured_fd_w )
+        return self
+
+    def __exit__(self, *args):
+        sys.stdout.flush()
+        os.dup2( self.copied_stdout.fileno(), self.stdout_fd )  # $ exec >&copied
+
+    def read( self ):
+        sys.stdout.flush()
+        self.debug_redirected_logging('  Draining pipe')
+
+        # Without this line the reading does not end - is that 'deadlock'?
+        os.close(self.stdout_fd)
+
+        captured_str = ''
+        while True:
+            data = os.read( self.captured_fd_r, 1024)
+            if not data:
+                break
+            captured_str += data
+            self.debug_redirected_logging('\n  captured_str: ' + captured_str)
+
+        self.debug_redirected_logging('  Draining completed')
+        return captured_str
+
+    def debug_redirected_logging( self, text ):
+        if self.enableDebugPrint:
+            text = '[Redirected debug] ' + text
+            if self._is_redirected:
+                os.write(fileno(self.copied_stdout), text + '\n')
+            else:
+                os.write(fileno(self.stdout_fd), text + '\n')

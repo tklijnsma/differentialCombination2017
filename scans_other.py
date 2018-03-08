@@ -1,10 +1,3 @@
-from scans_yukawa import (
-    run_postfit_fastscan_scan,
-    scan_directly,
-    assert_decay_channel,
-    assert_asimov
-    )
-
 from OptionHandler import flag_as_option, flag_as_parser_options
 
 import LatestPaths
@@ -12,7 +5,7 @@ import sys
 sys.path.append('src')
 import Commands
 import CombineToolWrapper
-import differentialTools
+import differentialutils
 
 from time import strftime
 datestr = strftime( '%b%d' )

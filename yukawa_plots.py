@@ -39,10 +39,16 @@ nominal_scans = Nominal(
     combination = 'out/Scan_Yukawa_Feb24_combination',
     )
 nominal_scans_asimov = Nominal(
-    hgg = 'out/Scan_Yukawa_Feb24_hgg_0',
-    # hzz = 'out/Scan_Yukawa_Feb24_hzz_0',
-    hzz = 'out/Scan_Yukawa_Feb24_hzz_asimov',
-    combination = 'out/Scan_Yukawa_Feb24_combination_0',
+    # hgg = 'out/Scan_Yukawa_Feb24_hgg_0',
+    # # hzz = 'out/Scan_Yukawa_Feb24_hzz_0',
+    # hzz = 'out/Scan_Yukawa_Feb24_hzz_asimov',
+    # combination = 'out/Scan_Yukawa_Feb24_combination_0',
+    hgg = 'out/Scan_Yukawa_Nov03_hgg_asimov',
+    hzz = 'out/Scan_Yukawa_Nov03_hzz_asimov',
+    combination = 'out/Scan_Yukawa_Nov03_asimov',
+    # out/Scan_Yukawa_Nov03_asimov
+    # out/Scan_Yukawa_Nov03_hgg_asimov
+    # out/Scan_Yukawa_Nov03_hzz_asimov
     )
 def get_nominal(args):
     if args.asimov:
@@ -81,6 +87,10 @@ def multicont_Yukawa_nominal(args):
         [combination, hgg, hzz],
         x_min=None, x_max=None, y_min=None, y_max=None
         )
+    plot.x_min = -25
+    plot.x_max = 25
+    plot.y_min = -9
+    plot.y_max = 12
     plot.draw()
 
 
@@ -326,7 +336,8 @@ def multicont_Yukawa_atfchi2(args):
 def points_on_contour_Yukawa(args):
 
     combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        scandir=LatestPaths.scan_combined_Yukawa_old)
+        scandir=get_nominal(args).combination
+        )
     combination.color = 1
     combination.read()
 
@@ -334,19 +345,19 @@ def points_on_contour_Yukawa(args):
     obs.drop_bins_up_to_value(125.)
 
     obs_name = 'pth_ggH'
-    pth_smH_combination = differentials.scans.DifferentialSpectrum('combination',
-        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
-        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
-        )
-    pth_smH_combination.color = 1
-    pth_smH_combination.no_overflow_label = True
-    pth_smH_combination.draw_method = 'repr_point_with_vertical_bar'
-    pth_smH_combination.set_sm(obs.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
-    pth_smH_combination.drop_bins_up_to_value(125.)
-    pth_smH_combination.read()
+    scandir = 'out/Scan_pth_ggH_Feb06_combination_asimov' if args.asimov else 'out/Scan_pth_ggH_Feb06_combination'
+    pth_ggH_combination = differentials.scans.DifferentialSpectrum('combination', scandir=scandir)
+    pth_ggH_combination.POIs = differentials.core.get_POIs_oldstyle_scandir(scandir)
+    pth_ggH_combination.color = 1
+    pth_ggH_combination.no_overflow_label = True
+    pth_ggH_combination.draw_method = 'repr_point_with_vertical_bar'
+    pth_ggH_combination.set_sm(obs.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
+    pth_ggH_combination.drop_bins_up_to_value(125.)
+    pth_ggH_combination.read()
 
     # ws = LatestPaths.ws_combined_TopHighPt
-    ws = LatestPaths.ws_combined_Yukawa
+    # ws = LatestPaths.ws_combined_Yukawa
+    ws = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
 
 
     # ======================================
@@ -355,7 +366,7 @@ def points_on_contour_Yukawa(args):
     plot = differentials.plotting.plots.BottomPanelPlotWithParametrizations('points_on_contour_Yukawa')
     plot.scan2D = combination
     plot.ws_file = ws
-    plot.ptspectrum = pth_smH_combination
+    plot.ptspectrum = pth_ggH_combination
     plot.obs = obs
 
     # plot.top_y_min = top_y_min
@@ -383,23 +394,26 @@ def one_kappa_scan(args):
 @flag_as_option
 def one_kappa_scan_kappab(args):
     differentials.plotting.canvas.c.resize_temporarily(850, 800)
+    scans = []
 
-    observed = differentials.scans.Scan('kappab', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappab)
-    observed.color = 4
-    observed.title = '#kappa_{b} observed'
-    observed.read()
-    observed.create_uncertainties()
-    observed.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(observed.unc.left_bound, observed.unc.right_bound)
+    # observed = differentials.scans.Scan('kappab', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappab)
+    # observed.color = 38
+    # observed.title = '#kappa_{b} observed'
+    # observed.read()
+    # observed.create_uncertainties()
+    # observed.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(observed.unc.left_bound, observed.unc.right_bound)
+    # scans.append(observed)
 
-    expected = differentials.scans.Scan('kappab', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappab_asimov)
-    expected.color = 38
+    expected = differentials.scans.Scan('kappab', scandir='out/Scan_Yukawa_Feb07_combined_oneKappa_kappab_asimov')
+    expected.color = 4
     expected.title = '#kappa_{b} expected'
     expected.read()
     expected.create_uncertainties()
-    expected.title += '; ({0:.2f}, {1:.2f}) @ 68% CL'.format(expected.unc.left_bound, expected.unc.right_bound)
+    expected.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(expected.unc.left_bound, expected.unc.right_bound)
+    scans.append(expected)
 
     plot = differentials.plotting.plots.MultiScanPlot('onekappascan_kappab')
-    plot.scans.extend([expected, observed])
+    plot.scans.extend(scans)
     plot.x_min = -6.
     plot.x_max = 6.
     plot.x_title = '#kappa_{b}'
@@ -414,25 +428,28 @@ def one_kappa_scan_kappab(args):
 @flag_as_option
 def one_kappa_scan_kappac(args):
     differentials.plotting.canvas.c.resize_temporarily(850, 800)
+    scans = []
 
-    observed = differentials.scans.Scan('kappac', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappac)
-    observed.color = 4
-    observed.title = '#kappa_{c} observed'
-    observed.read()
-    observed.create_uncertainties()
-    observed.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(observed.unc.left_bound, observed.unc.right_bound)
-    observed.draw_style = 'repr_smooth_line'
+    # observed = differentials.scans.Scan('kappac', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappac)
+    # observed.color = 38
+    # observed.title = '#kappa_{c} observed'
+    # observed.read()
+    # observed.create_uncertainties()
+    # observed.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(observed.unc.left_bound, observed.unc.right_bound)
+    # observed.draw_style = 'repr_smooth_line'
+    # scans.append(observed)
 
-    expected = differentials.scans.Scan('kappac', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappac_asimov)
-    expected.color = 38
+    expected = differentials.scans.Scan('kappac', scandir='out/Scan_Yukawa_Feb07_combined_oneKappa_kappac_asimov')
+    expected.color = 4
     expected.title = '#kappa_{c} expected'
     expected.read()
     expected.create_uncertainties()
     expected.title += '; ({0:.2f}, {1:.2f}) @ 68% CL'.format(expected.unc.left_bound, expected.unc.right_bound)
     expected.draw_style = 'repr_smooth_line'
+    scans.append(expected)
 
     plot = differentials.plotting.plots.MultiScanPlot('onekappascan_kappac')
-    plot.scans.extend([expected, observed])
+    plot.scans.extend(scans)
     plot.x_min = -15.
     plot.x_max = 15.
     plot.x_title = '#kappa_{c}'

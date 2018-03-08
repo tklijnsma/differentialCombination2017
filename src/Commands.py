@@ -800,14 +800,18 @@ def executeCommand( cmd, captureOutput=False, ignoreTestmode=False ):
 
     if TESTMODE and not ignoreTestmode:
         print '\n[TESTMODE] ' + cmdStr + '\n'
+        if captureOutput:
+            return 'Bogus output from captureOutput'
     else:
+        print '\n[EXECUTING] ' + cmdStr + '\n'
+        if captureOutput: print '[EXECUTING] Capturing output'
         if not captureOutput:
-            print '\n[EXECUTING] ' + cmdStr + '\n'
             os.system( cmdExec )
         else:
             output = subprocess.check_output(
-                cmd,
+                cmdExec,
                 shell=True,
+                # shell=False,
                 )
             return output
 

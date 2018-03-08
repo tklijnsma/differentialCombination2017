@@ -22,6 +22,11 @@ card.pth_smH = AttrDict()
 card.pth_smH.hgg = None
 card.pth_smH.hzz = None
 
+card.yukawa = AttrDict()
+card.yukawa.hgg = 'suppliedInput/Yukawa_hgg_pth_ggH_Mar08.txt'
+card.yukawa.hzz = 'suppliedInput/Yukawa_hzz_pth_ggH_Mar08.txt'
+card.yukawa.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt'
+
 #____________________________________________________________________
 # Workspaces
 

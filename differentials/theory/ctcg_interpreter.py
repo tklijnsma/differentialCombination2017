@@ -1,13 +1,14 @@
 import differentials.core as core
 from differentials.core import AttrDict
-import logging, copy, os, os.path
-
 import binheuristic
+import logging, copy, os, os.path
+import scalecorrelation
 
 
 def create_all_ctcg():
     create_SM()
-    
+    create_scale_variations()
+    create_coupling_variations_highpt()
 
 def create_SM():
     if not TopTheory.sm_is_defined:
@@ -16,12 +17,29 @@ def create_SM():
         TopTheory.set_sm(sm)
         sm.dump()
 
-
 def create_scale_variations():
     for d in scale_variations:
-        pass
+        theory = TopTheory(d)
+        theory.get_columns()
+        theory.dump()
 
+def create_coupling_variations_highpt():
+    for d in coupling_variations_lowpt:
+        theory_lowpt = TopTheory(d)
+        theory_lowpt.get_columns()
 
+        # Find corresponding highpt
+        for d_highpt in coupling_variations_highpt:
+            if theory_lowpt.equals(d_highpt):
+                break
+        else:
+            raise RuntimeError('Could not find a match for low pt coupling variation {0}'.format(theory_lowpt.d))
+
+        theory_highpt = TopTheory(d_highpt)
+        theory_highpt.get_columns()
+
+        theory_merged = theory_lowpt.merge(theory_highpt)
+        theory_merged.dump()
 
 
 class TopTheory(object):
@@ -40,6 +58,37 @@ class TopTheory(object):
         logging.debug('d contents:\n{0}'.format(self.d))
         self.tags = ['tophighpt']
 
+    def equals(self, d_to_compare):
+        d = self.fill_defaults(d_to_compare)
+        for key in self.d.keys():
+            if key in ['path', 'is_SM', 'first_column_is_xs']: continue
+            try:
+                if not(self.d[key] == d[key]):
+                    return False
+            except KeyError:
+                logging.error(
+                    'Key {0} was not found in either:\n{1}\nor\n{2}'
+                    .format(key, self.d, d)
+                    )
+                raise
+        else:
+            return True
+
+    def merge(self, other):
+        logging.info(
+            'Merging {0} and {1}'
+            .format(self.d.path, other.d.path)
+            )
+        res = copy.deepcopy(self)
+        res.other_file = other.d.path
+        res.bin_boundaries += other.bin_boundaries[1:]
+        res.bin_centers += other.bin_centers
+        res.n_bins += other.n_bins
+        res.xs_per_GeV += other.xs_per_GeV
+        res.xs += other.xs
+        res.ratio += other.ratio
+        return res
+
     def fill_defaults(self, d_orig):
         d = copy.copy(d_orig)
         defaults = {
@@ -50,6 +99,7 @@ class TopTheory(object):
         for key, value in defaults.iteritems():
             if not key in d.keys():
                 setattr(d, key, value)
+                d[key] = value
         return d
 
     def get_columns(self):
@@ -58,13 +108,14 @@ class TopTheory(object):
         self.n_bins = len(self.bin_centers)
         self.bin_boundaries = bin_heuristic.get_bin_boundaries(self.bin_centers)
         if self.d.first_column_is_xs:
-            self.xs_per_GeV = columns[1]
+            logging.warning('Dividing cross section in {0} by factor 2.27'.format(self.d.path))
+            self.xs_per_GeV = [ v/2.27 for v in columns[1] ]
             if self.d.is_SM:
                 self.ratio = [ 1.0 for xs in self.xs_per_GeV ]
             elif self.sm_is_defined:
                 # HIER VERDER
                 # Kijken of 2.27 implementatie een beetje oke is
-                self.ratio = [ xs / sm_xs / 2.27 for xs, sm_xs in zip(self.xs_per_GeV, self.sm.xs_per_GeV) ]
+                self.ratio = [ xs / sm_xs for xs, sm_xs in zip(self.xs_per_GeV, self.sm.xs_per_GeV) ]
             else:
                 raise RuntimeError('Run TopTheory.set_sm(sm) with the SM variation first')
         else:
@@ -110,8 +161,8 @@ class TopTheory(object):
             'Q={0}'.format(self.d.Q),
             'binBoundaries={0}'.format(','.join(map(str, self.bin_boundaries))),
             'binCenters={0}'.format(','.join(map(str, self.bin_centers))),
-            'crosssection_over_binwidth={0}'.format(','.join(map( str, self.xs_per_GeV))),
-            'crosssection={0}'.format(','.join(map( str, self.xs))),
+            'crosssection={0}'.format(','.join(map( str, self.xs_per_GeV))),
+            'crosssection_integrated={0}'.format(','.join(map( str, self.xs))),
             'ratios={0}'.format(','.join(map(str, self.ratio))),
             ]
 
@@ -127,9 +178,27 @@ class TopBinHeuristic(binheuristic.BinHeuristic):
     def __init__(self, *args, **kwargs):
         super(TopBinHeuristic, self).__init__(*args, **kwargs)
 
+        self.faulty_bin_centers = [
+            401., 410., 420., 430., 440., 450., 460., 470., 480., 490.,
+            500., 510., 520., 530., 540., 550., 560., 570., 580., 590.,
+            600., 610., 620., 630., 640., 650., 660., 670., 680., 690.,
+            700., 710., 720., 730., 740., 750., 760., 770., 780., 790.
+            ]
+        self.corrected_bin_centers = [
+            405., 415., 425., 435., 445., 455., 465., 475., 485., 495.,
+            505., 515., 525., 535., 545., 555., 565., 575., 585., 595.,
+            605., 615., 625., 635., 645., 655., 665., 675., 685., 695.,
+            705., 715., 725., 735., 745., 755., 765., 775., 785., 795.
+            ]
+
     def get_bin_boundaries(self, bin_centers):
+        if bin_centers == self.faulty_bin_centers:
+            logging.warning('Copying manually corrected bin centers')
+            bin_centers = copy.copy(self.corrected_bin_centers)
         bin_boundaries = super(TopBinHeuristic, self).get_bin_boundaries(bin_centers)
-        bin_boundaries[bin_boundaries.index(51.75)] = 51
+        if 51.75 in bin_boundaries:
+            logging.warning('Correcting bin boundary 51.75 to 51.0')
+            bin_boundaries[bin_boundaries.index(51.75)] = 51
         return bin_boundaries
 
 bin_heuristic = TopBinHeuristic()
@@ -143,10 +212,11 @@ SM = AttrDict(
     )
 
 scale_variations = [
-    AttrDict(
-        path = 'suppliedInput/fromAgnieszka/ScaleVarNNLO_Jul17/HRes_mR1mF1.top',
-        first_column_is_xs = True,
-        ),
+    # This is just the SM
+    # AttrDict(
+    #     path = 'suppliedInput/fromAgnieszka/ScaleVarNNLO_Jul17/HRes_mR1mF1.top',
+    #     first_column_is_xs = True,
+    #     ),
     AttrDict(
         path = 'suppliedInput/fromAgnieszka/ScaleVarNNLO_Jul17/HRes_mR1mF1Q2.top',
         Q = 2.0,

@@ -31,21 +31,21 @@ def multicont_Top_nominal(args):
     scans = []
 
     hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
-        scandir = 'out/Scan_Mar03_Top_hgg_asimov'  if args.asimov else 'out/Scan_Mar03_Top_hgg'
+        scandir = 'out/Scan_Mar06_Top_hgg_asimov'  if args.asimov else 'out/Scan_Mar03_Top_hgg'
         )
     hgg.color = 2
     hgg.read()
     scans.append(hgg)
 
     combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        scandir = 'out/Scan_Mar03_Top_combination_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combination'
+        scandir = 'out/Scan_Mar06_Top_combination_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combination'
         )
     combination.color = 1
     combination.read()
     scans.append(combination)
 
     combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling,
-        scandir = 'out/Scan_Mar03_Top_combWithHbb_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combWithHbb'
+        scandir = 'out/Scan_Mar06_Top_combWithHbb_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combWithHbb'
         )
     combWithHbb.color = 9
     combWithHbb.read()
@@ -75,40 +75,43 @@ def multicont_Top_nominal(args):
 
 @flag_as_option
 def points_on_contour_Top(args):
+    obs_name = 'pth_ggH'
+    obstuple = LatestBinning.obstuple_pth_ggH
 
-    combination = differentials.scans.Scan2D(
-        'combination', x_coupling, y_coupling,
-        scandir=LatestPaths.scan_combined_TopHighPt
+    Top_combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar06_Top_combWithHbb_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combWithHbb'
         )
-    combination.color = 1
-    combination.read()
+    Top_combWithHbb.color = 9
+    Top_combWithHbb.read()
 
-    obs = LatestBinning.obs_pth_ggH
+    # obs = LatestBinning.obs_pth_ggH
     # obs.drop_bins_up_to_value(125.)
 
-    obs_name = 'pth_ggH'
-    pth_smH_combination = differentials.scans.DifferentialSpectrum('combination',
-        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
-        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
-        )
-    pth_smH_combination.color = 1
-    pth_smH_combination.no_overflow_label = True
-    pth_smH_combination.draw_method = 'repr_point_with_vertical_bar'
-    pth_smH_combination.set_sm(obs.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    # pth_smH_combination.drop_bins_up_to_value(125.)
-    pth_smH_combination.read()
+    dir_combWithHbb = 'out/Scan_Mar02_pth_ggH_combWithHbb'
+    if args.asimov:
+        dir_combWithHbb = 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov'
+    combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', dir_combWithHbb)
+    combWithHbb.scandirs.append('out/Scan_Mar07_pth_ggH_combWithHbb_asimov')
+    # combWithHbb.color = 47
+    combWithHbb.color = 1
+    combWithHbb.no_overflow_label = True
+    combWithHbb.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb.read()
 
-    ws = 'out/workspaces_Dec11/combinedCard_Nov03_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+
+    # ws = 'out/workspaces_Dec11/combinedCard_Nov03_CouplingModel_TopHighPt_withTheoryUncertainties.root'
+    ws = 'out/workspaces_Mar06/combWithHbb_Top_reweighted_nominal.root'
 
 
     # ======================================
     # Load into plot
 
     plot = differentials.plotting.plots.BottomPanelPlotWithParametrizations('points_on_contour_Top')
-    plot.scan2D = combination
+    plot.scan2D = Top_combWithHbb
     plot.ws_file = ws
-    plot.ptspectrum = pth_smH_combination
-    plot.obs = obs
+    plot.ptspectrum = combWithHbb
+    plot.obs = obstuple.combWithHbb
 
     plot.default_points_xy_maxima = False
 

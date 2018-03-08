@@ -77,8 +77,8 @@ class Canvas(object):
         # Only allow 1 additional slash (otherwise may accidentally create deep tree structures)
         outdir = self.plotdir
         subdir = ''
-        if len(outname.split('/')) == 2:
-            subdir = outname.split('/')[0]
+        if len(outname.rsplit('/', 1)) == 2:
+            subdir = outname.rsplit('/', 1)[0]
             outdir = os.path.join(outdir, subdir)
 
         if not os.path.isdir(outdir): os.makedirs(outdir)

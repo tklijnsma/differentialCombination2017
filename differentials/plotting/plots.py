@@ -590,7 +590,9 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
     def get_points(self):
         contour = self.scan2D.to_hist().get_most_probable_1sigma_contour()
         if self.default_points_xy_maxima:
-            self.points.append(pywrappers.Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y, color=self.color_cycle.next()))
+            bestfit_point = pywrappers.Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y, color=self.color_cycle.next())
+            bestfit_point._is_bestfit = True
+            self.points.append(bestfit_point)
             self.points.append(pywrappers.Point(contour.x_min, contour.y[contour.x.index(contour.x_min)], color=self.color_cycle.next()))
             self.points.append(pywrappers.Point(contour.x_max, contour.y[contour.x.index(contour.x_max)], color=self.color_cycle.next()))
             self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_min)], contour.y_min, color=self.color_cycle.next()))
@@ -676,9 +678,12 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
             parametrization.set(self.scan2D.y_variable, point.y)
             mus = parametrization.get_mus_exp()
 
-            title = '{0}={1:.1f}, {2}={3:.1f}'.format(
-                self.scan2D.x_title, point.x, self.scan2D.y_title, point.y
-                )
+            if hasattr(point, '_is_bestfit'):
+                title = 'Best fit'
+            else:
+                title = '{0}={1:.1f}, {2}={3:.1f}'.format(
+                    self.scan2D.x_title, point.x, self.scan2D.y_title, point.y
+                    )
 
             mu_histogram = pywrappers.Histogram(
                 utils.get_unique_rootname(),

@@ -67,7 +67,13 @@ class YieldParameterContainer(Container):
     def search_yieldParameter_in_left_right(self, left, right, some_list):
         if right is None:
             yp = some_list[-1]
-            if not( yp.left <= left and left <= yp.right ):
+            # Changed second comp. to "<"
+            # Example: binning [ ..., 350, 600 ], input_yp r_ggH_GT600
+            # Then right=None, left=600, and "left(600)<=yp.right(600) == True"
+            # To prevent the last True, use strictly smaller than
+            if yp.left <= left and left < yp.right:
+                return yp.name
+            else:
                 # raise RuntimeError((
                 #     'Process {0} should be scaled by the overflow yieldParameter, '
                 #     'but the yieldParameter has range {1} to {2}, '
@@ -76,8 +82,6 @@ class YieldParameterContainer(Container):
                 #     )
                 # Treat as bkg (considers signal processes that are not included in the range)
                 return self.bkg_yieldParameter.name
-            else:
-                return yp.name
 
         if self.debug:
             print 'search_yieldParameter_in_left_right called with left={0}, right = {1}'.format(left, right)
