@@ -14,15 +14,18 @@ import LatestPathsGetters
 import LatestBinning
 
 import differentials
+import differentialutils
 
 import logging
 import copy
 import random
 random.seed(1002)
 
-import sys
-sys.path.append('src')
-import TheoryFileInterface
+# import sys
+# sys.path.append('src')
+# import TheoryFileInterface
+from differentials.theory.theory_utils import FileFinder
+
 
 from time import strftime
 datestr = strftime('%b%d')
@@ -43,10 +46,10 @@ def make_theory_files_Yukawa(args):
 
 
 def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
-    t2ws = differentials.combine.t2ws.T2WS(get_nominal_card_Yukawa(args))
+    t2ws = differentials.combine.t2ws.T2WS()
 
-    decay_channel = differentials.core.get_decay_channel_tag(args, allow_default=True)
-    t2ws.card = LatestBinning.yukawa[decay_channel]
+    decay_channel = differentialutils.get_decay_channel_tag(args, allow_default=True)
+    t2ws.card = LatestPaths.card.yukawa[decay_channel]
     t2ws.model_file = 'physicsModels/CouplingModel.py'
     t2ws.model_name = 'couplingModel'
     t2ws.name = decay_channel + '_Yukawa'
@@ -78,38 +81,68 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
         add_theory_uncertainties(t2ws)
     return t2ws
 
-
 def add_theory_uncertainties(t2ws, uncorrelated=False):
-    TheoryFileInterface.SetFileFinderDir(LatestPaths.derivedTheoryFiles_YukawaSummed)
+    coupling_variations = FileFinder(
+        muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.yukawa.filedir
+        ).get()
 
-    t2ws.extra_options.append(
-        '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
-            TheoryFileInterface.FileFinder(kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
+    print coupling_variations
+    for v in coupling_variations:
+        print v
+
+    sm = [ v for v in coupling_variations if v.kappab==1.0 and v.kappac==1.0 ][0]
+    coupling_variations.pop(coupling_variations.index(sm))
+
+    t2ws.extra_options.append('--PO SM=[kappab=1.0,kappac=1.0,file={0}]'.format(sm.theory_file))
+    for variation in random.sample(coupling_variations, 7):
+        if variation.kappab == 0.0 and variation.kappac == 0.0: continue
+        t2ws.extra_options.append(
+            '--PO theory=[kappab={0},kappac={1},file={2}]'
+            .format(variation.kappab, variation.kappac, variation.theory_file)
             )
-        )
-    possible_theories = []
-    for kappab in [ -2, -1, 0, 1, 2 ]:
-        for kappac in [ -10, -5, 0, 1, 5, 10 ]:
-            if (kappab == 1 and kappac == 1 ) or (kappab == 0 and kappac == 0 ): continue
-            else:
-                possible_theories.append(
-                    '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
-                        kappab, kappac,
-                        TheoryFileInterface.FileFinder(kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
-                        )
-                    )
-    t2ws.extra_options.extend(random.sample(possible_theories, 6))
 
     # Theory uncertainties
-    correlationMatrix   = LatestPaths.correlationMatrix_Yukawa
-    theoryUncertainties = LatestPaths.theoryUncertainties_Yukawa
+    correlation_matrix   = LatestPaths.theory.yukawa.correlation_matrix
+    theory_uncertainties = LatestPaths.theory.yukawa.uncertainties
     if uncorrelated:
-        correlationMatrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated # Uncorrelated
+        correlation_matrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated # Uncorrelated
         t2ws.tags.append('uncorrelatedTheoryUnc')
 
-    t2ws.extra_options.append('--PO correlationMatrix={0}'.format(correlationMatrix))
-    t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theoryUncertainties))
-    # t2ws.tags.append('withTheoryUncertainties') # Pretty much the default anyway
+    t2ws.extra_options.append('--PO correlationMatrix={0}'.format(correlation_matrix))
+    t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theory_uncertainties))
+
+
+# def add_theory_uncertainties(t2ws, uncorrelated=False):
+#     TheoryFileInterface.SetFileFinderDir(LatestPaths.derivedTheoryFiles_YukawaSummed)
+
+#     t2ws.extra_options.append(
+#         '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
+#             TheoryFileInterface.FileFinder(kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
+#             )
+#         )
+#     possible_theories = []
+#     for kappab in [ -2, -1, 0, 1, 2 ]:
+#         for kappac in [ -10, -5, 0, 1, 5, 10 ]:
+#             if (kappab == 1 and kappac == 1 ) or (kappab == 0 and kappac == 0 ): continue
+#             else:
+#                 possible_theories.append(
+#                     '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
+#                         kappab, kappac,
+#                         TheoryFileInterface.FileFinder(kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
+#                         )
+#                     )
+#     t2ws.extra_options.extend(random.sample(possible_theories, 6))
+
+#     # Theory uncertainties
+#     correlationMatrix   = LatestPaths.correlationMatrix_Yukawa
+#     theoryUncertainties = LatestPaths.theoryUncertainties_Yukawa
+#     if uncorrelated:
+#         correlationMatrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated # Uncorrelated
+#         t2ws.tags.append('uncorrelatedTheoryUnc')
+
+#     t2ws.extra_options.append('--PO correlationMatrix={0}'.format(correlationMatrix))
+#     t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theoryUncertainties))
+#     # t2ws.tags.append('withTheoryUncertainties') # Pretty much the default anyway
 
 #____________________________________________________________________
 def set_decay_channel(args, given_channel):

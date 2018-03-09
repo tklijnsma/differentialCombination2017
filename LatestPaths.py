@@ -52,16 +52,14 @@ theory.top.filedir = 'out/derivedTheoryFiles_Dec07_TopHighPt'
 theory.top.correlation_matrix = 'out/correlationMatrices_Nov24_Top/corrMat_exp.txt'
 theory.top.uncertainties = 'out/correlationMatrices_Nov24_Top/errors_for_corrMat_exp.txt'
 
-# HIER VERDER
-# MAKE THIS NICE:
+theory.yukawa = AttrDict()
+theory.yukawa.filedir = 'out/theories_Mar09_yukawa_summed'
+theory.yukawa.correlation_matrix = 'out/scalecorrelations_Mar09/corrMat_yukawa.txt'
+theory.yukawa.uncertainties = 'out/scalecorrelations_Mar09/errors_yukawa.txt'
 
-# out/scalecorrelations_Mar09/corrMat_yukawa.txt
-# out/scalecorrelations_Mar09/errors_yukawa.txt
-
-# out/theories_Mar09_yukawa_gluoninduced
-# out/theories_Mar09_yukawa_quarkinduced
-# out/theories_Mar09_yukawa_quarkinduced_scaled
-# out/theories_Mar09_yukawa_summed
+theory.yukawa.filedir_gluoninduced = 'out/theories_Mar09_yukawa_gluoninduced'
+theory.yukawa.filedir_quarkinduced = 'out/theories_Mar09_yukawa_quarkinduced'
+theory.yukawa.filedir_quarkinduced_scaled = 'out/theories_Mar09_yukawa_quarkinduced_scaled'
 
 
 # # ----- PTH -----

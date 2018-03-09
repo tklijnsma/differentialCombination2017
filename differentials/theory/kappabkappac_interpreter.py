@@ -170,18 +170,11 @@ class KappabKappacInterpreter(object):
     def get_quark_induced_scaled(self):
         parametrization = self.get_parametrization_quark_induced()
         # Scale first SM so other variations can use it to compute the ratio
-        YukawaTheoryQuarkInduced.sm.scale(parametrization)
+        YukawaTheoryQuarkInducedScaled.set_sm(YukawaTheoryQuarkInduced.sm.scale(parametrization))
         theories = []
         for d in self.scale_variations_qi + self.coupling_variations_qi:
             theory = YukawaTheoryQuarkInduced(d)
             scaled_theory = theory.scale(parametrization)
-
-            # if scaled_theory.d.muF==2. and scaled_theory.d.muR==1. and scaled_theory.d.Q==1.:
-            #     print '\n'
-            #     print scaled_theory.parameter_string()
-            #     print scaled_theory.ratio
-            #     sys.exit()
-
             theories.append(scaled_theory)
         return theories
 
@@ -191,7 +184,7 @@ class KappabKappacInterpreter(object):
         summed_theories = []
 
         # First do SM so the others can use it for a ratio
-        YukawaTheorySummed(YukawaTheoryQuarkInduced.sm, YukawaTheoryGluonInduced.sm)
+        YukawaTheorySummed(YukawaTheoryQuarkInducedScaled.sm, YukawaTheoryGluonInduced.sm)
 
         for qi in quarkinduced_scaled_theories:
             # Find corresponding gluon induced theory
