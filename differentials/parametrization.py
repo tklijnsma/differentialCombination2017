@@ -111,7 +111,7 @@ class Parametrization(object):
         self.parametrizations = []
 
     def evaluate(self, c1, c2):
-        return [ p(c1, c2) for p in self.parametrizations ]
+        return [ p(c1, c2) if abs(p(c1, c2))>1e-12 else 0.0 for p in self.parametrizations ]
 
     def parametrize(self):
         self.n_bins = len(self.variations[0].xs)
@@ -120,7 +120,7 @@ class Parametrization(object):
         self.parametrizations = []
         for i_bin in xrange(self.n_bins):
             xs = [ v.xs[i_bin] for v in self.variations ]
-            parametrization = self.get_parametrization_function(c1s, c2s, xs)
+            parametrization = self.get_fitted_parametrization(c1s, c2s, xs)
             self.parametrizations.append(parametrization)
 
 
@@ -155,7 +155,7 @@ class Parametrization(object):
         return parabola_for_scipy
 
 
-    def get_parametrization_function(self, couplings1, couplings2, crosssections):
+    def get_fitted_parametrization(self, couplings1, couplings2, crosssections):
         logging.info('Trying to import scipy.optimize.curve_fit')
         from scipy.optimize import curve_fit
 

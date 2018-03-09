@@ -38,7 +38,8 @@ datestr = strftime('%b%d')
 def debug_test_kappabkappac_files(args):
     interp = differentials.theory.kappabkappac_interpreter.KappabKappacInterpreter()
     # interp.dump_gluon_induced()
-    interp.scale_quark_induced()
+    interp.dump_quark_induced_scaled()
+    # interp.dump_summed_quark_gluon_induced()
 
 
 @flag_as_option

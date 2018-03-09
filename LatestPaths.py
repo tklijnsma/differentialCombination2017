@@ -52,6 +52,17 @@ theory.top.filedir = 'out/derivedTheoryFiles_Dec07_TopHighPt'
 theory.top.correlation_matrix = 'out/correlationMatrices_Nov24_Top/corrMat_exp.txt'
 theory.top.uncertainties = 'out/correlationMatrices_Nov24_Top/errors_for_corrMat_exp.txt'
 
+# HIER VERDER
+# MAKE THIS NICE:
+
+# out/scalecorrelations_Mar09/corrMat_yukawa.txt
+# out/scalecorrelations_Mar09/errors_yukawa.txt
+
+# out/theories_Mar09_yukawa_gluoninduced
+# out/theories_Mar09_yukawa_quarkinduced
+# out/theories_Mar09_yukawa_quarkinduced_scaled
+# out/theories_Mar09_yukawa_summed
+
 
 # # ----- PTH -----
 # card_hgg_smH_PTH_unprocessed   = 'suppliedInput/fromVittorio/pT_NNLOPS_Nov01/Datacard_13TeV_differential_PtNNLOPS_systs.txt'

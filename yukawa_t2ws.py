@@ -33,6 +33,14 @@ datestr = strftime('%b%d')
 
 yukawa_exp_binning = [ 0., 15., 30., 45., 80., 120. ]
 
+@flag_as_option
+def make_theory_files_Yukawa(args):
+    interp = differentials.theory.kappabkappac_interpreter.KappabKappacInterpreter()
+    interp.dump_gluon_induced()
+    interp.dump_quark_induced()
+    interp.dump_quark_induced_scaled()
+    interp.dump_summed_quark_gluon_induced()
+
 
 def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
     t2ws = differentials.combine.t2ws.T2WS(get_nominal_card_Yukawa(args))

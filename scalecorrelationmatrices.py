@@ -35,7 +35,7 @@ import TheoryCommands
 ########################################
 
 top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600., 10000 ]
-
+yukawa_exp_binning = [0.0, 15., 30., 45., 80., 120.]
 
 
 @flag_as_option
@@ -71,3 +71,27 @@ def top_scalecorrelations(args):
     scalecorrelation.write_correlation_matrix_to_file('tophighpt')
     scalecorrelation.write_errors_to_file('tophighpt')
 
+@flag_as_option
+def yukawa_scalecorrelations(args):
+
+    variations = differentials.theory.theory_utils.FileFinder(
+        kappab=1.0, kappac=1.0,
+        directory='out/theories_Mar09_yukawa_summed/'
+        ).get()
+    sm = [v for v in variations if v.muR==1.0 and v.muF==1.0 and v.Q==1.0][0]
+    # variations.pop(variations.index(sm))
+
+    scalecorrelation = differentials.theory.scalecorrelation.ScaleCorrelation()
+    scalecorrelation.set_bin_boundaries(yukawa_exp_binning, add_overflow=False)
+
+    for variation in variations:
+        scalecorrelation.add_variation(
+            TheoryCommands.Rebin(variation.binBoundaries, variation.crosssection, yukawa_exp_binning),
+            {},
+            is_central=(variation is sm),
+            )
+
+    scalecorrelation.plot_correlation_matrix('yukawa')
+    scalecorrelation.make_scatter_plots(subdir='scatterplots_yukawa')
+    scalecorrelation.write_correlation_matrix_to_file('yukawa')
+    scalecorrelation.write_errors_to_file('yukawa')

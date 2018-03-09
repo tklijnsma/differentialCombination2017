@@ -345,7 +345,7 @@ def GetIntegral( binBoundaries, binValues ):
     # linearInterpolate = lambda a, x1, x2, y1, y2: \
     #     y1 + ( a - x1 ) / ( x2 - x1 ) * ( y2 - y1 )
 
-    def integralfunction( a, b, verbose=False ):
+    def integralfunction( a, b, verbose=True ):
 
         if verbose: print '\n\nInterpolation function called with a = {0} and b = {1} (defined range: {2} to {3})'.format( a, b, binBoundaries[0], binBoundaries[-1] )
 
