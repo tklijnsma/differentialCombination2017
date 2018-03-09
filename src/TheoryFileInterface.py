@@ -364,8 +364,6 @@ def ScaleQuarkInduced(
     # (needed because mass effects need to be scaled)
 
     parametrization = Parametrization()
-
-
     parametrization.SetSM( qI_SM )
     parametrization.ParametrizeByFitting( qI_containers, fitWithScipy=True )
 
