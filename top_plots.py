@@ -9,6 +9,7 @@ Thomas Klijnsma
 
 from OptionHandler import flag_as_option
 
+import copy
 import LatestPaths
 import LatestPathsGetters
 import LatestBinning
@@ -24,6 +25,53 @@ datestr = strftime( '%b%d' )
 
 x_coupling = 'ct'
 y_coupling = 'cg'
+
+
+@flag_as_option
+def multicont_Top_chi2XC(real_args):
+    args = copy.deepcopy(real_args)
+    args.asimov = True
+    scans = []
+
+    combination_lastBinDroppedHgg = differentials.scans.Scan2D('combination_lastBinDroppedHgg', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar07_Top_combination_asimov_5'
+        )
+    combination_lastBinDroppedHgg.color = 1
+    combination_lastBinDroppedHgg.title = 'Old combination'
+    combination_lastBinDroppedHgg.read()
+    scans.append(combination_lastBinDroppedHgg)
+
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar06_Top_combination_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combination'
+        )
+    combination.color = 2
+    combination.title = 'H#gamma#gamma new bins'
+    combination.read()
+    scans.append(combination)
+
+    combWithHbb_lastBinDroppedHgg = differentials.scans.Scan2D('combWithHbb_lastBinDroppedHgg', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar07_Top_combWithHbb_asimov'
+        )
+    combWithHbb_lastBinDroppedHgg.title = 'Hbb incl.'
+    combWithHbb_lastBinDroppedHgg.color = 4
+    combWithHbb_lastBinDroppedHgg.read()
+    scans.append(combWithHbb_lastBinDroppedHgg)
+
+    combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling,
+        scandir = 'out/Scan_Mar06_Top_combWithHbb_asimov'  if args.asimov else 'out/Scan_Mar03_Top_combWithHbb'
+        )
+    combWithHbb.title = 'Hgg new b. + Hbb'
+    combWithHbb.color = 8
+    combWithHbb.read()
+    scans.append(combWithHbb)
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Top_chi2XC' + ('_asimov' if args.asimov else ''),
+        scans,
+        x_min=None, x_max=None, y_min=None, y_max=None
+        )
+    plot.only_1sigma_contours = True
+    plot.draw()
 
 
 @flag_as_option
@@ -51,6 +99,8 @@ def multicont_Top_nominal(args):
     combWithHbb.read()
     scans.append(combWithHbb)
 
+
+    
 
     
     # hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,

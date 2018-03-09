@@ -130,6 +130,8 @@ class MultiContourPlot(PlotBase):
         self.y_max = y_max
 
         self.draw_individual_contours=True
+        self.only_1sigma_contours=False
+
         self.x_SM = 1.0
         self.y_SM = 1.0
 
@@ -155,7 +157,10 @@ class MultiContourPlot(PlotBase):
         for scan in self.scans:
             histogram2D = scan.to_hist()
             histogram2D._legend = self.legend
-            histogram2D.Draw('repr_contours')
+            if self.only_1sigma_contours:
+                histogram2D.Draw('repr_1sigma_contours_with_bestfit')
+            else:
+                histogram2D.Draw('repr_contours')
             self.histograms.append(histogram2D)
 
         self.legend.Draw()
