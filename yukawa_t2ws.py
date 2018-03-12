@@ -72,23 +72,10 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
         .format(','.join([str(b) for b in obs.binning]))
         )
 
-    if apply_reweighting:
-        crosssections = obs.crosssection()
-        crosssections_str = ','.join([str(v) for v in crosssections])
-        t2ws.extra_options.append('--PO ReweightCrossSections={0}'.format(crosssections_str))
-        t2ws.tags.append('reweighted')
-    if apply_theory_uncertainties:
-        add_theory_uncertainties(t2ws)
-    return t2ws
-
-def add_theory_uncertainties(t2ws, uncorrelated=False):
+    # Add the theory
     coupling_variations = FileFinder(
         muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.yukawa.filedir
         ).get()
-
-    print coupling_variations
-    for v in coupling_variations:
-        print v
 
     sm = [ v for v in coupling_variations if v.kappab==1.0 and v.kappac==1.0 ][0]
     coupling_variations.pop(coupling_variations.index(sm))
@@ -101,11 +88,21 @@ def add_theory_uncertainties(t2ws, uncorrelated=False):
             .format(variation.kappab, variation.kappac, variation.theory_file)
             )
 
+    if apply_reweighting:
+        crosssections = obs.crosssection()
+        crosssections_str = ','.join([str(v) for v in crosssections])
+        t2ws.extra_options.append('--PO ReweightCrossSections={0}'.format(crosssections_str))
+        t2ws.tags.append('reweighted')
+    if apply_theory_uncertainties:
+        add_theory_uncertainties(t2ws)
+    return t2ws
+
+def add_theory_uncertainties(t2ws, uncorrelated=False):
     # Theory uncertainties
     correlation_matrix   = LatestPaths.theory.yukawa.correlation_matrix
     theory_uncertainties = LatestPaths.theory.yukawa.uncertainties
     if uncorrelated:
-        correlation_matrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated # Uncorrelated
+        correlation_matrix = LatestPaths.theory.yukawa.correlation_matrix_uncorrelated
         t2ws.tags.append('uncorrelatedTheoryUnc')
 
     t2ws.extra_options.append('--PO correlationMatrix={0}'.format(correlation_matrix))
@@ -174,10 +171,11 @@ def all_t2ws_Yukawa(args_original):
         t2ws_Yukawa_noTheoryUnc,
         t2ws_Yukawa_uncorrelatedTheoryUnc,
         t2ws_Yukawa_lumiScale,
-        t2ws_Yukawa_BRcouplingDependency,
         t2ws_Yukawa_profiledTotalXS,
-        t2ws_Yukawa_fitRatioOfBRs,
-        t2ws_Yukawa_fitOnlyNormalization,
+        # 
+        # t2ws_Yukawa_BRcouplingDependency,
+        # t2ws_Yukawa_fitRatioOfBRs,
+        # t2ws_Yukawa_fitOnlyNormalization,
         ]
     for fn in fns:
         try_call_function_with_args(fn, args)
@@ -198,6 +196,13 @@ def t2ws_Yukawa_nominal(args):
     t2ws.run()
 
 @flag_as_option
+def t2ws_Yukawa_noReweighting(args):
+    t2ws = base_t2ws(args, apply_reweighting=False)
+    t2ws.tags.append('nominal')
+    t2ws.run()
+
+
+@flag_as_option
 def t2ws_Yukawa_noTheoryUnc(args):
     t2ws = base_t2ws(args, apply_theory_uncertainties=False)
     t2ws.tags.append('noTheoryUnc')
@@ -207,7 +212,6 @@ def t2ws_Yukawa_noTheoryUnc(args):
 def t2ws_Yukawa_uncorrelatedTheoryUnc(args):
     t2ws = base_t2ws(args, apply_theory_uncertainties=False)
     add_theory_uncertainties(t2ws, uncorrelated=True)
-    t2ws.tags.append('uncorrelatedTheoryUnc')
     t2ws.run()
 
 @flag_as_option
@@ -215,6 +219,22 @@ def t2ws_Yukawa_lumiScale(args):
     t2ws = base_t2ws(args)
     t2ws.tags.append('lumiScale')
     t2ws.extra_options.append('--PO lumiScale=True')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_profiledTotalXS(args):
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('profiledTotalXS')
+    t2ws.extra_options.append('--PO ProfileTotalXS=True')
+    t2ws.run()
+
+
+@flag_as_option
+def t2ws_Yukawa_fitOnlyNormalization(args):
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('fitOnlyNormalization')
+    add_theory_uncertainties(t2ws)
+    t2ws.extra_options.append('--PO FitOnlyNormalization=True')
     t2ws.run()
 
 @flag_as_option
@@ -229,25 +249,10 @@ def t2ws_Yukawa_BRcouplingDependency(args):
     t2ws.run()
 
 @flag_as_option
-def t2ws_Yukawa_profiledTotalXS(args):
-    t2ws = base_t2ws(args)
-    t2ws.tags.append('profiledTotalXS')
-    t2ws.extra_options.append('--PO ProfileTotalXS=True')
-    t2ws.run()
-
-@flag_as_option
 def t2ws_Yukawa_fitRatioOfBRs(args):
     t2ws = base_t2ws(args)
     t2ws.tags.append('fitRatioOfBRs')
     t2ws.extra_options.append('--PO FitRatioOfBRs=True')
-    t2ws.run()
-
-@flag_as_option
-def t2ws_Yukawa_fitOnlyNormalization(args):
-    t2ws = base_t2ws(args)
-    t2ws.tags.append('fitOnlyNormalization')
-    add_theory_uncertainties(t2ws)
-    t2ws.extra_options.append('--PO FitOnlyNormalization=True')
     t2ws.run()
 
 

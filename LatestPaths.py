@@ -27,6 +27,10 @@ card.yukawa.hgg = 'suppliedInput/Yukawa_hgg_pth_ggH_Mar08.txt'
 card.yukawa.hzz = 'suppliedInput/Yukawa_hzz_pth_ggH_Mar08.txt'
 card.yukawa.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt'
 
+card.top = AttrDict()
+card.top.combWithHbb_last2BinsDropped = 'suppliedInput/Top_combWithHbb_pth_ggH_Mar12_last2BinsDropped.txt'
+
+
 #____________________________________________________________________
 # Workspaces
 
@@ -44,6 +48,26 @@ ws.top.nominal.combWithHbb = 'out/workspaces_Mar03/combWithHbb_Top_reweighted_no
 ws.top.nominal.hgg = 'out/workspaces_Mar03/hgg_Top_reweighted_nominal.root'
 ws.top.nominal.hzz = 'out/workspaces_Mar03/hzz_Top_reweighted_nominal.root'
 
+ws.top.last2BinsDropped = AttrDict()
+ws.top.last2BinsDropped.combWithHbb = 'out/workspaces_Mar12/combWithHbb_Top_reweighted_last2BinsDropped.root'
+
+
+ws.yukawa = AttrDict()
+
+ws.yukawa.nominal = AttrDict()
+ws.yukawa.nominal.combination = 'out/workspaces_Mar09/combination_Yukawa_reweighted_nominal.root'
+ws.yukawa.nominal.hgg = 'out/workspaces_Mar09/hgg_Yukawa_reweighted_nominal.root'
+
+ws.yukawa.unreweighted = AttrDict()
+ws.yukawa.unreweighted.combination = 'out/workspaces_Mar09/combination_Yukawa_nominal.root'
+ws.yukawa.unreweighted.hgg = 'out/workspaces_Mar09/hgg_Yukawa_nominal.root'
+
+ws.yukawa.lumiScale = 'out/workspaces_Mar12/combination_Yukawa_reweighted_lumiScale.root'
+ws.yukawa.noTheoryUnc = 'out/workspaces_Mar12/combination_Yukawa_reweighted_noTheoryUnc.root'
+ws.yukawa.profiledTotalXS = 'out/workspaces_Mar12/combination_Yukawa_reweighted_profiledTotalXS.root'
+ws.yukawa.uncorrelatedTheoryUnc = 'out/workspaces_Mar12/combination_Yukawa_reweighted_uncorrelatedTheoryUnc.root'
+
+
 #____________________________________________________________________
 # Theory
 
@@ -55,6 +79,7 @@ theory.top.uncertainties = 'out/correlationMatrices_Nov24_Top/errors_for_corrMat
 theory.yukawa = AttrDict()
 theory.yukawa.filedir = 'out/theories_Mar09_yukawa_summed'
 theory.yukawa.correlation_matrix = 'out/scalecorrelations_Mar09/corrMat_yukawa.txt'
+theory.yukawa.correlation_matrix_uncorrelated = 'out/scalecorrelations_Mar09/corrMat_yukawa_uncorrelated.txt'
 theory.yukawa.uncertainties = 'out/scalecorrelations_Mar09/errors_yukawa.txt'
 
 theory.yukawa.filedir_gluoninduced = 'out/theories_Mar09_yukawa_gluoninduced'

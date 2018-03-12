@@ -86,6 +86,8 @@ def main():
         'debug',
         # 
         'scalecorrelationmatrices',
+        'crosschecks',
+        'correlationmatrices',
         ])
 
     args = parser.parse_args()

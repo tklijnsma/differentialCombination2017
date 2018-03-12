@@ -52,6 +52,11 @@ def basic_config(args, hurry=False):
     config.deltaNLLCutOff = 70.
     return config
 
+def set_combination_and_asimov(real_args):
+    args = copy.deepcopy(real_args)
+    args.asimov = True
+    differentialutils.set_one_decay_channel(args, 'combination')
+    return args
 
 @flag_as_option
 def all_scans_Yukawa(args_original):
@@ -80,32 +85,30 @@ def all_scans_Yukawa(args_original):
         differentialutils.try_call_function_with_args(fn, args)
 
 
+
 @flag_as_option
 def scan_yukawa(args):
     config = basic_config(args)
-    config.datacard = nominal_datacard(args)
+    if args.combination:
+        config.datacard = 'out/workspaces_Mar09/combination_Yukawa_reweighted_nominal.root'
+    elif args.hgg:
+        config.datacard = 'out/workspaces_Mar09/hgg_Yukawa_reweighted_nominal.root'
     differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
-def scan_yukawa_uncorrelatedTheoryUnc(args):
+def scan_yukawa_unreweighted(args):
     config = basic_config(args)
-    config.datacard = 'out/workspaces_Feb23/combination_Yukawa_reweighted_uncorrelatedTheoryUnc_uncorrelatedTheoryUnc.root'
-    config.subDirectory += '_uncorrelatedTheoryUnc'
-    differentialutils.run_postfit_fastscan_scan(config)
-
-@flag_as_option
-def scan_yukawa_fitOnlyNormalization(args):
-    config = basic_config(args)
-    config.datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization
-    config.subDirectory += '_fitOnlyNormalization'
+    if args.combination:
+        config.datacard = 'out/workspaces_Mar09/combination_Yukawa_nominal.root'
+    elif args.hgg:
+        config.datacard = 'out/workspaces_Mar09/hgg_Yukawa_nominal.root'
     differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
 def scan_yukawa_oneKappa(args):
     for kappa in ['kappac', 'kappab']:
         config = basic_config(args)
-        config.datacard = nominal_datacard(args)
-
+        config.datacard = LatestPaths.ws.yukawa.nominal[config.decay_channel]
         config.nPoints       = 72
         config.nPointsPerJob = 3
         config.queue         = 'short.q'
@@ -113,51 +116,72 @@ def scan_yukawa_oneKappa(args):
 
         otherKappa = { 'kappab' : 'kappac', 'kappac' : 'kappab' }[kappa]
         config.floatNuisances.append(otherKappa)
-        config.subDirectory += '_oneKappa_' + kappa
+        config.tags.append('oneKappa_' + kappa)
 
         if args.lumiScale:
             config.datacard = 'out/workspaces_Feb12/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
-            config.subDirectory += '_lumiStudy'
             config.freezeNuisances.append('lumiScale')
+            config.tags.append('lumi300fb')
             config.hardPhysicsModelParameters.append( 'lumiScale=8.356546' )
-        scan_directly(config)
+
+        # differentialutils.scan_directly(config)
+        differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
-def scan_yukawa_lumiScale(args):
-    assert_asimov(args)
+def scan_yukawa_uncorrelatedTheoryUnc(real_args):
+    args = set_combination_and_asimov(real_args)
     config = basic_config(args)
-    # config.datacard = LatestPaths.ws_combined_Yukawa_lumiScalable
-    # config.datacard = 'out/workspaces_Feb12/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
-    config.datacard = 'out/workspaces_Feb23/combination_Yukawa_reweighted_lumiScale.root'
+    config.datacard = LatestPaths.ws.yukawa.uncorrelatedTheoryUnc
+    config.tags.append('uncorrelatedTheoryUnc')
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_yukawa_noTheoryUnc(real_args):
+    args = set_combination_and_asimov(real_args)
+    config = basic_config(args)
+    config.datacard = LatestPaths.ws.yukawa.noTheoryUnc
+    config.tags.append('noTheoryUnc')
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_yukawa_profiledTotalXS(real_args):
+    args = set_combination_and_asimov(real_args)
+    config = basic_config(args)
+    # config.datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS
+    config.datacard = LatestPaths.ws.yukawa.profiledTotalXS
+    config.tags.append('profiledTotalXS')
+    config.nPoints = 60*60
+    config.nPointsPerJob = 15
+    config.deltaNLLCutOff = 120.
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_yukawa_lumiScale(real_args):
+    args = set_combination_and_asimov(real_args)
+    config = basic_config(args)
+    config.datacard = LatestPaths.ws.yukawa.lumiScale
     config.freezeNuisances.append('lumiScale')
     config.hardPhysicsModelParameters.append( 'lumiScale=8.356546' )
-    config.subDirectory += '_lumiStudy'
+    config.tags.append('lumi300fb')
     # config.hardPhysicsModelParameters.append( 'lumiScale=83.56546' )
-    # config.subDirectory += '_lumiStudy3000fb'
+    # config.tags.append('lumi3000fb')
     differentialutils.run_postfit_fastscan_scan(config)
 
+
+# Need reimplementation in the model
+
 @flag_as_option
-def scan_yukawa_BRdependent(args):
-    assert_asimov(args)
+def scan_yukawa_fitOnlyNormalization(real_args):
+    args = set_combination_and_asimov(real_args)
     config = basic_config(args)
-    # config.datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR
-    config.datacard = 'out/workspaces_Feb23/combination_Yukawa_reweighted_BRcouplingDependency.root'
-    config.subDirectory += '_couplingDependentBR'
-   
-    config.PhysicsModelParameters.append('kappa_V=0.999')
-
-    # config.freezeNuisances.append('kappa_V')
-
-    config.floatNuisances.append('kappa_V')
-    config.PhysicsModelParameterRanges.append('kappa_V=-1000.0:1.0')
-    config.subDirectory += '_floatKappaV'
-
+    config.datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS_fitOnlyNormalization
+    config.tags.append('fitOnlyNormalization')
     differentialutils.run_postfit_fastscan_scan(config)
 
 
 @flag_as_option
-def scan_yukawa_BRdependent_and_profiledTotalXS(args):
-    assert_asimov(args)
+def scan_yukawa_BRdependent_and_profiledTotalXS(real_args):
+    args = set_combination_and_asimov(real_args)
     config = basic_config(args)
     config.datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR_profiledTotalXS
     config.subDirectory += '_couplingDependentBR_profiledTotalXS'
@@ -165,14 +189,18 @@ def scan_yukawa_BRdependent_and_profiledTotalXS(args):
     differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
-def scan_yukawa_profiledTotalXS(args):
-    assert_asimov(args)
+def scan_yukawa_BRdependent(real_args):
+    args = set_combination_and_asimov(real_args)
     config = basic_config(args)
-    # config.datacard = LatestPaths.ws_combined_Yukawa_profiledTotalXS
-    config.datacard = 'out/workspaces_Feb23/combination_Yukawa_reweighted_profiledTotalXS.root'
-    config.subDirectory += '_profiledTotalXS'
-    config.nPoints = 60*60
-    config.nPointsPerJob = 15
-    config.deltaNLLCutOff = 120.
+    # config.datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR
+    config.datacard = 'out/workspaces_Feb23/combination_Yukawa_reweighted_BRcouplingDependency.root'
+    config.subDirectory += '_couplingDependentBR'
+    config.PhysicsModelParameters.append('kappa_V=0.999')
+
+    # config.freezeNuisances.append('kappa_V')
+    config.floatNuisances.append('kappa_V')
+    config.PhysicsModelParameterRanges.append('kappa_V=-1000.0:1.0')
+    config.subDirectory += '_floatKappaV'
+
     differentialutils.run_postfit_fastscan_scan(config)
 

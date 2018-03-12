@@ -35,6 +35,21 @@ datestr = strftime('%b%d')
 ########################################
 
 @flag_as_option
+def debug_test_setreading(args):
+    ws = LatestPaths.ws.yukawa.nominal.combination
+    differentials.core.read_set(ws, 'SMXS')
+    differentials.core.read_set(ws, 'reweightors')
+
+
+@flag_as_option
+def debug_test_integrator(args):
+    bin_boundaries = [ 0., 5., 10., 15., 20., 25., 30. ]
+    bin_values = [1.0 for i in xrange(len(bin_boundaries)-1)]
+    integral = differentials.integral.Integrator(bin_boundaries, bin_values)
+    integral.integral(7., 23.)
+
+
+@flag_as_option
 def debug_test_kappabkappac_files(args):
     interp = differentials.theory.kappabkappac_interpreter.KappabKappacInterpreter()
     # interp.dump_gluon_induced()

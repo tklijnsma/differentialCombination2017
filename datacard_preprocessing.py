@@ -155,6 +155,35 @@ def combine_cards_Yukawa(args):
         drop_pdfindices(out_card, hgg_cat_pats)
 
 
+@flag_as_option
+def combine_cards_Top_last2BinsDropped(args):
+    hgg_cat_pats = [
+        'recoPt_350p0_600p0',
+        'recoPt_600p0_10000p0',
+        ]
+
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+    out_card = 'suppliedInput/Top_{0}_pth_ggH_{1}_last2BinsDropped.txt'.format(
+            decay_channel, core.datestr()
+            )
+
+    cmd = []
+    if args.combWithHbb or args.combination or args.hgg:
+        cmd.append('hgg=' + LatestPaths.card.pth_ggH.hgg)
+        for cat_pat in hgg_cat_pats:
+            cmd.append('--xc={0}.*'.format(cat_pat))
+    if args.combWithHbb or args.hbb:
+        cmd.append('hbb=' + LatestPaths.card.pth_ggH.hbb)
+    if args.combWithHbb or args.combination or args.hzz:
+        cmd.append('hzz=' + LatestPaths.card.pth_ggH.hzz)
+
+    combine_cards(out_card, *cmd)
+
+    # Have to manually remove the 
+    if args.combWithHbb or args.combination or args.hgg:
+        drop_pdfindices(out_card, hgg_cat_pats)
+
+
 #____________________________________________________________________
 # Helper functions
 

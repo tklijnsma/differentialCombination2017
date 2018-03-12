@@ -2,6 +2,8 @@ import logger
 import core
 import scans
 import parametrization
+import integral
+import pdffreezer
 
 # Sub-packages
 import plotting

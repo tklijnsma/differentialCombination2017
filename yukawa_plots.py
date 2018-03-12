@@ -57,6 +57,54 @@ def get_nominal(args):
         return nominal_scans
 
 
+@flag_as_option
+def multicont_Yukawa_Mar09(args):
+    multicont_Yukawa_Mar09_reweighted(args)
+    multicont_Yukawa_Mar09_unreweighted(args)
+
+@flag_as_option
+def multicont_Yukawa_Mar09_reweighted(args):
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
+        scandir = 'out/Scan_Yukawa_Mar09_combination_asimov' if args.asimov else 'out/Scan_Yukawa_Mar09_combination'
+        )
+    combination.color = 1
+    combination.read()
+    
+    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
+        scandir = 'out/Scan_Yukawa_Mar09_hgg_asimov' if args.asimov else 'out/Scan_Yukawa_Mar09_hgg'
+        )
+    hgg.color = 2
+    hgg.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_Mar09_reweighted' + ('_asimov' if args.asimov else ''),
+        [combination, hgg],
+        x_min=-25, x_max=25, y_min=-9, y_max=12
+        )
+    plot.draw()
+
+@flag_as_option
+def multicont_Yukawa_Mar09_unreweighted(args):
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
+        scandir = 'out/Scan_Yukawa_Mar09_combination_asimov_0' if args.asimov else 'out/Scan_Yukawa_Mar09_combination_0'
+        )
+    combination.color = 1
+    combination.read()
+    
+    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
+        scandir = 'out/Scan_Yukawa_Mar09_hgg_asimov_0' if args.asimov else 'out/Scan_Yukawa_Mar09_hgg_0'
+        )
+    hgg.color = 2
+    hgg.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_Mar09_unreweighted' + ('_asimov' if args.asimov else ''),
+        [combination, hgg],
+        x_min=-25, x_max=25, y_min=-9, y_max=12
+        )
+    plot.draw()
+
+
 
 @flag_as_option
 def multicont_Yukawa_nominal(args):

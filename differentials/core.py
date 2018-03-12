@@ -1,4 +1,4 @@
-import os, re, random, copy, glob
+import os, re, random, copy, glob, sys
 from os.path import *
 from datetime import datetime
 import traceback
@@ -230,6 +230,51 @@ def list_POIs(root_file, only_r_=True):
     return par_names
 
 
+def get_ws(root_file, wsname = 'w'):
+    with openroot(root_file) as root_fp:
+        w = root_fp.Get(wsname)
+    if w == None:
+        raise ValueError('Workspace \'{0}\' does not exist in {1}'.format(wsname, root_file))
+    return w
+
+def read_set(root_file, setname, return_names=True):
+    if isinstance(root_file, ROOT.RooWorkspace):
+        w = root_file
+    else:
+        w = get_ws(root_file)
+    if not set_exists(w, setname):
+        return []
+    argset = w.set(setname)
+    arglist = ROOT.RooArgList(argset)
+
+    names = []
+    objs = []
+    for i in xrange(arglist.getSize()):
+        obj = arglist[i]
+        obj_name = obj.GetName()
+        names.append(obj_name)
+        objs.append(obj)
+    logging.debug('Found the following object names in set {0}: {1}'.format(setname, names))
+
+    if return_names:
+        return names
+    else:
+        return objs
+
+
+def set_exists(root_file, setname):
+    if isinstance(root_file, ROOT.RooWorkspace):
+        w = root_file
+    else:
+        w = get_ws(root_file)
+    s = w.set(setname)
+    if s == None:
+        logging.info('Set {0} does not exist in {1}'.format(setname, root_file))
+        return False
+    else:
+        return True
+
+
 def last_bin_is_overflow(POIs):
     """Checks if the last bin is an overflow bin. Assumes POIs are pre-sorted"""
     left, right = get_range_from_str(POIs[-1])
@@ -361,3 +406,47 @@ class RedirectStdout():
                 os.write(fileno(self.copied_stdout), text + '\n')
             else:
                 os.write(fileno(self.stdout_fd), text + '\n')
+
+
+
+class enterdirectory():
+    """Context manager to (create and) go into and out of a directory"""
+
+    def __init__(self, subdirectory=None, verbose=True):
+        self.verbose = verbose
+        self._active = False
+        if not subdirectory is None and not subdirectory == '':
+            self._active = True
+            self.backdir = os.getcwd()
+            self.subdirectory = subdirectory
+
+    def __enter__(self):
+        if self._active:
+            logging.info('Would now create/go into \'{0}\''.format(self.subdirectory))
+            if not isdir( self.subdirectory ):
+                logging.info('Creating \'{0}\''.format(relpath(self.subdirectory, self.backdir)))
+                if not is_testmode(): os.makedirs( self.subdirectory )
+            logging.info('Entering \'{0}\''.format(relpath(self.subdirectory, self.backdir)))
+            if not is_testmode(): os.chdir(self.subdirectory)
+        return self
+
+    def __exit__(self, *args):
+        if self._active:
+            os.chdir(self.backdir)
+
+
+def make_unique_directory(dirname, n_attempts = 100):
+    dirname = abspath(dirname)
+    if not isdir(dirname):
+        return dirname
+
+    dirname += '_{0}'
+    for iAttempt in xrange(n_attempts):
+        if not isdir( dirname.format(iAttempt) ):
+            dirname = dirname.format(iAttempt)
+            break
+    else:
+        raise RuntimeError('Could not create a unique directory for {0}'.format(dirname.format('X')))
+
+    logging.info('Uniquified directory: {0}'.format(dirname))
+    return dirname

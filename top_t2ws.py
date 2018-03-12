@@ -14,6 +14,7 @@ import LatestPathsGetters
 import LatestBinning
 
 import differentials
+import differentialutils
 
 import logging
 import copy
@@ -38,7 +39,7 @@ top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600. ]
 
 
 def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, drop_last_bin=False):
-    decay_channel = differentials.core.get_decay_channel_tag(args)
+    decay_channel = differentialutils.get_decay_channel_tag(args)
     card = LatestPaths.card.pth_ggH[decay_channel]
     t2ws = differentials.combine.t2ws.T2WS(card)
     t2ws.model_file = 'physicsModels/CouplingModel.py'
@@ -157,6 +158,18 @@ def t2ws_Top_lastBinDroppedHgg(args):
         raise NotImplementedError('Use --combination or --combWithHbb')
     t2ws.tags.append('lastBinDroppedHgg')
     t2ws.run()
+
+
+@flag_as_option
+def t2ws_Top_last2BinsDropped(args):
+    t2ws = base_t2ws(args)
+    if args.combWithHbb:
+        t2ws.card = LatestPaths.card.top.combWithHbb_last2BinsDropped
+    else:
+        raise NotImplementedError('Use --combination or --combWithHbb')
+    t2ws.tags.append('last2BinsDropped')
+    t2ws.run()
+
 
 @flag_as_option
 def t2ws_Top_unreweighted(args):

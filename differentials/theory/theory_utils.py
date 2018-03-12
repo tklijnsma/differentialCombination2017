@@ -1,4 +1,7 @@
-import glob
+import glob, copy
+
+import logging
+import differentials
 import differentials.core as core
 
 def read_theory_file(theory_file):
@@ -21,6 +24,22 @@ def read_theory_file(theory_file):
     d['theory_file'] = theory_file
     return core.AttrDict(**d)
 
+def rebin_theory(theory, bin_boundaries):
+    rebinner = differentials.integral.Rebinner(
+        bin_boundaries_old = theory.binBoundaries,
+        values_old         = theory.crosssection,
+        bin_boundaries_new = bin_boundaries
+        )
+    crosssection_integrated = rebinner.rebin()
+    widths = [ r-l for l,r in zip(bin_boundaries[:-1], bin_boundaries[1:])]
+    crosssection_per_GeV = [ xs / width for xs, width in zip(crosssection_integrated, widths) ]
+
+    rebinned_theory = copy.deepcopy(theory)
+    rebinned_theory.binBoundaries = bin_boundaries
+    rebinned_theory.crosssection = crosssection_per_GeV
+    rebinned_theory.crosssection_integrated = crosssection_integrated
+    logging.warning('Theory is rebinned, but lists for binCenters and ratios are not changed')
+    return rebinned_theory
 
 class FileFinder(object):
     def __init__(self, **kwargs):
@@ -44,3 +63,15 @@ class FileFinder(object):
                 accepted_theories.append(theory)
 
         return accepted_theories
+
+    def get_one(self):
+        theories = self.get()
+        if len(theories) == 0:
+            raise RuntimeError('Explicitily requested one file to be returned, but found zero.')
+        elif len(theories) > 1:
+            raise RuntimeError(
+                'Explicitily requested one file to be returned, '
+                'but found {0}:\n{1}'
+                .format(len(theories), '\n'.join([t.path for t in theories]))
+                )
+        return theories[0]

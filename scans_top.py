@@ -36,14 +36,13 @@ def basic_config(args, hurry=False):
     else:
         config.asimov = False
 
-    config.decay_channel = differentialTools.get_decay_channel_tag(args)
+    config.decay_channel = differentialutils.get_decay_channel_tag(args)
 
     if args.combWithHbb or args.hbb:
         # raise NotImplementedError(
         #     'combWithHbb and hbb need workspaces with new binning first.'
         #     )
-        config.default_minimizer_settings = False
-        config.extraOptions.extend([
+        config.minimizer_settings.extend([
             '--minimizerStrategy 2',
             '--minimizerTolerance 0.001',
             '--robustFit 1',
@@ -118,6 +117,22 @@ def scan_top(args):
     config = basic_config(args)
     config.datacard = LatestPaths.ws.top.nominal[differentials.core.get_decay_channel_tag(args)]
     differentialutils.run_postfit_fastscan_scan(config)
+
+
+
+@flag_as_option
+def scan_top_last2BinsDropped(real_args):
+    args = deepcopy(real_args)
+    args.asimov = True
+    config = basic_config(args)
+    if args.combWithHbb:
+        config.datacard = LatestPaths.ws.top.last2BinsDropped.combWithHbb
+    else:
+        raise NotImplementedError('Run with --combination or --combWithHbb')
+    config.tags.append('last2BinsDropped')
+    config.nPoints = 150*150
+    differentialutils.run_postfit_fastscan_scan(config)
+
 
 @flag_as_option
 def scan_top_lastBinDropped(real_args):

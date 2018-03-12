@@ -11,57 +11,39 @@ import os, tempfile, shutil, re, subprocess, sys, traceback
 from os.path import *
 from copy import deepcopy, copy
 from glob import glob
-import tempfile
-
 from time import strftime
-datestr = strftime( '%b%d' )
 
-from Container import Container
-
-import ROOT
-
-
-import Commands
-
-import PlotCommands
-
-import TheoryCommands
-from TheoryCommands import c
-from TheoryCommands import SetCMargins
-from TheoryCommands import SetPlotDir
-from TheoryCommands import SaveAsRoot
-from TheoryCommands import SaveC
-from TheoryCommands import GetUniqueRootName
-from TheoryCommands import GetPlotBase
-
+import logging
+import differentials
+import differentials.core as core
 
 
 ########################################
 # Main
 ########################################
 
-#____________________________________________________________________
-class CombineConfig(Container):
-
-    SQUARE_DIST_POI_STEP              = True
-    FLOAT_OTHER_POIS                  = True
-    ALGO                              = 'grid'
-    SAVE_WORKSPACE                    = False
-
-    # Very basic, unlikely to ever change
-    METHOD                            = 'MultiDimFit'
-    DEFAULT_MASS                      = 125.
-    SAVE_NLL                          = True
-    SAVE_INACTIVE_POI                 = True
-
-    # Default settings for jobs
-    fromPostfit                       = False
-    onBatch                           = True
-    queue                             = 'all.q'
-    jobPriority                       = 0
+class CombineConfig(object):
 
     def __init__(self, args, *otherargs, **kwargs):
-        super(CombineConfig, self).__init__(*otherargs, **kwargs)
+        super(CombineConfig, self).__init__()
+
+        self.SQUARE_DIST_POI_STEP        = True
+        self.FLOAT_OTHER_POIS            = True
+        self.ALGO                        = 'grid'
+        self.SAVE_WORKSPACE              = False
+
+        # Very basic, unlikely to ever change
+        self.METHOD                      = 'MultiDimFit'
+        self.DEFAULT_MASS                = 125.
+        self.SAVE_NLL                    = True
+        self.SAVE_INACTIVE_POI           = True
+
+        # Default settings for jobs
+        self.fromPostfit                 = False
+        self.onBatch                     = True
+        self.queue                       = 'all.q'
+        self.jobPriority                 = 0
+
         self.datacard                    = 'somedatacard.root'
         self.subDirectory                = ''
 
@@ -97,7 +79,7 @@ class CombineConfig(Container):
             self.subDirectory += '_' + tag
         if self.asimov:
             self.subDirectory += '_asimov'
-        self.subDirectory = Commands.AppendNumberToDirNameUntilItDoesNotExistAnymore(self.subDirectory)
+        self.subDirectory = core.make_unique_directory(self.subDirectory)
 
     def get_name(self):
         return basename(self.datacard).replace('.root','')
@@ -109,13 +91,13 @@ class CombineConfig(Container):
 
 
 #____________________________________________________________________
-class BaseCombineScan(Container):
+class BaseCombineScan(object):
 
     debug = True
     verbose = True
 
     def __init__(self, config):
-        self.input = config
+        self.input = deepcopy(config)
 
         # Attributes that may need to be altered from call to call
         self.onBatch = self.input.onBatch
@@ -142,7 +124,7 @@ class BaseCombineScan(Container):
 
 
     def get_output(self):
-        with Commands.EnterDirectory(self.subDirectory, verbose=False):
+        with core.enterdirectory(self.subDirectory, verbose=False):
             output = 'higgsCombine{0}.{1}.mH{2}.root'.format(self.get_task_name(), self.input.METHOD, int(self.input.DEFAULT_MASS))
             output = abspath(output)
         return output
@@ -213,17 +195,19 @@ class BaseCombineScan(Container):
         if self.onBatch:
             if 't3' in os.environ['HOSTNAME']:
                 if not self.input.queue in [ 'all.q', 'long.q', 'short.q' ]:
-                    Commands.ThrowError( 'Queue \'{0}\' is not available on PSI'.format(self.input.queue) )
+                    raise RuntimeError('Queue \'{0}\' is not available on PSI'.format(self.input.queue))
                 if self.input.jobPriority != 0:
                     cmd.append(
-                        '--job-mode psi --task-name {0} --sub-opts=\'-q {1} -p {2}\' '.format( taskName, self.input.queue, self.input.jobPriority ),
+                        '--job-mode psi --task-name {0} --sub-opts=\'-q {1} -p {2}\' '
+                        .format( taskName, self.input.queue, self.input.jobPriority ),
                         )
                 else:
                     cmd.append(
-                        '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '.format( taskName, self.input.queue ),
+                        '--job-mode psi --task-name {0} --sub-opts=\'-q {1}\' '
+                        .format( taskName, self.input.queue ),
                         )
             else:
-                Commands.ThrowError( 'Only jobs submitted from T3 are implemented now' )
+                raise NotImplementedError( 'Only jobs submitted from T3 are implemented now' )
 
         # Do POIs, ranges, etc.
         cmd.extend(self.get_parameter_settings())
@@ -233,21 +217,22 @@ class BaseCombineScan(Container):
 
     def execute_command(self, cmd):
         if self.onBatch:
-            output = Commands.executeCommand(cmd, captureOutput=True)
-            print output
+            output = core.execute(cmd, capture_output=True)
+            logging.info('Output of cmd {0}'.format(cmd))
+            logging.info(output)
         else:
-            Commands.executeCommand(cmd)
+            core.execute(cmd)
             output = ''
         return output
 
     def run(self):
         cmd = self.parse_command()
-        with Commands.EnterDirectory(self.subDirectory):
+        with core.enterdirectory(self.subDirectory):
             output = self.execute_command(cmd)
         self.register_jobids_in_jobmanager(output)
 
     def register_jobids_in_jobmanager(self, submission_output):
-        if Commands.IsTestMode():
+        if core.is_testmode():
             print '[TESTMODE] Not writing any jobmanager files'
             return
         if not self.onBatch:
@@ -296,7 +281,10 @@ class CombinePostfit(BaseCombineScan):
         cmd = super(CombinePostfit, self).parse_command()
 
         if self.input.asimov and len(self.input.PhysicsModelParameters)==0:
-            Commands.ThrowError('PhysicsModelParameters *have* to be set when running asimov, or the best fit may make no sense')
+            raise ValueError(
+                'PhysicsModelParameters *have* to be set when running asimov, '
+                'or the best fit may make no sense'
+                )
 
         # For the postfit: Hard-coded saving the workspace
         cmd.append( '--saveWorkspace' )
@@ -308,7 +296,7 @@ class CombineOnlyPostfit(BaseCombineScan):
 
     def __init__(self, *args, **kwargs):
         super(CombineOnlyPostfit, self).__init__(*args, **kwargs)
-        self.subDirectory = 'out/postfits_{0}'.format(datestr)
+        self.subDirectory = 'out/postfits_{0}'.format(core.datestr())
         self.onBatch = True
 
     def get_task_name(self):
@@ -318,10 +306,48 @@ class CombineOnlyPostfit(BaseCombineScan):
         cmd = super(CombineOnlyPostfit, self).parse_command()
 
         if self.input.asimov and len(self.input.PhysicsModelParameters)==0:
-            Commands.ThrowError('PhysicsModelParameters *have* to be set when running asimov, or the best fit may make no sense')
+            raise ValueError(
+                'PhysicsModelParameters *have* to be set when running asimov, '
+                'or the best fit may make no sense'
+                )
 
         # For the postfit: Hard-coded saving the workspace
         cmd.append( '--saveWorkspace' )
+
+        return cmd
+
+#____________________________________________________________________
+class CombineCorrMat(BaseCombineScan):
+
+    def __init__(self, *args, **kwargs):
+        super(CombineCorrMat, self).__init__(*args, **kwargs)
+        self.subDirectory = 'out/corrmats_{0}'.format(core.datestr())
+
+    def get_task_name(self):
+        return '_CORRMAT_' + ( 'ASIMOV_' if self.input.asimov else '' ) + self.input.get_name()
+
+    def parse_command(self):
+        cmd = super(CombineCorrMat, self).parse_command()
+        if self.input.asimov and len(self.input.PhysicsModelParameters)==0:
+            raise ValueError(
+                'PhysicsModelParameters *have* to be set when running asimov, '
+                'or the best fit may make no sense'
+                )
+
+        if core.is_testmode():
+            pdf_vars_to_freeze = [ 'some', 'pdfs' ]
+        else:
+            # pdf_vars_to_freeze = ListOfPDFIndicesToFreeze( postfitFilename, verbose=False )
+            pdf_vars_to_freeze = differentials.pdffreezer.PDFFreezer(self.datacard).get_vars_to_freeze()
+
+        cmd.extend([
+            '--algo none',
+            '--snapshotName MultiDimFit',
+            '--saveWorkspace',
+            # '--skipInitialFit',
+            '--computeCovarianceMatrix=1',
+            '--freezeNuisances {0}'.format( ','.join(pdf_vars_to_freeze) ),
+            ])
 
         return cmd
 
@@ -341,7 +367,6 @@ class CombineScan(BaseCombineScan):
             '--split-points {0}'.format(self.nPointsPerJob)
             ])
         return cmd
-
 
 #____________________________________________________________________
 class CombineScanFromPostFit(BaseCombineScan):
@@ -434,7 +459,7 @@ class CombinePointwiseScan(BaseCombineScan):
         accepted_points = self.list_accepted_points(self.fastscanFile)
 
         submission_outputs = ''
-        with Commands.EnterDirectory(self.subDirectory):
+        with core.enterdirectory(self.subDirectory):
             for iChunk, chunk in enumerate(chunks(accepted_points, self.nPointsPerJob)):
                 print '\nJob', iChunk
                 self.extraOptions = _extraOptions + [ '--doPoints ' + ','.join([ str(i) for i in chunk ]) ]
@@ -448,18 +473,17 @@ class CombinePointwiseScan(BaseCombineScan):
     def list_accepted_points(self, fastscanFile):
 
         if not isfile(fastscanFile):
-            if Commands.IsTestMode():
+            if core.is_testmode():
                 self.print_info('[TESTMODE] No file \'{0}\'; Returning some bogus accepted points'.format(fastscanFile))
                 # return [ Container(iPoint=i) for i in xrange(2*self.nPointsPerJob) ]
                 return range(2*self.nPointsPerJob)
             else:
-                Commands.ThrowError( 'File \'{0}\' does not exist'.format(fastscanFile) )
+                raise ValueError('File \'{0}\' does not exist'.format(fastscanFile))
 
 
-        with Commands.OpenRootFile(fastscanFile) as fastscanFp:
-
+        with core.openroot(fastscanFile) as fastscanFp:
             if not fastscanFp.GetListOfKeys().Contains('limit'):
-                Commands.ThrowError( 'There is no tree \'limit\' in', fastscanFile )
+                raise ValueError('There is no tree \'limit\' in', fastscanFile)
 
             acceptedPoints = []
             rejectedPoints = []
