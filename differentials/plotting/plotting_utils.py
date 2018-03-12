@@ -43,6 +43,12 @@ def set_color_palette(option=None):
             reds   = [ 55./255.,  1.0, 1.0 ]
             greens = [ 138./255., 1.0, 26./255. ]
             blues  = [ 221./255., 1.0, 26./255. ]
+        elif option == 'correlation_matrix':
+            n_stops = 3
+            stops  = [ 0.0, 0.5, 1.0 ]
+            reds   = [ 0.0, 1.0, 1.0 ]
+            blues  = [ 1.0, 1.0, 0.0 ]
+            greens = [ 0.0, 1.0, 0.0 ]
         else:
             n_stops = 3
             stops  = [ 0.0, 0.3, 1.0 ]

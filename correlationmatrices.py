@@ -22,3 +22,12 @@ def corrmats_vittorio(args):
         config.datacard = bestfit
         corrmat = combine.CombineCorrMat(config)
         corrmat.run()
+
+
+@flag_as_option
+def plot_corrmats_vittorio(args):
+    corrmat_file = 'out/bestfits_Vittorio_Mar12/differential_PtNNLOPS_newBins_DataBestFit.root'
+
+    plot = differentials.plotting.plots_matrix.CorrelationMatrixPlot('vitttest', corrmat_file)
+
+    plot.draw()

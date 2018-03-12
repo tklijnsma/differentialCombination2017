@@ -9,4 +9,5 @@ import multipanel
 import pywrappers
 import plotting_utils
 import plots
+import plots_matrix
 import tables
