@@ -26,7 +26,7 @@ def corrmats_vittorio(args):
 
 @flag_as_option
 def plot_corrmats_vittorio(args):
-    corrmat_file = 'out/bestfits_Vittorio_Mar12/differential_PtNNLOPS_newBins_DataBestFit.root'
+    corrmat_file = 'out/corrmats_Mar12/higgsCombine_CORRMAT_differential_PtNNLOPS_newBins_DataBestFit.MultiDimFit.mH125.root'
 
     plot = differentials.plotting.plots_matrix.CorrelationMatrixPlot('vitttest', corrmat_file)
 
