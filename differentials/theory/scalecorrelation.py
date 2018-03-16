@@ -29,6 +29,7 @@ class ScaleCorrelation(object):
         self.variations = []
         self.do_wrt_central = False
         self.last_bin_is_overflow = False
+        self.tags = []
 
         self.outdir = None
         self.default_outdir = 'out/scalecorrelations_{0}'.format(core.datestr())
@@ -38,22 +39,23 @@ class ScaleCorrelation(object):
             outdir = self.default_outdir
         else:
             outdir = self.outdir
+        if outdir.endswith('/'): outdir = outdir[:-1]
+        if len(self.tags) > 0:
+            outdir += '_' + '_'.join(self.tags)
         if not core.is_testmode() and not os.path.isdir(outdir):
             os.makedirs(outdir)
         return outdir
 
-    def set_bin_boundaries(self, bin_boundaries, add_overflow=False):
+    def set_bin_boundaries(self, bin_boundaries):
         self.bin_boundaries = bin_boundaries
         logging.info('Bin boundaries set: {0}'.format(self.bin_boundaries))
-        if add_overflow:
-            self.n_bins = len(self.bin_boundaries)
-            self.last_bin_is_overflow = True
-            logging.info('Taking an overflow bin into account')
-        else:
-            self.n_bins = len(self.bin_boundaries)-1
+        self.n_bins = len(self.bin_boundaries)-1
 
     def add_variation(self, values, parameters, is_central=False):
-        self.variations.append(Variation(values, parameters, is_central))
+        variation = Variation(values, parameters, is_central)
+        self.variations.append(variation)
+        if is_central:
+            self.central_variation = variation
 
     def check_variation_consistency(self):
         # Check if passed variations make some sense
@@ -74,6 +76,9 @@ class ScaleCorrelation(object):
         else:
             bin_center = sum(self.get_values(i))/len(self.variations)
         return bin_center
+
+    def get_bin_width(self, i):
+        return self.bin_boundaries[i+1] - self.bin_boundaries[i]
 
     def get_values(self, i):
         return [ variation.values[i] for variation in self.variations ]
@@ -119,9 +124,11 @@ class ScaleCorrelation(object):
 
     def write_correlation_matrix_to_file(self, tag=None):
         corrMatrix = self.calculate_correlation_matrix()
-        outname = os.path.join( self.get_outdir(), 'corrMat' )
+        outname = os.path.join( self.get_outdir(), 'corrmat' )
         if not(tag is None):
             outname += '_' + tag
+        if len(self.tags) > 0:
+            outname += '_' + '_'.join(self.tags)
         outname += '.txt'
         with open(outname, 'w') as out_fp:
             out_fp.write('# ' + core.gittag()+'\n')
@@ -136,6 +143,8 @@ class ScaleCorrelation(object):
         outname = os.path.join( self.get_outdir(), 'errors' )
         if not(tag is None):
             outname += '_' + tag
+        if len(self.tags) > 0:
+            outname += '_' + '_'.join(self.tags)
         outname += '.txt'
         with open(outname, 'w') as out_fp:
             out_fp.write('# ' + core.gittag()+'\n')
@@ -143,6 +152,39 @@ class ScaleCorrelation(object):
             out_fp.write('# Up        Down\n')
             for up, down in errors:
                 out_fp.write('{0:+.8f} {1:+.8f}\n'.format( up, down ))
+
+    def write_errors_to_texfile(self, tag=None):
+        errors = self.calculate_errors()
+        outname = os.path.join( self.get_outdir(), 'errors' )
+        if not(tag is None):
+            outname += '_' + tag
+        if len(self.tags) > 0:
+            outname += '_' + '_'.join(self.tags)
+        outname += '.tex'
+
+        lines = []
+        bin_line = [ 'Bin boundaries (GeV)' ]
+        for i in xrange(self.n_bins):
+            left = self.bin_boundaries[i]
+            right = self.bin_boundaries[i+1]
+            s = '{0} to {1}'.format(int(left), int(right))
+            bin_line.append(s)
+        lines.append(bin_line)
+        down_line = [ '$\\Delta^\\text{scale}_-$ (pb)' ]
+        up_line   = [ '$\\Delta^\\text{scale}_+$ (pb)' ]
+        for i, (up, down) in enumerate(errors):
+            down = -abs(down)
+            center = self.get_bin_center(i) * self.get_bin_width(i) # Multiply by width for center in pb
+            down_line.append('{0:+.2f} ({1:+.1f}\\%)'.format(down, 100.*down/center))
+            up_line.append('{0:+.2f} ({1:+.1f}\\%)'.format(up, 100.*up/center))
+        lines.append(down_line)
+        lines.append(up_line)
+
+        contents = '\n'.join([ ' & '.join(line) + ' \\\\' for line in lines ])
+
+        with open(outname, 'w') as out_fp:
+            out_fp.write('% ' + core.gittag()+'\n')
+            out_fp.write(contents)
 
 
     def make_scatter_plots(self, subdir=None):
@@ -226,81 +268,112 @@ class ScaleCorrelation(object):
         c.save(outname)
 
 
-    def plot_correlation_matrix(self, tag=None):
-        corrMat = self.calculate_correlation_matrix()
+    #____________________________________________________________________
+    # Plotting
 
-        c.Clear()
-        c.set_margins(
-            LeftMargin   = 0.21,
-            RightMargin  = 0.12,
-            TopMargin    = 0.12,
-            BottomMargin = 0.19,
-            )
+    def float_to_str(self, number):
+        return str(int(number)) if number.is_integer() else '{0:.1f}'.format(number)
 
-        T = ROOT.TH2D(
-            'corrMat', '#scale[0.85]{Correlation between p_{T} bins}',
-            self.n_bins, 0., self.n_bins,
-            self.n_bins, 0., self.n_bins
-            )
-        ROOT.SetOwnership( T, False )
-        T.SetContour(100)
-        for i_row in xrange(self.n_bins):
-            for i_col in xrange(self.n_bins):
-                T.SetBinContent( i_col+1, i_row+1, corrMat[i_row][i_col] )
-        T.GetZaxis().SetRangeUser(-1.0,1.0)
-
-        toString = lambda number: str(int(number)) if number.is_integer() else '{0:.1f}'.format(number)
+    def get_bin_labels(self):
+        labels = []
         for i in xrange(self.n_bins):
             if self.last_bin_is_overflow and i == self.n_bins-1:
-                label = toString(self.bin_boundaries[i]) + '-#infty'
+                label = self.float_to_str(self.bin_boundaries[i]) + '-#infty'
             else:
                 label = '{0}-{1}'.format(
-                    toString(self.bin_boundaries[i]), toString(self.bin_boundaries[i+1])
+                    self.float_to_str(self.bin_boundaries[i]), self.float_to_str(self.bin_boundaries[i+1])
                     )
-            if self.n_bins < 20 or i % int(0.1*self.n_bins) == 0:
-                T.GetXaxis().SetBinLabel(i+1, label)
-                T.GetYaxis().SetBinLabel(i+1, label)
+            labels.append(label)
+        return labels
 
-        n_stops = 3
-        stops  = [ 0.0, 0.5, 1.0 ]
-        reds   = [ 0.0, 1.0, 1.0 ]
-        blues  = [ 1.0, 1.0, 0.0 ]
-        greens = [ 0.0, 1.0, 0.0 ]
-
-        ROOT.TColor.CreateGradientColorTable(
-            n_stops,
-            array('d', stops ),
-            array('d', reds ),
-            array('d', greens ),
-            array('d', blues ),
-            255 )
-
-        T.GetXaxis().SetTitle( 'p_{T} [GeV]' )
-        T.GetXaxis().SetTitleOffset( 1.7 )
-        T.GetXaxis().SetTitleSize(0.055)
-
-        T.GetYaxis().SetTitle( 'p_{T} [GeV]' )
-        T.GetYaxis().SetTitleOffset( 1.65 )
-        T.GetYaxis().SetTitleSize(0.055)
-
-        T.GetXaxis().SetLabelSize(0.055)
-        T.GetYaxis().SetLabelSize(0.055)
-
-        ROOT.gStyle.SetHistMinimumZero() # To draw the "0", otherwise ROOT leaves it empty
-        ROOT.gStyle.SetPaintTextFormat('1.2g')
-
-        T.SetMarkerSize(1.35)
-        
-        if self.n_bins < 20:
-            T.Draw('COLZ TEXT')
-        else:
-            T.Draw('COLZ')
-
-        c.cd()
-        c.Update()
-
-        outname = 'corrMat'
+    def plot_correlation_matrix(self, tag=None):
+        outname = 'corrmat'
         if not(tag is None):
-            outname += '_' + tag
-        # SaveC(outname, asPNG=True)
-        c.save(outname)
+            self.tags.append(tag)
+        outname += '_' + '_'.join(self.tags)
+
+        plot = plotting.plots_matrix.CorrelationMatrixPlot(outname)
+        plot.corrmat = self.calculate_correlation_matrix()
+        plot.x_title = 'p_{T}^{H} (GeV)'
+        plot.binlabels = self.get_bin_labels()
+        plot.draw()
+        plot.wrapup()
+
+    # def plot_correlation_matrix(self, tag=None):
+    #     corrMat = self.calculate_correlation_matrix()
+
+    #     c.Clear()
+    #     c.set_margins(
+    #         LeftMargin   = 0.21,
+    #         RightMargin  = 0.12,
+    #         TopMargin    = 0.12,
+    #         BottomMargin = 0.19,
+    #         )
+
+    #     T = ROOT.TH2D(
+    #         'corrMat', '#scale[0.85]{Correlation between p_{T} bins}',
+    #         self.n_bins, 0., self.n_bins,
+    #         self.n_bins, 0., self.n_bins
+    #         )
+    #     ROOT.SetOwnership( T, False )
+    #     T.SetContour(100)
+    #     for i_row in xrange(self.n_bins):
+    #         for i_col in xrange(self.n_bins):
+    #             T.SetBinContent( i_col+1, i_row+1, corrMat[i_row][i_col] )
+    #     T.GetZaxis().SetRangeUser(-1.0,1.0)
+
+    #     toString = lambda number: str(int(number)) if number.is_integer() else '{0:.1f}'.format(number)
+    #     for i in xrange(self.n_bins):
+    #         if self.last_bin_is_overflow and i == self.n_bins-1:
+    #             label = toString(self.bin_boundaries[i]) + '-#infty'
+    #         else:
+    #             label = '{0}-{1}'.format(
+    #                 toString(self.bin_boundaries[i]), toString(self.bin_boundaries[i+1])
+    #                 )
+    #         if self.n_bins < 20 or i % int(0.1*self.n_bins) == 0:
+    #             T.GetXaxis().SetBinLabel(i+1, label)
+    #             T.GetYaxis().SetBinLabel(i+1, label)
+
+    #     n_stops = 3
+    #     stops  = [ 0.0, 0.5, 1.0 ]
+    #     reds   = [ 0.0, 1.0, 1.0 ]
+    #     blues  = [ 1.0, 1.0, 0.0 ]
+    #     greens = [ 0.0, 1.0, 0.0 ]
+
+    #     ROOT.TColor.CreateGradientColorTable(
+    #         n_stops,
+    #         array('d', stops ),
+    #         array('d', reds ),
+    #         array('d', greens ),
+    #         array('d', blues ),
+    #         255 )
+
+    #     T.GetXaxis().SetTitle( 'p_{T} [GeV]' )
+    #     T.GetXaxis().SetTitleOffset( 1.7 )
+    #     T.GetXaxis().SetTitleSize(0.055)
+
+    #     T.GetYaxis().SetTitle( 'p_{T} [GeV]' )
+    #     T.GetYaxis().SetTitleOffset( 1.65 )
+    #     T.GetYaxis().SetTitleSize(0.055)
+
+    #     T.GetXaxis().SetLabelSize(0.055)
+    #     T.GetYaxis().SetLabelSize(0.055)
+
+    #     ROOT.gStyle.SetHistMinimumZero() # To draw the "0", otherwise ROOT leaves it empty
+    #     ROOT.gStyle.SetPaintTextFormat('1.2g')
+
+    #     T.SetMarkerSize(1.35)
+        
+    #     if self.n_bins < 20:
+    #         T.Draw('COLZ TEXT')
+    #     else:
+    #         T.Draw('COLZ')
+
+    #     c.cd()
+    #     c.Update()
+
+    #     outname = 'corrMat'
+    #     if not(tag is None):
+    #         outname += '_' + tag
+    #     # SaveC(outname, asPNG=True)
+    #     c.save(outname)

@@ -52,6 +52,7 @@ def main():
     parser.add_argument( '--saveroot',   action='store_true' )
     parser.add_argument( '--savepng',   action='store_true' )
     parser.add_argument( '--savepng_convert',   action='store_true' )
+    parser.add_argument( '--savegray',   action='store_true' )
 
     parser.add_argument( '--statonly', action='store_true' )
     parser.add_argument( '--statsyst', action='store_true' )
@@ -94,10 +95,11 @@ def main():
 
     if args.bkg:
         pass
+
+    differentials.logger.set_basic_format()
     if args.test:
         Commands.TestMode()
         differentials.core.testmode()
-
     if args.debug:
         differentials.logger.set_level_debug()
     if args.trace:
@@ -105,12 +107,15 @@ def main():
 
     if args.saveroot:
         TheoryCommands.SaveAsRoot()
+        differentials.core.save_root()
     if args.savepng:
         TheoryCommands.SaveAsPng()
         differentials.core.save_png()
     if args.savepng_convert:
         TheoryCommands.SaveAsPngThroughConvert()
         differentials.core.save_png_through_convert()
+    if args.savegray:
+        differentials.core.save_gray()
 
 
     ########################################

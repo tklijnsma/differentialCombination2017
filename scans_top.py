@@ -1,6 +1,7 @@
 from OptionHandler import flag_as_option, flag_as_parser_options
 
 import logging
+import copy
 from copy import deepcopy
 import os
 from os.path import *
@@ -16,6 +17,12 @@ import LatestPaths
 
 #____________________________________________________________________
 datestr = differentials.core.datestr()
+
+def set_combWithHbb_and_asimov(real_args):
+    args = copy.deepcopy(real_args)
+    args.asimov = True
+    differentialutils.set_one_decay_channel(args, 'combWithHbb')
+    return args
 
 def basic_config(args, hurry=False):
     # assert_highpt(args)
@@ -71,6 +78,19 @@ def basic_config(args, hurry=False):
             ct_ranges = [ -5.0, 5.0 ]
             cg_ranges = [ -0.35, 0.35 ]
             config.nPointsPerJob = 12
+    else:
+        if args.hgg:
+            ct_ranges = [ -7.5, 7.5 ]
+            cg_ranges = [ -0.50, 0.50 ]
+            config.nPointsPerJob = 32
+        elif args.combination:
+            ct_ranges = [ -7.0, 7.0 ]
+            cg_ranges = [ -0.50, 0.50 ]
+            config.nPointsPerJob = 20
+        elif args.combWithHbb:
+            ct_ranges = [ -6.0, 6.0 ]
+            cg_ranges = [ -0.40, 0.40 ]
+            config.nPointsPerJob = 12
 
     config.POIs = [ 'ct', 'cg' ]
     config.PhysicsModelParameters = [ 'ct=1.0', 'cg=0.0' ]
@@ -107,7 +127,7 @@ def scan_top_hzz_testrun(real_args):
     differentials.core.set_one_decay_channel(args, 'hzz')
     args.asimov = True
     config = basic_config(args)
-    config.datacard = LatestPaths.ws.top.nominal[differentials.core.get_decay_channel_tag(args)]
+    config.datacard = LatestPaths.ws.top.nominal[differentialutils.get_decay_channel_tag(args)]
     config.nPoints = 10*10
     config.nPointsPerJob = 50
     differentialutils.run_postfit_fastscan_scan(config)
@@ -115,9 +135,26 @@ def scan_top_hzz_testrun(real_args):
 @flag_as_option
 def scan_top(args):
     config = basic_config(args)
-    config.datacard = LatestPaths.ws.top.nominal[differentials.core.get_decay_channel_tag(args)]
+    config.datacard = LatestPaths.ws.top.nominal[differentialutils.get_decay_channel_tag(args)]
+    config.nPoints = 110*110
+    config.nPointsPerJob = int(0.5*config.nPointsPerJob)
     differentialutils.run_postfit_fastscan_scan(config)
 
+@flag_as_option
+def scan_top_noBinsDropped(real_args):
+    args = deepcopy(real_args)
+    args.asimov = True
+    config = basic_config(args)
+    if args.combWithHbb:
+        config.datacard = LatestPaths.ws.top.nominal.combWithHbb
+    elif args.combination:
+        config.datacard = LatestPaths.ws.top.nominal.combination
+    else:
+        raise NotImplementedError('Run with --combination or --combWithHbb')
+    config.tags.append('noBinsDropped')
+    config.nPoints = 120*120
+    config.nPointsPerJob = int(0.5*config.nPointsPerJob)
+    differentialutils.run_postfit_fastscan_scan(config)
 
 
 @flag_as_option
@@ -127,6 +164,8 @@ def scan_top_last2BinsDropped(real_args):
     config = basic_config(args)
     if args.combWithHbb:
         config.datacard = LatestPaths.ws.top.last2BinsDropped.combWithHbb
+    elif args.combination:
+        config.datacard = LatestPaths.ws.top.last2BinsDropped.combination
     else:
         raise NotImplementedError('Run with --combination or --combWithHbb')
     config.tags.append('last2BinsDropped')
@@ -147,22 +186,29 @@ def scan_top_lastBinDropped(real_args):
         raise NotImplementedError('Run with --combination or --combWithHbb')
     differentialutils.run_postfit_fastscan_scan(config)
 
+
 @flag_as_option
 def scan_top_lumiStudy(args):
-    differentialutils.assert_asimov(args)
-    config.datacard = LatestPaths.ws_combined_Top_lumiScalable
+    args = set_combWithHbb_and_asimov(args)
+    config = basic_config(args)
+    config.datacard = 'out/workspaces_Mar13/combWithHbb_Top_reweighted_lumiScale.root'
     config.freezeNuisances.append('lumiScale')
     config.hardPhysicsModelParameters.append( 'lumiScale=8.356546' )
     config.subDirectory += '_lumiStudy'
     # config.hardPhysicsModelParameters.append( 'lumiScale=83.56546' )
     # config.subDirectory += '_lumiStudy3000fb'
+    differentialutils.run_postfit_fastscan_scan(config)
+
 
 @flag_as_option
 def scan_top_profiledTotalXS(args):
-    differentialutils.assert_asimov(args)
-    config.datacard = LatestPaths.ws_combined_Top_profiledTotalXS
+    args = set_combWithHbb_and_asimov(args)
+    config = basic_config(args)
+    config.datacard = 'out/workspaces_Mar13/combWithHbb_Top_reweighted_profiledTotalXS.root'
     config.tags.append('profiledTotalXS')
+    config.nPoints = 150*150
     differentialutils.run_postfit_fastscan_scan(config)
+
 
 @flag_as_option
 def scan_top_fitOnlyNormalization(args):

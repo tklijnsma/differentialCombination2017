@@ -31,116 +31,120 @@ x_coupling = 'kappac'
 y_coupling = 'kappab'
 titles = { 'kappac': '#kappa_{c}', 'kappab' : '#kappa_{b}' }
 
-
-Nominal = namedtuple('Nominal', ['hgg', 'hzz', 'combination'])
-nominal_scans = Nominal(
-    hgg = 'out/Scan_Yukawa_Feb24_hgg',
-    hzz = 'out/Scan_Yukawa_Feb24_hzz',
-    combination = 'out/Scan_Yukawa_Feb24_combination',
-    )
-nominal_scans_asimov = Nominal(
-    # hgg = 'out/Scan_Yukawa_Feb24_hgg_0',
-    # # hzz = 'out/Scan_Yukawa_Feb24_hzz_0',
-    # hzz = 'out/Scan_Yukawa_Feb24_hzz_asimov',
-    # combination = 'out/Scan_Yukawa_Feb24_combination_0',
-    hgg = 'out/Scan_Yukawa_Nov03_hgg_asimov',
-    hzz = 'out/Scan_Yukawa_Nov03_hzz_asimov',
-    combination = 'out/Scan_Yukawa_Nov03_asimov',
-    # out/Scan_Yukawa_Nov03_asimov
-    # out/Scan_Yukawa_Nov03_hgg_asimov
-    # out/Scan_Yukawa_Nov03_hzz_asimov
-    )
-def get_nominal(args):
-    if args.asimov:
-        return nominal_scans_asimov
-    else:
-        return nominal_scans
+yukawa_x_min = -35
+yukawa_x_max = 35
+yukawa_y_min = -11
+yukawa_y_max = 12
 
 
 @flag_as_option
-def multicont_Yukawa_Mar09(args):
-    multicont_Yukawa_Mar09_reweighted(args)
-    multicont_Yukawa_Mar09_unreweighted(args)
+def multicont_Yukawa(args):
+    multicont_Yukawa_reweighted(args)
+    multicont_Yukawa_unreweighted(args)
 
 @flag_as_option
-def multicont_Yukawa_Mar09_reweighted(args):
-    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        scandir = 'out/Scan_Yukawa_Mar09_combination_asimov' if args.asimov else 'out/Scan_Yukawa_Mar09_combination'
-        )
+def multicont_Yukawa_reweighted(args):
+    scandict = LatestPaths.scan.yukawa.reweighted.asimov if args.asimov else LatestPaths.scan.yukawa.reweighted.observed
+
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir = scandict.combination)
     combination.color = 1
     combination.read()
     
-    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
-        scandir = 'out/Scan_Yukawa_Mar09_hgg_asimov' if args.asimov else 'out/Scan_Yukawa_Mar09_hgg'
-        )
+    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling, scandir = scandict.hgg)
     hgg.color = 2
     hgg.read()
 
-    plot = differentials.plotting.plots.MultiContourPlot(
-        'multicont_Yukawa_Mar09_reweighted' + ('_asimov' if args.asimov else ''),
-        [combination, hgg],
-        x_min=-25, x_max=25, y_min=-9, y_max=12
-        )
-    plot.draw()
-
-@flag_as_option
-def multicont_Yukawa_Mar09_unreweighted(args):
-    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        scandir = 'out/Scan_Yukawa_Mar09_combination_asimov_0' if args.asimov else 'out/Scan_Yukawa_Mar09_combination_0'
-        )
-    combination.color = 1
-    combination.read()
-    
-    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
-        scandir = 'out/Scan_Yukawa_Mar09_hgg_asimov_0' if args.asimov else 'out/Scan_Yukawa_Mar09_hgg_0'
-        )
-    hgg.color = 2
-    hgg.read()
-
-    plot = differentials.plotting.plots.MultiContourPlot(
-        'multicont_Yukawa_Mar09_unreweighted' + ('_asimov' if args.asimov else ''),
-        [combination, hgg],
-        x_min=-25, x_max=25, y_min=-9, y_max=12
-        )
-    plot.draw()
-
-
-
-@flag_as_option
-def multicont_Yukawa_nominal(args):
-
-    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        # scandir=LatestPaths.scan_combined_Yukawa_old
-        scandir = get_nominal(args).combination
-        )
-    combination.color = 1
-    combination.read()
-    
-    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling,
-        # scandir=LatestPaths.scan_hgg_Yukawa_old
-        scandir = get_nominal(args).hgg
-        )
-    hgg.color = 2
-    hgg.read()
-
-    hzz = differentials.scans.Scan2D('hzz', x_coupling, y_coupling,
-        # scandir=LatestPaths.scan_hzz_Yukawa_old
-        scandir = get_nominal(args).hzz
-        )
+    hzz = differentials.scans.Scan2D('hzz', x_coupling, y_coupling, scandir = scandict.hzz)
     hzz.color = 4
     hzz.read()
 
     plot = differentials.plotting.plots.MultiContourPlot(
-        'multicont_Yukawa_nominal' + ('_asimov' if args.asimov else ''),
+        'multicont_Yukawa_reweighted' + ('_asimov' if args.asimov else ''),
         [combination, hgg, hzz],
-        x_min=None, x_max=None, y_min=None, y_max=None
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
-    plot.x_min = -25
-    plot.x_max = 25
-    plot.y_min = -9
-    plot.y_max = 12
     plot.draw()
 
+@flag_as_option
+def multicont_Yukawa_unreweighted(args):
+    scandict = LatestPaths.scan.yukawa.unreweighted.asimov if args.asimov else LatestPaths.scan.yukawa.unreweighted.observed
+
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir = scandict.combination)
+    combination.color = 1
+    combination.read()
+    
+    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling, scandir = scandict.hgg)
+    hgg.color = 2
+    hgg.read()
+
+    hzz = differentials.scans.Scan2D('hzz', x_coupling, y_coupling, scandir = scandict.hzz)
+    hzz.color = 4
+    hzz.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_unreweighted' + ('_asimov' if args.asimov else ''),
+        [combination, hgg, hzz],
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        )
+    plot.draw()
+
+
+#____________________________________________________________________
+# Extra studies
+
+@flag_as_option
+def multicont_Yukawa_highLumi(args):
+
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir=LatestPaths.scan.yukawa.reweighted.asimov.combination)
+    combination.color = 1
+    combination.title = '35.9 fb^{-1}'
+    combination.read()
+
+    lumi300fb = differentials.scans.Scan2D('lumi300fb', x_coupling, y_coupling, scandir=LatestPaths.scan.yukawa.lumi300fb)
+    lumi300fb.color = 4
+    lumi300fb.title = '300 fb^{-1}'
+    lumi300fb.read()
+    lumi300fb.contour_filter_method = 'max_distance_to_com'
+
+    # raise NotImplementedError('Need to multiply values from 300 fb-1')
+    # lumi_3000 = differentials.scans.Scan2D('lumi_3000', x_coupling, y_coupling,
+    #     scandir=LatestPaths.scan_combined_Yukawa_lumiStudy_asimov
+    #     )
+    # lumi_3000.color = 4
+    # lumi_3000.title = '3000 fb^{-1}'
+    # lumi_3000.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_highLumi',
+        [combination, lumi300fb],
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        )
+    plot.draw()
+
+
+@flag_as_option
+def multicont_Yukawa_profiledTotalXS(args):
+    # Range too small... range should be higher to observe starlike pattern.
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir=LatestPaths.scan.yukawa.reweighted.asimov.combination)
+    combination.color = 1
+    combination.title = 'Nominal'
+    combination.read()
+
+    profiled_total_XS = differentials.scans.Scan2D('profiled_total_XS', x_coupling, y_coupling, scandir=LatestPaths.scan.yukawa.profiledTotalXS)
+    profiled_total_XS.color = 4
+    profiled_total_XS.title = '#sigma_{tot} profiled'
+    profiled_total_XS.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_profiledTotalXS',
+        [combination, profiled_total_XS],
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        )
+    plot.draw()
+
+
+#____________________________________________________________________
+# To redo
 
 @flag_as_option
 def multicont_Yukawa_ratio_of_BRs(args):
@@ -163,36 +167,9 @@ def multicont_Yukawa_ratio_of_BRs(args):
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_Yukawa_ratio_of_BRs',
         [combination, ratio_of_BRs],
-        x_min=None, x_max=None, y_min=None, y_max=None
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
     plot.draw()
-
-
-@flag_as_option
-def multicont_Yukawa_profiledTotalXS(args):
-
-    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        # scandir=LatestPaths.scan_combined_Yukawa_asimov
-        scandir=LatestPaths.scan_combined_Yukawa_reweighted_asimov
-        )
-    combination.color = 1
-    combination.title = 'Nominal'
-    combination.read()
-
-    profiled_total_XS = differentials.scans.Scan2D('profiled_total_XS', x_coupling, y_coupling,
-        scandir=LatestPaths.scan_combined_Yukawa_profiledTotalXS_asimov
-        )
-    profiled_total_XS.color = 4
-    profiled_total_XS.title = '#sigma_{tot} profiled'
-    profiled_total_XS.read()
-
-    plot = differentials.plotting.plots.MultiContourPlot(
-        'multicont_Yukawa_profiledTotalXS',
-        [combination, profiled_total_XS],
-        x_min=None, x_max=None, y_min=None, y_max=None
-        )
-    plot.draw()
-
 
 
 @flag_as_option
@@ -215,10 +192,9 @@ def multicont_Yukawa_onlyNormalization(args):
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_Yukawa_onlyNormalization',
         [combination, only_normalization],
-        x_min=None, x_max=None, y_min=None, y_max=None
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
     plot.draw()
-
 
 
 @flag_as_option
@@ -248,10 +224,9 @@ def multicont_Yukawa_theoryCrossCheck(args):
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_Yukawa_theoryCrossCheck',
         [combination, no_theory_unc, uncorr_theory_unc],
-        x_min=None, x_max=None, y_min=None, y_max=None
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
     plot.draw()
-
 
 
 @flag_as_option
@@ -288,44 +263,9 @@ def multicont_Yukawa_BRdependencyComparison(args):
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_Yukawa_BRdependencyComparison',
         [combination, brscal_kappaV_fixed, brscal_profiledTotalXS, brscal_kappaV_max1],
-        x_min=None, x_max=None, y_min=None, y_max=None
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
     plot.draw()
-
-
-
-@flag_as_option
-def multicont_Yukawa_highLumi(args):
-
-    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        scandir=LatestPaths.scan_combined_Yukawa_asimov
-        )
-    combination.color = 1
-    combination.title = '35.9 fb^{-1}'
-    combination.read()
-
-    lumi_300 = differentials.scans.Scan2D('lumi_300', x_coupling, y_coupling,
-        scandir=LatestPaths.scan_combined_Yukawa_lumiStudy_asimov
-        )
-    lumi_300.color = 4
-    lumi_300.title = '300 fb^{-1}'
-    lumi_300.read()
-
-    raise NotImplementedError('Need to multiply values from 300 fb-1')
-    lumi_3000 = differentials.scans.Scan2D('lumi_3000', x_coupling, y_coupling,
-        scandir=LatestPaths.scan_combined_Yukawa_lumiStudy_asimov
-        )
-    lumi_3000.color = 4
-    lumi_3000.title = '3000 fb^{-1}'
-    lumi_3000.read()
-
-    plot = differentials.plotting.plots.MultiContourPlot(
-        'multicont_Yukawa_highLumi',
-        [combination, lumi_300, lumi_3000],
-        x_min=None, x_max=None, y_min=None, y_max=None
-        )
-    plot.draw()
-
 
 
 @flag_as_option
@@ -372,7 +312,7 @@ def multicont_Yukawa_atfchi2(args):
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_Yukawa_atfchi2',
         [combination, atfchi2],
-        x_min=None, x_max=None, y_min=None, y_max=None
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
     plot.draw()
 
@@ -382,10 +322,8 @@ def multicont_Yukawa_atfchi2(args):
 
 @flag_as_option
 def points_on_contour_Yukawa(args):
-
-    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling,
-        scandir=get_nominal(args).combination
-        )
+    scandict_2D = LatestPaths.scan.yukawa.reweighted.asimov if args.asimov else LatestPaths.scan.yukawa.reweighted.observed
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir=scandict_2D.combination)
     combination.color = 1
     combination.read()
 
@@ -393,9 +331,9 @@ def points_on_contour_Yukawa(args):
     obs.drop_bins_up_to_value(125.)
 
     obs_name = 'pth_ggH'
-    scandir = 'out/Scan_pth_ggH_Feb06_combination_asimov' if args.asimov else 'out/Scan_pth_ggH_Feb06_combination'
-    pth_ggH_combination = differentials.scans.DifferentialSpectrum('combination', scandir=scandir)
-    pth_ggH_combination.POIs = differentials.core.get_POIs_oldstyle_scandir(scandir)
+
+    scandict = LatestPaths.scan.pth_ggH.asimov if args.asimov else LatestPaths.scan.pth_ggH.observed
+    pth_ggH_combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
     pth_ggH_combination.color = 1
     pth_ggH_combination.no_overflow_label = True
     pth_ggH_combination.draw_method = 'repr_point_with_vertical_bar'
@@ -405,8 +343,8 @@ def points_on_contour_Yukawa(args):
 
     # ws = LatestPaths.ws_combined_TopHighPt
     # ws = LatestPaths.ws_combined_Yukawa
-    ws = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
-
+    # ws = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
+    ws = LatestPaths.ws.yukawa.nominal.combination
 
     # ======================================
     # Load into plot
@@ -435,36 +373,41 @@ def points_on_contour_Yukawa(args):
 
 @flag_as_option
 def one_kappa_scan(args):
-    one_kappa_scan_kappab(args)
-    one_kappa_scan_kappac(args)
+    one_kappa_scan_plot_manualProfile(args, 'kappab')
+    one_kappa_scan_plot(args, 'kappac')
 
-
-@flag_as_option
-def one_kappa_scan_kappab(args):
+def one_kappa_scan_plot(args, kappa):
     differentials.plotting.canvas.c.resize_temporarily(850, 800)
+    scandict = LatestPaths.scan.yukawa.onekappa
     scans = []
 
-    # observed = differentials.scans.Scan('kappab', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappab)
-    # observed.color = 38
-    # observed.title = '#kappa_{b} observed'
-    # observed.read()
-    # observed.create_uncertainties()
-    # observed.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(observed.unc.left_bound, observed.unc.right_bound)
-    # scans.append(observed)
+    observed = differentials.scans.Scan(kappa, scandir=scandict.observed[kappa])
+    observed.color = 1
+    observed.title = '{0} observed'.format(differentials.core.standard_titles[kappa])
+    observed.read()
+    observed.create_uncertainties()
+    observed.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(observed.unc.left_bound, observed.unc.right_bound)
+    scans.append(observed)
 
-    expected = differentials.scans.Scan('kappab', scandir='out/Scan_Yukawa_Feb07_combined_oneKappa_kappab_asimov')
-    expected.color = 4
-    expected.title = '#kappa_{b} expected'
+    expected = differentials.scans.Scan(kappa, scandir=scandict.asimov[kappa])
+    expected.color = 1
+    expected.title = '{0} expected'.format(differentials.core.standard_titles[kappa])
     expected.read()
     expected.create_uncertainties()
     expected.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(expected.unc.left_bound, expected.unc.right_bound)
+    expected.draw_style = 'repr_dashed_line'
     scans.append(expected)
 
-    plot = differentials.plotting.plots.MultiScanPlot('onekappascan_kappab')
+    plot = differentials.plotting.plots.MultiScanPlot('onekappascan_{0}'.format(kappa))
     plot.scans.extend(scans)
-    plot.x_min = -6.
-    plot.x_max = 6.
-    plot.x_title = '#kappa_{b}'
+
+    plot.x_title = differentials.core.standard_titles[kappa]
+    if kappa == 'kappab':
+        plot.x_min = -7.
+        plot.x_max = 9.
+    else:
+        plot.x_min = -20.
+        plot.x_max = 20.
 
     plot.leg.SetNColumns(1)
     plot.leg._y1 = lambda c: 1. - c.GetTopMargin() - 0.20
@@ -473,38 +416,45 @@ def one_kappa_scan_kappab(args):
     plot.wrapup()
 
 
-@flag_as_option
-def one_kappa_scan_kappac(args):
+def one_kappa_scan_plot_manualProfile(args, kappa):
     differentials.plotting.canvas.c.resize_temporarily(850, 800)
-    scans = []
+    scandict = LatestPaths.scan.yukawa.onekappa
 
-    # observed = differentials.scans.Scan('kappac', scandir=LatestPaths.scan_combined_Yukawa_oneKappa_kappac)
-    # observed.color = 38
-    # observed.title = '#kappa_{c} observed'
-    # observed.read()
-    # observed.create_uncertainties()
-    # observed.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(observed.unc.left_bound, observed.unc.right_bound)
-    # observed.draw_style = 'repr_smooth_line'
-    # scans.append(observed)
-
-    expected = differentials.scans.Scan('kappac', scandir='out/Scan_Yukawa_Feb07_combined_oneKappa_kappac_asimov')
-    expected.color = 4
-    expected.title = '#kappa_{c} expected'
+    expected = differentials.scans.Scan(kappa, scandir=scandict.asimov[kappa])
+    expected.color = 1
+    expected.title = '{0} expected'.format(differentials.core.standard_titles[kappa])
     expected.read()
     expected.create_uncertainties()
-    expected.title += '; ({0:.2f}, {1:.2f}) @ 68% CL'.format(expected.unc.left_bound, expected.unc.right_bound)
-    expected.draw_style = 'repr_smooth_line'
-    scans.append(expected)
+    expected.title += '; ({0:.2f} - {1:.2f}) @ 68% CL'.format(expected.unc.left_bound, expected.unc.right_bound)
+    expected.draw_style = 'repr_dashed_line'
 
-    plot = differentials.plotting.plots.MultiScanPlot('onekappascan_kappac')
-    plot.scans.extend(scans)
-    plot.x_min = -15.
-    plot.x_max = 15.
-    plot.x_title = '#kappa_{c}'
+    # Get the 2D scan
+    observed2D = differentials.scans.Scan2D('observed2D', x_coupling, y_coupling,
+        scandir = LatestPaths.scan.yukawa.reweighted.observed.combination
+        )
+    observed2D.color = 1
+    observed2D.read()
 
+    # Read the observed from the 2D scan; take a minimum per slice
+    observed1D = observed2D.get_1d(kappa)
+    observed1D.draw_style = 'repr_smooth_line'
+    observed1D.title = '{0} observed; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+        differentials.core.standard_titles[kappa],
+        observed1D.unc.left_bound, observed1D.unc.right_bound
+        )
+
+    plot = differentials.plotting.plots.MultiScanPlot('onekappascan_{0}'.format(kappa))
+    plot.scans.append(expected)
+    plot.manual_graphs.append(observed1D)
+    plot.x_title = differentials.core.standard_titles[kappa]
+    if kappa == 'kappab':
+        plot.x_min = -7.
+        plot.x_max = 9.
+    else:
+        plot.x_min = -20.
+        plot.x_max = 20.
     plot.leg.SetNColumns(1)
     plot.leg._y1 = lambda c: 1. - c.GetTopMargin() - 0.20
-
     plot.draw()
     plot.wrapup()
 

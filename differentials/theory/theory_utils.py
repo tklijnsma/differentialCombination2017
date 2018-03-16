@@ -30,9 +30,9 @@ def rebin_theory(theory, bin_boundaries):
         values_old         = theory.crosssection,
         bin_boundaries_new = bin_boundaries
         )
-    crosssection_integrated = rebinner.rebin()
+    crosssection_per_GeV = rebinner.rebin()
     widths = [ r-l for l,r in zip(bin_boundaries[:-1], bin_boundaries[1:])]
-    crosssection_per_GeV = [ xs / width for xs, width in zip(crosssection_integrated, widths) ]
+    crosssection_integrated = [ xs * width for xs, width in zip(crosssection_per_GeV, widths) ]
 
     rebinned_theory = copy.deepcopy(theory)
     rebinned_theory.binBoundaries = bin_boundaries

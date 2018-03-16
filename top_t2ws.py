@@ -144,7 +144,8 @@ def all_t2ws_Top(args_original):
 @flag_as_option
 def t2ws_Top_nominal(args):
     t2ws = base_t2ws(args)
-    t2ws.tags.append('nominal')
+    t2ws.card = LatestPaths.card.top.nominal[differentialutils.get_decay_channel_tag(args)]
+    t2ws.tags.append('noBinsDropped')
     t2ws.run()
 
 @flag_as_option
@@ -165,6 +166,8 @@ def t2ws_Top_last2BinsDropped(args):
     t2ws = base_t2ws(args)
     if args.combWithHbb:
         t2ws.card = LatestPaths.card.top.combWithHbb_last2BinsDropped
+    if args.combination:
+        t2ws.card = LatestPaths.card.top.combination_last2BinsDropped
     else:
         raise NotImplementedError('Use --combination or --combWithHbb')
     t2ws.tags.append('last2BinsDropped')
@@ -190,12 +193,21 @@ def t2ws_Top_uncorrelatedTheoryUnc(args):
     t2ws.tags.append('uncorrelatedTheoryUnc')
     t2ws.run()
 
+
 @flag_as_option
 def t2ws_Top_lumiScale(args):
     t2ws = base_t2ws(args)
     t2ws.tags.append('lumiScale')
     t2ws.extra_options.append('--PO lumiScale=True')
     t2ws.run()
+
+@flag_as_option
+def t2ws_Top_profiledTotalXS(args):
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('profiledTotalXS')
+    t2ws.extra_options.append('--PO ProfileTotalXS=True')
+    t2ws.run()
+
 
 @flag_as_option
 def t2ws_Top_BRcouplingDependency(args):
@@ -206,13 +218,6 @@ def t2ws_Top_BRcouplingDependency(args):
     if do_BR_uncertainties:
         t2ws.extra_options.append('--PO DoBRUncertainties=True')
         t2ws.tags.append('withBRUnc')
-    t2ws.run()
-
-@flag_as_option
-def t2ws_Top_profiledTotalXS(args):
-    t2ws = base_t2ws(args)
-    t2ws.tags.append('profiledTotalXS')
-    t2ws.extra_options.append('--PO ProfileTotalXS=True')
     t2ws.run()
 
 @flag_as_option

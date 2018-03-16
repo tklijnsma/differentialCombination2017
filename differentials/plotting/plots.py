@@ -46,9 +46,12 @@ class MultiScanPlot(PlotBase):
         self.y_min = 0.0
         self.y_max = 5.0
         self.leg = pywrappers.Legend()
-        self.scans = []
         self.x_title = 'POI'
         differentials.plotting.canvas.reset_global_color_cyle()
+
+        self.scans = []
+        self.manual_graphs = []
+
 
     def add_scan(self, scan):
         self.scans.append(scan)
@@ -81,23 +84,7 @@ class MultiScanPlot(PlotBase):
             graph._legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
-            left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [1.0]))
-            ROOT.SetOwnership(left_point, False)
-            left_point.SetMarkerColor(graph.color)
-            left_point.SetMarkerSize(1.1)
-            left_point.SetMarkerStyle(8)
-            if not scan.unc.well_defined_left_bound:
-                left_point.SetMarkerStyle(5)
-            left_point.Draw('PSAME')
-
-            right_point = ROOT.TGraph(1, array('f', [scan.unc.right_bound]), array('f', [1.0]))
-            ROOT.SetOwnership(right_point, False)
-            right_point.SetMarkerColor(graph.color)
-            right_point.SetMarkerSize(1.1)
-            right_point.SetMarkerStyle(8)
-            if not scan.unc.well_defined_right_bound:
-                right_point.SetMarkerStyle(5)
-            right_point.Draw('PSAME')
+            left_point, right_point = self.get_unc_points(scan)
 
             line_bestfit = ROOT.TGraph(2,
                 array('f', [scan.bestfit().x, scan.bestfit().x]),
@@ -105,10 +92,56 @@ class MultiScanPlot(PlotBase):
                 )
             ROOT.SetOwnership(line_bestfit, False)
             line_bestfit.SetLineColor(graph.color)
+            if 'dashed' in getattr(graph, 'draw_style', 'repr_basic_line'):
+                line_bestfit.SetLineStyle(2)
             line_bestfit.Draw('SAMEL')
+
+
+        for graph in self.manual_graphs:
+            graph.filter(y_max=3.5)
+            graph._legend = self.leg
+            graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
+
+            left_point, right_point = self.get_unc_points(graph)
+
+            x_bestfit = graph.unc.x_min
+            line_bestfit = ROOT.TGraph(2,
+                array('f', [x_bestfit, x_bestfit]),
+                array('f', [0.0, 3.0]),
+                )
+            ROOT.SetOwnership(line_bestfit, False)
+            line_bestfit.SetLineColor(graph.color)
+            if 'dashed' in getattr(graph, 'draw_style', 'repr_basic_line'):
+                line_bestfit.SetLineStyle(2)
+            line_bestfit.Draw('SAMEL')
+
 
         pywrappers.CMS_Latex_type().Draw()
         pywrappers.CMS_Latex_lumi().Draw()
+
+
+    def get_unc_points(self, scan):
+        """Should work in Graph as well"""
+
+        left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [1.0]))
+        ROOT.SetOwnership(left_point, False)
+        left_point.SetMarkerColor(scan.color)
+        left_point.SetMarkerSize(1.1)
+        left_point.SetMarkerStyle(8)
+        if not scan.unc.well_defined_left_bound:
+            left_point.SetMarkerStyle(5)
+        left_point.Draw('PSAME')
+
+        right_point = ROOT.TGraph(1, array('f', [scan.unc.right_bound]), array('f', [1.0]))
+        ROOT.SetOwnership(right_point, False)
+        right_point.SetMarkerColor(scan.color)
+        right_point.SetMarkerSize(1.1)
+        right_point.SetMarkerStyle(8)
+        if not scan.unc.well_defined_right_bound:
+            right_point.SetMarkerStyle(5)
+        right_point.Draw('PSAME')
+
+        return left_point, right_point
 
 
     def wrapup(self):
@@ -475,6 +508,8 @@ class SpectraPlot(BottomPanelPlot):
         self.obsunit = None
 
         self.draw_multiscans = False
+        self.scans_x_min = -10.0
+        self.scans_x_max = 10.0
 
         self.leg = pywrappers.Legend(
             lambda c: c.GetLeftMargin() + 0.01,
@@ -530,6 +565,8 @@ class SpectraPlot(BottomPanelPlot):
             for spectrum in self.spectra:
                 differentials.plotting.canvas.reset_global_color_cyle()
                 differentials.plotting.pywrappers.Graph.color_cycle = differentials.plotting.canvas.global_color_cycle
+                spectrum.scans_x_min = self.scans_x_min
+                spectrum.scans_x_max = self.scans_x_max
                 spectrum.plot_scans(self.plotname + '_scans_' + spectrum.name)
 
         self.obstitle = core.standard_titles.get(self.obsname, self.obsname)
@@ -555,10 +592,10 @@ class SpectraPlot(BottomPanelPlot):
             for spectrum in self.spectra:
                 spectrum.hard_x_max = x_max
 
+        self.make_SM_line(self.spectra, leg=self.leg)
         for spectrum in self.spectra:
             self.add_bottom(spectrum.to_hist(), spectrum.draw_method)
             self.add_top(spectrum.to_hist_xs(), spectrum.draw_method, leg=self.leg)
-        self.make_SM_line(self.spectra, leg=self.leg)
 
         self.make_labels_for_overflow_spectra(self.spectra, self.obstitle)
         self.add_top(self.leg, '')

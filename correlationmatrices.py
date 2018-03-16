@@ -5,7 +5,9 @@ import differentials
 import differentials.core as core
 import differentials.combine.combine as combine
 
-import glob
+from vittinterpreter import RTransformer
+
+import glob, re, sys
 
 
 def base_config(args):
@@ -23,11 +25,37 @@ def corrmats_vittorio(args):
         corrmat = combine.CombineCorrMat(config)
         corrmat.run()
 
-
 @flag_as_option
 def plot_corrmats_vittorio(args):
-    corrmat_file = 'out/corrmats_Mar12/higgsCombine_CORRMAT_differential_PtNNLOPS_newBins_DataBestFit.MultiDimFit.mH125.root'
+    for corrmat_file in glob.glob('out/corrmats_Mar12/*.root'):
+        logging.info('Plotting corrmat for {0}'.format(corrmat_file))
+        name = 'corrmat_' + re.search(r'differential_(.*)_DataBestFit', corrmat_file).group(1)
+        plot = differentials.plotting.plots_matrix.CorrelationMatrixPlot(name, corrmat_file)
 
-    plot = differentials.plotting.plots_matrix.CorrelationMatrixPlot('vitttest', corrmat_file)
+        rtransformer = RTransformer()
+        rtransformer.set_obsname_from_corrmat(corrmat_file)
 
-    plot.draw()
+        # print rtransformer.get_sorted_rs()
+        # print rtransformer.get_sorted_binlabels()
+        # print rtransformer.process_str_dict
+        # sys.exit()
+
+        plot.pois = rtransformer.get_sorted_rs()
+        plot.binlabels = rtransformer.get_sorted_binlabels()
+        plot.x_title = rtransformer.get_x_title()
+
+        plot.draw()
+
+        l = differentials.plotting.pywrappers.Latex(
+            lambda c: 1.0 - 0.01,
+            lambda c: 1.0 - c.GetTopMargin(),
+            'Correlation'
+            )
+        l.SetTextFont(42)
+        l.SetNDC()
+        l.SetTextAngle(-90)
+        l.SetTextSize(0.04)
+        l.SetTextAlign(13)
+        l.Draw()
+
+        plot.wrapup()

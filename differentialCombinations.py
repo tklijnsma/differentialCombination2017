@@ -15,19 +15,16 @@ from copy import deepcopy
 import logging
 from OptionHandler import flag_as_option
 
-sys.path.append('src')
-import Commands
-import PhysicsCommands
-import TheoryCommands
+import differentials
+import differentialutils
 import LatestPaths
 import LatestPathsGetters
 import LatestBinning
-from Container import Container
-import PlotCommands
-from differentialTools import *
-import CombineToolWrapper
 
-import differentials
+from differentials.core import AttrDict
+
+sys.path.append('src')
+import CombineToolWrapper
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -37,127 +34,92 @@ datestr = strftime( '%b%d' )
 # Main
 ########################################
 
+rescans = AttrDict()
+rescans.pth_ggH = AttrDict()
+rescans.pth_ggH.observed = [
+    # AttrDict(dc='combWithHbb', POI='r_ggH_PTH_350_600', x_min=-10., x_max=10.),
+    # AttrDict(dc='combWithHbb', POI='r_ggH_PTH_GT600', x_min=-5., x_max=10.),
+    # AttrDict(dc='hgg', POI='r_ggH_PTH_350_600', x_min=-10., x_max=1.),
+    AttrDict(dc='hgg', POI='r_ggH_PTH_GT600', x_min=-110., x_max=-70.),
+    # AttrDict(dc='hzz', POI='r_ggH_PTH_GT200', x_min=-10., x_max=1.),
+    ]
+rescans.pth_ggH.asimov = [
+    # AttrDict(dc='combWithHbb', POI='r_ggH_PTH_GT600', x_min=-10., x_max=10.),
+    # AttrDict(dc='hgg', POI='r_ggH_PTH_GT600', x_min=-10., x_max=20.),
+    # AttrDict(dc='hzz', POI='r_ggH_PTH_GT200', x_min=-1., x_max=4.),
+    ]
+rescans.pth_smH = AttrDict()
+rescans.pth_smH.observed = [
+    # AttrDict(dc='combWithHbb', POI='r_smH_PTH_350_600', x_min=-10., x_max=10.),
+    # AttrDict(dc='combWithHbb', POI='r_smH_PTH_GT600', x_min=-10., x_max=10.),
+    # AttrDict(dc='hgg', POI='r_smH_PTH_GT600', x_min=-10., x_max=4.),
+    # AttrDict(dc='hzz', POI='r_smH_PTH_GT200', x_min=-10., x_max=1.),
+    ]
+rescans.pth_smH.asimov = [
+    # AttrDict(dc='combWithHbb', POI='r_smH_PTH_GT600', x_min=-5., x_max=5.),
+    # AttrDict(dc='hgg', POI='r_smH_PTH_GT600', x_min=-3., x_max=8.),
+    ]
+
 @flag_as_option
-def pth_ggH_rescan(real_args):
-    args = deepcopy(real_args)
+def rescan(real_args):
+    for asimov in [False, True]:
+        for obsname in ['pth_ggH', 'pth_smH']:
+            for rescan in rescans[obsname]['asimov' if asimov else 'observed']:
+                args = differentialutils.set_one_decay_channel(real_args,
+                    rescan.dc,
+                    asimov=asimov
+                    )
+                ws = LatestPaths.ws[obsname][rescan.dc]
+                config = differential_config(args, ws, obsname)
 
-    args.asimov = True
-    differentials.core.set_one_decay_channel(args, 'combWithHbb')
-    ws = LatestPaths.ws.pth_ggH.combWithHbb
-    config = differential_config(args, ws, 'pth_ggH')
+                config.POIs = [rescan.POI]
+                config.nPoints = 40
 
-    config.POIs = ['r_ggH_PTH_350_600']
-    config.nPoints = 40
-    for i in xrange(len(config.PhysicsModelParameterRanges)):
-        range_str = config.PhysicsModelParameterRanges[i]
-        if range_str.startswith('r_ggH_PTH_350_600'):
-            config.PhysicsModelParameterRanges[i] = 'r_ggH_PTH_350_600=-1.0,3.0'
-
-    scan_directly(args, config)
-    
+                for i in xrange(len(config.PhysicsModelParameterRanges)):
+                    range_str = config.PhysicsModelParameterRanges[i]
+                    if range_str.startswith(rescan.POI):
+                        config.PhysicsModelParameterRanges[i] = '{0}={1},{2}'.format(
+                            rescan.POI, rescan.x_min, rescan.x_max
+                            )
+            
+                config.tags.append('rescan')
+                scan_directly(args, config)
+                # postfit_and_scan(args, config)
 
 
 @flag_as_option
 def pth_smH_scan(args):
-    ws = LatestPathsGetters.get_ws('pth_smH', args)
+    ws = LatestPaths.ws.pth_smH[differentialutils.get_decay_channel_tag(args)]
     config = differential_config(args, ws, 'pth_smH')
-    scan_directly(args, config)
+    postfit_and_scan(args, config)
 
 @flag_as_option
 def pth_ggH_scan(args):
-    # ws = LatestPathsGetters.get_ws('pth_ggH', args)
-    ws = LatestPaths.ws.pth_ggH[differentials.core.get_decay_channel_tag(args)]
+    ws = LatestPaths.ws.pth_ggH[differentialutils.get_decay_channel_tag(args)]
     config = differential_config(args, ws, 'pth_ggH')
     postfit_and_scan(args, config)
-    # if args.combWithHbb or args.hbb or args.hzz:
-    #     # scan_directly(args, config)
-    #     only_postfit(args, config)
-    # else:
-    #     # postfit_and_scan(args, config)
-    #     only_postfit(args, config)
 
 @flag_as_option
 def njets_scan(args):
     ws = LatestPathsGetters.get_ws('njets', args)
     config = differential_config(args, ws, 'njets')
-    scan_directly(args, config)
+    postfit_and_scan(args, config)
 
 @flag_as_option
 def ptjet_scan(args):
     ws = LatestPathsGetters.get_ws('ptjet', args)
     config = differential_config(args, ws, 'ptjet')
-    scan_directly(args, config)
+    postfit_and_scan(args, config)
 
 @flag_as_option
 def rapidity_scan(args):
     ws = LatestPathsGetters.get_ws('rapidity', args)
     config = differential_config(args, ws, 'rapidity')
-    scan_directly(args, config)
-
-
-@flag_as_option
-def all_pth_ggH_scans(real_args):
-    args = deepcopy(real_args)
-    for asimov in [True, False]:
-        args.asimov = asimov
-        for dc in [
-                'hbb',
-                'hzz',
-                'combination',
-                'combWithHbb',
-                'hgg',
-                ]:
-            set_all_false(args)
-            setattr(args, dc, True)
-            pth_ggH_scan(args)
-
-
-@flag_as_option
-def scan_all(real_args):
-    args = deepcopy(real_args)
-    decay_channels = [
-            'hgg',
-            'hzz',
-            # Workspaces are not working yet; Wait for Vs input
-            # 'hbb',
-            # 'combWithHbb',
-            'combination'
-            ]
-    try:
-        decay_channel = get_decay_channel_tag(args)
-        Commands.Warning('Decay channel {0} was specified, so only scans relating to it are submitted'.format(decay_channel))
-        decay_channels = [decay_channel]
-    except DecayChannelNotFoundError:
-        pass
-
-    scan_functions = [
-        pth_smH_scan,
-        pth_ggH_scan,
-        ptjet_scan,
-        rapidity_scan,
-        njets_scan,
-        ]
-
-    for decay_channel in decay_channels:
-        set_all_false(args)
-        setattr(args, decay_channel, True)
-        print '\nSubmitting scans for {0}'.format(decay_channel)
-        for function in scan_functions:
-            try:
-                function(args)
-            except NotImplementedError:
-                pass
+    postfit_and_scan(args, config)
 
 
 #____________________________________________________________________
 # Helpers
-
-def set_all_false(args):
-    args.hgg = False
-    args.hzz = False
-    args.hbb = False
-    args.combWithHbb = False
-    args.combination = False
 
 lumiMultiplier300 = 8.356546
 lumiMultiplier3000 = 83.56546
@@ -175,7 +137,7 @@ def differential_config(args, ws, obs_name):
     else:
         base_config.asimov = False
 
-    base_config.decay_channel = differentials.core.get_decay_channel_tag(args)    
+    base_config.decay_channel = differentialutils.get_decay_channel_tag(args)    
     if args.hzz or args.hbb:
         base_config.nPointsPerJob = base_config.nPoints
     if args.combWithHbb:
@@ -200,7 +162,7 @@ def differential_config(args, ws, obs_name):
     if args.statonly:
         base_config.subDirectory += '_statonly'
 
-    POIs = Commands.ListPOIs(ws)
+    POIs = differentials.core.list_POIs(ws)
     POIrange = [ -1.0, 4.0 ]
     if args.hzz:
         POIrange[0] = 0.0
@@ -216,7 +178,16 @@ def differential_config(args, ws, obs_name):
 
     base_config.POIs = POIs
     base_config.PhysicsModelParameters = [ '{0}=1.0'.format(p) for p in POIs ]
-    base_config.PhysicsModelParameterRanges = [ '{0}={1},{2}'.format(p, *POIrange) for p in POIs ]
+
+    for POI in POIs:
+        left, right = POIrange
+        if '350_600' in POI or 'GT600' in POI or 'GT200' in POI:
+            left = -10.
+            right = 10.
+            if base_config.decay_channel == 'hgg':
+                left = -15.
+        base_config.PhysicsModelParameterRanges.append('{0}={1},{2}'.format(POI, left, right))
+
     if args.hbb or args.combWithHbb:
         logging.warning(
             'For hbb: qcdeff and r*p* parameters are given ranges! '
@@ -284,23 +255,6 @@ def only_postfit(args, config):
 # t2ws
 ########################################
 
-# def t2ws(args, card, extraOptions=None):
-#     modelName = None
-#     suffix = None
-    
-#     if args.lumiScale:
-#         modelName = 'lumiScaleDifferentialModel'
-#         suffix = 'lumiScale'
-    
-#     Commands.BasicT2WSwithModel(
-#         card,
-#         pathToModel = 'physicsModels/DifferentialModel.py',
-#         modelName = modelName,
-#         suffix = suffix,
-#         extraOptions = extraOptions
-#         )
-
-
 def basic_t2ws(obsname, decay_channel):
     t2ws = differentials.combine.t2ws.T2WS(
         LatestPaths.card[obsname][decay_channel],
@@ -311,13 +265,25 @@ def basic_t2ws(obsname, decay_channel):
 
 @flag_as_option
 def pth_ggH_t2ws(args):
-    t2ws = basic_t2ws('pth_ggH', differentials.core.get_decay_channel_tag(args))
+    t2ws = basic_t2ws('pth_ggH', differentialutils.get_decay_channel_tag(args))
     if args.hzz:
         t2ws.extra_options.append('--PO \'binning=0,15,30,80,200\'')
     if args.hbb:
         t2ws.extra_options.append('--PO \'binning=200,350,600\'')
         # t2ws.extra_options.append('--PO \'binning=350,600\'')
     t2ws.run()
+
+@flag_as_option
+def pth_smH_t2ws(args):
+    t2ws = basic_t2ws('pth_smH', differentialutils.get_decay_channel_tag(args))
+    if args.hzz:
+        t2ws.extra_options.append('--PO \'binning=0,15,30,80,200\'')
+    if args.hbb:
+        t2ws.extra_options.append('--PO \'binning=200,350,600\'')
+    if args.hgg or args.combination or args.combWithHbb or args.hbb:
+        t2ws.extra_options.append('--PO \'scale_xH_ggH_as_smH=True\'')
+    t2ws.run()
+
 
 # TODO: Reform t2ws for pth_smH, njets, ptjet, rapidity
 

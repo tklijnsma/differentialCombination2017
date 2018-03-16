@@ -13,9 +13,12 @@ class DifferentialModel(MultiSignalModel):
         self.binning = None
         self.verbose = True
         self.make_underflow = False
+        self.scale_xH_ggH_as_smH = False
 
     def get_processes(self):
         processes = [ s for s in self.DC.signals if not('OutsideAcceptance' in s) and not('xH' in s) ]
+        if self.scale_xH_ggH_as_smH:
+            processes = list(set([p.replace('xH', 'smH').replace('ggH', 'smH') for p in processes]))
         processes.sort(key=left_bound_of_process)
         return processes
 
@@ -29,6 +32,8 @@ class DifferentialModel(MultiSignalModel):
                 self.binning = [ float(i) for i in po.replace('binning=','').split(',') ]
             if po.startswith('make_underflow'):
                 self.make_underflow = True
+            if po.startswith('scale_xH_ggH_as_smH'):
+                self.scale_xH_ggH_as_smH = True
 
     def doParametersOfInterest(self):
         for expr in self.exprs:
@@ -46,6 +51,10 @@ class DifferentialModel(MultiSignalModel):
         print 'Leaving doParametersOfInterest'
 
     def getYieldScale(self, bin, process):
+        _process = process
+        if self.scale_xH_ggH_as_smH:
+            process = process.replace('xH', 'smH').replace('ggH', 'smH')
+
         if process in self.get_processes():
             if self.binning is None:
                 y = 'r_' + process
@@ -57,7 +66,7 @@ class DifferentialModel(MultiSignalModel):
                     y = self.yield_parameters[i_bin]
         else:
             y = 1
-        if self.verbose: print 'Scaling proc:{0}/bin:{1} with {2}'.format(process, bin, y)
+        if self.verbose: print 'Scaling proc:{0}/bin:{1} with {2}'.format(_process, bin, y)
         return y
 
 

@@ -15,6 +15,7 @@ class Canvas(object):
     save_png = False
     save_root = False
     save_png_through_convert = False
+    save_gray = False
 
     default_width = 1000
     default_height = 800
@@ -75,6 +76,7 @@ class Canvas(object):
     def save(self, outname, pdf=True, png=False, root=False, png_through_convert=False ):
         # Check if a '/' was passed in the outname; if so, create a sub directory
         # Only allow 1 additional slash (otherwise may accidentally create deep tree structures)
+
         outdir = self.plotdir
         subdir = ''
         if len(outname.rsplit('/', 1)) == 2:
@@ -94,6 +96,10 @@ class Canvas(object):
             # See: https://stackoverflow.com/a/6605085/9209944
             cmd = 'convert -density 300 -quality 100 {0}.pdf -trim {0}.png'.format(outname)
             os.system(cmd)
+        if self.save_gray:
+            c.SetGrayscale()
+            self.canvas.SaveAs(outname+'_gray.pdf')
+            c.SetGrayscale(False)
 
         if self._is_resized_temporarily:
             self.resize(self._tmp_width, self._tmp_height)

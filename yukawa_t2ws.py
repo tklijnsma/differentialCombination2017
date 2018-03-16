@@ -243,9 +243,9 @@ def t2ws_Yukawa_BRcouplingDependency(args):
     t2ws.tags.append('BRcouplingDependency')
     t2ws.extra_options.append('--PO FitBR=True')
     do_BR_uncertainties = False
-    if do_BR_uncertainties:
-        t2ws.extra_options.append('--PO DoBRUncertainties=True')
-        t2ws.tags.append('withBRUnc')
+    # if do_BR_uncertainties:
+    #     t2ws.extra_options.append('--PO DoBRUncertainties=True')
+    #     t2ws.tags.append('withBRUnc')
     t2ws.run()
 
 @flag_as_option

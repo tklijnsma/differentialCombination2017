@@ -73,10 +73,19 @@ def get_decay_channel_tag(args, allow_default=False):
             raise DecayChannelNotFoundError()
     return tag
 
-def set_one_decay_channel(args, decay_channel):
+def set_one_decay_channel(real_args, decay_channel, asimov=None):
+    args = copy.deepcopy(real_args)
     for dc in [ 'hgg', 'hzz', 'hbb', 'combination', 'combWithHbb' ]:
         setattr(args, dc, False)
     setattr(args, decay_channel, True)
+    if not(asimov is None):
+        args.asimov = asimov
+    return args
+
+def force_asimov(real_args):
+    args = copy.deepcopy(real_args)
+    args.asimov = True
+    return args
 
 def try_call_function_with_args(fn, args):
     try:

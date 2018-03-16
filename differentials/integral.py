@@ -15,17 +15,19 @@ class Rebinner(object):
             raise ValueError('Length of given input lists do not match')
         self.bin_boundaries_old = bin_boundaries_old
         self.values_old = values_old
-        self.n_bins_old = len(self.bin_boundaries_old)-1
         self.bin_boundaries_new = bin_boundaries_new
-        self.n_bins_new = len(self.bin_boundaries_new)-1
 
     def rebin(self):
+        self.n_bins_old = len(self.bin_boundaries_old)-1
+        self.n_bins_new = len(self.bin_boundaries_new)-1
         self.integral = Integrator(self.bin_boundaries_old, self.values_old)
         self.values_new = []
         lefts = self.bin_boundaries_new[:-1]
         rights = self.bin_boundaries_new[1:]
         for a, b in zip(lefts, rights):
-            self.values_new.append(self.integral.integral(a, b))
+            self.values_new.append(
+                self.integral.integral(a, b) / (b-a)
+                )
         return self.values_new
 
 
@@ -70,7 +72,7 @@ class Integrator(object):
     def integral(self, a, b):
         ret = 0.0
 
-        logging.info('Requested integral from a={0} to b={1}'.format(a, b))
+        logging.debug('Requested integral from a={0} to b={1}'.format(a, b))
         logging.debug('Bin boundaries are {0}'.format(self.bin_boundaries))
 
         _multiply_by_minus_one = False
@@ -84,11 +86,11 @@ class Integrator(object):
             a = _
             _multiply_by_minus_one = True
 
-        logging.info('Requested behavior is {0}'.format(self.behavior))
+        logging.debug('Requested behavior is {0}'.format(self.behavior))
         if a < self.x_min:
-            logging.info('Requested left bound {0} < x_min({1})'.format(a, self.x_min))
+            logging.debug('Requested left bound {0} < x_min({1})'.format(a, self.x_min))
         if b > self.x_max:
-            logging.info('Requested right bound {0} > x_max({1}); assuming zero above x_max'.format(b, self.x_max))
+            logging.debug('Requested right bound {0} > x_max({1}); assuming zero above x_max'.format(b, self.x_max))
 
         ret += self.get_underflow(a, b)
 
@@ -140,6 +142,9 @@ class Integrator(object):
         logging.debug('overflow contribution:' + ' '*29 + '{0:<+9.3f}'.format(overflow))
         ret += overflow
 
-        logging.info('Result: Integral from a={0:<+9.3f} to b={1:<+9.3f} is {2:<+9.3f}'.format(a, b, ret))
+        logging.debug('Result: Integral from a={0:<+9.3f} to b={1:<+9.3f} is {2:<+9.3f}'.format(a, b, ret))
+        if _multiply_by_minus_one:
+            logging.info('Multiplying by -1.0 to correct for the a<>b switch')
+            ret *= -1.0
         return ret
 

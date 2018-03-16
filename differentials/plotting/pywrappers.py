@@ -171,12 +171,12 @@ class CMS_Latex_type(Latex):
     apply_text_offset = True
     text_size    = 0.06
 
-    def __init__(self, text=None, text_size=None):
-        if text is None: text = self.CMS_type_str
+    def __init__(self, type_str=None, text_size=None):
         if not(text_size is None):
             self.text_size = text_size
 
-        text = '#bf{{CMS}} #it{{#scale[0.75]{{{0}}}}}'.format(self.CMS_type_str)
+        if type_str is None: type_str = self.CMS_type_str
+        text = '#bf{{CMS}} #it{{#scale[0.75]{{{0}}}}}'.format(type_str)
         x = lambda c: c.GetLeftMargin()
         y = self._y
         super(CMS_Latex_type, self).__init__(x, y, text)
@@ -204,7 +204,7 @@ class CMS_Latex_lumi(Latex):
     """
     CMS_lumi = 35.9
     apply_text_offset = True
-    text_size    = 0.06
+    text_size    = 0.05
 
     def __init__(self, lumi=None, text_size=None):
         if lumi is None: lumi = self.CMS_lumi
@@ -648,6 +648,10 @@ class Graph(object):
 
         return [(Tg, 'SAMEL')]
 
+    def repr_dashed_line(self, leg=None):
+        ret = self.repr_basic_line(leg)
+        ret[0][0].SetLineStyle(2)
+        return ret
 
     def repr_smooth_line(self, leg=None):
         Tg, _ = self.repr_basic_line(leg)[0]
@@ -757,6 +761,7 @@ class Histogram2D(object):
 
     color_cycle = global_color_cycle
     default_value = 999.
+    contour_filter = utils.ContourFilter()
 
     def __init__(
             self,
@@ -775,7 +780,10 @@ class Histogram2D(object):
 
         self._legend = None
         self.H2 = None
+        self.H2_array = None
         self.entries = []
+
+        self.contour_filter_method = None
 
 
     def infer_bin_boundaries(self, bin_centers):
@@ -813,10 +821,8 @@ class Histogram2D(object):
     def y_max(self):
         return max(self.y())
 
-    def fill_from_entries(self, entries):
-        self.entries = entries
+    def set_binning_from_entries(self):
         bestfit = self.bestfit()
-
         self.x_bin_centers = [ x for x in list(set(self.x())) if not x == bestfit.x ]
         self.y_bin_centers = [ y for y in list(set(self.y())) if not y == bestfit.y ]
         self.x_bin_centers.sort()
@@ -830,12 +836,20 @@ class Histogram2D(object):
         logging.trace('Found the following x_bin_boundaries:\n{0}'.format(self.x_bin_boundaries))
         logging.trace('Found the following y_bin_boundaries:\n{0}'.format(self.y_bin_boundaries))
 
+
+    def fill_from_entries(self, entries=None):
+        if not(entries is None):
+            self.entries = entries
+        bestfit = self.bestfit()
+        self.set_binning_from_entries()
+
         self.H2 = ROOT.TH2D(
             utils.get_unique_rootname(), '',
             self.n_bins_x, array('d', self.x_bin_boundaries),
             self.n_bins_y, array('d', self.y_bin_boundaries),
             )
         ROOT.SetOwnership(self.H2, False)
+        self.H2_array = [ [self.default_value for j in xrange(self.n_bins_y)] for i in xrange(self.n_bins_x) ]
 
         for i_x in xrange(self.n_bins_x):
             for i_y in xrange(self.n_bins_y):
@@ -865,6 +879,7 @@ class Histogram2D(object):
                 )
 
             self.H2.SetBinContent(i_bin_x+1, i_bin_y+1, 2.*entry.deltaNLL)
+            self.H2_array[i_bin_x][i_bin_y] = 2.*entry.deltaNLL
 
 
     def repr_2D(self, leg=None):
@@ -920,6 +935,8 @@ class Histogram2D(object):
 
     def repr_1sigma_contours(self, leg=None):
         Tgs = utils.get_contours_from_H2(self.H2, 2.30)
+        if not(self.contour_filter_method is None):
+            Tgs = getattr(self.contour_filter, self.contour_filter_method)(Tgs)[:1]
         for Tg in Tgs:
             Tg.SetLineColor(self.color)
             Tg.SetLineWidth(2)
@@ -931,6 +948,8 @@ class Histogram2D(object):
 
     def repr_2sigma_contours(self, leg=None):
         Tgs = utils.get_contours_from_H2(self.H2, 6.18)
+        if not(self.contour_filter_method is None):
+            Tgs = getattr(self.contour_filter, self.contour_filter_method)(Tgs)[:1]
         for Tg in Tgs:
             Tg.SetLineColor(self.color)
             Tg.SetLineWidth(2)

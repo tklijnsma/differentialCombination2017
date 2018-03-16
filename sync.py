@@ -36,7 +36,7 @@ def main():
         AUTO_PASSWORDS = False
 
     www_onlxplus = '/afs/cern.ch/user/t/tklijnsm/www/'
-    plotdir_onlxplus = join( www_onlxplus, 'differentials2017/ptCombination_v3' )
+    plotdir_onlxplus = join( www_onlxplus, 'differentials2017/ptCombination_v4' )
     if plotdir_onlxplus.endswith('/'): plotdir_onlxplus = plotdir_onlxplus[:-1]
 
 

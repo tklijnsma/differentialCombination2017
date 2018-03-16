@@ -34,6 +34,152 @@ datestr = strftime('%b%d')
 # Main
 ########################################
 
+
+@flag_as_option
+def debug_scan_hgg_Mar15_pth_ggH_GT600_bestfit(args):
+    cmd = [
+        'combine',
+        'out/workspaces_Mar02/ws_pth_ggH_hgg.root',
+        '-n _debug_hgg_GT600_bestfit',
+        '-M MultiDimFit',
+        '-m 125.0',
+        '--cminDefaultMinimizerType Minuit2',
+        '--cminDefaultMinimizerAlgo migrad',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--floatOtherPOIs=1',
+        '-v 1',
+        '-P r_ggH_PTH_GT600',
+        '--setPhysicsModelParameterRanges r_ggH_PTH_0_15=-1.0,4.0:r_ggH_PTH_15_30=-1.0,4.0:r_ggH_PTH_30_45=-1.0,4.0:r_ggH_PTH_45_80=-1.0,4.0:r_ggH_PTH_80_120=-1.0,4.0:r_ggH_PTH_120_200=-1.0,4.0:r_ggH_PTH_200_350=-1.0,4.0:r_ggH_PTH_350_600=-15.0,10.0:r_ggH_PTH_GT600=-1000.0,10.0',
+        '--setPhysicsModelParameters r_ggH_PTH_0_15=1.0,r_ggH_PTH_15_30=1.0,r_ggH_PTH_30_45=1.0,r_ggH_PTH_45_80=1.0,r_ggH_PTH_80_120=1.0,r_ggH_PTH_120_200=1.0,r_ggH_PTH_200_350=1.0,r_ggH_PTH_350_600=1.0,r_ggH_PTH_GT600=1.0',
+        ]
+    differentials.core.execute(cmd)
+
+
+pdf_indices = [
+    'pdfindex_recoPt_350p0_600p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_350p0_600p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_350p0_600p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_600p0_10000p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_600p0_10000p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_600p0_10000p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_45p0_80p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_45p0_80p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_45p0_80p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_80p0_120p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_80p0_120p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_80p0_120p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_200p0_350p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_200p0_350p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_200p0_350p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_0p0_15p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_0p0_15p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_0p0_15p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_15p0_30p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_15p0_30p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_15p0_30p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_120p0_200p0_SigmaMpTTag_2_13TeV',
+    'pdfindex_recoPt_120p0_200p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_120p0_200p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_30p0_45p0_SigmaMpTTag_1_13TeV',
+    'pdfindex_recoPt_30p0_45p0_SigmaMpTTag_0_13TeV',
+    'pdfindex_recoPt_30p0_45p0_SigmaMpTTag_2_13TeV',
+    ]
+
+@flag_as_option
+def debug_scan_hgg_Mar15_pth_smH(args):
+    cmd = [
+        'combine',
+        'out/workspaces_Mar14/ws_pth_smH_hgg.root',
+        '-n _debug_hgg_Mar15_pth_smH',
+        '-t -1',
+        '--cminDefaultMinimizerType Minuit2',
+        '--cminDefaultMinimizerAlgo migrad',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--floatOtherPOIs=1',
+        '-v 1',
+        '-P r_smH_PTH_GT600',
+        '--setPhysicsModelParameters r_smH_PTH_0_15=1.0,r_smH_PTH_15_30=1.0,r_smH_PTH_30_45=1.0,r_smH_PTH_45_80=1.0,r_smH_PTH_80_120=1.0,r_smH_PTH_120_200=1.0,r_smH_PTH_200_350=1.0,r_smH_PTH_350_600=1.0,r_smH_PTH_GT600=1.0',
+        '--algo=grid',
+        '-M MultiDimFit',
+        '-m 125.0',
+        '--setPhysicsModelParameterRanges r_smH_PTH_0_15=-1.0,4.0:r_smH_PTH_15_30=-1.0,4.0:r_smH_PTH_30_45=-1.0,4.0:r_smH_PTH_45_80=-1.0,4.0:r_smH_PTH_80_120=-1.0,4.0:r_smH_PTH_120_200=-1.0,4.0:r_smH_PTH_200_350=-1.0,4.0:r_smH_PTH_350_600=-15.0,10.0:r_smH_PTH_GT600=-10.0,20.0',
+        '--points 40',
+        '--firstPoint 5',
+        '--lastPoint 7',
+        '--saveSpecifiedIndex {0}'.format(','.join(pdf_indices))
+        ]
+    differentials.core.execute(cmd)
+
+@flag_as_option
+def debug_scan_hgg_Mar15_pth_ggH(args):
+    cmd = [
+        'combine',
+        'out/workspaces_Mar02/ws_pth_ggH_hgg.root',
+        '-n _debug_hgg_Mar15_pth_ggH',
+        '-t -1',
+        '--cminDefaultMinimizerType Minuit2',
+        '--cminDefaultMinimizerAlgo migrad',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--floatOtherPOIs=1',
+        '-v 1',
+        '-P r_ggH_PTH_GT600',
+        '--setPhysicsModelParameters r_ggH_PTH_0_15=1.0,r_ggH_PTH_15_30=1.0,r_ggH_PTH_30_45=1.0,r_ggH_PTH_45_80=1.0,r_ggH_PTH_80_120=1.0,r_ggH_PTH_120_200=1.0,r_ggH_PTH_200_350=1.0,r_ggH_PTH_350_600=1.0,r_ggH_PTH_GT600=1.0',
+        '--algo=grid',
+        '-M MultiDimFit',
+        '-m 125.0',
+        '--setPhysicsModelParameterRanges r_ggH_PTH_0_15=-1.0,4.0:r_ggH_PTH_15_30=-1.0,4.0:r_ggH_PTH_30_45=-1.0,4.0:r_ggH_PTH_45_80=-1.0,4.0:r_ggH_PTH_80_120=-1.0,4.0:r_ggH_PTH_120_200=-1.0,4.0:r_ggH_PTH_200_350=-1.0,4.0:r_ggH_PTH_350_600=-15.0,10.0:r_ggH_PTH_GT600=-10.0,20.0',
+        '--points 40',
+        '--firstPoint 5',
+        '--lastPoint 7',
+        '--saveSpecifiedIndex {0}'.format(','.join(pdf_indices))
+        ]
+    differentials.core.execute(cmd)
+
+
+@flag_as_option
+def debug_scan_hzz_Mar15(args):
+    cmd = [
+        'combine',
+        'out/workspaces_Feb28/ws_pth_ggH_hzz.root',
+        '-n _debug_scan_hzz_Mar15',
+        '-M MultiDimFit',
+        '-m 125.0',
+        '--cminDefaultMinimizerType Minuit2',
+        '--cminDefaultMinimizerAlgo migrad',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--floatOtherPOIs=1',
+        # '-v -1',
+        '-P r_ggH_PTH_GT200',
+        '--setPhysicsModelParameterRanges r_ggH_PTH_0_15=0.0,4.0:r_ggH_PTH_15_30=0.0,4.0:r_ggH_PTH_30_80=0.0,4.0:r_ggH_PTH_80_200=0.0,4.0:r_ggH_PTH_GT200=-10.0,1.0',
+        '--setPhysicsModelParameters r_ggH_PTH_0_15=1.0,r_ggH_PTH_15_30=1.0,r_ggH_PTH_30_80=1.0,r_ggH_PTH_80_200=1.0,r_ggH_PTH_GT200=1.0',
+        '--algo=grid',
+        '--points=40',
+        ]
+    differentials.core.execute(cmd)
+
+
+@flag_as_option
+def debug_draw_fastscans_Mar12(args):
+    scandirs = [
+        'out/Scan_Mar06_Top_combWithHbb_asimov',
+        'out/Scan_Mar07_Top_combWithHbb_asimov',
+        'out/Scan_Mar12_Top_combWithHbb_last2BinsDropped_asimov',
+        'out/Scan_Mar06_Top_combination_asimov',
+        'out/Scan_Mar07_Top_combination_asimov_5',
+        'out/Scan_Mar12_Top_combination_last2BinsDropped_asimov',
+        ]
+    for scandir in scandirs:
+        fastscan_file = glob.glob(scandir + '/postfit_and_fastscan/*FASTSCAN*.root')[0]
+        name = os.path.basename(fastscan_file).replace('.root','')
+        fastscan = differentials.scans.Scan2D(name, 'ct', 'cg')
+        fastscan.root_files = [fastscan_file]
+        fastscan.read()
+        fastscan.plot(name, draw_style='repr_2D_rainbow_high_contours')
+
 @flag_as_option
 def debug_test_setreading(args):
     ws = LatestPaths.ws.yukawa.nominal.combination
@@ -93,7 +239,7 @@ Created job script: job__SCAN_ASIMOV_hgg_Top_reweighted_nominal_74_0.sh
 @flag_as_option
 def debug_draw_fastscans(args):
     
-    all_fastscans = glob.glob('out/Scan*Mar03*Top*/postfit_and_fastscan/*FASTSCAN*.root')
+    all_fastscans = glob.glob('out/Scan*Mar12*Top*/postfit_and_fastscan/*FASTSCAN*.root')
     for fastscan_file in all_fastscans:
         name = os.path.basename(fastscan_file).replace('.root','')
         fastscan = differentials.scans.Scan2D(name, 'ct', 'cg')

@@ -6,6 +6,7 @@ import core
 import plotting
 from plotting.canvas import c
 import plotting.plotting_utils as utils
+from uncertaintycalculator import UncertaintyCalculator
 
 from collections import namedtuple
 from array import array
@@ -16,10 +17,6 @@ import ROOT
 def glob_rootfiles(d):
     if not d.endswith('/'): d += '/'
     return glob.glob(d + '*.root')
-
-def rindex( someList, val ):
-    # Regular list.index() finds first instance in list, this function finds the last
-    return len(someList) - someList[::-1].index(val) - 1
 
 
 class DifferentialSpectrum(object):
@@ -32,10 +29,10 @@ class DifferentialSpectrum(object):
         'combWithHbb' : 'Comb. with H#rightarrowbb',
         }
 
-    def __init__(self, name, scandir, auto_determine_POIs=True, datacard=None):
+    def __init__(self, name, scandirs, auto_determine_POIs=True, datacard=None):
         self.name = name
-        self.scandir = scandir
-        self.scandirs = []
+        if isinstance(scandirs, basestring): scandirs = [scandirs]
+        self.scandirs = scandirs
         self.scans = []
 
         self.auto_determine_POIs = auto_determine_POIs
@@ -55,12 +52,21 @@ class DifferentialSpectrum(object):
         self.get_POIs()
         self._is_read = False
 
+        self.scans_x_min = -10.0
+        self.scans_x_max = 10.0
+
     def set_sm(self, smxs):
         self.smxs = smxs
         self.smxs_set = True
 
+    def add_scandir(self, scandir):
+        self.scandirs.append(scandir)
+        self.get_POIs()
+
     def get_POIs_from_scandir(self):
-        root_files = glob_rootfiles(self.scandir)
+        root_files = []
+        for scandir in self.scandirs:
+            root_files.extend(glob_rootfiles(scandir))
         POIs = []
         for root_file in root_files:
             match = re.search(r'bPOI_(\w+)_ePOI', os.path.basename(root_file))
@@ -69,6 +75,10 @@ class DifferentialSpectrum(object):
             POIs.append(match.group(1))
         POIs = list(set(POIs))
         POIs.sort(key=core.range_sorter)
+        logging.debug(
+            'Found the following set of POIs from {0}: {1}'
+            .format(', '.join(self.scandirs), ', '.join(POIs))
+            )
         return POIs
 
     def get_POIs_from_datacard(self, datacard=None):
@@ -94,7 +104,6 @@ class DifferentialSpectrum(object):
                 scan = Scan(
                     x_variable=POI,
                     y_variable='deltaNLL',
-                    scandir=self.scandir,
                     globpat=POI
                     )
                 scan.scandirs.extend(self.scandirs)
@@ -108,9 +117,8 @@ class DifferentialSpectrum(object):
             plotname = 'scans_{0}'.format(self.name)
         plot = plotting.plots.MultiScanPlot(plotname)
         plot.scans = self.scans
-        if 'hbb' in self.name:
-            plot.x_min = -10.0
-            plot.x_max = 10.0
+        plot.x_min = self.scans_x_min
+        plot.x_max = self.scans_x_max
         plot.draw()
         plot.wrapup()
 
@@ -254,14 +262,23 @@ class ScanPrimitive(object):
         self.entries = []
         self.globpat = '*'
 
+        self.read_one_scandir = True
+
 
     def collect_root_files(self):
         root_files = copy.copy(self.root_files)
 
         if len(self.scandirs)>0:
-            for scandir in self.scandirs:
+            for scandir in self.scandirs[::-1]:
                 if not scandir.endswith('/'): scandir += '/'
-                root_files.extend(glob.glob(scandir + self.globpat + '.root'))
+                root_files_this_scandir = glob.glob(scandir + self.globpat + '.root')
+                n_found = len(root_files_this_scandir)
+                logging.debug('Found {0} root files in {1}'.format(n_found, scandir))
+                root_files.extend(root_files_this_scandir)
+                if self.read_one_scandir and len(root_files_this_scandir) > 0:
+                    logging.warning('Using only root files found in {0} (ignoring others for globpat {1})'.format(scandir, self.globpat))
+                    self.scandirs = [scandir]
+                    break
             logging.debug('Found {0} root files in {1}'.format(len(root_files), ', '.join(self.scandirs)))
 
         if len(root_files) == 0:
@@ -345,10 +362,20 @@ class ScanPrimitive(object):
         passed_entries = []
         for entry in self.entries:
             if entry.deltaNLL < self.deltaNLL_threshold:
+                POIs = [ k for k in entry._fields if k.startswith('r_') ]
+                if len(POIs) == 0:
+                    POI = 'x'
+                else:
+                    POI = POIs[0]
                 if self.filter_negatives:
                     logging.warning(
-                        'Dropping entry (deltaNLL<{0}:'.format(self.deltaNLL_threshold)
-                        + entry.__repr__()
+                        'deltaNLL<{0}; Dropping entry (deltaNLL={1:+10.4f}, {2}={3:+10.4f}) (scandirs: {4})'
+                        .format(
+                            self.deltaNLL_threshold,
+                            entry.deltaNLL,
+                            POI,
+                            getattr(entry, POI),
+                            self.scandirs)
                         )
                     continue
                 else:
@@ -376,11 +403,23 @@ class ScanPrimitive(object):
         return [ 2.*entry.deltaNLL for entry in self.entries ]
 
     def bestfit(self):
-        return self.entries[self.deltaNLL().index(0.0)]
+        deltaNLLs = self.deltaNLL()
+        if 0.0 in deltaNLLs:
+            i_bestfit = deltaNLLs.index(0.0)
+        else:
+            abs_deltaNLLs = map(abs, deltaNLLs)
+            i_bestfit = abs_deltaNLLs.index(min(abs_deltaNLLs))
+            logging.error(
+                'Could not find deltaNLL == 0.; taking value closest to 0.0: {0} (scandirs: {1})'
+                .format(deltaNLLs[i_bestfit], self.scandirs)
+                )
+        return self.entries[i_bestfit]
 
 
 class Scan(ScanPrimitive):
     """docstring for Scan"""
+
+    uncertainty_calculator = UncertaintyCalculator()
 
     def __init__(self, x_variable, y_variable='deltaNLL', scandir=None, globpat=None):
         super(Scan, self).__init__()
@@ -422,114 +461,19 @@ class Scan(ScanPrimitive):
         self.entries = self.read_chain(root_files, variables)
         self.filter_entries()
 
-
     def create_uncertainties(self, inplace=True):
-        xs = self.x()
-        deltaNLLs = self.deltaNLL()
-
-        min_deltaNLL   = min(deltaNLLs)
-        i_min_deltaNLL = rindex(deltaNLLs, min_deltaNLL)
-        x_min          = xs[i_min_deltaNLL]
-
         logging.debug('Determining uncertainties for scan (x={0}, y={1})'.format(self.x_variable, self.y_variable))
-        logging.debug('Found minimum at index {0}: x={1}, deltaNLL={2}'.format(i_min_deltaNLL, x_min, min_deltaNLL))
-
-        unc_dict = {
-            'min_deltaNLL' : min_deltaNLL,
-            'i_min' : i_min_deltaNLL,
-            'x_min' : x_min,
-            'left_bound' : -0,
-            'left_error' : -0,
-            'right_bound' : 0,
-            'right_error' : 0,
-            'well_defined_left_bound' : False,
-            'well_defined_right_bound' : False,
-            }
-        Unc = namedtuple('Unc', unc_dict.keys())
-
-        # Process left uncertainty
-        if i_min_deltaNLL < 3:
-            logging.debug('Not enough points on the left side for a well defined left bound')
-            well_defined_left_bound = False
-        else:
-            xs_left = xs[:i_min_deltaNLL+1]
-            deltaNLLs_left = deltaNLLs[:i_min_deltaNLL+1]
-            if min(deltaNLLs_left) > 0.5 or max(deltaNLLs_left) < 0.5:
-                logging.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_left), max(deltaNLLs_left)))
-                well_defined_left_bound = False
-            else:
-                left_bound = self.interpolate(xs_left, deltaNLLs_left, 0.5)
-                if left_bound is False:
-                    well_defined_left_bound = False
-                else:
-                    well_defined_left_bound = True
-
-        # Process right uncertainty
-        if i_min_deltaNLL > len(xs)-3:
-            logging.debug('Not enough points on the right side for a well defined right bound')
-            well_defined_right_bound = False
-        else:
-            xs_right = xs[i_min_deltaNLL:]
-            deltaNLLs_right = deltaNLLs[i_min_deltaNLL:]
-            if min(deltaNLLs_right) > 0.5 or max(deltaNLLs_right) < 0.5:
-                logging.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_right), max(deltaNLLs_right)))
-                well_defined_right_bound = False
-            else:
-                right_bound = self.interpolate(xs_right, deltaNLLs_right, 0.5)
-                if right_bound is False:
-                    well_defined_right_bound = False
-                else:
-                    well_defined_right_bound = True
-
-        is_hopeless = False
-        if well_defined_left_bound and well_defined_right_bound:
-            pass
-        elif well_defined_left_bound and not well_defined_right_bound:
-            right_bound = x_min + (x_min - left_bound)
-        elif well_defined_right_bound and not well_defined_left_bound:
-            left_bound  = x_min - (right_bound - x_min)
-        else:
+        unc = self.uncertainty_calculator.create_uncertainties(xs = self.x(), deltaNLLs = self.deltaNLL())
+        if unc.is_hopeless:
             logging.error(
-                'Hopeless interpolation case; unable to determine uncertainties for '
-                'x = {0}, y = {1}'
-                .format(self.x_variable, self.y_variable)
+                'Hopeless interpolation case: Unable to determine uncertainties for '
+                'x = {0}, y = {1}, scandirs = {2}'
+                .format(self.x_variable, self.y_variable, self.scandirs)
                 )
-            is_hopeless = True
-
-        if not is_hopeless:
-            unc_dict['well_defined_left_bound'] = well_defined_left_bound
-            unc_dict['well_defined_right_bound'] = well_defined_right_bound
-            left_error = abs(x_min - left_bound)
-            right_error = abs(x_min - right_bound)
-            unc_dict['left_bound']  = left_bound
-            unc_dict['left_error']  = left_error
-            unc_dict['right_bound'] = right_bound
-            unc_dict['right_error'] = right_error
-
-        unc = Unc(**unc_dict)
         if inplace:
             self.unc = unc
         else:
             return unc
-
-    def interpolate(self, ys, xs, x_value):
-        logging.debug('Interpolating for x_value={0}'.format(x_value))
-        logging.trace('  x  /  y:')
-        for x, y in zip(xs, ys): logging.trace('    {0:+7.2f}  /  {1:+7.2f}'.format(x, y))
-
-        if min(xs) > x_value or max(xs) < x_value:
-            logging.debug('  Requested interpolation {0} is outside the range: {1} to {2}'.format(x_value, min(xs), max(xs)))
-            return False
-        Tg = ROOT.TGraph(len(xs), array('f', xs), array('f', ys))
-        y_value = Tg.Eval(x_value)
-        # if y_value < min(ys) or y_value > max(ys):
-        #     return False
-        if y_value is False:
-            logging.debug('  Could not interpolate properly')
-        else:
-            logging.debug('  Interpolated y_value {0} for x_value {1}'.format(y_value, x_value))
-        return y_value
-
 
     def to_graph(self):
         name = utils.get_unique_rootname()
@@ -538,7 +482,6 @@ class Scan(ScanPrimitive):
         if hasattr(self, 'draw_style'): graph.draw_style = self.draw_style
         return graph
 
-        
 
 
 class Scan2D(ScanPrimitive):
@@ -605,6 +548,8 @@ class Scan2D(ScanPrimitive):
         histogram2D.y_title = self.y_title
         histogram2D.z_title = self.z_title
         histogram2D.fill_from_entries(self.entries)
+        if hasattr(self, 'contour_filter_method'):
+            histogram2D.contour_filter_method = self.contour_filter_method
         return histogram2D
 
 
@@ -644,4 +589,63 @@ class Scan2D(ScanPrimitive):
         c.Update()
         c.RedrawAxis()
         c.save(plotname)
+
+
+    def get_1d(self, variable):
+        logging.info('Creating 1D profile from 2D histogram for variable {0}'.format(variable))
+        histogram2D = self.to_hist()
+        logging.trace('Will use 2D histogram with the following array:\n{0}'.format(histogram2D.H2_array))
+
+        if variable == self.x_variable:
+            logging.debug('Making 1D graph for x variable {0}'.format(variable))
+            graph = self.get_1d_x(histogram2D)
+        elif variable == self.y_variable:
+            logging.debug('Making 1D graph for y variable {0}'.format(variable))
+            graph = self.get_1d_y(histogram2D)
+        else:
+            raise ValueError('Variable {0} is not x {1} or y {2}'.format(variable, self.x_variable, self.y_variable))
+
+        logging.trace('Found x values for 1D graph: {0}'.format(graph.xs))
+        logging.trace('Found deltaNLL values for 1D graph: {0}'.format(graph.ys))
+
+        logging.debug('Creating uncertainties for graph')
+        graph.unc = Scan.uncertainty_calculator.create_uncertainties(
+            graph.xs,
+            [ 0.5*y for y in graph.ys ] # Histogram has 2dNLL, but unc calculator expects dNLL
+            )
+        return graph
+
+    def get_1d_x(self, histogram2D):
+        xs = []
+        deltaNLLs = []
+        for i_center, center in enumerate(histogram2D.x_bin_centers):
+            deltaNLL = min(histogram2D.H2_array[i_center][:])
+            xs.append(center)
+            deltaNLLs.append(deltaNLL)
+
+        graph = plotting.pywrappers.Graph(
+            utils.get_unique_rootname(),
+            self.x_variable,
+            xs,
+            deltaNLLs,
+            color=self.color
+            )
+        return graph
+
+    def get_1d_y(self, histogram2D):
+        xs = []
+        deltaNLLs = []
+        for i_center, center in enumerate(histogram2D.y_bin_centers):
+            deltaNLL = min([ row[i_center] for row in histogram2D.H2_array ])
+            xs.append(center)
+            deltaNLLs.append(deltaNLL)
+
+        graph = plotting.pywrappers.Graph(
+            utils.get_unique_rootname(),
+            self.y_variable,
+            xs,
+            deltaNLLs,
+            color=self.color
+            )
+        return graph
 

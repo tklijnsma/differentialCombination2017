@@ -89,24 +89,32 @@ def all_scans_Yukawa(args_original):
 @flag_as_option
 def scan_yukawa(args):
     config = basic_config(args)
-    if args.combination:
-        config.datacard = 'out/workspaces_Mar09/combination_Yukawa_reweighted_nominal.root'
-    elif args.hgg:
-        config.datacard = 'out/workspaces_Mar09/hgg_Yukawa_reweighted_nominal.root'
+    datacard_dict = LatestPaths.ws.yukawa.nominal
+    config.datacard = datacard_dict[differentialutils.get_decay_channel_tag(args)]
+    # if args.combination:
+    #     config.datacard = 'out/workspaces_Mar09/combination_Yukawa_reweighted_nominal.root'
+    # elif args.hgg:
+    #     config.datacard = 'out/workspaces_Mar09/hgg_Yukawa_reweighted_nominal.root'
     differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
 def scan_yukawa_unreweighted(args):
     config = basic_config(args)
-    if args.combination:
-        config.datacard = 'out/workspaces_Mar09/combination_Yukawa_nominal.root'
-    elif args.hgg:
-        config.datacard = 'out/workspaces_Mar09/hgg_Yukawa_nominal.root'
+    datacard_dict = LatestPaths.ws.yukawa.unreweighted
+    config.datacard = datacard_dict[differentialutils.get_decay_channel_tag(args)]
+    # if args.combination:
+    #     config.datacard = 'out/workspaces_Mar09/combination_Yukawa_nominal.root'
+    # elif args.hgg:
+    #     config.datacard = 'out/workspaces_Mar09/hgg_Yukawa_nominal.root'
     differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
 def scan_yukawa_oneKappa(args):
-    for kappa in ['kappac', 'kappab']:
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    for kappa in [
+            # 'kappac',
+            'kappab'
+            ]:
         config = basic_config(args)
         config.datacard = LatestPaths.ws.yukawa.nominal[config.decay_channel]
         config.nPoints       = 72
@@ -118,14 +126,25 @@ def scan_yukawa_oneKappa(args):
         config.floatNuisances.append(otherKappa)
         config.tags.append('oneKappa_' + kappa)
 
+        for i, range_str in enumerate(config.PhysicsModelParameterRanges):
+            if range_str.startswith('kappab'):
+                config.PhysicsModelParameterRanges[i] = 'kappab={0},{1}'.format(-7.0, 9.0)
+        if kappa == 'kappab':
+            config.nPoints = 80
+            config.nPointsPerJob = 2
+
         if args.lumiScale:
             config.datacard = 'out/workspaces_Feb12/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties_lumiScale.root'
             config.freezeNuisances.append('lumiScale')
             config.tags.append('lumi300fb')
             config.hardPhysicsModelParameters.append( 'lumiScale=8.356546' )
 
-        # differentialutils.scan_directly(config)
-        differentialutils.run_postfit_fastscan_scan(config)
+        differentialutils.scan_directly(config)
+
+        # DONT DO THIS:
+        # differentialutils.run_postfit_fastscan_scan(config)
+        # This relies on the fastscan-first-code, which is NOT implemented in combine
+        # (only works for 2D now)
 
 @flag_as_option
 def scan_yukawa_uncorrelatedTheoryUnc(real_args):

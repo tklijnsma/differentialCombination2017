@@ -5,14 +5,19 @@ import traceback
 import subprocess
 
 import logging
-logging.getLogger().setLevel(logging.INFO)
 import logger
+logger.set_basic_format()
 
 import differentials
 import ROOT
 
 from time import strftime
 GLOBAL_DATESTR = strftime( '%b%d' )
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 def get_POIs_oldstyle_scandir(scandir):
     root_files = glob.glob(join(scandir, '*.root'))
@@ -58,12 +63,25 @@ def is_testmode():
     global TESTMODE
     return TESTMODE
 
+
+def save_root():
+    differentials.plotting.canvas.Canvas.save_root = True
+
 def save_png():
     differentials.plotting.canvas.Canvas.save_png = True
 
 def save_png_through_convert():
     differentials.plotting.canvas.Canvas.save_png_through_convert = True
 
+def save_gray():
+    differentials.plotting.canvas.Canvas.save_gray = True
+
+# Colors picked to be projector safe and reasonably distinguishable in grayscale
+safe_colors = AttrDict(
+    red = 628,
+    blue = 601,
+    green = 419,
+    )
 
 standard_titles = {
     'hgg' : 'H#rightarrow#gamma#gamma',
@@ -107,12 +125,6 @@ def execute(cmd, capture_output=False, ignore_testmode=False, py_capture_output=
             return output
         else:
             os.system(cmd_exec)
-
-class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-
 
 def float_to_str(number, nDecimals=None):
     number = float(number)

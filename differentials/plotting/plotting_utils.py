@@ -5,6 +5,7 @@ import ROOT
 
 import logging
 from array import array
+from math import sqrt
 
 ROOTCOUNTER = 1000
 def get_unique_rootname():
@@ -129,6 +130,43 @@ def get_contours_from_H2(H2_original, threshold):
     ROOT.gPad.Update()
 
     return Tgs
+
+
+
+class ContourFilter(object):
+    """docstring for ContourFilter"""
+    def __init__(self):
+        super(ContourFilter, self).__init__()
+
+
+    def com(self, xs, ys):
+        # Not very properly done now
+        x_com = sum(xs)/len(xs)
+        y_com = sum(ys)/len(ys)
+        return x_com, y_com
+
+    def preprocess_contours(self, Tgs):
+        for Tg in Tgs:
+            xs, ys = get_x_y_from_TGraph(Tg)
+            if not hasattr(Tg, 'x'):
+                Tg.x = xs
+            if not hasattr(Tg, 'y'):
+                Tg.y = ys
+
+    def max_distance_to_com(self, Tgs):
+        self.preprocess_contours(Tgs)
+
+        def d_sorter(Tg):
+            x_com, y_com = self.com(Tg.x, Tg.y)
+            d = 0.0
+            for x, y in zip(Tg.x, Tg.y):
+                d += sqrt((x-x_com)**2 + (y-y_com)**2)
+            return d
+        
+        new_Tgs = Tgs[:]
+        new_Tgs.sort(key=d_sorter, reverse=True)
+        return new_Tgs
+
 
 def get_x_y_from_TGraph(Tg):
     N = Tg.GetN()
