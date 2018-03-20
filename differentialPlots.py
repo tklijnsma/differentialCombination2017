@@ -365,9 +365,256 @@ def rapidity_plot(args):
 # Other plots
 ########################################
 
-#____________________________________________________________________
+def get_systonly_histogram(combination, combination_statonly):
+    # Calculate the syst-only errors
+    combination_histogram = combination.to_hist()
+    statonly_histogram    = combination_statonly.to_hist()
+
+    systonly_histogram = deepcopy(combination_histogram)
+    systonly_histogram.title = 'Syst. unc.'
+    systonly_histogram.draw_method = 'repr_uncertainties_fully_filled_area'
+    systonly_histogram_xs = combination.to_hist_xs()
+    systonly_histogram_xs.title = 'Syst. unc.'
+    systonly_histogram_xs.draw_method = 'repr_uncertainties_fully_filled_area'
+
+    syst_err_up = []
+    syst_err_down = []
+    syst_err_up_xs = []
+    syst_err_down_xs = []
+    for i in xrange(combination_histogram.n_bins):
+        up_tot = abs(combination_histogram.errs_up[i])
+        down_tot = abs(combination_histogram.errs_down[i])
+        symm_tot = 0.5*(up_tot+down_tot)
+        if symm_tot == 0.0:
+            logging.error(
+                'Found symm_tot == 0.0 (probably because of faulty uncertainty determination). '
+                'Will now use 999 instead.'
+                )
+            symm_tot = 999.
+
+        symm_stat = 0.5*(abs(statonly_histogram.errs_up[i]) + abs(statonly_histogram.errs_down[i]))
+        sm_crosssection = combination.smxs[i]
+
+        if symm_tot>symm_stat:
+            symm_syst = sqrt(symm_tot**2-symm_stat**2)
+        else:
+            logging.warning(
+                'For bin {0}, symm_tot={1} > symm_stat={2}. '
+                'Taking sqrt(symm_stat**2-symm_tot**2) instead'
+                .format(i, symm_tot, symm_stat)
+                )
+            symm_syst = sqrt(symm_stat**2-symm_tot**2)
+        syst_err_up.append(up_tot * symm_syst/symm_tot)
+        syst_err_down.append(down_tot * symm_syst/symm_tot)
+        syst_err_up_xs.append(up_tot * symm_syst/symm_tot * sm_crosssection)
+        syst_err_down_xs.append(down_tot * symm_syst/symm_tot * sm_crosssection)
+    systonly_histogram.set_err_up(syst_err_up)
+    systonly_histogram.set_err_down(syst_err_down)
+    systonly_histogram_xs.set_err_up(syst_err_up_xs)
+    systonly_histogram_xs.set_err_down(syst_err_down_xs)
+    return systonly_histogram, systonly_histogram_xs
+
+@flag_as_option
+def plot_all_statsyst(args):
+    njets_plot_statsyst(args)
+    ptjet_plot_statsyst(args)
+    rapidity_plot_statsyst(args)
+    pth_ggH_plot_statsyst(args)
+    pth_smH_plot_statsyst(args)
+
+@flag_as_option
+def pth_ggH_plot_statsyst(args):
+    obs_name = 'pth_ggH'
+    obstuple = LatestBinning.obstuple_pth_ggH
+    scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
+    plotname = 'spectra_{0}_statsyst'.format(obs_name) + ('_asimov' if args.asimov else '')
+
+    combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', scandict.combWithHbb)
+    combWithHbb.color = 1
+    combWithHbb.title = 'Total'
+    combWithHbb.no_overflow_label = True
+    combWithHbb.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb.read()
+
+    combWithHbb_statonly = differentials.scans.DifferentialSpectrum('combWithHbb_statonly', scandict.combWithHbb_statonly)
+    combWithHbb_statonly.color = 1
+    combWithHbb_statonly.no_overflow_label = True
+    combWithHbb_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb_statonly.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb_statonly.read()
+    combWithHbb_statonly.plot_scans(plotname + '_scans_combWithHbb_statonly')
+
+    systonly_histogram, systonly_histogram_xs = get_systonly_histogram(combWithHbb, combWithHbb_statonly)
+
+    plot = differentials.plotting.plots.SpectraPlot(
+        plotname,
+        [ combWithHbb ]
+        )
+    plot.draw_multiscans = True
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+    plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+    plot.draw()
+    plot.wrapup()
+
 @flag_as_option
 def pth_smH_plot_statsyst(args):
+    obs_name = 'pth_smH'
+    obstuple = LatestBinning.obstuple_pth_smH
+    scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
+    plotname = 'spectra_{0}_statsyst'.format(obs_name) + ('_asimov' if args.asimov else '')
+
+    combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', scandict.combWithHbb)
+    combWithHbb.color = 1
+    combWithHbb.title = 'Total'
+    combWithHbb.no_overflow_label = True
+    combWithHbb.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb.read()
+
+    combWithHbb_statonly = differentials.scans.DifferentialSpectrum('combWithHbb_statonly', scandict.combWithHbb_statonly)
+    combWithHbb_statonly.color = 1
+    combWithHbb_statonly.no_overflow_label = True
+    combWithHbb_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb_statonly.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb_statonly.read()
+    combWithHbb_statonly.plot_scans(plotname + '_scans_combWithHbb_statonly')
+
+    systonly_histogram, systonly_histogram_xs = get_systonly_histogram(combWithHbb, combWithHbb_statonly)
+
+    plot = differentials.plotting.plots.SpectraPlot(
+        plotname,
+        [ combWithHbb ]
+        )
+    plot.draw_multiscans = True
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+    plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+    plot.draw()
+    plot.wrapup()
+
+@flag_as_option
+def njets_plot_statsyst(args):
+    obs_name = 'njets'
+    obstuple = LatestBinning.obstuple_njets
+    scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
+    # scandict.combination_statonly = 'out/Scan_njets_Feb06_combination_statonly'
+
+    combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
+    # combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
+    combination.color = 1
+    combination.title = 'Total'
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combination.read()
+
+    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
+    # combination_statonly.POIs = get_POIs_oldstyle_scandir(scandict.combination_statonly)
+    combination_statonly.color = 1
+    combination_statonly.no_overflow_label = True
+    combination_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combination_statonly.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combination_statonly.read()
+
+    systonly_histogram, systonly_histogram_xs = get_systonly_histogram(combination, combination_statonly)
+
+    plot = differentials.plotting.plots.SpectraPlot(
+        'spectra_{0}_statsyst'.format(obs_name) + ('_asimov' if args.asimov else ''),
+        [ combination ]
+        )
+    plot.draw_multiscans = False
+    plot.obsname = obs_name
+    plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+    plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+    plot.draw()
+    plot.wrapup()
+
+@flag_as_option
+def ptjet_plot_statsyst(args):
+    obs_name = 'ptjet'
+    obstuple = LatestBinning.obstuple_ptjet
+    scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
+    # scandict.combination_statonly = 'out/Scan_ptjet_Feb06_combination_statonly'
+
+    combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
+    # combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
+    combination.color = 1
+    combination.title = 'Total'
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combination.read()
+
+    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
+    # combination_statonly.POIs = get_POIs_oldstyle_scandir(scandict.combination_statonly)
+    combination_statonly.color = 1
+    combination_statonly.no_overflow_label = True
+    combination_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combination_statonly.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combination_statonly.read()
+
+    systonly_histogram, systonly_histogram_xs = get_systonly_histogram(combination, combination_statonly)
+
+    plot = differentials.plotting.plots.SpectraPlot(
+        'spectra_{0}_statsyst'.format(obs_name) + ('_asimov' if args.asimov else ''),
+        [ combination ]
+        )
+    plot.draw_multiscans = False
+    plot.top_y_max = 10.
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
+    plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+    plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+    plot.draw()
+    plot.wrapup()
+
+@flag_as_option
+def rapidity_plot_statsyst(args):
+    obs_name = 'rapidity'
+    obstuple = LatestBinning.obstuple_rapidity
+    scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
+    # scandict.combination_statonly = 'out/Scan_rapidity_Feb06_combination_statonly'
+
+    combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
+    # combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
+    combination.color = 1
+    combination.title = 'Total'
+    combination.no_overflow_label = True
+    combination.draw_method = 'repr_point_with_vertical_bar'
+    combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
+    combination.read()
+
+    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
+    # combination_statonly.POIs = get_POIs_oldstyle_scandir(scandict.combination_statonly)
+    combination_statonly.color = 1
+    combination_statonly.no_overflow_label = True
+    combination_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combination_statonly.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
+    combination_statonly.read()
+
+    systonly_histogram, systonly_histogram_xs = get_systonly_histogram(combination, combination_statonly)
+
+    plot = differentials.plotting.plots.SpectraPlot(
+        'spectra_{0}_statsyst'.format(obs_name) + ('_asimov' if args.asimov else ''),
+        [ combination ]
+        )
+    plot.draw_multiscans = False
+    plot.top_y_max = 300
+    plot.obsname = obs_name
+    plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+    plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+    plot.draw()
+    plot.wrapup()
+
+
+
+#____________________________________________________________________
+@flag_as_option
+def pth_smH_plot_statsyst_old(args):
     obs_name = 'pth_smH'
 
     sm_crosssections = get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)

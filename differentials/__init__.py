@@ -5,6 +5,7 @@ import parametrization
 import integral
 import pdffreezer
 import uncertaintycalculator
+import processinterpreter
 
 # Sub-packages
 import plotting

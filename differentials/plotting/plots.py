@@ -84,7 +84,7 @@ class MultiScanPlot(PlotBase):
             graph._legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
-            left_point, right_point = self.get_unc_points(scan)
+            left_point, right_point = self.get_unc_points(scan, color=graph.color)
 
             line_bestfit = ROOT.TGraph(2,
                 array('f', [scan.bestfit().x, scan.bestfit().x]),
@@ -102,7 +102,7 @@ class MultiScanPlot(PlotBase):
             graph._legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
-            left_point, right_point = self.get_unc_points(graph)
+            left_point, right_point = self.get_unc_points(graph, color=graph.color)
 
             x_bestfit = graph.unc.x_min
             line_bestfit = ROOT.TGraph(2,
@@ -120,12 +120,12 @@ class MultiScanPlot(PlotBase):
         pywrappers.CMS_Latex_lumi().Draw()
 
 
-    def get_unc_points(self, scan):
+    def get_unc_points(self, scan, color=1):
         """Should work in Graph as well"""
 
         left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [1.0]))
         ROOT.SetOwnership(left_point, False)
-        left_point.SetMarkerColor(scan.color)
+        left_point.SetMarkerColor(color)
         left_point.SetMarkerSize(1.1)
         left_point.SetMarkerStyle(8)
         if not scan.unc.well_defined_left_bound:
@@ -134,7 +134,7 @@ class MultiScanPlot(PlotBase):
 
         right_point = ROOT.TGraph(1, array('f', [scan.unc.right_bound]), array('f', [1.0]))
         ROOT.SetOwnership(right_point, False)
-        right_point.SetMarkerColor(scan.color)
+        right_point.SetMarkerColor(color)
         right_point.SetMarkerSize(1.1)
         right_point.SetMarkerStyle(8)
         if not scan.unc.well_defined_right_bound:

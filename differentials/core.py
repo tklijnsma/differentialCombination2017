@@ -19,6 +19,16 @@ class AttrDict(dict):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
+def deprecated(fn):
+    def decorated(*args):
+        caller = get_caller()
+        logging.warning(
+            'Deprecated call to {0}: made by {1}:{2}:{3}'
+            .format(fn.__name__, caller.module, caller.function, caller.line)
+            )
+        return fn(*args)
+    return decorated
+
 def get_POIs_oldstyle_scandir(scandir):
     root_files = glob.glob(join(scandir, '*.root'))
     POIs = []
@@ -39,17 +49,20 @@ def get_POIs_oldstyle_scandir(scandir):
 def datestr():
     return GLOBAL_DATESTR
 
-def gittag():
-    stack = traceback.extract_stack(None, 2)
+def get_caller():
+    stack = traceback.extract_stack(None, 3)
     stack = stack[0]
     linenumber = stack[1]
     funcname = stack[2]
     cwd = abspath(os.getcwd())
     modulefilename = relpath(stack[0], cwd)
+    return AttrDict(module=modulefilename, function=funcname, line=linenumber)
 
+def gittag():
+    caller = get_caller()
     datestr_detailed = strftime('%y-%m-%d %H:%M:%S')
     currentcommit = execute(['git', 'log', '-1', '--oneline' ], py_capture_output=True)
-    ret = 'Generated on {0} by {1}; current git commit: {2}'.format(datestr_detailed, modulefilename, currentcommit.replace('\n',''))
+    ret = 'Generated on {0} by {1}; current git commit: {2}'.format(datestr_detailed, caller.module, currentcommit.replace('\n',''))
     return ret
 
 TESTMODE = False
@@ -142,44 +155,6 @@ def str_to_float(string):
     number = float(number)
 
     return number
-
-def get_range_from_str(text):
-    regular_match = re.search(r'([\dpm\.\-]+)_([\dpm\.\-]+)', text)
-    overflow_match = re.search(r'(GE|GT)([\dpm\.\-]+)', text)
-    underflow_match = re.search(r'(LE|LT)([\dpm\.\-]+)', text)
-    single_match = re.search(r'_([\dpm\.\-]+)', text)
-
-    if regular_match:
-        left = str_to_float(regular_match.group(1))
-        right = str_to_float(regular_match.group(2))
-    elif overflow_match:
-        left = str_to_float(overflow_match.group(2))
-        right = 'INF'
-    elif underflow_match:
-        left = '-INF'
-        right = str_to_float(underflow_match.group(2))
-    elif single_match:
-        logging.debug('single_match for {0}; matched text is {1}'.format(text, single_match.group(1)))
-        left = str_to_float(single_match.group(1))
-        right = 'SINGLE'
-    else:
-        left = 'UNDEFINED'
-        right = 'UNDEFINED'
-
-    return left, right
-
-def range_sorter(text):
-    left, right = get_range_from_str(text)
-    if left == 'UNDEFINED':
-        return 900000
-    elif right == 'SINGLE':
-        return left
-    elif right == 'INF':
-        return 800000
-    elif left == '-INF':
-        return -800000
-    else:
-        return left
 
 
 def __uniqueid__():
@@ -285,47 +260,6 @@ def set_exists(root_file, setname):
         return False
     else:
         return True
-
-
-def last_bin_is_overflow(POIs):
-    """Checks if the last bin is an overflow bin. Assumes POIs are pre-sorted"""
-    left, right = get_range_from_str(POIs[-1])
-    is_overflow = False
-    if right == 'INF':
-        is_overflow = True
-    logging.debug('Checking if POI \'{0}\' is overflow: found right {1}; overflow={2}'.format(POIs[-1], right, is_overflow))
-    return is_overflow
-
-def first_bin_is_underflow(POIs):
-    """Checks if the first bin is an underflow bin. Assumes POIs are pre-sorted"""
-    left, right = get_range_from_str(POIs[0])
-    if left == '-INF':
-        return True
-    return False
-
-def binning_from_POIs(POIs_original):
-    POIs = copy.copy(POIs_original)
-    POIs.sort(key=range_sorter)
-    logging.debug(
-        'Determining bin boundaries of the following (sorted) POIs:\n    '
-        + '\n    '.join(POIs)
-        )
-    is_underflow = first_bin_is_underflow(POIs)
-    is_overflow  = last_bin_is_overflow(POIs)
-    binning = []
-    if is_underflow:
-        POIs = POIs[1:]
-        binning.append(-10000)
-    for POI in POIs:
-        left, right = get_range_from_str(POI)
-        binning.append(left)
-    if is_overflow:
-        binning.append(10000)
-    else:
-        binning.append(right)
-    logging.debug('Determined the following binning: {0}'.format(binning))
-    return binning
-
 
 def read_data(f, sep=' ', columns=False, make_float=False):
     with open(f, 'r') as fp:
@@ -462,3 +396,90 @@ def make_unique_directory(dirname, n_attempts = 100):
 
     logging.info('Uniquified directory: {0}'.format(dirname))
     return dirname
+
+
+# ======================================
+# To be replaced by tools in proccesinterpreter.py
+
+# @deprecated
+def get_range_from_str(text):
+    regular_match = re.search(r'([\dpm\.\-]+)_([\dpm\.\-]+)', text)
+    overflow_match = re.search(r'(GE|GT)([\dpm\.\-]+)', text)
+    underflow_match = re.search(r'(LE|LT)([\dpm\.\-]+)', text)
+    single_match = re.search(r'_([\dpm\.\-]+)', text)
+
+    if regular_match:
+        left = str_to_float(regular_match.group(1))
+        right = str_to_float(regular_match.group(2))
+    elif overflow_match:
+        left = str_to_float(overflow_match.group(2))
+        right = 'INF'
+    elif underflow_match:
+        left = '-INF'
+        right = str_to_float(underflow_match.group(2))
+    elif single_match:
+        logging.debug('single_match for {0}; matched text is {1}'.format(text, single_match.group(1)))
+        left = str_to_float(single_match.group(1))
+        right = 'SINGLE'
+    else:
+        left = 'UNDEFINED'
+        right = 'UNDEFINED'
+
+    return left, right
+
+# @deprecated
+def range_sorter(text):
+    left, right = get_range_from_str(text)
+    if left == 'UNDEFINED':
+        return 900000
+    elif right == 'SINGLE':
+        return left
+    elif right == 'INF':
+        return 800000
+    elif left == '-INF':
+        return -800000
+    else:
+        return left
+
+# @deprecated
+def last_bin_is_overflow(POIs):
+    """Checks if the last bin is an overflow bin. Assumes POIs are pre-sorted"""
+    left, right = get_range_from_str(POIs[-1])
+    is_overflow = False
+    if right == 'INF':
+        is_overflow = True
+    logging.debug('Checking if POI \'{0}\' is overflow: found right {1}; overflow={2}'.format(POIs[-1], right, is_overflow))
+    return is_overflow
+
+# @deprecated
+def first_bin_is_underflow(POIs):
+    """Checks if the first bin is an underflow bin. Assumes POIs are pre-sorted"""
+    left, right = get_range_from_str(POIs[0])
+    if left == '-INF':
+        return True
+    return False
+
+# @deprecated
+def binning_from_POIs(POIs_original):
+    POIs = copy.copy(POIs_original)
+    POIs.sort(key=range_sorter)
+    logging.debug(
+        'Determining bin boundaries of the following (sorted) POIs:\n    '
+        + '\n    '.join(POIs)
+        )
+    is_underflow = first_bin_is_underflow(POIs)
+    is_overflow  = last_bin_is_overflow(POIs)
+    binning = []
+    if is_underflow:
+        POIs = POIs[1:]
+        binning.append(-10000)
+    for POI in POIs:
+        left, right = get_range_from_str(POI)
+        binning.append(left)
+    if is_overflow:
+        binning.append(10000)
+    else:
+        binning.append(right)
+    logging.debug('Determined the following binning: {0}'.format(binning))
+    return binning
+

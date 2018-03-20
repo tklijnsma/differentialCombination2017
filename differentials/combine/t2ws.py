@@ -3,6 +3,7 @@ import logging
 from os.path import *
 import glob, re, copy
 from collections import namedtuple
+import sys
 
 import differentials
 import differentials.core as core
@@ -32,12 +33,34 @@ class T2WS(object):
 
         self.outdir = 'workspaces_{0}'.format(core.datestr())
         self.output_ws = None
-
         self.tags = []
-
         self.extra_options = []
-        self.tags = []
 
+    def get_processes_from_card(self):
+        with open(self.card, 'r') as card_fp:
+            lines = [ i.strip() for i in card_fp.readlines() ]
+        process_lines = []
+        for line in lines:
+            if line.startswith('process'):
+                process_lines.append(line)
+                if len(process_lines) == 2: break
+        else:
+            raise RuntimeError('Could not find two lines in {0} that start with \'process\''.format(self.card))
+
+        processes = []
+        for process, integer in zip(process_lines[0].split()[1:], process_lines[1].split()[1:]):
+            if int(integer) <= 0 and not 'OutsideAcceptance' in process:
+                processes.append(process)
+        processes = list(set(processes))
+        logging.debug('Determined list of processes from {0}: {1}'.format(self.card, processes))
+        return processes
+
+    def make_maps_from_processes(self, binning=None, add_overflow=False, add_underflow=False):
+        processes = self.get_processes_from_card()
+        self.processinterpreter = differentials.processinterpreter.ProcessInterpreter(processes, binning)
+        self.processinterpreter.make_yield_parameters(add_underflow=add_underflow, add_overflow=add_overflow)
+        self.processinterpreter.link_processes_to_yield_parameters()
+        self.extra_options.extend(self.processinterpreter.make_maps())
 
     def get_outdir(self):
         outdir = abspath(join(utils.get_global_outdir(), self.outdir))

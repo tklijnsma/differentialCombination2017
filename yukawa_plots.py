@@ -14,6 +14,7 @@ import LatestPathsGetters
 import LatestBinning
 
 import differentials
+import differentialutils
 import logging
 from collections import namedtuple
 
@@ -36,6 +37,14 @@ yukawa_x_max = 35
 yukawa_y_min = -11
 yukawa_y_max = 12
 
+@flag_as_option
+def all_plots_Yukawa(args):
+    multicont_Yukawa(args)
+    points_on_contour_Yukawa(args)
+    args = differentialutils.force_asimov(args)
+    multicont_Yukawa(args)
+    multicont_Yukawa_highLumi(args)
+    multicont_Yukawa_profiledTotalXS(args)
 
 @flag_as_option
 def multicont_Yukawa(args):

@@ -22,9 +22,10 @@ import LatestPathsGetters
 import LatestBinning
 
 from differentials.core import AttrDict
+import differentials.combine.combine as combine
 
-sys.path.append('src')
-import CombineToolWrapper
+# sys.path.append('src')
+# import CombineToolWrapper
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -40,7 +41,7 @@ rescans.pth_ggH.observed = [
     # AttrDict(dc='combWithHbb', POI='r_ggH_PTH_350_600', x_min=-10., x_max=10.),
     # AttrDict(dc='combWithHbb', POI='r_ggH_PTH_GT600', x_min=-5., x_max=10.),
     # AttrDict(dc='hgg', POI='r_ggH_PTH_350_600', x_min=-10., x_max=1.),
-    AttrDict(dc='hgg', POI='r_ggH_PTH_GT600', x_min=-110., x_max=-70.),
+    # AttrDict(dc='hgg', POI='r_ggH_PTH_GT600', x_min=-110., x_max=-70.),
     # AttrDict(dc='hzz', POI='r_ggH_PTH_GT200', x_min=-10., x_max=1.),
     ]
 rescans.pth_ggH.asimov = [
@@ -101,19 +102,19 @@ def pth_ggH_scan(args):
 
 @flag_as_option
 def njets_scan(args):
-    ws = LatestPathsGetters.get_ws('njets', args)
+    ws = LatestPaths.ws.njets[differentialutils.get_decay_channel_tag(args)]
     config = differential_config(args, ws, 'njets')
     postfit_and_scan(args, config)
 
 @flag_as_option
 def ptjet_scan(args):
-    ws = LatestPathsGetters.get_ws('ptjet', args)
+    ws = LatestPaths.ws.ptjet[differentialutils.get_decay_channel_tag(args)]
     config = differential_config(args, ws, 'ptjet')
     postfit_and_scan(args, config)
 
 @flag_as_option
 def rapidity_scan(args):
-    ws = LatestPathsGetters.get_ws('rapidity', args)
+    ws = LatestPaths.ws.rapidity[differentialutils.get_decay_channel_tag(args)]
     config = differential_config(args, ws, 'rapidity')
     postfit_and_scan(args, config)
 
@@ -126,7 +127,7 @@ lumiMultiplier3000 = 83.56546
 lumiMultiplier = lumiMultiplier300
 
 def differential_config(args, ws, obs_name):
-    base_config = CombineToolWrapper.CombineConfig(args)
+    base_config = combine.CombineConfig(args)
     base_config.onBatch       = True
     base_config.nPoints       = 55
     base_config.nPointsPerJob = 5
@@ -230,24 +231,24 @@ def postfit_and_scan(args, postfit_config):
     # Make sure no previous run directory is overwritten
     postfit_config.make_unique_directory()
 
-    postfit = CombineToolWrapper.CombinePostfit(postfit_config)
+    postfit = combine.CombinePostfit(postfit_config)
     postfit.run()
     postfit_ws = postfit.get_output()
 
     scan_configs = differential_configs_for_scanning(args, postfit_config)
     for config in scan_configs:
-        scan = CombineToolWrapper.CombineScanFromPostFit(config)
+        scan = combine.CombineScanFromPostFit(config)
         scan.run(postfit_ws)
 
 def scan_directly(args, base_config):
     base_config.make_unique_directory()
     scan_configs = differential_configs_for_scanning(args, base_config)
     for config in scan_configs:
-        scan = CombineToolWrapper.CombineScan(config)
+        scan = combine.CombineScan(config)
         scan.run()
 
 def only_postfit(args, config):
-    postfit = CombineToolWrapper.CombineOnlyPostfit(config)
+    postfit = combine.CombineOnlyPostfit(config)
     postfit.run()
 
 
@@ -258,7 +259,7 @@ def only_postfit(args, config):
 def basic_t2ws(obsname, decay_channel):
     t2ws = differentials.combine.t2ws.T2WS(
         LatestPaths.card[obsname][decay_channel],
-        model_file='physicsModels/DifferentialModel.py', model_name='differentialModel',
+        # model_file='physicsModels/DifferentialModel.py', model_name='differentialModel',
         name = 'ws_' + obsname + '_' + decay_channel
         )
     return t2ws
@@ -283,6 +284,31 @@ def pth_smH_t2ws(args):
     if args.hgg or args.combination or args.combWithHbb or args.hbb:
         t2ws.extra_options.append('--PO \'scale_xH_ggH_as_smH=True\'')
     t2ws.run()
+
+@flag_as_option
+def njets_t2ws(args):
+    t2ws = basic_t2ws('njets', differentialutils.get_decay_channel_tag(args))
+    if args.hzz:
+        t2ws.make_maps_from_processes(binning=[0,1,2], add_overflow=True)
+    else:
+        t2ws.make_maps_from_processes()
+    t2ws.run()
+
+@flag_as_option
+def rapidity_t2ws(args):
+    t2ws = basic_t2ws('rapidity', differentialutils.get_decay_channel_tag(args))
+    t2ws.make_maps_from_processes()
+    t2ws.run()
+
+@flag_as_option
+def ptjet_t2ws(args):
+    t2ws = basic_t2ws('ptjet', differentialutils.get_decay_channel_tag(args))
+    if args.hzz:
+        t2ws.make_maps_from_processes(binning=[30,55,95], add_underflow=True, add_overflow=True)
+    else:
+        t2ws.make_maps_from_processes()
+    t2ws.run()
+
 
 
 # TODO: Reform t2ws for pth_smH, njets, ptjet, rapidity

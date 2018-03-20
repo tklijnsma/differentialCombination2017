@@ -40,37 +40,38 @@ def renumber_processes_hzz_pth_smH(args):
         'suppliedInput/fromDavid/PTH_Jan24_newBinning/smH/hzz4l_comb_13TeV_xs.txt'
         )
 
-# Doesnt work
-# @flag_as_option
-# def make_hbb_pth_smH(args):
-#     make_hbb_pth_smH_fn(
-#         'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
-#         )
-
-# @flag_as_option
-# def disable_200_350_process_hbb_pth_ggH(args):
-#     disable_200_350_process_hbb_pth(
-#         'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
-#         )
+# Hgg differentials: njets, ptjet, rapidity
+@flag_as_option
+def rename_processes_hgg_njets(args):
+    rename_processes_hgg_differentials(
+        'suppliedInput/fromVittorio/differential_Njets2p5NNLOPS_Nov10/Datacard_13TeV_differential_Njets2p5NNLOPS.txt',
+        global_replace = [( 'CMS_hgg_JEC', 'CMS_scale_j' )]
+        )
+@flag_as_option
+def rename_processes_hgg_ptjet(args):
+    rename_processes_hgg_differentials(
+        'suppliedInput/fromVittorio/differential_Jet2p5Pt0NNLOPS_newBins_Nov28/Datacard_13TeV_differential_Jet2p5Pt0NNLOPS_newBins.txt'
+        )
+@flag_as_option
+def rename_processes_hgg_rapidity(args):
+    rename_processes_hgg_differentials(
+        'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination.txt'
+        )
 
 #____________________________________________________________________
 # combineCards
 
 @flag_as_option
 def combine_all_cards(args):
-    for obsname in [
-            'pth_smH',
-            # 'pth_ggH',
-            # 'njets',
-            # 'rapidity',
-            # 'ptjet'
-            ]:
-        combine_cards_for_observable(obsname)
-    for obsname in [
-            'pth_smH',
-            # 'pth_ggH',
-            ]:
-        combine_cards_for_observable_with_hbb(obsname)
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    # combine_pth_ggH(args)
+    # combine_pth_smH(args)
+    combine_njets(args)
+    combine_ptjet(args)
+    combine_rapidity(args)
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb')
+    # combine_pth_ggH(args)
+    # combine_pth_smH(args)
 
 @flag_as_option
 def combine_pth_ggH(args):
@@ -104,15 +105,23 @@ def combine_pth_smH(args):
 
 @flag_as_option
 def combine_njets(args):
-    combine_cards_for_observable('njets')
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    combine_cards_for_observable(args, 'njets')
 
 @flag_as_option
 def combine_ptjet(args):
-    combine_cards_for_observable('ptjet')
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    combine_cards_for_observable(args, 'ptjet')
 
 @flag_as_option
 def combine_rapidity(args):
-    combine_cards_for_observable('rapidity')
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    combine_cards_for_observable(args, 'rapidity')
+
+@flag_as_option
+def combine_inclusive(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    combine_cards_for_observable(args, 'inclusive')
 
 def combine_cards_for_observable(args, obsname):
     decay_channel = differentialutils.get_decay_channel_tag(args)
