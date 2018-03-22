@@ -229,13 +229,13 @@ def t2ws_Yukawa_profiledTotalXS(args):
     t2ws.run()
 
 
-@flag_as_option
-def t2ws_Yukawa_fitOnlyNormalization(args):
-    t2ws = base_t2ws(args)
-    t2ws.tags.append('fitOnlyNormalization')
-    add_theory_uncertainties(t2ws)
-    t2ws.extra_options.append('--PO FitOnlyNormalization=True')
-    t2ws.run()
+# @flag_as_option
+# def t2ws_Yukawa_fitOnlyNormalization(args):
+#     t2ws = base_t2ws(args)
+#     t2ws.tags.append('fitOnlyNormalization')
+#     add_theory_uncertainties(t2ws)
+#     t2ws.extra_options.append('--PO FitOnlyNormalization=True')
+#     t2ws.run()
 
 @flag_as_option
 def t2ws_Yukawa_BRcouplingDependency(args):
@@ -248,12 +248,12 @@ def t2ws_Yukawa_BRcouplingDependency(args):
     #     t2ws.tags.append('withBRUnc')
     t2ws.run()
 
-@flag_as_option
-def t2ws_Yukawa_fitRatioOfBRs(args):
-    t2ws = base_t2ws(args)
-    t2ws.tags.append('fitRatioOfBRs')
-    t2ws.extra_options.append('--PO FitRatioOfBRs=True')
-    t2ws.run()
+# @flag_as_option
+# def t2ws_Yukawa_fitRatioOfBRs(args):
+#     t2ws = base_t2ws(args)
+#     t2ws.tags.append('fitRatioOfBRs')
+#     t2ws.extra_options.append('--PO FitRatioOfBRs=True')
+#     t2ws.run()
 
 
 

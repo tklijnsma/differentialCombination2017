@@ -5,6 +5,7 @@ import plotting_utils as utils
 from canvas import c, global_color_cycle
 
 import logging
+import differentials
 import differentials.logger
 
 from array import array
@@ -428,7 +429,7 @@ class Histogram(object):
         return self.repr_horizontal_bars() + self.repr_uncertainties_narrow_filled_area(leg)
 
 
-    def repr_horizontal_bars(self):
+    def repr_horizontal_bars(self, leg=None):
         Tg = ROOT.TGraphErrors(
             self.n_bins,
             array( 'f', self.get_bin_centers() ),
@@ -445,6 +446,14 @@ class Histogram(object):
         # Tg.SetLineWidth(   getattr(self, 'setLineWidth',   2 ) )
 
         return [ (Tg, 'EPSAME') ]
+
+    def repr_point_with_horizontal_bar(self, leg=None):
+        Tg, draw_str = self.repr_horizontal_bars()[0]
+        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
+        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
+        if not(leg is None):
+            leg.AddEntry( Tg.GetName(), self.title, 'PE' )
+        return [(Tg, draw_str)]
 
 
     def repr_uncertainties_filled_area(self, leg=None):
@@ -784,6 +793,7 @@ class Histogram2D(object):
         self.entries = []
 
         self.contour_filter_method = None
+        self._filled_bestfit = False
 
 
     def infer_bin_boundaries(self, bin_centers):
@@ -799,6 +809,8 @@ class Histogram2D(object):
 
 
     def bestfit(self):
+        if self._filled_bestfit:
+            return self._bestfit
         return self.entries[self.deltaNLL().index(0.0)]
 
     def x(self):
@@ -835,7 +847,6 @@ class Histogram2D(object):
 
         logging.trace('Found the following x_bin_boundaries:\n{0}'.format(self.x_bin_boundaries))
         logging.trace('Found the following y_bin_boundaries:\n{0}'.format(self.y_bin_boundaries))
-
 
     def fill_from_entries(self, entries=None):
         if not(entries is None):
@@ -881,6 +892,30 @@ class Histogram2D(object):
             self.H2.SetBinContent(i_bin_x+1, i_bin_y+1, 2.*entry.deltaNLL)
             self.H2_array[i_bin_x][i_bin_y] = 2.*entry.deltaNLL
 
+    def fill_with_matrix(self, matrix, x_bin_boundaries, y_bin_boundaries):
+        self.x_bin_boundaries = x_bin_boundaries
+        self.y_bin_boundaries = y_bin_boundaries
+        self.n_bins_x = len(self.x_bin_boundaries)-1
+        self.n_bins_y = len(self.y_bin_boundaries)-1
+        self.x_bin_centers = [ 0.5*(r+l) for l, r in zip(self.x_bin_boundaries[:-1], self.x_bin_boundaries[1:]) ]
+        self.y_bin_centers = [ 0.5*(r+l) for l, r in zip(self.y_bin_boundaries[:-1], self.y_bin_boundaries[1:]) ]
+
+        self.H2_array = matrix
+
+        self.H2 = ROOT.TH2D(
+            utils.get_unique_rootname(), '',
+            self.n_bins_x, array('d', self.x_bin_boundaries),
+            self.n_bins_y, array('d', self.y_bin_boundaries),
+            )
+        ROOT.SetOwnership(self.H2, False)
+
+        for i_x in xrange(self.n_bins_x):
+            for i_y in xrange(self.n_bins_y):
+                self.H2.SetBinContent(i_x+1, i_y+1, self.H2_array[i_x][i_y])
+
+    def fill_bestfit(self, x, y):
+        self._filled_bestfit = True
+        self._bestfit = differentials.core.AttrDict(x=x, y=y)
 
     def repr_2D(self, leg=None):
         utils.set_color_palette()

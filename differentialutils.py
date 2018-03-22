@@ -1,9 +1,10 @@
 import LatestPaths
 import differentialTools
 
-import sys
-sys.path.append('src')
-import CombineToolWrapper
+# import sys
+# sys.path.append('src')
+# import CombineToolWrapper
+import differentials.combine.combine as combine
 
 import os, copy, traceback
 
@@ -16,21 +17,33 @@ def run_postfit_fastscan_scan(config):
     # Make sure no previous run directory is overwritten
     config.make_unique_directory()
 
-    postfit = CombineToolWrapper.CombinePostfit(config)
+    postfit = combine.CombinePostfit(config)
     postfit.run()
     postfit_file = postfit.get_output()
 
-    fastscan = CombineToolWrapper.CombineFastScan(config)
+    fastscan = combine.CombineFastScan(config)
     fastscan.run(postfit_file)
     fastscan_file = fastscan.get_output()
 
-    pointwisescan = CombineToolWrapper.CombinePointwiseScan(config)
+    pointwisescan = combine.CombinePointwiseScan(config)
     pointwisescan.run(postfit_file, fastscan_file)
+
+
+def run_postfit_scan(config):
+    # Make sure no previous run directory is overwritten
+    config.make_unique_directory()
+
+    postfit = combine.CombinePostfit(config)
+    postfit.run()
+    postfit_file = postfit.get_output()
+
+    scan = combine.CombineScanFromPostFit(config)
+    scan.run(postfit_file)
 
 def scan_directly(config):
     # Make sure no previous run directory is overwritten
     config.make_unique_directory()
-    scan = CombineToolWrapper.CombineScan(config)
+    scan = combine.CombineScan(config)
     scan.run()
 
 #____________________________________________________________________

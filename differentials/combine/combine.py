@@ -125,8 +125,11 @@ class BaseCombineScan(object):
 
     def get_output(self):
         with core.enterdirectory(self.subDirectory, verbose=False):
-            output = 'higgsCombine{0}.{1}.mH{2}.root'.format(self.get_task_name(), self.input.METHOD, int(self.input.DEFAULT_MASS))
-            output = abspath(output)
+            if core.is_testmode():
+                output = 'higgsCombine_[TESTMODE].root'
+            else:
+                output = 'higgsCombine{0}.{1}.mH{2}.root'.format(self.get_task_name(), self.input.METHOD, int(self.input.DEFAULT_MASS))
+                output = abspath(output)
         return output
 
     def get_parameter_settings(self):
@@ -217,12 +220,14 @@ class BaseCombineScan(object):
 
     def execute_command(self, cmd):
         if self.onBatch:
-            output = core.execute(cmd, capture_output=True)
+            output = core.execute(cmd, py_capture_output=True)
             logging.info('Output of cmd {0}'.format(cmd))
             logging.info(output)
         else:
             core.execute(cmd)
             output = ''
+        if core.is_testmode():
+            output = '\nOUTPUT: some output but this is testmode'
         return output
 
     def run(self):
@@ -489,7 +494,7 @@ class CombinePointwiseScan(BaseCombineScan):
             rejectedPoints = []
             tree = fastscanFp.Get('limit')
             for iEvent, event in enumerate(tree):
-                container = Container()
+                container = core.AttrDict()
                 container.iPoint   = iEvent
                 container.deltaNLL = event.deltaNLL
                 container.POIvals  = [ getattr( event, POI ) for POI in self.input.POIs ]

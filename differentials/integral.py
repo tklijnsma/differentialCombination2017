@@ -9,10 +9,10 @@ import os, glob, re, copy, numpy
 
 class Rebinner(object):
 
-    def __init__(self, bin_boundaries_old, values_old, bin_boundaries_new):
+    def __init__(self, bin_boundaries_old=None, values_old=None, bin_boundaries_new=None):
         super(Rebinner, self).__init__()
-        if len(bin_boundaries_old)-1 != len(values_old):
-            raise ValueError('Length of given input lists do not match')
+        # if len(bin_boundaries_old)-1 != len(values_old):
+        #     raise ValueError('Length of given input lists do not match')
         self.bin_boundaries_old = bin_boundaries_old
         self.values_old = values_old
         self.bin_boundaries_new = bin_boundaries_new
@@ -29,6 +29,10 @@ class Rebinner(object):
                 self.integral.integral(a, b) / (b-a)
                 )
         return self.values_new
+
+    def rebin_values(self, values_old):
+        self.values_old = values_old
+        return self.rebin()
 
 
 class Integrator(object):

@@ -37,6 +37,43 @@ class PlotBase(object):
 
 
 
+class QuickPlot(PlotBase):
+    """docstring for QuickPlot"""
+    def __init__(self, plotname, x_min=-1.0, x_max=4.0, y_min=0.0, y_max=5.0):
+        super(QuickPlot, self).__init__(plotname)
+        self.x_min = x_min
+        self.x_max = x_max
+        self.y_min = y_min
+        self.y_max = y_max
+        self.leg = pywrappers.Legend()
+        self.objs = []
+
+        self.x_title = 'x'
+        self.y_title = 'y'
+        differentials.plotting.canvas.reset_global_color_cyle()
+
+    def add(self, obj, draw_str):
+        self.objs.append([obj, draw_str])
+
+    def draw(self):
+        c.Clear()
+        c.set_margins()
+
+        self.base = pywrappers.Base(
+            x_min=self.x_min, x_max=self.x_max, y_min=self.y_min, y_max=self.y_max,
+            x_title=self.x_title, y_title=self.y_title
+            )
+        self.base.Draw()
+
+        for obj, draw_str in self.objs:
+            obj._legend = self.leg
+            obj.Draw(draw_str)
+
+    def wrapup(self):
+        self.leg.Draw()
+        super(QuickPlot, self).wrapup()
+
+
 class MultiScanPlot(PlotBase):
     """docstring for MultiScanPlot"""
     def __init__(self, plotname):

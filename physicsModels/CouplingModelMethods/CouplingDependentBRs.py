@@ -84,7 +84,8 @@ def MakeWidthExpressions( self ):
     self.modelBuilder.factory_("expr::kappa_mu_expr(\"@0*@1+(1-@0)*@2\", CMS_use_kmu[0], kappa_mu, kappa_tau)")
 
     # Invisible BR, needed for the other expressions but fixing to 0. now
-    self.modelBuilder.doVar("BRinv[0.,0.,1.]")
+    # self.modelBuilder.doVar("BRinv[0.,0.,1.]")
+    self.modelBuilder.doVar("BRinv[0.]")
     self.modelBuilder.out.var("BRinv").setConstant(True)
 
 
@@ -123,7 +124,9 @@ def MakeWidthExpressions( self ):
 
     # makeScaling functions copied from https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit/blob/74x-root6/python/LHCHCGModels.py#L355-L358
 
-    self.modelBuilder.factory_( 'expr::kappa_t_plus_kappa_glu( "@0+@1", {0}, {1} )'.format( kappa_t.GetName(), kappa_glu.GetName() ) )
+    expr_kappa_t_plus_kappa_glu = 'expr::kappa_t_plus_kappa_glu( "@0+12.*@1", {0}, {1} )'.format( kappa_t.GetName(), kappa_glu.GetName() )
+    print '\n[WARNING] Adding factor 12. in front of kappa_glu in: {0}'.format(expr_kappa_t_plus_kappa_glu)
+    self.modelBuilder.factory_(expr_kappa_t_plus_kappa_glu)
     self.SMH.makeScaling(
         'hgluglu',
         Cb      = kappa_b.GetName(),
@@ -276,6 +279,11 @@ def MakeWidthExpressions( self ):
         '"@0", c7_BRscal_hzz )'
         )
 
+    self.modelBuilder.factory_(
+        'expr::scalingBR_hbbModifier('
+        '"@0", c7_BRscal_hbb )'
+        )
+
     # xH modifier
     self.modelBuilder.factory_(
         'expr::scalingBR_xHModifier('
@@ -285,6 +293,6 @@ def MakeWidthExpressions( self ):
     # Set for convenient access in the ws
     self.modelBuilder.out.defineSet( 'BRvariables', ','.join([
         kappa_t.GetName(), kappa_b.GetName(), kappa_c.GetName(), kappa_W.GetName(), kappa_Z.GetName(), kappa_tau.GetName(), kappa_mu.GetName(),
-        'scalingBR_hggModifier', 'scalingBR_hzzModifier', 'scalingBR_xHModifier', 'Scaling_hgg', 'Scaling_hzg', 'Scaling_hgluglu',
+        'scalingBR_hggModifier', 'scalingBR_hzzModifier', 'scalingBR_hbbModifier', 'scalingBR_xHModifier', 'Scaling_hgg', 'Scaling_hzg', 'Scaling_hgluglu',
         ]))
 

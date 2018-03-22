@@ -210,7 +210,7 @@ def defineYieldParameters(self):
 
     if self.FitBR:
         # Add a previously defined scale parameter to the ggH yieldParameters
-        scaleParameter = { 'hgg' : 'scalingBR_hggModifier', 'hzz' : 'scalingBR_hzzModifier' }
+        scaleParameter = { 'hgg' : 'scalingBR_hggModifier', 'hzz' : 'scalingBR_hzzModifier', 'hbb' : 'scalingBR_hbbModifier' }
         for decayChannel in decayChannels:
             yieldParameterContainer = self.yieldParameters_per_decay_channel[decayChannel]
             for ggH_yieldParameter in yieldParameterContainer.ggH_yieldParameters:

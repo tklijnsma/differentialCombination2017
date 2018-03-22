@@ -38,14 +38,18 @@ datestr = strftime('%b%d')
 top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600. ]
 
 
-def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, drop_last_bin=False):
+def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, drop_last_bin=False, do_kappat_kappag=True):
     decay_channel = differentialutils.get_decay_channel_tag(args)
-    card = LatestPaths.card.pth_ggH[decay_channel]
-    t2ws = differentials.combine.t2ws.T2WS(card)
+    # card = LatestPaths.card.pth_ggH[decay_channel]
+    t2ws = differentials.combine.t2ws.T2WS()
     t2ws.model_file = 'physicsModels/CouplingModel.py'
     t2ws.model_name = 'couplingModel'
 
-    t2ws.name = decay_channel + '_Top'
+    if do_kappat_kappag:
+        t2ws.name = decay_channel + '_Top'
+    else:
+        t2ws.name = decay_channel + '_TopCtCb'
+
     t2ws.extra_options.extend([
         '--PO linearTerms=False',
         '--PO splitggH=True',
@@ -66,6 +70,39 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, dro
         .format(','.join([str(b) for b in obs.binning]))
         )
 
+    # Add the theory
+
+    if do_kappat_kappag:
+        logging.warning('Doing variations for kappa_t / kappa_g')
+        coupling_variations = FileFinder(
+            cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory='out/theories_Mar05_tophighpt'
+            ).get()
+        sm = [ v for v in coupling_variations if v.ct==1.0 and v.cg==0.0 ][0]
+        coupling_variations.pop(coupling_variations.index(sm))
+
+        t2ws.extra_options.append('--PO SM=[ct=1,cg=0,file={0}]'.format(sm.theory_file))
+        for variation in coupling_variations:
+            if variation.ct == 1.0 or variation.cg == 0.0: continue
+            t2ws.extra_options.append(
+                '--PO theory=[ct={0},cg={1},file={2}]'
+                .format(variation.ct, variation.cg, variation.theory_file)
+                )
+    else:
+        logging.warning('Doing variations for kappa_t / kappa_b')
+        coupling_variations = FileFinder(
+            cg=0.0, muR=1.0, muF=1.0, Q=1.0, directory='out/theories_Mar05_tophighpt'
+            ).get()
+        sm = [ v for v in coupling_variations if v.ct==1.0 and v.cb==1.0 ][0]
+        coupling_variations.pop(coupling_variations.index(sm))
+
+        t2ws.extra_options.append('--PO SM=[ct=1,cb=1,file={0}]'.format(sm.theory_file))
+        for variation in coupling_variations:
+            if variation.ct == 1.0 or variation.cb == 1.0: continue
+            t2ws.extra_options.append(
+                '--PO theory=[ct={0},cb={1},file={2}]'
+                .format(variation.ct, variation.cb, variation.theory_file)
+                )
+
     if apply_reweighting:
         t2ws.extra_options.append(
             '--PO ReweightCrossSections={0}'.format(','.join([str(v) for v in obs.crosssection()]))
@@ -76,20 +113,6 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, dro
     return t2ws
 
 def add_theory_uncertainties(t2ws, uncorrelated=False):
-    coupling_variations = FileFinder(
-        cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory='out/theories_Mar05_tophighpt'
-        ).get()
-    sm = [ v for v in coupling_variations if v.ct==1.0 and v.cg==0.0 ][0]
-    coupling_variations.pop(coupling_variations.index(sm))
-
-    t2ws.extra_options.append('--PO SM=[ct=1,cg=0,file={0}]'.format(sm.theory_file))
-    for variation in coupling_variations:
-        if variation.ct == 1.0 or variation.cg == 0.0: continue
-        t2ws.extra_options.append(
-            '--PO theory=[ct={0},cg={1},file={2}]'
-            .format(variation.ct, variation.cg, variation.theory_file)
-            )
-
     # Theory uncertainties
     correlation_matrix   = 'out/scalecorrelations_Mar06/corrMat_tophighpt.txt'
     theory_uncertainties = 'out/scalecorrelations_Mar06/errors_tophighpt.txt'
@@ -149,6 +172,13 @@ def t2ws_Top_nominal(args):
     t2ws.run()
 
 @flag_as_option
+def t2ws_TopCtCb_nominal(args):
+    t2ws = base_t2ws(args, do_kappat_kappag=False)
+    t2ws.card = LatestPaths.card.top.nominal[differentialutils.get_decay_channel_tag(args)]
+    t2ws.tags.append('noBinsDropped')
+    t2ws.run()
+
+@flag_as_option
 def t2ws_Top_lastBinDroppedHgg(args):
     t2ws = base_t2ws(args)
     if args.combination:
@@ -173,6 +203,23 @@ def t2ws_Top_last2BinsDropped(args):
     t2ws.tags.append('last2BinsDropped')
     t2ws.run()
 
+@flag_as_option
+def t2ws_Top_BRcouplingDependency(args):
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('BRcouplingDependency')
+    t2ws.extra_options.append('--PO FitBR=True')
+    # do_BR_uncertainties = False
+    # if do_BR_uncertainties:
+    #     t2ws.extra_options.append('--PO DoBRUncertainties=True')
+    #     t2ws.tags.append('withBRUnc')
+    t2ws.run()
+
+
+
+
+
+
+#____________________________________________________________________
 
 @flag_as_option
 def t2ws_Top_unreweighted(args):
@@ -209,16 +256,8 @@ def t2ws_Top_profiledTotalXS(args):
     t2ws.run()
 
 
-@flag_as_option
-def t2ws_Top_BRcouplingDependency(args):
-    t2ws = base_t2ws(args)
-    t2ws.tags.append('BRcouplingDependency')
-    t2ws.extra_options.append('--PO FitBR=True')
-    do_BR_uncertainties = False
-    if do_BR_uncertainties:
-        t2ws.extra_options.append('--PO DoBRUncertainties=True')
-        t2ws.tags.append('withBRUnc')
-    t2ws.run()
+#____________________________________________________________________
+# Not yet repeated
 
 @flag_as_option
 def t2ws_Top_fitRatioOfBRs(args):

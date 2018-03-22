@@ -89,6 +89,8 @@ def main():
         'scalecorrelationmatrices',
         'crosschecks',
         'correlationmatrices',
+        # 
+        'fermilab',
         ])
 
     args = parser.parse_args()

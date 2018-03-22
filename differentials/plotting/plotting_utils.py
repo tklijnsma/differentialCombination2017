@@ -168,7 +168,7 @@ class ContourFilter(object):
         return new_Tgs
 
 
-def get_x_y_from_TGraph(Tg):
+def get_x_y_from_TGraph(Tg, per_point=False):
     N = Tg.GetN()
     xs = []
     ys = []
@@ -178,4 +178,55 @@ def get_x_y_from_TGraph(Tg):
         Tg.GetPoint( i, x_Double, y_Double )
         xs.append( float(x_Double) )
         ys.append( float(y_Double) )
-    return xs, ys
+
+    if per_point:
+        points = []
+        for i in xrange(N):
+            point = differentials.core.AttrDict(
+                x = xs[i],
+                y = ys[i],
+                )
+            points.append(point)
+        return points
+    else:
+        return xs, ys
+
+def get_x_y_from_TGraphAsymmErrors(Tg, per_point=False):
+    N = Tg.GetN()
+    xs = []
+    ys = []
+    xs_down = []
+    xs_up = []
+    ys_down = []
+    ys_up = []
+
+    x_Double = ROOT.Double(0)
+    y_Double = ROOT.Double(0)
+    for i in xrange(N):
+        Tg.GetPoint( i, x_Double, y_Double )
+        xs.append( float(x_Double) )
+        ys.append( float(y_Double) )
+        xs_down.append(Tg.GetErrorXlow(i))
+        xs_up.append(Tg.GetErrorXhigh(i))
+        ys_down.append(Tg.GetErrorYlow(i))
+        ys_up.append(Tg.GetErrorYhigh(i))
+
+    if per_point:
+        points = []
+        for i in xrange(N):
+            point = differentials.core.AttrDict(
+                x = xs[i],
+                y = ys[i],
+                x_err_down   = xs_down[i],
+                x_err_up     = xs_up[i],
+                y_err_down   = ys_down[i],
+                y_err_up     = ys_up[i],
+                x_bound_down = xs[i] - abs(xs_down[i]),
+                x_bound_up   = xs[i] + abs(xs_up[i]),
+                y_bound_down = ys[i] - abs(ys_down[i]),
+                y_bound_up   = ys[i] + abs(ys_up[i]),
+                )
+            points.append(point)
+        return points
+    else:
+        return xs, ys, xs_down, xs_up, ys_down, ys_up

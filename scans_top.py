@@ -6,9 +6,10 @@ from copy import deepcopy
 import os
 from os.path import *
 
-import sys
-sys.path.append('src')
-import CombineToolWrapper
+# import sys
+# sys.path.append('src')
+# import CombineToolWrapper
+import differentials.combine.combine as combine
 
 import differentials
 import differentialutils
@@ -18,15 +19,14 @@ import LatestPaths
 #____________________________________________________________________
 datestr = differentials.core.datestr()
 
-def set_combWithHbb_and_asimov(real_args):
-    args = copy.deepcopy(real_args)
-    args.asimov = True
-    differentialutils.set_one_decay_channel(args, 'combWithHbb')
+def set_combWithHbb_and_asimov(args):
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb')
+    args.asimov = True    
     return args
 
 def basic_config(args, hurry=False):
     # assert_highpt(args)
-    config = CombineToolWrapper.CombineConfig(args)
+    config = combine.CombineConfig(args)
     config.onBatch       = True
     config.queue         = 'all.q'
     if hurry:
@@ -104,6 +104,54 @@ def basic_config(args, hurry=False):
     return config
 
 
+def basic_config_ctcb(args):
+    # assert_highpt(args)
+    config = combine.CombineConfig(args)
+    config.onBatch       = True
+    config.queue         = 'all.q'
+
+    if args.hzz:
+        config.nPointsPerJob = 320
+        config.queue         = 'short.q'
+    if args.asimov:
+        config.asimov = True
+    else:
+        config.asimov = False
+
+    config.decay_channel = differentialutils.get_decay_channel_tag(args)
+
+    if args.combWithHbb or args.hbb:
+        config.minimizer_settings.extend([
+            '--minimizerStrategy 2',
+            '--minimizerTolerance 0.001',
+            '--robustFit 1',
+            '--minimizerAlgoForMinos Minuit2,Migrad',
+            ])
+
+    config.deltaNLLCutOff = 70.
+    config.nPoints = 70**2
+
+    config.nPointsPerJob = 20
+    if args.hgg:
+        config.nPointsPerJob = 32
+    elif args.combWithHbb:
+        config.nPointsPerJob = 12
+
+    # default ranges; should cover general usecases
+    ct_ranges = [ -0.5, 2.0 ]
+    cb_ranges = [ -20., 22. ]
+
+    config.POIs = [ 'ct', 'cb' ]
+    config.PhysicsModelParameters = [ 'ct=1.0', 'cb=1.0' ]
+    config.PhysicsModelParameterRanges = [
+        'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
+        'cb={0},{1}'.format( cb_ranges[0], cb_ranges[1] )
+        ]
+    config.subDirectory = 'out/Scan_{0}_TopCtCb_{1}'.format(datestr, config.decay_channel)
+
+    return config
+
+
 #____________________________________________________________________
 @flag_as_option
 def scan_top_nominal_all(real_args):
@@ -139,6 +187,14 @@ def scan_top(args):
     config.nPoints = 110*110
     config.nPointsPerJob = int(0.5*config.nPointsPerJob)
     differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_topctcb(args):
+    config = basic_config_ctcb(args)
+    config.datacard = LatestPaths.ws.topctcb.nominal[differentialutils.get_decay_channel_tag(args)]
+    differentialutils.run_postfit_fastscan_scan(config)
+
+#____________________________________________________________________
 
 @flag_as_option
 def scan_top_noBinsDropped(real_args):
@@ -210,6 +266,34 @@ def scan_top_profiledTotalXS(args):
     differentialutils.run_postfit_fastscan_scan(config)
 
 
+#____________________________________________________________________
+
+@flag_as_option
+def scan_top_BRdependent(args):
+    args = set_combWithHbb_and_asimov(args)
+    config = basic_config(args)
+    config.datacard = LatestPaths.ws.top.BRcouplingDependency
+
+    config.nPoints = 80*80
+    config.nPointsPerJob = 10
+
+    config.PhysicsModelParameterRanges = [
+        'ct={0},{1}'.format(-8.5, 8.5 ),
+        'cg={0},{1}'.format(-0.65, 0.65 )
+        ]
+
+    config.tags.append('couplingDependentBR')
+    config.PhysicsModelParameters.append('kappa_V=0.999')
+
+    # config.freezeNuisances.append('kappa_V')
+    config.floatNuisances.append('kappa_V')
+    config.PhysicsModelParameterRanges.append('kappa_V=-1000.0,1.0')
+    config.tags.append('floatKappaV')
+
+    differentialutils.run_postfit_scan(config)
+
+
+#____________________________________________________________________
 @flag_as_option
 def scan_top_fitOnlyNormalization(args):
     differentialutils.assert_asimov(args)

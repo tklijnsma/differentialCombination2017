@@ -32,9 +32,11 @@ class UncertaintyCalculator(object):
             'left_error' : -0,
             'right_bound' : 0,
             'right_error' : 0,
+            'symm_error' : 0,
             'well_defined_left_bound' : False,
             'well_defined_right_bound' : False,
             'is_hopeless' : True,
+            'cutoff_1sigma' : self.cutoff,
             }
         Unc = namedtuple('Unc', unc_dict.keys())
 
@@ -45,11 +47,11 @@ class UncertaintyCalculator(object):
         else:
             xs_left = xs[:i_min_deltaNLL+1]
             deltaNLLs_left = deltaNLLs[:i_min_deltaNLL+1]
-            if min(deltaNLLs_left) > 0.5 or max(deltaNLLs_left) < 0.5:
+            if min(deltaNLLs_left) > self.cutoff or max(deltaNLLs_left) < self.cutoff:
                 logging.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_left), max(deltaNLLs_left)))
                 well_defined_left_bound = False
             else:
-                left_bound = self.interpolate(xs_left, deltaNLLs_left, 0.5)
+                left_bound = self.interpolate(xs_left, deltaNLLs_left, self.cutoff)
                 if left_bound is False:
                     well_defined_left_bound = False
                 else:
@@ -62,11 +64,11 @@ class UncertaintyCalculator(object):
         else:
             xs_right = xs[i_min_deltaNLL:]
             deltaNLLs_right = deltaNLLs[i_min_deltaNLL:]
-            if min(deltaNLLs_right) > 0.5 or max(deltaNLLs_right) < 0.5:
+            if min(deltaNLLs_right) > self.cutoff or max(deltaNLLs_right) < self.cutoff:
                 logging.debug('Requested dNLL interpolation point is outside the range: min dNLL={0}, max dNLL={1}'.format(min(deltaNLLs_right), max(deltaNLLs_right)))
                 well_defined_right_bound = False
             else:
-                right_bound = self.interpolate(xs_right, deltaNLLs_right, 0.5)
+                right_bound = self.interpolate(xs_right, deltaNLLs_right, self.cutoff)
                 if right_bound is False:
                     well_defined_right_bound = False
                 else:
@@ -91,6 +93,7 @@ class UncertaintyCalculator(object):
             unc_dict['left_error']  = left_error
             unc_dict['right_bound'] = right_bound
             unc_dict['right_error'] = right_error
+            unc_dict['symm_error']  = 0.5*(abs(left_error)+abs(right_error))
             unc_dict['is_hopeless'] = False
 
         unc = Unc(**unc_dict)

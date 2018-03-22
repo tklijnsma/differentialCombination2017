@@ -110,25 +110,99 @@ class Parametrization(object):
         self.variations = []
         self.parametrizations = []
 
+        self.parametrize_by_matrix_inversion = False
+
+        self.c1_name = 'c1'
+        self.c2_name = 'c2'
+
     def evaluate(self, c1, c2):
         return [ p(c1, c2) if abs(p(c1, c2))>1e-12 else 0.0 for p in self.parametrizations ]
-
-    def parametrize(self):
-        self.n_bins = len(self.variations[0].xs)
-        c1s = [ v.c1 for v in self.variations ]
-        c2s = [ v.c2 for v in self.variations ]
-        self.parametrizations = []
-        for i_bin in xrange(self.n_bins):
-            xs = [ v.xs[i_bin] for v in self.variations ]
-            parametrization = self.get_fitted_parametrization(c1s, c2s, xs)
-            self.parametrizations.append(parametrization)
-
 
     def add_variation(self, c1, c2, crosssections):
         logging.debug('Entering variation for c1={0}, c2={1}'.format(c1, c2))
         self.variations.append(
             AttrDict(c1=c1, c2=c2, xs=crosssections)
             )
+
+    def from_theory_dicts(self, theories):
+        for theory in theories:
+            c1 = theory[self.c1_name]
+            c2 = theory[self.c2_name]
+            crosssections = theory.crosssection
+            self.add_variation(c1, c2, crosssections)
+        self.parametrize()
+
+    def parametrize(self):
+        if self.parametrize_by_matrix_inversion:
+            if self.do_linear_terms:
+                n_needed = 6
+            else:
+                n_needed = 3
+            n = len(self.variations)
+            if n < n_needed:
+                raise RuntimeError('Need {0} variations, but only {1} were given'.format(n_needed, n))
+            elif n > n_needed:
+                self.variations = self.variations[:n_needed]
+                logging.warning(
+                    'Taking only first {0} variations: {1}'
+                    .format(
+                        n_needed,
+                        ', '.join([ '({0}={1},{2}={3})'.format(self.c1_name, v.c1, self.c2_name, v.c2) for v in self.variations ])
+                        )
+                    )
+
+        self.n_bins = len(self.variations[0].xs)
+        c1s = [ v.c1 for v in self.variations ]
+        c2s = [ v.c2 for v in self.variations ]
+
+        if self.parametrize_by_matrix_inversion:
+            inv_coupling_matrix = self.get_inv_coupling_matrix(c1s, c2s)
+
+        self.parametrizations = []
+        for i_bin in xrange(self.n_bins):
+            xs = [ v.xs[i_bin] for v in self.variations ]
+            if self.parametrize_by_matrix_inversion:
+                parametrization = self.get_paramatrization_by_matrix_inversion(inv_coupling_matrix, xs)
+            else:
+                parametrization = self.get_fitted_parametrization(c1s, c2s, xs)
+            self.parametrizations.append(parametrization)
+
+
+    def get_paramatrization_by_matrix_inversion(self, inv_coupling_matrix, xs):
+        xs_column = numpy.array([ [x] for x in xs ])
+        coefficients_column = inv_coupling_matrix.dot(xs_column)
+        coefficients = [ coefficients_column[i][0] for i in xrange(len(xs)) ]
+        return self.get_parabola_for_given_coefficients(coefficients)
+
+    def get_inv_coupling_matrix(self, c1s, c2s):
+        coupling_matrix = []
+        
+        if self.do_linear_terms:
+            def get_row(c1, c2):
+                # Order should be identical as in get_parabola_for_given_coefficients
+                return [ c1**2, c2**2, c1*c2, c1, c2, 1. ]
+        else:
+            def get_row(c1, c2):
+                return [ c1**2, c2**2, c1*c2 ]
+
+        for c1, c2 in zip(c1s, c2s):
+            coupling_matrix.append(get_row(c1, c2))
+
+        coupling_matrix = numpy.array(coupling_matrix)
+        inv_coupling_matrix = numpy.linalg.inv(coupling_matrix)
+        return inv_coupling_matrix
+
+    def get_parabola_for_given_coefficients(self, coefficients):
+        if self.do_linear_terms:
+            A, B, C, D, E, F = coefficients
+            def parabola(c1, c2):
+                return A*c1**2 + B*c2**2 + C*c1*c2 + D*c1 + E*c2 + F
+        else:
+            A, B, C = coefficients
+            def parabola(c1, c2):
+                return A*c1**2 + B*c2**2 + C*c1*c2
+        return parabola
+
 
     def get_parabola(self):
         """

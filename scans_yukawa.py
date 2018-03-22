@@ -3,9 +3,10 @@ from OptionHandler import flag_as_option, flag_as_parser_options
 import os, logging, copy
 from os.path import *
 
-import sys
-sys.path.append('src')
-import CombineToolWrapper
+# import sys
+# sys.path.append('src')
+# import CombineToolWrapper
+import differentials.combine.combine as combine
 
 import LatestPaths
 import differentials
@@ -15,7 +16,7 @@ import differentialutils
 datestr = differentials.core.datestr()
 
 def basic_config(args, hurry=False):
-    config = CombineToolWrapper.CombineConfig(args)
+    config = combine.CombineConfig(args)
     config.onBatch       = True
     config.queue         = 'all.q'
     if hurry:
@@ -52,10 +53,9 @@ def basic_config(args, hurry=False):
     config.deltaNLLCutOff = 70.
     return config
 
-def set_combination_and_asimov(real_args):
-    args = copy.deepcopy(real_args)
+def set_combination_and_asimov(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination')
     args.asimov = True
-    differentialutils.set_one_decay_channel(args, 'combination')
     return args
 
 @flag_as_option
@@ -186,7 +186,32 @@ def scan_yukawa_lumiScale(real_args):
     # config.tags.append('lumi3000fb')
     differentialutils.run_postfit_fastscan_scan(config)
 
+@flag_as_option
+def scan_yukawa_BRdependent(real_args):
+    args = set_combination_and_asimov(real_args)
+    config = basic_config(args)
+    config.datacard = LatestPaths.ws.yukawa.BRcouplingDependency
 
+    config.nPoints = 60*60
+    config.nPointsPerJob = 10
+
+    config.PhysicsModelParameterRanges = [
+        'kappab={0},{1}'.format(-25., 25),
+        'kappac={0},{1}'.format(-45., 45)
+        ]
+
+    config.tags.append('couplingDependentBR')
+    config.PhysicsModelParameters.append('kappa_V=0.999')
+
+    # config.freezeNuisances.append('kappa_V')
+    config.floatNuisances.append('kappa_V')
+    config.PhysicsModelParameterRanges.append('kappa_V=-1000.0,1.0')
+    config.tags.append('floatKappaV')
+
+    differentialutils.run_postfit_scan(config)
+
+
+#____________________________________________________________________
 # Need reimplementation in the model
 
 @flag_as_option
@@ -205,21 +230,5 @@ def scan_yukawa_BRdependent_and_profiledTotalXS(real_args):
     config.datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR_profiledTotalXS
     config.subDirectory += '_couplingDependentBR_profiledTotalXS'
     config.fix_parameter_at_value('kappa_V', 0.999)
-    differentialutils.run_postfit_fastscan_scan(config)
-
-@flag_as_option
-def scan_yukawa_BRdependent(real_args):
-    args = set_combination_and_asimov(real_args)
-    config = basic_config(args)
-    # config.datacard = LatestPaths.ws_combined_Yukawa_couplingDependentBR
-    config.datacard = 'out/workspaces_Feb23/combination_Yukawa_reweighted_BRcouplingDependency.root'
-    config.subDirectory += '_couplingDependentBR'
-    config.PhysicsModelParameters.append('kappa_V=0.999')
-
-    # config.freezeNuisances.append('kappa_V')
-    config.floatNuisances.append('kappa_V')
-    config.PhysicsModelParameterRanges.append('kappa_V=-1000.0:1.0')
-    config.subDirectory += '_floatKappaV'
-
     differentialutils.run_postfit_fastscan_scan(config)
 
