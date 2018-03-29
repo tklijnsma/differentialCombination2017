@@ -17,6 +17,23 @@ class Legend(object):
             x1=None, y1=None, x2=None, y2=None,
             ):
 
+        self._entries = []
+        self.legend = ROOT.TLegend(0., 1., 0., 1.)
+        self.legend.SetBorderSize(0)
+        self.legend.SetFillStyle(0)
+        ROOT.SetOwnership(self.legend, False)
+
+        self.set(x1, y1, x2, y2)
+        self.auto_n_columns = True
+
+    def __getattr__(self, name):
+        """
+        Reroutes calls TLegendMultiPanel.xxxx to TLegendMultiPanel.legend.xxxx
+        This method should only be called if the attribute could not be found in TLegendMultiPanel
+        """
+        return getattr(self.legend, name)
+
+    def set(self, x1=None, y1=None, x2=None, y2=None):
         if x1 is None:
             self._x1 = lambda c: c.GetLeftMargin()
         else:
@@ -37,22 +54,6 @@ class Legend(object):
         else:
             self._y2 = y2
 
-        self._entries = []
-        self.legend = ROOT.TLegend(0., 1., 0., 1.)
-        self.legend.SetBorderSize(0)
-        self.legend.SetFillStyle(0)
-
-        ROOT.SetOwnership(self.legend, False)
-
-        self.auto_n_columns = True
-
-
-    def __getattr__(self, name):
-        """
-        Reroutes calls TLegendMultiPanel.xxxx to TLegendMultiPanel.legend.xxxx
-        This method should only be called if the attribute could not be found in TLegendMultiPanel
-        """
-        return getattr(self.legend, name)
 
     def AddEntry(self, *args):
         """Save entries in a python list, but add them to the actual legend later"""
@@ -825,12 +826,16 @@ class Histogram2D(object):
         return [2.*e.deltaNLL for e in self.entries]
 
     def x_min(self):
+        if len(self.entries) == 0: return self.x_bin_boundaries[0]
         return min(self.x())
     def x_max(self):
+        if len(self.entries) == 0: return self.x_bin_boundaries[-1]
         return max(self.x())
     def y_min(self):
+        if len(self.entries) == 0: return self.y_bin_boundaries[0]
         return min(self.y())
     def y_max(self):
+        if len(self.entries) == 0: return self.y_bin_boundaries[-1]
         return max(self.y())
 
     def set_binning_from_entries(self):
@@ -1002,7 +1007,7 @@ class Histogram2D(object):
         return self.repr_bestfitpoint() + self.repr_1sigma_contours(leg)
 
     def repr_2D_with_contours(self, leg=None):
-        return self.repr_2D() + self.repr_1sigma_contours() + self.repr_2sigma_contours() + self.repr_bestfitpoint()
+        return self.repr_2D() + self.repr_1sigma_contours(leg) + self.repr_2sigma_contours() + self.repr_bestfitpoint()
 
     def repr_2D_with_contours_no_bestfit(self, leg=None):
         return self.repr_2D() + self.repr_1sigma_contours() + self.repr_2sigma_contours()
@@ -1012,8 +1017,10 @@ class Histogram2D(object):
             obj.Draw(draw_str)
 
 
-    def get_most_probable_1sigma_contour(self):
-        allcontours = utils.get_contours_from_H2(self.H2, 2.30)
+    def get_most_probable_1sigma_contour(self, cutoff=2.30):
+        allcontours = utils.get_contours_from_H2(self.H2, cutoff)
+        if len(allcontours) == 0:
+            raise RuntimeError('No contours at all found for cutoff {0}'.format(cutoff))
         candidatecontours = []
 
         bestfit = self.bestfit()
@@ -1045,7 +1052,8 @@ class Histogram2D(object):
             candidatecontours.append( Tg )
 
         if len(candidatecontours) == 0:
-            raise RuntimeError('Can\'t find contour')
+            logging.error('Basic contour selection yielded no contours; returning first of all contours')
+            return allcontours[0]
         elif len(candidatecontours) > 1:
             candidatecontours.sort( key = lambda Tg: Tg.minDist )
             candidatecontours = candidatecontours[:2]
@@ -1055,8 +1063,26 @@ class Histogram2D(object):
 
         # Actually, pick the 'inner' shell, outer shell is too likely to be a misfit
         candidatecontours.sort( key = lambda Tg: Tg.distRatio )    
-
         contour = candidatecontours[0]
-
         return contour
+
+    def get_most_probable_2sigma_contour(self):
+        return self.get_most_probable_1sigma_contour(6.18)
         
+    def get_extrema_from_contour(self, cutoff=2.30):
+        if cutoff == '2sigma': cutoff = 6.18
+        contour = self.get_most_probable_1sigma_contour(cutoff)
+        xs, ys = utils.get_x_y_from_TGraph(contour)
+        extrema = differentials.core.AttrDict(x_min=min(xs), x_max=max(xs), y_min=min(ys), y_max=max(ys))
+        logging.info(
+            'Found extreme at z={0}: x_min={1}, x_max={2}, y_min={3}, y_max={4}'
+            .format(
+                cutoff,
+                extrema.x_min,
+                extrema.x_max,
+                extrema.y_min,
+                extrema.y_max,
+                )
+            )
+        return extrema
+

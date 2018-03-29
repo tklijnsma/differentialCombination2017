@@ -19,6 +19,11 @@ class AttrDict(dict):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
+    def __deepcopy__(self, memo):
+        d = copy.deepcopy({ key : getattr(self, key) for key in self.keys() })
+        return AttrDict(**d)
+
+
 def deprecated(fn):
     def decorated(*args):
         caller = get_caller()
@@ -115,6 +120,8 @@ standard_titles = {
     'ptjet'    : 'p_{T}^{jet}',
     'rapidity' : '|y_{H}|',
     }
+def get_standard_title(name):
+    return standard_titles.get(name, name)
 
 def execute(cmd, capture_output=False, ignore_testmode=False, py_capture_output=False):
     # Allow both lists and strings to be passed as the cmd
@@ -396,6 +403,28 @@ def make_unique_directory(dirname, n_attempts = 100):
 
     logging.info('Uniquified directory: {0}'.format(dirname))
     return dirname
+
+class raise_logging_level():
+    """Context manager to temporarily raise the logging level"""
+    raise_map = {
+        logging.TRACE : logging.DEBUG,
+        logging.DEBUG : logging.INFO,
+        logging.INFO  : logging.WARNING,
+        logging.WARNING : logging.ERROR,
+        logging.ERROR : logging.ERROR
+        }
+
+    def __init__(self):
+        self.old_level = logging.getLogger().getEffectiveLevel()
+        self.new_level = self.raise_map[self.old_level]
+
+    def __enter__(self):
+        # logging.warning('Temporarily raising logging level to {0}'.format(self.new_level))
+        logging.getLogger().setLevel(self.new_level)
+
+    def __exit__(self, *args):
+        # logging.info('Setting logging level back to {0}'.format(self.old_level))
+        logging.getLogger().setLevel(self.old_level)
 
 
 # ======================================

@@ -1,7 +1,8 @@
-import os
+import os, sys, copy
 import importlib
 import logging
 import differentials
+from differentials.core import AttrDict
 
 import scipy
 scipyversion = scipy.__version__.split('.')[1]
@@ -9,7 +10,7 @@ if int(scipyversion) < 15:
     logging.error('Failed to load scipy.optimize; need to pass the python environment')
     _optimize_loaded = False
 else:
-    from scipy.optimize import minimize
+    import scipy.optimize
     _optimize_loaded = True
 
 #____________________________________________________________________
@@ -22,6 +23,24 @@ smxs = normalize(
     [ 27.46607434,  29.44961617,  19.6934684,   26.59903008,  10.46543842, 6.31602595, 2.0582112, 0.28218741 ],
     normalization = 55.620335
     )
+smxs_hzz = smxs[:2] + [smxs[2]+smxs[3]] + [smxs[4]+smxs[5]] + [smxs[6]+smxs[7]]
+
+sm_binning     = [ 0., 15., 30., 45., 85., 125., 200., 350., 10000. ]
+sm_binning_hzz = [ 0., 15., 30., 85., 200., 10000. ]
+
+def divide_by_binwidth(xss, binning, do_overflow=True):
+    widths = [ r-l for l, r in zip(binning[:-1], binning[1:]) ]
+    xs_per_GeV = [ xs/width for xs, width in zip(xss, widths) ]
+    if do_overflow:
+        logging.warning(
+            'Normalizing last bin of xs_per_GeV by second to last bin '
+            '(only suitable for plotting!)'
+            )
+        xs_per_GeV[-1] = xss[-1] / widths[-2]
+    return xs_per_GeV
+smxs_per_GeV = divide_by_binwidth(smxs, sm_binning)
+smxs_per_GeV_hzz = divide_by_binwidth(smxs_hzz, sm_binning_hzz)
+
 
 def load_data(module):
     module = module.replace('/','.').replace('.py','')
@@ -29,19 +48,28 @@ def load_data(module):
     return mod.data
 
 def data_to_hist(data, do_xs=False, title='', x_max=500., color=None):
+    ys = data.mu
+    ys_up = data.mu_up
+    ys_down = data.mu_down
+
     if do_xs:
-        getstr = 'xs'
-    else:
-        getstr = 'mu'
+        if data.binning == sm_binning:
+            xs_per_GeV = smxs_per_GeV
+        elif data.binning == sm_binning_hzz:
+            xs_per_GeV = smxs_per_GeV_hzz
+        ys = [ y*xs for y, xs in zip(ys, xs_per_GeV) ]
+        ys_up = [ y*xs for y, xs in zip(ys_up, xs_per_GeV) ]
+        ys_down = [ y*xs for y, xs in zip(ys_down, xs_per_GeV) ]
+
     histogram = differentials.plotting.pywrappers.Histogram(
         differentials.plotting.plotting_utils.get_unique_rootname(),
         title,
         data.binning,
-        data[getstr]
+        ys
         )
-    histogram.set_err_up(data[getstr + '_up'])
-    histogram.set_err_down(data[getstr + '_down'])
-    histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=500.)
+    histogram.set_err_up(ys_up)
+    histogram.set_err_down(ys_down)
+    histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=x_max)
     if not(color is None):
         histogram.color = color
     return histogram
@@ -60,8 +88,25 @@ def get_kappab_kappac_parametrization():
 
     parametrization = differentials.parametrization.Parametrization()
     parametrization.parametrize_by_matrix_inversion = True
-    parametrization.c1_name = 'kappab'
-    parametrization.c2_name = 'kappac'
+    parametrization.c1_name = 'kappac'
+    parametrization.c2_name = 'kappab'
+    parametrization.from_theory_dicts(coupling_variations)
+    parametrization.bin_boundaries = sm.binBoundaries
+    return parametrization
+
+def get_kappat_kappag_parametrization():
+    import LatestPaths
+    coupling_variations = differentials.theory.theory_utils.FileFinder(
+        cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory='out/theories_Mar05_tophighpt'
+        ).get()
+    sm = [ v for v in coupling_variations if v.ct==1.0 and v.cg==0.0 ][0]
+    coupling_variations.pop(coupling_variations.index(sm))
+
+    parametrization = differentials.parametrization.Parametrization()
+    parametrization.do_linear_terms = False
+    parametrization.parametrize_by_matrix_inversion = True
+    parametrization.c1_name = 'ct'
+    parametrization.c2_name = 'cg'
     parametrization.from_theory_dicts(coupling_variations)
     parametrization.bin_boundaries = sm.binBoundaries
     return parametrization
@@ -71,14 +116,17 @@ def get_kappab_kappac_parametrization():
 
 class CouplingFit(object):
     """docstring for CouplingFit"""
+
+    _transpose = False
+
     def __init__(self):
         super(CouplingFit, self).__init__()
         self.c1_min = -10.
         self.c1_max = 10.
-        self.c1_n_points = 70
+        self.c1_n_points = 150
         self.c2_min = -35.
         self.c2_max = 35.
-        self.c2_n_points = 70
+        self.c2_n_points = 150
         self.title = ''
         self.color = None
         self.bestfit = None
@@ -87,12 +135,23 @@ class CouplingFit(object):
         self.chi2 = Chi2CouplingFitter()
         self.chi2.c1_name = 'kappab'
         self.chi2.c2_name = 'kappac'
+        self.chi2.pois_sm = [ 1., 1. ]
         self.chi2.set_parametrization_kappabkappac()
+        self.chi2.set_data(data)
+        self.chi2.build()
+
+    def setup_kappatkappag(self, data):
+        self.chi2 = Chi2CouplingFitter()
+        self.chi2.c1_name = 'ct'
+        self.chi2.c2_name = 'cg'
+        self.chi2.pois_sm = [ 1., 0. ]
+        self.chi2.set_parametrization_kappatkappag()
         self.chi2.set_data(data)
         self.chi2.build()
 
     def get_bestfit(self):
         self.bestfit = self.chi2.minimize()
+        logging.info('Got bestfit: chi2 = {0}, pois = {1}'.format(self.bestfit.chi2, self.bestfit.pois))
 
     def get_scan(self):
         if self.bestfit is None: self.get_bestfit()
@@ -101,34 +160,56 @@ class CouplingFit(object):
         self.c1_bin_centers = [ 0.5*(l+r) for l, r in zip(self.c1_bin_boundaries[:-1], self.c1_bin_boundaries[1:]) ]
         self.c2_bin_centers = [ 0.5*(l+r) for l, r in zip(self.c2_bin_boundaries[:-1], self.c2_bin_boundaries[1:]) ]
 
+        _do_log = logging.getLogger().isEnabledFor(logging.DEBUG)
+        if _do_log: logging.debug(
+            'Scanning grid; c1_min={0:<+6.2f}, c1_max={1:<+6.2f}, c2_min={2:<+6.2f}, c2_max={3:<+6.2f}'
+            .format( self.c1_min, self.c1_max, self.c2_min, self.c2_max )
+            )
+
         scan = [[ 999. for j in xrange(self.c2_n_points) ] for i in xrange(self.c1_n_points)]
         for i_c1, c1 in enumerate(self.c1_bin_centers):
             for i_c2, c2 in enumerate(self.c2_bin_centers):
-                scan[i_c1][i_c2] = self.chi2.evaluate([c1, c2]) - self.bestfit.chi2
+                nll = self.chi2.evaluate([c1, c2])
+                nll0 = self.bestfit.chi2
+                dnll = nll - nll0
+                if _do_log:
+                    logging.debug(
+                        '{0}={1:<+6.2f}/{2}={3:<+6.2f}; dnll={4:<+6.2f}, nll={5:<+6.2f}, nll0={6:<+6.2f}'
+                        .format(self.chi2.c1_name, c1, self.chi2.c2_name, c2, dnll, nll, nll0)
+                        )
+                scan[i_c1][i_c2] =  dnll
+
+
         self.scan = scan
 
     def to_hist(self):
         histogram2D = differentials.plotting.pywrappers.Histogram2D(
             differentials.plotting.plotting_utils.get_unique_rootname(), self.title, self.color
             )
-        histogram2D.fill_with_matrix(self.scan, self.c1_bin_boundaries, self.c2_bin_boundaries)
-        histogram2D.fill_bestfit(self.bestfit.pois[0], self.bestfit.pois[1])
-        histogram2D.x_title = self.chi2.c1_name
-        histogram2D.y_title = self.chi2.c2_name
+        if self._transpose:
+            n_rows = len(self.scan)
+            n_cols = len(self.scan[0])
+            transposed_scan = [[ self.scan[i_row][i_col] for i_row in xrange(n_rows) ] for i_col in xrange(n_cols) ]
+            histogram2D.fill_with_matrix(self.scan, self.c2_bin_boundaries, self.c1_bin_boundaries)
+            histogram2D.fill_bestfit(self.bestfit.pois[0], self.bestfit.pois[1])
+            histogram2D.x_title = self.chi2.c2_name
+            histogram2D.y_title = self.chi2.c1_name
+        else:
+            histogram2D.fill_with_matrix(self.scan, self.c1_bin_boundaries, self.c2_bin_boundaries)
+            histogram2D.fill_bestfit(self.bestfit.pois[0], self.bestfit.pois[1])
+            histogram2D.x_title = self.chi2.c1_name
+            histogram2D.y_title = self.chi2.c2_name
         histogram2D.z_title = '#chi^2'
         return histogram2D
 
-    # def to_hist(self):
-    #     histogram2D = plotting.pywrappers.Histogram2D(
-    #         utils.get_unique_rootname(), getattr(self, 'title', ''), self.color
-    #         )
-    #     histogram2D.x_title = self.x_title
-    #     histogram2D.y_title = self.y_title
-    #     histogram2D.z_title = self.z_title
-    #     histogram2D.fill_from_entries(self.entries)
-    #     if hasattr(self, 'contour_filter_method'):
-    #         histogram2D.contour_filter_method = self.contour_filter_method
-    #     return histogram2D
+
+    def sum(self, other):
+        new = copy.deepcopy(self)
+        for i_c1 in xrange(len(new.c1_bin_centers)):
+            for i_c2 in xrange(len(new.c2_bin_centers)):
+                new.scan[i_c1][i_c2] = self.scan[i_c1][i_c2] + other.scan[i_c1][i_c2]
+        return new
+
 
 
 class Chi2(object):
@@ -174,10 +255,11 @@ class Chi2(object):
 
     def minimize(self):
         pois = [ p for i, p in enumerate(self.pois) if not i in self.freeze_pois ] # pick only floating pois
-        fit = minimize(self.evaluate, pois, method='Nelder-Mead', tol=1e-6)
+        with differentials.core.raise_logging_level():
+            fit = scipy.optimize.minimize(self.evaluate, pois, method='Nelder-Mead', tol=1e-6)
         chi2 = fit.fun
         fitted_pois = self.get_all_pois(list(fit.x)) # get fit, and plug back in the frozen pois as well
-        return differentials.core.AttrDict(chi2=chi2, pois=fitted_pois)
+        return AttrDict(chi2=chi2, pois=fitted_pois)
 
 
 class Chi2CouplingFitter(Chi2):
@@ -185,16 +267,21 @@ class Chi2CouplingFitter(Chi2):
     def __init__(self):
         super(Chi2CouplingFitter, self).__init__()
         self.parametrization = None
-        self.pois = [ 1., 1. ]
+        self.pois = [ 1.1, 1.1 ]
+        self.pois_sm = [ 1., 1. ]
 
     def build(self):
         self.get_rebinner()
         self.get_smxs_parametrization()
 
     def get_smxs_parametrization(self):
-        self.smxs_parametrization = self.evaluate_parametrization_xs(self.pois) # Should give SM values!
+        self.smxs_parametrization = self.evaluate_parametrization_xs(self.pois_sm)
 
     def get_rebinner(self):
+        logging.info(
+            'Initializing Rebinner; new: {0}; old: {1}'
+            .format(self.binning(), self.parametrization.bin_boundaries)
+            )
         self.rebinner = differentials.integral.Rebinner(
             bin_boundaries_old = self.parametrization.bin_boundaries,
             bin_boundaries_new = self.binning()
@@ -212,9 +299,15 @@ class Chi2CouplingFitter(Chi2):
         self.c1_name = self.parametrization.c1_name
         self.c2_name = self.parametrization.c2_name
 
+    def set_parametrization_kappatkappag(self):
+        self.parametrization = get_kappat_kappag_parametrization()
+        self.c1_name = self.parametrization.c1_name
+        self.c2_name = self.parametrization.c2_name
+
     def evaluate_parametrization_xs(self, pois):
         xs_per_GeV_theory_binning = self.parametrization.evaluate(*pois)
-        xs_per_GeV = self.rebinner.rebin_values(xs_per_GeV_theory_binning)
+        with differentials.core.raise_logging_level():
+            xs_per_GeV = self.rebinner.rebin_values(xs_per_GeV_theory_binning)
         return xs_per_GeV
 
     def evaluate_parametrization(self, pois):
@@ -393,7 +486,6 @@ class Chi2PtCombination(Chi2):
         super(Chi2PtCombination, self).__init__()
         self.spectra = []
         self.chi2_spectra = []
-        self.pois = [ 1. for i in xrange(self.n_bins) ]
        
     def add_spectrum(self, spectrum):
         self.spectra.append(spectrum)
@@ -410,6 +502,9 @@ class Chi2PtCombination(Chi2):
             chi2_spectrum = Chi2Spectrum(spectrum)
             chi2_spectrum.set_finest(finest)
             self.chi2_spectra.append(chi2_spectrum)
+
+        self.pois = [ 1. for i in xrange(self.n_bins) ]
+
 
     def evaluate(self, pois):
         # logging.trace('Evaluating combination; pois = {0}'.format(pois))

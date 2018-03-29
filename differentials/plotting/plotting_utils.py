@@ -63,7 +63,11 @@ def set_color_palette(option=None):
             array('d', reds),
             array('d', greens),
             array('d', blues),
-            255)
+            255
+            # 8*256-1
+            )
+    ROOT.gStyle.SetNumberContours(999)
+
 
 def new_color_cycle():
     return itertools.cycle(

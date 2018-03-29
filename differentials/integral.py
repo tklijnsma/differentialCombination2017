@@ -51,17 +51,20 @@ class Integrator(object):
 
         self.set_zero_outside_range()
 
+        # Check at initialization time, so this doesn't have to be called all the time
+        self._log_debug_enabled = logging.getLogger().isEnabledFor(logging.DEBUG)
 
     def set_zero_outside_range(self):
         self.behavior = 'zero_outside_range'
 
-
     def get_underflow(self, a, b):
         if self.behavior == 'zero_outside_range':
+            if self._log_debug_enabled: logging.debug('Underflow contribution: 0.0 (fixed by behavior zero_outside_range)')
             return 0.
 
     def get_overflow(self, a, b):
         if self.behavior == 'zero_outside_range':
+            if self._log_debug_enabled: logging.debug('Overflow contribution: 0.0 (fixed by behavior zero_outside_range)')
             return 0.
 
     def get_partial_bin_contribution(self, i, x):
@@ -76,8 +79,8 @@ class Integrator(object):
     def integral(self, a, b):
         ret = 0.0
 
-        logging.debug('Requested integral from a={0} to b={1}'.format(a, b))
-        logging.debug('Bin boundaries are {0}'.format(self.bin_boundaries))
+        if self._log_debug_enabled: logging.debug('Requested integral from a={0} to b={1}'.format(a, b))
+        if self._log_debug_enabled: logging.debug('Bin boundaries are {0}'.format(self.bin_boundaries))
 
         _multiply_by_minus_one = False
         if a == b:
@@ -85,18 +88,29 @@ class Integrator(object):
             return 0.
         elif b < a:
             logging.info('Found b < a; will calculate integral from a -> b and multiply by -1 later')
-            _ = b
-            b = a
-            a = _
+            (a, b) = (b, a)
             _multiply_by_minus_one = True
 
-        logging.debug('Requested behavior is {0}'.format(self.behavior))
+        has_underflow = False
+        has_overflow = False
         if a < self.x_min:
-            logging.debug('Requested left bound {0} < x_min({1})'.format(a, self.x_min))
+            if self._log_debug_enabled: logging.debug('Requested behavior is {0}'.format(self.behavior))
+            if self._log_debug_enabled: logging.debug(
+                'Requested left bound {0} < x_min({1}); will add an underflow contribution to the result'
+                .format(a, self.x_min)
+                )
+            underflow = self.get_underflow(a, b)
+            has_underflow = True
+            a = self.x_min
         if b > self.x_max:
-            logging.debug('Requested right bound {0} > x_max({1}); assuming zero above x_max'.format(b, self.x_max))
-
-        ret += self.get_underflow(a, b)
+            if self._log_debug_enabled: logging.debug('Requested behavior is {0}'.format(self.behavior))
+            if self._log_debug_enabled: logging.debug(
+                'Requested right bound {0} > x_max({1}); will add an overflow contribution to the result'
+                .format(b, self.x_max)
+                )
+            overflow = self.get_overflow(a, b)
+            has_overflow = True
+            b = self.x_max
 
         # New lists to contain actual bin boundaries and values for integration
         _bin_boundaries = []
@@ -123,30 +137,30 @@ class Integrator(object):
                     _values.append(value)
                 break
 
-        logging.debug('The bin boundaries over which to integrate are: {0}'.format(_bin_boundaries))
-        logging.debug('The bin values over which to integrate are: {0}'.format(_values))
-
+        if self._log_debug_enabled: logging.debug('The bin boundaries over which to integrate are: {0}'.format(_bin_boundaries))
+        if self._log_debug_enabled: logging.debug('The bin values over which to integrate are: {0}'.format(_values))
 
         _lefts  = _bin_boundaries[:-1]
         _rights = _bin_boundaries[1:]
         _widths = [ r-l for l, r in zip(_lefts, _rights) ]
 
-        logging.debug('Start evaluating integral')
-        logging.debug('underflow contribution:' + ' '*28 + '{0:<+9.3f}'.format(ret))
+        if self._log_debug_enabled: logging.debug('Start evaluating integral')
+        if has_underflow:
+            ret += underflow
+            if self._log_debug_enabled: logging.debug('underflow contribution:' + ' '*28 + '{0:<+9.3f}'.format(ret))
         for value, width, left, right in zip(_values, _widths, _lefts, _rights):
             contribution = value * width
-            logging.debug(
+            if self._log_debug_enabled: logging.debug(
                 'val = {0:<+9.3f}, width = {1:<+9.3f}, contribution = {2:<+9.3f} '
                 '(l={3}, r={4})'
                 .format(value, width, contribution, left, right)
                 )
             ret += contribution
+        if has_overflow:
+            if self._log_debug_enabled: logging.debug('overflow contribution:' + ' '*29 + '{0:<+9.3f}'.format(overflow))
+            ret += overflow
 
-        overflow = self.get_overflow(a, b)
-        logging.debug('overflow contribution:' + ' '*29 + '{0:<+9.3f}'.format(overflow))
-        ret += overflow
-
-        logging.debug('Result: Integral from a={0:<+9.3f} to b={1:<+9.3f} is {2:<+9.3f}'.format(a, b, ret))
+        if self._log_debug_enabled: logging.debug('Result: Integral from a={0:<+9.3f} to b={1:<+9.3f} is {2:<+9.3f}'.format(a, b, ret))
         if _multiply_by_minus_one:
             logging.info('Multiplying by -1.0 to correct for the a<>b switch')
             ret *= -1.0

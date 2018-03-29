@@ -16,6 +16,7 @@ class PlotBase(object):
     """docstring for PlotBase"""
     def __init__(self, plotname):
         self.plotname = plotname
+        self.disable_CMS_labels = False
         c.Clear()
         c.set_margins()
         
@@ -72,6 +73,105 @@ class QuickPlot(PlotBase):
     def wrapup(self):
         self.leg.Draw()
         super(QuickPlot, self).wrapup()
+
+
+class Single2DHistPlot(PlotBase):
+    """docstring for Single2DHistPlot"""
+    def __init__(
+            self, plotname, H2, draw_str='repr_2D_with_contours',
+            x_min=None, x_max=None, y_min=None, y_max=None
+            ):
+        super(Single2DHistPlot, self).__init__(plotname)
+        self.H2 = H2
+        self.draw_str = draw_str
+
+        self.leg = pywrappers.Legend()
+        self.x_title = 'x'
+        self.y_title = 'y'
+        self.x_min = x_min
+        self.x_max = x_max
+        self.y_min = y_min
+        self.y_max = y_max
+        differentials.plotting.canvas.reset_global_color_cyle()
+        self.set_ranges_by_contour = True
+
+
+    def draw(self):
+        c.Clear()
+        c.set_margins_2D()
+
+        leg = pywrappers.Legend(
+            c.GetLeftMargin() + 0.01,
+            c.GetBottomMargin() + 0.02,
+            1 - c.GetRightMargin() - 0.01,
+            c.GetBottomMargin() + 0.09
+            )
+
+        self.H2._legend = leg
+        self.H2.Draw(self.draw_str)
+
+        H = self.H2.H2
+        H.GetXaxis().SetTitle(self.x_title)
+        H.GetYaxis().SetTitle(self.y_title)
+        H.GetXaxis().SetTitleSize(0.06)
+        H.GetXaxis().SetLabelSize(0.05)
+        H.GetYaxis().SetTitleSize(0.06)
+        H.GetYaxis().SetLabelSize(0.05)
+
+        if self.set_ranges_by_contour:
+            extrema = self.H2.get_extrema_from_contour('2sigma')
+            x_min_abs = extrema.x_min
+            x_max_abs = extrema.x_max
+            dx_abs = x_max_abs-x_min_abs
+            y_min_abs = extrema.y_min
+            y_max_abs = extrema.y_max
+            dy_abs = y_max_abs-y_min_abs
+            # Add some margin
+            self.x_min = x_min_abs - 0.2*dx_abs
+            self.x_max = x_max_abs + 0.2*dx_abs
+            self.y_min = y_min_abs - 0.2*dy_abs
+            self.y_max = y_max_abs + 0.3*dy_abs
+
+        if not(self.x_min is None) and not(self.x_max is None):
+            H.GetXaxis().SetRangeUser(self.x_min, self.x_max)
+        elif not(self.x_min is None):
+            H.GetXaxis().SetRangeUser(self.x_min, H.GetXaxis().GetXmax())
+        elif not(self.x_max is None):
+            H.GetXaxis().SetRangeUser(H.GetXaxis().GetXmin(), self.x_max)
+        if not(self.y_min is None) and not(self.y_max is None):
+            H.GetYaxis().SetRangeUser(self.y_min, self.y_max)
+        elif not(self.y_min is None):
+            H.GetYaxis().SetRangeUser(self.y_min, H.GetYaxis().GetXmax())
+        elif not(self.y_max is None):
+            H.GetYaxis().SetRangeUser(H.GetYaxis().GetXmin(), self.y_min)
+
+        if not self.disable_CMS_labels:
+            pywrappers.CMS_Latex_type().Draw()
+            pywrappers.CMS_Latex_lumi().Draw()
+
+        pywrappers.Point(self.H2.bestfit().x, self.H2.bestfit().y).Draw('repr_SM_point')
+        self.H2.Draw('repr_bestfitpoint') # Redraw since the SM frequently overlaps the BF for Asimov
+
+        pywrappers.ContourDummyLegend(
+            c.GetLeftMargin() + 0.11,
+            1. - c.GetTopMargin() - 0.1,
+            1. - c.GetRightMargin() - 0.01,
+            1. - c.GetTopMargin() - 0.01,
+            ).Draw()
+
+        c.Update()
+        c.RedrawAxis()
+
+        if self.set_ranges_by_contour:
+            # To make sure that a second call to .draw() doesn't break stuff
+            self.x_min = None
+            self.x_max = None
+            self.y_min = None
+            self.y_max = None
+
+    def wrapup(self):
+        self.leg.Draw()
+        super(Single2DHistPlot, self).wrapup()
 
 
 class MultiScanPlot(PlotBase):
@@ -199,18 +299,20 @@ class MultiContourPlot(PlotBase):
         self.x_max = x_max
         self.y_max = y_max
 
-        self.draw_individual_contours=True
-        self.only_1sigma_contours=False
+        self.draw_individual_contours = True
+        self.only_1sigma_contours = False
+        self.set_ranges_by_contour = False
 
         self.x_SM = 1.0
         self.y_SM = 1.0
 
-        self.x_title = scans[0].x_title
-        self.y_title = scans[0].y_title
+        self.x_title = getattr(scans[0], 'x_title', 'x')
+        self.y_title = getattr(scans[0], 'y_title', 'y')
+
         self.base = pywrappers.Base(x_title=self.x_title, y_title=self.y_title)
 
         self.legend = pywrappers.Legend(
-            lambda c: c.GetLeftMargin() + 0.01,
+            lambda c: c.GetLeftMargin() + 0.07,
             lambda c: c.GetBottomMargin() + 0.02,
             lambda c: 1 - c.GetRightMargin() - 0.01,
             lambda c: c.GetBottomMargin() + 0.09
@@ -219,6 +321,23 @@ class MultiContourPlot(PlotBase):
     def pre_draw(self):
         super(MultiContourPlot, self).pre_draw()
         self.base.Draw()
+
+    def extrema_from_contours(self, H2s):
+        x_min = 10e9
+        x_max = -10e9
+        y_min = 10e9
+        y_max = -10e9
+        for H2 in H2s:
+            extrema = H2.get_extrema_from_contour('2sigma')
+            if extrema.x_min < x_min: x_min = extrema.x_min
+            if extrema.x_max > x_max: x_max = extrema.x_max
+            if extrema.y_min < y_min: y_min = extrema.y_min
+            if extrema.y_max > y_max: y_max = extrema.y_max
+        self.x_min = x_min - 0.4*(x_max-x_min)
+        self.x_max = x_max + 0.4*(x_max-x_min)
+        self.y_min = y_min - 0.3*(y_max-y_min)
+        self.y_max = y_max + 0.4*(y_max-y_min)
+
 
     def draw(self):
         super(MultiContourPlot, self).draw()
@@ -235,10 +354,13 @@ class MultiContourPlot(PlotBase):
 
         self.legend.Draw()
 
-        if self.x_min is None: self.x_min = min([H.x_min() for H in self.histograms])
-        if self.y_min is None: self.y_min = min([H.y_min() for H in self.histograms])
-        if self.x_max is None: self.x_max = max([H.x_max() for H in self.histograms])
-        if self.y_max is None: self.y_max = max([H.y_max() for H in self.histograms])
+        if self.set_ranges_by_contour:
+            self.extrema_from_contours(self.histograms)
+        else:
+            if self.x_min is None: self.x_min = min([H.x_min() for H in self.histograms])
+            if self.y_min is None: self.y_min = min([H.y_min() for H in self.histograms])
+            if self.x_max is None: self.x_max = max([H.x_max() for H in self.histograms])
+            if self.y_max is None: self.y_max = max([H.y_max() for H in self.histograms])
         self.base.set(x_min=self.x_min, y_min=self.y_min, x_max=self.x_max, y_max=self.y_max)
 
         self.base.GetXaxis().SetTitle(self.x_title)
@@ -250,12 +372,15 @@ class MultiContourPlot(PlotBase):
 
         SM_point = pywrappers.Point(self.x_SM, self.y_SM)
         SM_point.Draw('repr_SM_point')
+        for histogram in self.histograms:
+            histogram.Draw('repr_bestfitpoint') # Redraw since the SM frequently overlaps the BF for Asimov
 
-        pywrappers.CMS_Latex_type().Draw()
-        pywrappers.CMS_Latex_lumi().Draw()
+        if not self.disable_CMS_labels:
+            pywrappers.CMS_Latex_type().Draw()
+            pywrappers.CMS_Latex_lumi().Draw()
 
         pywrappers.ContourDummyLegend(
-            c.GetLeftMargin() + 0.01,
+            c.GetLeftMargin() + 0.07,
             1. - c.GetTopMargin() - 0.1,
             1. - c.GetRightMargin() - 0.01,
             1. - c.GetTopMargin() - 0.01,
@@ -309,7 +434,16 @@ class BottomPanelPlot(PlotBase):
         self.bottom_x_max = None
         self.bottom_y_min = None
         self.bottom_y_max = None
+        self.has_legend = False
 
+    def make_legend(self):
+        self.has_legend = True
+        self.leg = pywrappers.Legend(
+            lambda c: c.GetLeftMargin() + 0.01,
+            lambda c: 1 - c.GetTopMargin() - 0.10,
+            lambda c: 1 - c.GetRightMargin() - 0.01,
+            lambda c: 1 - c.GetTopMargin()
+            )
 
     def add_top(self, obj, draw_str=None, leg=None):
         if not(leg is None):
@@ -516,7 +650,7 @@ class BottomPanelPlot(PlotBase):
         base_bottom.GetYaxis().SetTitleSize(base_top.GetYaxis().GetTitleSize() * height_ratio)
         base_bottom.GetYaxis().SetTitleOffset(1./height_ratio)
 
-        if self.CMS_labels:
+        if not self.disable_CMS_labels:
             toppad.cd()
             pywrappers.CMS_Latex_type(text_size=0.08).Draw()
             pywrappers.CMS_Latex_lumi(text_size=0.07).Draw()
@@ -526,6 +660,9 @@ class BottomPanelPlot(PlotBase):
 
 
     def wrapup(self):
+        if self.has_legend:
+            self.toppad.cd()
+            self.leg.Draw()
         super(BottomPanelPlot, self).save()
         c.SetCanvasSize(self._tmp_width, self._tmp_height)
 
