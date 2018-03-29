@@ -27,7 +27,11 @@ class T2WS(object):
             self.model_file = model_file
 
         if model_name is None:
-            self.model_name = 'multiSignalModel'
+            if self.model_file == T2WS.default_model_file:
+                self.model_name = 'multiSignalModel'
+            else:
+                base = basename(self.model_file).replace('.py','')
+                self.model_name = base[0].lower() + base[1:]
         else:
             self.model_name = model_name
 
@@ -35,6 +39,17 @@ class T2WS(object):
         self.output_ws = None
         self.tags = []
         self.extra_options = []
+
+    def add_expr(self, expr):
+        if self.model_file == T2WS.default_model_file:
+            dummyname = 'dummy_{0}'.format(core.__uniqueid__().next())
+            mapstr = '--PO \'map={0}:{1}\''.format(dummyname, expr)
+            self.extra_options.insert(0, mapstr)
+        else:
+            self.extra_options.append('--PO \'factory={0}\''.format(expr))
+
+    def add_map(self, mapstr):
+        self.extra_options.append('--PO \'map={0}\''.format(mapstr))
 
     def get_processes_from_card(self):
         with open(self.card, 'r') as card_fp:

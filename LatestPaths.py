@@ -292,3 +292,13 @@ scan.yukawa.onekappa.asimov = AttrDict()
 scan.yukawa.onekappa.asimov.kappab = 'out/Scan_Yukawa_Mar16_combination_oneKappa_kappab_asimov'
 scan.yukawa.onekappa.asimov.kappac = 'out/Scan_Yukawa_Mar16_combination_oneKappa_kappac_asimov'
 
+scan.topctcb = AttrDict()
+scan.topctcb.reweighted = AttrDict()
+scan.topctcb.reweighted.observed = AttrDict()
+scan.topctcb.reweighted.observed.combWithHbb =  'out/Scan_Mar20_TopCtCb_combWithHbb_0'
+scan.topctcb.reweighted.observed.hgg =  'out/Scan_Mar20_TopCtCb_hgg_0'
+scan.topctcb.reweighted.observed.hzz =  'out/Scan_Mar20_TopCtCb_hzz_0'
+scan.topctcb.reweighted.asimov = AttrDict()
+scan.topctcb.reweighted.asimov.combWithHbb = 'out/Scan_Mar20_TopCtCb_combWithHbb_asimov_0'
+scan.topctcb.reweighted.asimov.hgg = 'out/Scan_Mar20_TopCtCb_hgg_asimov_0'
+scan.topctcb.reweighted.asimov.hzz = 'out/Scan_Mar20_TopCtCb_hzz_asimov_0'

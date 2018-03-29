@@ -357,3 +357,36 @@ def points_on_contour_Top(args):
 
     plot.draw()
 
+
+#____________________________________________________________________
+# kappat kappab
+
+@flag_as_option
+def multicont_TopCtCb(args):
+    scans = []
+    scandict = LatestPaths.scan.topctcb.reweighted.asimov if args.asimov else LatestPaths.scan.topctcb.reweighted.observed
+    y_coupling = 'cb'
+
+    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling, scandir = scandict.hgg)
+    hgg.color = 2
+    hgg.read()
+    scans.append(hgg)
+
+    hzz = differentials.scans.Scan2D('hzz', x_coupling, y_coupling, scandir = scandict.hzz)
+    hzz.color = 4
+    hzz.read()
+    scans.append(hzz)
+
+    combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling, scandir = scandict.combWithHbb)
+    combWithHbb.color = 1
+    combWithHbb.read()
+    scans.append(combWithHbb)
+    
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_TopCtCb' + ('_asimov' if args.asimov else ''),
+        scans,
+        # x_min=top_x_min, x_max=top_x_max, y_min=top_y_min, y_max=top_y_max,
+        )
+    # plot.legend.SetNColumns(2)
+    # plot.only_1sigma_contours = True
+    plot.draw()

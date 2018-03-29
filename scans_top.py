@@ -129,7 +129,7 @@ def basic_config_ctcb(args):
             ])
 
     config.deltaNLLCutOff = 70.
-    config.nPoints = 70**2
+    config.nPoints = 85**2
 
     config.nPointsPerJob = 20
     if args.hgg:
@@ -138,8 +138,15 @@ def basic_config_ctcb(args):
         config.nPointsPerJob = 12
 
     # default ranges; should cover general usecases
-    ct_ranges = [ -0.5, 2.0 ]
-    cb_ranges = [ -20., 22. ]
+    # ct_ranges = [ -0.5, 2.0 ]
+    # cb_ranges = [ -20., 22. ]
+
+    # Default: Hzz ranges (the widest)
+    ct_ranges = [ -1.55, 1.55 ]
+    cb_ranges = [ -20., 20. ]
+    if args.hzz:
+        ct_ranges = [ -1.7, 1.7 ]
+        cb_ranges = [ -23., 23. ]
 
     config.POIs = [ 'ct', 'cb' ]
     config.PhysicsModelParameters = [ 'ct=1.0', 'cb=1.0' ]
@@ -313,65 +320,3 @@ def scan_top_BRdependent_and_profiledTotalXS(args):
     config.fix_parameter_at_value('kappa_V', 0.999)
     differentialutils.run_postfit_fastscan_scan(config)
 
-
-
-#____________________________________________________________________
-@flag_as_option
-def couplingScan_TopCtCb(args):
-    print 'Now in couplingScan_TopCtCb'
-    raise NotImplementedError(
-        'Re-implement this properly!'
-        )
-
-    if not args.highpt:
-        logging.warning('Probably no reason anymore to not use --highpt; setting --highpt to True')
-        args.highpt = True
-
-    TheoryCommands.SetPlotDir( 'plots_{0}_TopCtCb'.format(datestr) )
-
-    scan = basic_scan_instance(args)
-    scan.deltaNLLCutOff = 50.
-    scan.nPoints = 120**2
-    ct_ranges = [ -0.1, 2. ]
-    cb_ranges = [ -10.0, 16.0 ]
-    scan.POIs = [ 'ct', 'cb' ]
-    scan.PhysicsModelParameterRanges = [
-        'ct={0},{1}'.format( ct_ranges[0], ct_ranges[1] ),
-        'cb={0},{1}'.format( cb_ranges[0], cb_ranges[1] )
-        ]
-    scan.subDirectory = 'out/Scan_TopCtCb_{0}'.format(datestr)
-    if args.highpt: scan.subDirectory = 'out/Scan_TopCtCbHighPt_{0}'.format(datestr)
-
-
-    # ======================================
-    # Determine the physics
-
-    def nominal_datacard(args):
-        if args.highpt:
-            if args.hgg:
-                dc = LatestPaths.ws_hgg_TopCtCbHighPt
-            elif args.hzz:
-                dc = LatestPaths.ws_hzz_TopCtCbHighPt
-            elif args.combWithHbb:
-                raise LookupError('No datacard defined yet')
-            else:
-                dc = LatestPaths.ws_combined_TopCtCbHighPt
-        else:
-            if args.hgg:
-                dc = LatestPaths.ws_hgg_TopCtCb
-            elif args.hzz:
-                dc = LatestPaths.ws_hzz_TopCtCb
-            elif args.combWithHbb:
-                raise LookupError('No datacard defined yet')
-            else:
-                dc = LatestPaths.ws_combined_TopCtCb
-        return dc
-
-    if args.nominal:
-        datacard = nominal_datacard(args)
-
-    else:
-        print 'Pass physics option'
-        return
-
-    scan.Run()
