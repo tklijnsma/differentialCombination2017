@@ -794,6 +794,8 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
 
         self.default_points_xy_maxima = True
 
+        self.get_points_method = 'extrema'
+
         self.legend = pywrappers.Legend(
             lambda c: c.GetLeftMargin()+0.01,
             lambda c: 1.-c.GetTopMargin()-0.40,
@@ -805,7 +807,7 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
 
     def get_points(self):
         contour = self.scan2D.to_hist().get_most_probable_1sigma_contour()
-        if self.default_points_xy_maxima:
+        if self.get_points_method == 'extrema':
             bestfit_point = pywrappers.Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y, color=self.color_cycle.next())
             bestfit_point._is_bestfit = True
             self.points.append(bestfit_point)
@@ -813,7 +815,8 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
             self.points.append(pywrappers.Point(contour.x_max, contour.y[contour.x.index(contour.x_max)], color=self.color_cycle.next()))
             self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_min)], contour.y_min, color=self.color_cycle.next()))
             self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_max)], contour.y_max, color=self.color_cycle.next()))
-        else:
+
+        elif self.get_points_method == 'max_distance_from_bestfit':
             Point = namedtuple('Point', ['x', 'y'])
 
             bestfit = Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y)
@@ -840,6 +843,14 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
             self.points.append(pywrappers.Point(p1.x, p1.y, color=self.color_cycle.next()))
             self.points.append(pywrappers.Point(p2.x, p2.y, color=self.color_cycle.next()))
             self.points.append(pywrappers.Point(p3.x, p3.y, color=self.color_cycle.next()))
+
+        elif self.get_points_method == 'extrema_y_and_x_max':
+            bestfit_point = pywrappers.Point(self.scan2D.bestfit().x, self.scan2D.bestfit().y, color=self.color_cycle.next())
+            bestfit_point._is_bestfit = True
+            self.points.append(bestfit_point)
+            self.points.append(pywrappers.Point(contour.x_max, contour.y[contour.x.index(contour.x_max)], color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_min)], contour.y_min, color=self.color_cycle.next()))
+            self.points.append(pywrappers.Point(contour.x[contour.y.index(contour.y_max)], contour.y_max, color=self.color_cycle.next()))
 
 
     def draw(self):

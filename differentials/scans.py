@@ -237,7 +237,8 @@ class DifferentialSpectrum(object):
 
 class ScanPrimitive(object):
 
-    standard_titles = {
+    standard_titles = copy.copy(core.standard_titles)
+    legacy_standard_titles = {
         'hgg' : 'H#rightarrow#gamma#gamma',
         'hzz' : 'H#rightarrowZZ',
         'combination' : 'Combination',
@@ -250,6 +251,9 @@ class ScanPrimitive(object):
         'ct' : '#kappa_{t}',
         'cg' : 'c_{g}',
         }
+    for key in legacy_standard_titles:
+        if not key in standard_titles:
+            standard_titles[key] = legacy_standard_titles[key]
 
     tree_name = 'limit'
     filter_negatives = True

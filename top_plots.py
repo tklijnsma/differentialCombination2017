@@ -390,3 +390,93 @@ def multicont_TopCtCb(args):
     # plot.legend.SetNColumns(2)
     # plot.only_1sigma_contours = True
     plot.draw()
+
+@flag_as_option
+def multicont_TopCtCb_lumi300fb(args):
+    args = differentialutils.force_asimov(args)
+    y_coupling = 'cb'
+
+    combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling,
+        scandir = LatestPaths.scan.topctcb.reweighted.asimov.combWithHbb
+        )
+    combWithHbb.color = 1
+    combWithHbb.title = '35.9 fb^{-1}'
+    combWithHbb.read()
+
+    lumi300fb = differentials.scans.Scan2D('lumi300fb', x_coupling, y_coupling,
+        scandir = LatestPaths.scan.topctcb.lumi300fb
+        )
+    lumi300fb.color = 4
+    lumi300fb.title = '300 fb^{-1}'
+    # lumi300fb.contour_filter_method = 'max_distance_to_com'
+    lumi300fb.read()
+    
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_TopCtCb_lumi300fb' + ('_asimov' if args.asimov else ''),
+        [combWithHbb, lumi300fb],
+        x_min = -1.8,
+        x_max = 1.8,
+        y_min = -20.,
+        y_max = 20.,
+        )
+    # plot.only_1sigma_contours = True
+    plot.draw()
+
+
+@flag_as_option
+def points_on_contour_TopCtCb(args):
+    obs_name = 'pth_ggH'
+    obstuple = LatestBinning.obstuple_pth_ggH
+    y_coupling = 'cb'
+
+    # Load 2D scan
+    scandict_2D = LatestPaths.scan.topctcb.reweighted.asimov if args.asimov else LatestPaths.scan.topctcb.reweighted.observed
+    TopCtCb_combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling, scandir = scandict_2D.combWithHbb)
+    TopCtCb_combWithHbb.color = 1
+    TopCtCb_combWithHbb.read()
+
+    # Load pt combination
+    scandict = LatestPaths.scan.pth_ggH.asimov if args.asimov else LatestPaths.scan.pth_ggH.observed
+    combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', scandict.combWithHbb)
+    combWithHbb.color = 1
+    combWithHbb.no_overflow_label = True
+    combWithHbb.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb.read()
+
+    # Load ws to get parametrization from
+    ws = LatestPaths.ws.topctcb.nominal.combWithHbb
+
+    # ======================================
+    # Load into plot
+
+    plot = differentials.plotting.plots.BottomPanelPlotWithParametrizations('points_on_contour_TopCtCb')
+    plot.scan2D = TopCtCb_combWithHbb
+    plot.ws_file = ws
+    plot.ptspectrum = combWithHbb
+    plot.obs = obstuple.combWithHbb
+
+    plot.get_points_method = 'extrema_y_and_x_max'
+
+    # plot.topctcb_y_min = topctcb_y_min
+    plot.top_y_max = 150.
+    plot.legend.set(
+        x1 = lambda c: c.GetLeftMargin()+0.05,
+        y1 = lambda c: 1.-c.GetTopMargin()-0.35,
+        x2 = lambda c: c.GetLeftMargin()+0.38,
+        y2 = lambda c: 1.-c.GetTopMargin()-0.02,
+        )
+
+    plot.y_SM = 0.0
+
+    obs_title = 'p_{T}'
+    obs_unit  = 'GeV'
+    plot.x_title = obs_title + (' ({0})'.format(obs_unit) if not(obs_unit is None) else '')
+    plot.y_title_top = '#Delta#sigma/#Delta{0} (pb{1})'.format(
+        obs_title,
+        '/' + obs_unit if not(obs_unit is None) else ''
+        )
+    plot.y_title_bottom = '#mu'
+
+    plot.draw()
+

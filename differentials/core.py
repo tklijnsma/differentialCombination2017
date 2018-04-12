@@ -113,6 +113,7 @@ standard_titles = {
     'kappat' : '#kappa_{t}',
     'ct' : '#kappa_{t}',
     'cg' : 'c_{g}',
+    'cb' : '#kappa_{b}',
     # 
     'pth_smH'  : 'p_{T}^{H}',
     'pth_ggH'  : 'p_{T}^{H (ggH)}',

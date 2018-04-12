@@ -172,11 +172,30 @@ def t2ws_Top_nominal(args):
     t2ws.run()
 
 @flag_as_option
+def t2ws_Top_lumiScale(args):
+    t2ws = base_t2ws(args)
+    t2ws.card = LatestPaths.card.top.nominal[differentialutils.get_decay_channel_tag(args)]
+    t2ws.tags.append('noBinsDropped')
+    t2ws.tags.append('lumiScale')
+    t2ws.extra_options.append('--PO lumiScale=True')
+    t2ws.run()
+
+@flag_as_option
 def t2ws_TopCtCb_nominal(args):
     t2ws = base_t2ws(args, do_kappat_kappag=False)
     t2ws.card = LatestPaths.card.top.nominal[differentialutils.get_decay_channel_tag(args)]
     t2ws.tags.append('noBinsDropped')
     t2ws.run()
+
+@flag_as_option
+def t2ws_TopCtCb_lumiScale(args):
+    t2ws = base_t2ws(args, do_kappat_kappag=False)
+    t2ws.card = LatestPaths.card.top.nominal[differentialutils.get_decay_channel_tag(args)]
+    t2ws.tags.append('noBinsDropped')
+    t2ws.tags.append('lumiScale')
+    t2ws.extra_options.append('--PO lumiScale=True')
+    t2ws.run()
+
 
 @flag_as_option
 def t2ws_Top_lastBinDroppedHgg(args):
@@ -241,12 +260,12 @@ def t2ws_Top_uncorrelatedTheoryUnc(args):
     t2ws.run()
 
 
-@flag_as_option
-def t2ws_Top_lumiScale(args):
-    t2ws = base_t2ws(args)
-    t2ws.tags.append('lumiScale')
-    t2ws.extra_options.append('--PO lumiScale=True')
-    t2ws.run()
+# @flag_as_option
+# def t2ws_Top_lumiScale(args):
+#     t2ws = base_t2ws(args)
+#     t2ws.tags.append('lumiScale')
+#     t2ws.extra_options.append('--PO lumiScale=True')
+#     t2ws.run()
 
 @flag_as_option
 def t2ws_Top_profiledTotalXS(args):

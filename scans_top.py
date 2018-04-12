@@ -196,9 +196,29 @@ def scan_top(args):
     differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
+def scan_top_lumiscale(args):
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    config = basic_config(args)
+    config.datacard = LatestPaths.ws.top.lumiScale
+    config.freezeNuisances.append('lumiScale')
+    config.hardPhysicsModelParameters.append( 'lumiScale=8.356546' )
+    config.tags.append('lumiStudy')
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
 def scan_topctcb(args):
     config = basic_config_ctcb(args)
     config.datacard = LatestPaths.ws.topctcb.nominal[differentialutils.get_decay_channel_tag(args)]
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_topctcb_lumiscale(args):
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    config = basic_config_ctcb(args)
+    config.datacard = LatestPaths.ws.topctcb.lumiScale
+    config.freezeNuisances.append('lumiScale')
+    config.hardPhysicsModelParameters.append( 'lumiScale=8.356546' )
+    config.tags.append('lumiStudy')
     differentialutils.run_postfit_fastscan_scan(config)
 
 #____________________________________________________________________

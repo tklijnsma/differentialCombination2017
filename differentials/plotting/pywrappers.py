@@ -444,7 +444,7 @@ class Histogram(object):
         Tg.SetMarkerSize(0)
         Tg.SetMarkerColor(self.color)
         Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
-        # Tg.SetLineWidth(   getattr(self, 'setLineWidth',   2 ) )
+        Tg.SetLineWidth(   getattr(self, 'ErrorLineWidth',   1 ) )
 
         return [ (Tg, 'EPSAME') ]
 
@@ -557,6 +557,7 @@ class Histogram(object):
         Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
         Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
         Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
+        Tg.SetLineWidth(   getattr(self, 'ErrorLineWidth',   1 ) )
 
         if not(leg is None):
             leg.AddEntry( Tg.GetName(), self.title, 'PE' )
@@ -693,7 +694,7 @@ class Point(object):
 
     color_cycle = global_color_cycle
 
-    def __init__(self, x, y, color=None, marker_style=21):
+    def __init__(self, x, y, color=None, marker_style=21, size=2):
         super(Point, self).__init__()
         self.x = x
         self.y = y
@@ -709,7 +710,7 @@ class Point(object):
         ROOT.SetOwnership(self.Tg, False)
         self.Tg.SetName(utils.get_unique_rootname())
 
-        self.Tg.SetMarkerSize(2)
+        self.Tg.SetMarkerSize(size)
 
 
     def __getattr__(self, name):

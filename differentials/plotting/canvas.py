@@ -43,6 +43,10 @@ class Canvas(object):
     def resize_temporarily(self, width=None, height=None):
         self._tmp_width = c.GetWindowWidth()
         self._tmp_height = c.GetWindowHeight()
+        if width is None:
+            width = self._tmp_width
+        if height is None:
+            height = self._tmp_height
         self.resize(width, height)
         self._is_resized_temporarily = True
 

@@ -102,10 +102,10 @@ ws.top.nominal.hbb = 'out/workspaces_Mar14/hbb_Top_reweighted_noBinsDropped.root
 ws.top.nominal.hgg = 'out/workspaces_Mar14/hgg_Top_reweighted_noBinsDropped.root'
 ws.top.nominal.hzz = 'out/workspaces_Mar14/hzz_Top_reweighted_noBinsDropped.root'
 
+ws.top.lumiScale = 'out/workspaces_Apr11/combWithHbb_Top_reweighted_noBinsDropped_lumiScale.root'
 ws.top.last2BinsDropped = AttrDict()
 ws.top.last2BinsDropped.combWithHbb = 'out/workspaces_Mar12/combWithHbb_Top_reweighted_last2BinsDropped.root'
 ws.top.last2BinsDropped.combination = 'out/workspaces_Mar12/combination_Top_reweighted_last2BinsDropped.root'
-
 ws.top.BRcouplingDependency = 'combWithHbb_Top_reweighted_BRcouplingDependency.root'
 
 ws.yukawa = AttrDict()
@@ -130,6 +130,7 @@ ws.topctcb.nominal = AttrDict()
 ws.topctcb.nominal.combWithHbb = 'out/workspaces_Mar20/combWithHbb_TopCtCb_reweighted_noBinsDropped.root'
 ws.topctcb.nominal.hgg = 'out/workspaces_Mar20/hgg_TopCtCb_reweighted_noBinsDropped.root'
 ws.topctcb.nominal.hzz = 'out/workspaces_Mar20/hzz_TopCtCb_reweighted_noBinsDropped.root'
+ws.topctcb.lumiScale = 'out/workspaces_Apr11/combWithHbb_TopCtCb_reweighted_noBinsDropped_lumiScale.root'
 
 
 #____________________________________________________________________
@@ -255,7 +256,8 @@ scan.top.reweighted.asimov = AttrDict()
 # scan.top.reweighted.asimov.hzz = 'out/Scan_Mar06_Top_hzz_asimov' # Redo properly for reweighted
 scan.top.reweighted.asimov.combWithHbb = 'out/Scan_Mar13_Top_combWithHbb_noBinsDropped_asimov'
 
-scan.top.lumi300fb = 'out/Scan_Mar13_Top_combWithHbb_lumiStudy_asimov'
+# scan.top.lumi300fb = 'out/Scan_Mar13_Top_combWithHbb_lumiStudy_asimov' # Not sure what reweighting scheme is implemented here
+scan.top.lumi300fb = 'out/Scan_Apr11_Top_combWithHbb_lumiStudy_asimov'
 scan.top.profiledTotalXS = 'out/Scan_Mar13_Top_combWithHbb_profiledTotalXS_asimov'
 
 scan.yukawa = AttrDict()
@@ -295,10 +297,11 @@ scan.yukawa.onekappa.asimov.kappac = 'out/Scan_Yukawa_Mar16_combination_oneKappa
 scan.topctcb = AttrDict()
 scan.topctcb.reweighted = AttrDict()
 scan.topctcb.reweighted.observed = AttrDict()
-scan.topctcb.reweighted.observed.combWithHbb =  'out/Scan_Mar20_TopCtCb_combWithHbb_0'
-scan.topctcb.reweighted.observed.hgg =  'out/Scan_Mar20_TopCtCb_hgg_0'
-scan.topctcb.reweighted.observed.hzz =  'out/Scan_Mar20_TopCtCb_hzz_0'
+scan.topctcb.reweighted.observed.combWithHbb =  'out/Scan_Mar29_TopCtCb_combWithHbb'
+scan.topctcb.reweighted.observed.hgg =  'out/Scan_Mar29_TopCtCb_hgg'
+scan.topctcb.reweighted.observed.hzz =  'out/Scan_Mar29_TopCtCb_hzz'
 scan.topctcb.reweighted.asimov = AttrDict()
-scan.topctcb.reweighted.asimov.combWithHbb = 'out/Scan_Mar20_TopCtCb_combWithHbb_asimov_0'
-scan.topctcb.reweighted.asimov.hgg = 'out/Scan_Mar20_TopCtCb_hgg_asimov_0'
-scan.topctcb.reweighted.asimov.hzz = 'out/Scan_Mar20_TopCtCb_hzz_asimov_0'
+scan.topctcb.reweighted.asimov.combWithHbb = 'out/Scan_Mar29_TopCtCb_combWithHbb_asimov'
+scan.topctcb.reweighted.asimov.hgg = 'out/Scan_Mar29_TopCtCb_hgg_asimov'
+scan.topctcb.reweighted.asimov.hzz = 'out/Scan_Mar29_TopCtCb_hzz_asimov'
+scan.topctcb.lumi300fb = 'out/Scan_Apr11_TopCtCb_combWithHbb_lumiStudy_asimov'
