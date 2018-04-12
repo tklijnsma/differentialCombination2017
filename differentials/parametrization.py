@@ -115,8 +115,43 @@ class Parametrization(object):
         self.c1_name = 'c1'
         self.c2_name = 'c2'
 
+        self.c1_SM = 1.0
+        self.c2_SM = 1.0
+
+        self.rebinner = None
+        self.SM_set = False
+
+
     def evaluate(self, c1, c2):
         return [ p(c1, c2) if abs(p(c1, c2))>1e-12 else 0.0 for p in self.parametrizations ]
+
+    def get_xs_exp(self, c1, c2):
+        if self.rebinner is None:
+            raise RuntimeError(
+                'First define a rebinner so that the theory spectrum may be mapped to the experimental one'
+                )
+        if not self.SM_set: self.set_SM()
+        xs_theory = self.evaluate(c1, c2)
+        xs_exp = self.rebinner.rebin_values(xs_theory)
+        return xs_exp
+
+    def get_mus_exp(self, c1, c2):
+        xs_exp = self.get_xs_exp(c1, c2)
+        mu_exp = [ xs / xs_SM for xs, xs_SM in zip(xs_exp, self.xs_exp_SM) ]
+        return mu_exp
+
+    def make_rebinner(self, theory_binning, exp_binning):
+        self.rebinner = differentials.integral.Rebinner(
+            bin_boundaries_old = exp_binning,
+            bin_boundaries_new = theory_binning
+            )
+
+    def set_SM(self):
+        self.xs_theory_SM = self.evaluate(self.c1_SM, self.c2_SM)
+        if not(self.rebinner is None):
+            self.xs_exp_SM = self.rebinner.rebin_values(self.xs_theory_SM)
+        self.SM_set = True
+
 
     def add_variation(self, c1, c2, crosssections):
         logging.debug('Entering variation for c1={0}, c2={1}'.format(c1, c2))

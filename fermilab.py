@@ -150,6 +150,145 @@ def get_combination_ATLAS_3000fb():
 #____________________________________________________________________
 # Plots
 
+class PtSpectraPlotter(object):
+    """docstring for PtSpectraPlotter"""
+    def __init__(self):
+        super(PtSpectraPlotter, self).__init__()
+        self._hists_made = False
+
+        self.name = 'overlay'
+        self.x_min = 0.
+        self.x_max = 125.
+        self.y_min = 0.6
+        self.y_max = 1.5
+
+        self.scale_canvas_height = None
+
+    def make_hists(self, args):
+        self.CMS_combination = get_combination(args)
+        self.CMS_combination_hist = fermilabcode.minicombine.data_to_hist(self.CMS_combination, title='CMS 35.9 fb^{-1}', color=2, x_max=400.)
+        self.CMS_combination_hist_xs = fermilabcode.minicombine.data_to_hist(self.CMS_combination, title='CMS 35.9 fb^{-1}', color=2, do_xs=True, x_max=400.)
+
+        self.ATLAS_combination = get_combination_ATLAS()
+        self.ATLAS_combination_hist = fermilabcode.minicombine.data_to_hist(self.ATLAS_combination, title='ATLAS 36.1 fb^{-1}', color=4, x_max=350.)
+        # self.ATLAS_combination_hist_xs = fermilabcode.minicombine.data_to_hist(self.ATLAS_combination, title='ATLAS 36.1 fb^{-1}', color=4, do_xs=True)
+
+        self.CMS_combination_3000fb = get_combination_at_lumi(args, 3000.)
+        self.CMS_combination_3000fb_hist = fermilabcode.minicombine.data_to_hist(self.CMS_combination_3000fb, title='CMS 3000 fb^{-1}', color=2, x_max=400.)
+        self.CMS_combination_3000fb_hist_xs = fermilabcode.minicombine.data_to_hist(self.CMS_combination_3000fb, title='CMS 3000 fb^{-1}', color=2, do_xs=True)    
+        
+        self.ATLAS_combination_3000fb = get_combination_ATLAS_3000fb()
+        self.ATLAS_combination_3000fb_hist = fermilabcode.minicombine.data_to_hist(self.ATLAS_combination_3000fb, title='ATLAS 3000 fb^{-1}', color=4, x_max=350.)
+        # self.ATLAS_combination_3000fb_hist_xs = fermilabcode.minicombine.data_to_hist(self.ATLAS_combination_3000fb, title='ATLAS 3000 fb^{-1}', color=4, do_xs=True)
+
+        self.CMS_combination_3000fb_hist.ErrorLineWidth = 4
+        self.CMS_combination_3000fb_hist_xs.ErrorLineWidth = 4
+        self.ATLAS_combination_3000fb_hist.ErrorLineWidth = 4
+
+        self._hists_made = True
+
+
+    def wrapup_whitened(self, plot):
+        c.set_margins(
+            TopMargin = 0.20,
+            BottomMargin = 0.03,
+            LeftMargin = 0.03,
+            RightMargin = 0.03,
+            )
+
+        if self.x_max == 400.:
+            p1 = differentials.plotting.pywrappers.Point(self.x_min, self.y_min, color=1, marker_style=8, size=1).Draw()
+            p2 = differentials.plotting.pywrappers.Point(self.x_max, self.y_max, color=1, marker_style=8, size=1).Draw()
+        else:
+            p1 = differentials.plotting.pywrappers.Point(0.0, 1.5, color=1, marker_style=8, size=1).Draw()
+            p2 = differentials.plotting.pywrappers.Point(0.0, 1.0, color=1, marker_style=8, size=1).Draw()
+            p3 = differentials.plotting.pywrappers.Point(100.0, 0.6, color=1, marker_style=8, size=1).Draw()
+
+        c.SetFrameLineColor(0)
+        plot.base.GetXaxis().SetAxisColor(0)
+        plot.base.GetXaxis().SetLabelColor(0)
+        plot.base.GetYaxis().SetAxisColor(0)
+        plot.base.GetYaxis().SetLabelColor(0)
+
+        if not(self.scale_canvas_height is None):
+            c.resize_temporarily(height=self.scale_canvas_height)
+
+        plot.wrapup()
+        c.SetFrameLineColor(1)
+
+    def plot_overlays(self, args, inplace=True):
+        if not self._hists_made:
+            self.make_hists(args)
+
+        plot = differentials.plotting.plots.QuickPlot('{0}_test1'.format(self.name))
+        plot.x_min = self.x_min
+        plot.x_max = self.x_max
+        plot.y_min = self.y_min
+        plot.y_max = self.y_max
+
+        plot.x_title = ''
+        plot.y_title = ''
+
+        plot.add(self.CMS_combination_hist, 'repr_point_with_vertical_bar_and_horizontal_bar')
+        plot.add(self.ATLAS_combination_hist, 'repr_point_with_vertical_bar_and_horizontal_bar')
+
+        plot.leg.SetNColumns(2)
+        plot.leg.SetFillStyle(1001)
+        plot.leg.SetBorderSize(1)
+
+        if self.x_max == 400:
+            plot.leg.set(
+                c.GetLeftMargin() + 0.02,
+                1-0.2,
+                c.GetLeftMargin() + 0.6,
+                1,
+                )
+        else:
+            plot.leg.set(
+                c.GetLeftMargin() + 0.02,
+                c.GetBottomMargin() + 0.01,
+                c.GetLeftMargin() + 0.6,
+                c.GetBottomMargin() + 0.15,
+                )
+
+        if inplace:
+            plot.draw()
+            self.wrapup_whitened(plot)
+        else:
+            return plot
+
+    def plot_overlays_3000fb(self, args):
+        plot = self.plot_overlays(args, inplace=False)
+        plot.plotname += '_3000fb'
+
+        plot.add(self.CMS_combination_3000fb_hist, 'repr_point_with_vertical_bar_and_horizontal_bar')
+        plot.add(self.ATLAS_combination_3000fb_hist, 'repr_point_with_vertical_bar_and_horizontal_bar')
+
+        plot.draw()
+        self.wrapup_whitened(plot)
+
+
+
+@flag_as_option
+def plot_combination_overlays(args):
+    args = differentialutils.force_asimov(args)
+    plotter = PtSpectraPlotter()
+
+    plotter.plot_overlays(args)
+    plotter.plot_overlays_3000fb(args)
+
+    plotter.name += '_to400'
+
+    plotter.y_min = 0.2
+    plotter.y_max = 2.0
+    plotter.x_min = 0.
+    plotter.x_max = 400.
+    plotter.scale_canvas_height = 250
+
+    plotter.plot_overlays(args)
+    plotter.plot_overlays_3000fb(args)
+
+
 @flag_as_option
 def plot_naive_pt_combination(args):
     args = differentialutils.force_asimov(args)

@@ -57,6 +57,9 @@ def data_to_hist(data, do_xs=False, title='', x_max=500., color=None):
             xs_per_GeV = smxs_per_GeV
         elif data.binning == sm_binning_hzz:
             xs_per_GeV = smxs_per_GeV_hzz
+        else:
+            raise RuntimeError('Found following binning:\n{0}\n  which is not known'.format(data.binning))
+
         ys = [ y*xs for y, xs in zip(ys, xs_per_GeV) ]
         ys_up = [ y*xs for y, xs in zip(ys_up, xs_per_GeV) ]
         ys_down = [ y*xs for y, xs in zip(ys_down, xs_per_GeV) ]
