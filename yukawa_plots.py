@@ -74,6 +74,37 @@ def multicont_Yukawa_reweighted(args):
         )
     plot.draw()
 
+
+@flag_as_option
+def multicont_Yukawa_reweighted_paper(args):
+
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir = scandict.combination)
+    combination.color = 1
+    combination.read()
+    
+    hgg = differentials.scans.Scan2D('hgg', x_coupling, y_coupling, scandir = scandict.hgg)
+    hgg.color = 2
+    hgg.read()
+
+    hzz = differentials.scans.Scan2D('hzz', x_coupling, y_coupling, scandir = scandict.hzz)
+    hzz.color = 4
+    hzz.read()
+
+    plot = differentials.plotting.plots.Single2DHistPlot(
+        'multicont_Yukaw_paper' + ('_asimov' if args.asimov else ''),
+        combination.to_hist()
+        )
+
+    # plot = differentials.plotting.plots.MultiContourPlot(
+    #     'multicont_Yukawa_reweighted' + ('_asimov' if args.asimov else ''),
+    #     [combination, hgg, hzz],
+    #     x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+    #     )
+    plot.draw()
+    plot.wrapup()
+
+
+
 @flag_as_option
 def multicont_Yukawa_unreweighted(args):
     scandict = LatestPaths.scan.yukawa.unreweighted.asimov if args.asimov else LatestPaths.scan.yukawa.unreweighted.observed

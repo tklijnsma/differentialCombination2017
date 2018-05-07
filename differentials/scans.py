@@ -425,7 +425,7 @@ class Scan(ScanPrimitive):
 
     uncertainty_calculator = UncertaintyCalculator()
 
-    def __init__(self, x_variable, y_variable='deltaNLL', scandir=None, globpat=None):
+    def __init__(self, x_variable, y_variable='deltaNLL', scandir=None, globpat=None, read_immediately=False):
         super(Scan, self).__init__()
         self.x_variable = x_variable
         self.y_variable = y_variable
@@ -447,6 +447,9 @@ class Scan(ScanPrimitive):
             '\nglobpat    = {3}'
             .format(self.x_variable, self.y_variable, ', '.join(self.scandirs), self.globpat)
             )
+
+        if read_immediately: self.read()
+
 
     def read(self):
         root_files = self.collect_root_files()
@@ -478,6 +481,11 @@ class Scan(ScanPrimitive):
             self.unc = unc
         else:
             return unc
+
+    def multiply_x_by_constant(self, constant):
+        # Very ugly way of doing things... should not have used a namedtuple in the first place.
+        for i in xrange(len(self.entries)):
+            self.entries[i] = self.entries[i]._replace(x = self.entries[i].x * constant)
 
     def to_graph(self):
         name = utils.get_unique_rootname()

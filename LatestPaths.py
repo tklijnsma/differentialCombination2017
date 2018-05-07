@@ -89,6 +89,11 @@ ws.rapidity = AttrDict()
 ws.rapidity.combination = 'out/workspaces_Mar19/ws_rapidity_combination.root'
 ws.rapidity.hgg = 'out/workspaces_Mar19/ws_rapidity_hgg.root'
 ws.rapidity.hzz = 'out/workspaces_Mar19/ws_rapidity_hzz.root'
+ws.totalXS = AttrDict()
+ws.totalXS.combination = 'out/workspaces_Apr12/combination_inclusive_Mar19_multiSignalModel.root'
+ws.totalXS.hgg = 'out/workspaces_Apr12/Datacard_13TeV_differential_InclusiveNNLOPS_multiSignalModel.root'
+ws.totalXS.hzz = 'out/workspaces_Apr12/hzz4l_comb_13TeV_xs_multiSignalModel.root'
+ws.ratioOfBRs = 'out/workspaces_Apr12/combination_inclusive_Mar19_extendedMultiSignalModel_ratioOfBRs.root'
 
 ws.top = AttrDict()
 ws.top.nominal = AttrDict()
@@ -243,6 +248,18 @@ scan.rapidity.asimov.combination = 'out/Scan_Mar19_rapidity_combination_asimov'
 scan.rapidity.asimov.hgg = 'out/Scan_Mar19_rapidity_hgg_asimov'
 scan.rapidity.asimov.hzz = 'out/Scan_Mar19_rapidity_hzz_asimov'
 scan.rapidity.asimov.combination_statonly = 'out/Scan_Mar19_rapidity_combination_statonly_asimov'
+
+scan.totalXS = AttrDict()
+scan.totalXS.combination = 'out/Scan_Apr12_totalXS_combination'
+scan.totalXS.hgg = 'out/Scan_Apr12_totalXS_hgg'
+scan.totalXS.hzz = 'out/Scan_Apr12_totalXS_hzz'
+scan.totalXS.statonly = AttrDict()
+scan.totalXS.statonly.combination = 'out/Scan_Apr12_totalXS_combination_statonly'
+scan.totalXS.statonly.hgg = 'out/Scan_Apr12_totalXS_hgg_statonly'
+scan.totalXS.statonly.hzz = 'out/Scan_Apr12_totalXS_hzz_statonly'
+
+scan.ratioOfBRs = 'out/Scan_Apr12_ratioOfBRs_1'
+scan.ratioOfBRs_statonly = 'out/Scan_Apr12_ratioOfBRs_1_statonly'
 
 scan.top = AttrDict()
 scan.top.reweighted = AttrDict()

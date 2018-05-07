@@ -167,6 +167,44 @@ class ScaleCorrelation(object):
         for i in xrange(self.n_bins):
             left = self.bin_boundaries[i]
             right = self.bin_boundaries[i+1]
+            s = '[{0}, {1})'.format(int(left), int(right))
+            bin_line.append(s)
+        lines.append(bin_line)
+        # down_line = [ '$\\Delta^\\text{scale}_-$ (pb)' ]
+        # up_line   = [ '$\\Delta^\\text{scale}_+$ (pb)' ]
+        line = ['$\\Delta^\\text{scale}$ (\\%)']
+        for i, (up, down) in enumerate(errors):
+            down = -abs(down)
+            symm = 0.5*(abs(up)+abs(down))
+            center = self.get_bin_center(i) * self.get_bin_width(i) # Multiply by width for center in pb
+            symm_perc = 100. * symm / center
+            # down_line.append('{0:+.2f} ({1:+.1f}\\%)'.format(down, 100.*down/center))
+            # up_line.append('{0:+.2f} ({1:+.1f}\\%)'.format(up, 100.*up/center))
+            line.append('{0:.1f}\\%'.format(symm_perc))
+        # lines.append(down_line)
+        # lines.append(up_line)
+        lines.append(line)
+
+        contents = '\n'.join([ ' & '.join(line) + ' \\\\' for line in lines ])
+
+        with open(outname, 'w') as out_fp:
+            out_fp.write('% ' + core.gittag()+'\n')
+            out_fp.write(contents)
+
+    def write_errors_to_texfile_old(self, tag=None):
+        errors = self.calculate_errors()
+        outname = os.path.join( self.get_outdir(), 'errors' )
+        if not(tag is None):
+            outname += '_' + tag
+        if len(self.tags) > 0:
+            outname += '_' + '_'.join(self.tags)
+        outname += '.tex'
+
+        lines = []
+        bin_line = [ 'Bin boundaries (GeV)' ]
+        for i in xrange(self.n_bins):
+            left = self.bin_boundaries[i]
+            right = self.bin_boundaries[i+1]
             s = '{0} to {1}'.format(int(left), int(right))
             bin_line.append(s)
         lines.append(bin_line)

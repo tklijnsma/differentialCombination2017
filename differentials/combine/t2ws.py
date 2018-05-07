@@ -40,13 +40,28 @@ class T2WS(object):
         self.tags = []
         self.extra_options = []
 
+    def add_variable(self, name, val, x_min=None, x_max=None, is_POI=False):
+        """Use only for variables (not expressions)"""
+        if x_min is None and x_max is None:
+            factory_str = '{0}[{1}]'.format(name, val)
+        elif not(x_min is None) and not(x_max is None):
+            factory_str = '{0}[{1},{2},{3}]'.format(name, val, x_min, x_max)
+        else:
+            raise ValueError('Pass both x_min and x_max, or neither')
+
+        if is_POI:
+            self.extra_options.append('--PO \'poi={0}\''.format(factory_str))
+        else:
+            self.extra_options.append('--PO \'variable={0}\''.format(factory_str))
+        
     def add_expr(self, expr):
+        """Use only for expressions (not variables)"""
         if self.model_file == T2WS.default_model_file:
             dummyname = 'dummy_{0}'.format(core.__uniqueid__().next())
             mapstr = '--PO \'map={0}:{1}\''.format(dummyname, expr)
             self.extra_options.insert(0, mapstr)
         else:
-            self.extra_options.append('--PO \'factory={0}\''.format(expr))
+            self.extra_options.append('--PO \'expr={0}\''.format(expr))
 
     def add_map(self, mapstr):
         self.extra_options.append('--PO \'map={0}\''.format(mapstr))

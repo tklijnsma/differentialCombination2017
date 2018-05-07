@@ -13,6 +13,7 @@ from os.path import *
 from glob import glob
 from copy import deepcopy
 from math import sqrt
+import traceback
 
 from OptionHandler import flag_as_option
 
@@ -98,17 +99,28 @@ def pth_smH_plot(args):
     combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', scandict.combWithHbb)
     combWithHbb.color = 1
     combWithHbb.no_overflow_label = True
-    combWithHbb.draw_method = 'repr_point_with_vertical_bar'
+    # combWithHbb.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     combWithHbb.title = 'Combination'
     combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     combWithHbb.read()
     spectra.append(combWithHbb)
 
+    # Get syst only shape
+    combWithHbb_statonly = differentials.scans.DifferentialSpectrum('combWithHbb_statonly', scandict.combWithHbb_statonly)
+    combWithHbb_statonly.color = 1
+    combWithHbb_statonly.no_overflow_label = True
+    combWithHbb_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb_statonly.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb_statonly.read()
+    systshapemaker = SystShapeMaker()
+    systonly_histogram, systonly_histogram_xs = systshapemaker.get_systonly_histogram(combWithHbb, combWithHbb_statonly)
+
     if args.table:
-        table = differentials.plotting.tables.SpectraTable('pth_smH', [s for s in spectra if not s is hbb])
+        table = differentials.plotting.tables.SpectraTable('pth_smH', [s for s in spectra if not s is hbb] + [combWithHbb_statonly])
         table.add_symm_improvement_row(hgg, combWithHbb)
-        table.add_symm_improvement_row(hgg, combination)
-        table.add_symm_improvement_row(combination, combWithHbb)
+        # table.add_symm_improvement_row(hgg, combination)
+        # table.add_symm_improvement_row(combination, combWithHbb)
         logging.info('Table:\n{0}'.format( table.repr_terminal() ))
         return
 
@@ -120,6 +132,13 @@ def pth_smH_plot(args):
     plot.obsname = obs_name
     plot.obsunit = 'GeV'
     plot.leg.SetNColumns(3)
+    if systshapemaker.success:
+        plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+        plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+
+    plot.bottom_y_min = -2.0
+    plot.bottom_y_max = 4.0
+
     plot.draw()
     plot.wrapup()
 
@@ -176,6 +195,16 @@ def pth_ggH_plot(args):
     combWithHbb.read()
     spectra.append(combWithHbb)
 
+    # Get syst only shape
+    combWithHbb_statonly = differentials.scans.DifferentialSpectrum('combWithHbb_statonly', scandict.combWithHbb_statonly)
+    combWithHbb_statonly.color = 1
+    combWithHbb_statonly.no_overflow_label = True
+    combWithHbb_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb_statonly.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb_statonly.read()
+    systshapemaker = SystShapeMaker()
+    systonly_histogram, systonly_histogram_xs = systshapemaker.get_systonly_histogram(combWithHbb, combWithHbb_statonly)
+
     if args.table:
         table = differentials.plotting.tables.SpectraTable('pth_ggH', [s for s in spectra if not s is hbb])
         table.add_symm_improvement_row(hgg, combWithHbb)
@@ -185,18 +214,22 @@ def pth_ggH_plot(args):
         return
 
     l = differentials.plotting.pywrappers.Latex(
-        lambda c: 1.0 - c.GetRightMargin() - 0.01,
-        lambda c: 1.0 - c.GetTopMargin() - 0.14,
-        'gluon fusion cross section'
+        lambda c: 1.0 - c.GetRightMargin() - 0.11,
+        lambda c: 1.0 - c.GetTopMargin() - 0.24,
+        'gg #rightarrow H'
         )
     l.SetNDC()
-    l.SetTextSize(0.05)
+    l.SetTextSize(0.06)
     l.SetTextAlign(33)
 
     plot = differentials.plotting.plots.SpectraPlot(
         'spectra_{0}'.format(obs_name) + ('_asimov' if args.asimov else ''),
         spectra
         )
+    plot.leg.SetNColumns(3)
+    if systshapemaker.success:
+        plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+        plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
     plot.draw_multiscans = True
     plot.obsname = obs_name
     plot.obsunit = 'GeV'
@@ -232,26 +265,36 @@ def njets_plot(args):
     scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
 
     hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
-    hgg.POIs = get_POIs_oldstyle_scandir(scandict.hgg)
+    # hgg.POIs = get_POIs_oldstyle_scandir(scandict.hgg)
     hgg.color = differentials.core.safe_colors.red
     hgg.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     hgg.read()
 
     hzz = differentials.scans.DifferentialSpectrum('hzz', scandict.hzz)
-    hzz.POIs = get_POIs_oldstyle_scandir(scandict.hzz)
+    # hzz.POIs = get_POIs_oldstyle_scandir(scandict.hzz)
     hzz.color = differentials.core.safe_colors.blue
     hzz.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     hzz.read()
 
     combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
-    combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
+    # combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
     combination.color = 1
     combination.no_overflow_label = True
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     combination.read()
+
+    # Get syst only shape
+    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
+    combination_statonly.color = 1
+    combination_statonly.no_overflow_label = True
+    combination_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combination_statonly.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combination_statonly.read()
+    systshapemaker = SystShapeMaker()
+    systonly_histogram, systonly_histogram_xs = systshapemaker.get_systonly_histogram(combination, combination_statonly)
 
     if args.table:
         table = differentials.plotting.tables.SpectraTable('njets', [ hgg, hzz, combination ])
@@ -263,6 +306,10 @@ def njets_plot(args):
         'spectra_{0}'.format(obs_name) + ('_asimov' if args.asimov else ''),
         [ hgg, hzz, combination ]
         )
+    plot.leg.SetNColumns(3)
+    if systshapemaker.success:
+        plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+        plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
     plot.draw_multiscans = True
     plot.obsname = obs_name
     plot.draw()
@@ -276,26 +323,36 @@ def ptjet_plot(args):
     scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
 
     hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
-    hgg.POIs = get_POIs_oldstyle_scandir(scandict.hgg)
+    # hgg.POIs = get_POIs_oldstyle_scandir(scandict.hgg)
     hgg.color = differentials.core.safe_colors.red
     hgg.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     hgg.read()
 
     hzz = differentials.scans.DifferentialSpectrum('hzz', scandict.hzz)
-    hzz.POIs = get_POIs_oldstyle_scandir(scandict.hzz)
+    # hzz.POIs = get_POIs_oldstyle_scandir(scandict.hzz)
     hzz.color = differentials.core.safe_colors.blue
     hzz.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     hzz.read()
 
     combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
-    combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
+    # combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
     combination.color = 1
     combination.no_overflow_label = True
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
     combination.read()
+
+    # Get syst only shape
+    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
+    combination_statonly.color = 1
+    combination_statonly.no_overflow_label = True
+    combination_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combination_statonly.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combination_statonly.read()
+    systshapemaker = SystShapeMaker()
+    systonly_histogram, systonly_histogram_xs = systshapemaker.get_systonly_histogram(combination, combination_statonly)
 
     if args.table:
         table = differentials.plotting.tables.SpectraTable('ptjet', [ hgg, hzz, combination ])
@@ -307,11 +364,16 @@ def ptjet_plot(args):
         'spectra_{0}'.format(obs_name) + ('_asimov' if args.asimov else ''),
         [ hgg, hzz, combination ]
         )
+    if systshapemaker.success:
+        plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+        plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
     plot.draw_multiscans = True
     plot.top_y_max = 10.
     plot.obsname = obs_name
     plot.obsunit = 'GeV'
+    plot.leg.SetNColumns(3)
     plot.draw()
+    plot.leg.SetNColumns(3)
     plot.wrapup()
 
 #____________________________________________________________________
@@ -322,26 +384,36 @@ def rapidity_plot(args):
     scandict = LatestPaths.scan[obs_name]['asimov' if args.asimov else 'observed']
 
     hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
-    hgg.POIs = get_POIs_oldstyle_scandir(scandict.hgg)
+    # hgg.POIs = get_POIs_oldstyle_scandir(scandict.hgg)
     hgg.color = differentials.core.safe_colors.red
     hgg.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
     hgg.read()
 
     hzz = differentials.scans.DifferentialSpectrum('hzz', scandict.hzz)
-    hzz.POIs = get_POIs_oldstyle_scandir(scandict.hzz)
+    # hzz.POIs = get_POIs_oldstyle_scandir(scandict.hzz)
     hzz.color = differentials.core.safe_colors.blue
     hzz.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
     hzz.read()
 
     combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
-    combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
+    # combination.POIs = get_POIs_oldstyle_scandir(scandict.combination)
     combination.color = 1
     combination.no_overflow_label = True
     combination.draw_method = 'repr_point_with_vertical_bar'
     combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
     combination.read()
+
+    # Get syst only shape
+    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
+    combination_statonly.color = 1
+    combination_statonly.no_overflow_label = True
+    combination_statonly.draw_method = 'repr_point_with_vertical_bar'
+    combination_statonly.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
+    combination_statonly.read()
+    systshapemaker = SystShapeMaker()
+    systonly_histogram, systonly_histogram_xs = systshapemaker.get_systonly_histogram(combination, combination_statonly)
 
     if args.table:
         table = differentials.plotting.tables.SpectraTable('rapidity', [ hgg, hzz, combination ])
@@ -353,9 +425,13 @@ def rapidity_plot(args):
         'spectra_{0}'.format(obs_name) + ('_asimov' if args.asimov else ''),
         [ hgg, hzz, combination ]
         )
+    if systshapemaker.success:
+        plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
+        plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
     plot.draw_multiscans = True
     plot.top_y_max = 300
     plot.obsname = obs_name
+    plot.leg.SetNColumns(3)
     plot.draw()
     plot.wrapup()
 
@@ -365,54 +441,77 @@ def rapidity_plot(args):
 # Other plots
 ########################################
 
-def get_systonly_histogram(combination, combination_statonly):
-    # Calculate the syst-only errors
-    combination_histogram = combination.to_hist()
-    statonly_histogram    = combination_statonly.to_hist()
+class SystShapeMaker(object):
+    """docstring for SystShapeMaker"""
+    def __init__(self):
+        super(SystShapeMaker, self).__init__()
+        self.success = False
+        
+    def get_systonly_histogram(self, combination, combination_statonly):
+        try:
+            logging.info('Getting syst-only shape for combination')
+            systonly_histogram, systonly_histogram_xs = self.get_systonly_histogram_notry(combination, combination_statonly)
+            systonly_histogram.draw_method = 'repr_uncertainties_narrow_filled_area'
+            systonly_histogram_xs.draw_method = 'repr_uncertainties_narrow_filled_area'
+            systonly_histogram_xs.move_to_bottom_of_legend = True
+            self.success = True
+            return systonly_histogram, systonly_histogram_xs
+        except Exception as exc:
+            self.success = False
+            logging.error('Getting syst-only shape FAILED:')
+            print traceback.format_exc()
+            print exc
+            return False, False
 
-    systonly_histogram = deepcopy(combination_histogram)
-    systonly_histogram.title = 'Syst. unc.'
-    systonly_histogram.draw_method = 'repr_uncertainties_fully_filled_area'
-    systonly_histogram_xs = combination.to_hist_xs()
-    systonly_histogram_xs.title = 'Syst. unc.'
-    systonly_histogram_xs.draw_method = 'repr_uncertainties_fully_filled_area'
+    def get_systonly_histogram_notry(self, combination, combination_statonly):
+        # Calculate the syst-only errors
+        combination_histogram = combination.to_hist()
+        statonly_histogram    = combination_statonly.to_hist()
 
-    syst_err_up = []
-    syst_err_down = []
-    syst_err_up_xs = []
-    syst_err_down_xs = []
-    for i in xrange(combination_histogram.n_bins):
-        up_tot = abs(combination_histogram.errs_up[i])
-        down_tot = abs(combination_histogram.errs_down[i])
-        symm_tot = 0.5*(up_tot+down_tot)
-        if symm_tot == 0.0:
-            logging.error(
-                'Found symm_tot == 0.0 (probably because of faulty uncertainty determination). '
-                'Will now use 999 instead.'
-                )
-            symm_tot = 999.
+        systonly_histogram = deepcopy(combination_histogram)
+        systonly_histogram.title = 'Syst. unc.'
+        systonly_histogram.draw_method = 'repr_uncertainties_fully_filled_area'
+        systonly_histogram_xs = combination.to_hist_xs()
+        systonly_histogram_xs.title = 'Syst. unc.'
+        systonly_histogram_xs.draw_method = 'repr_uncertainties_fully_filled_area'
 
-        symm_stat = 0.5*(abs(statonly_histogram.errs_up[i]) + abs(statonly_histogram.errs_down[i]))
-        sm_crosssection = combination.smxs[i]
+        syst_err_up = []
+        syst_err_down = []
+        syst_err_up_xs = []
+        syst_err_down_xs = []
+        for i in xrange(combination_histogram.n_bins):
+            up_tot = abs(combination_histogram.errs_up[i])
+            down_tot = abs(combination_histogram.errs_down[i])
+            symm_tot = 0.5*(up_tot+down_tot)
+            if symm_tot == 0.0:
+                logging.error(
+                    'Found symm_tot == 0.0 (probably because of faulty uncertainty determination). '
+                    'Will now use 999 instead.'
+                    )
+                symm_tot = 999.
 
-        if symm_tot>symm_stat:
-            symm_syst = sqrt(symm_tot**2-symm_stat**2)
-        else:
-            logging.warning(
-                'For bin {0}, symm_tot={1} > symm_stat={2}. '
-                'Taking sqrt(symm_stat**2-symm_tot**2) instead'
-                .format(i, symm_tot, symm_stat)
-                )
-            symm_syst = sqrt(symm_stat**2-symm_tot**2)
-        syst_err_up.append(up_tot * symm_syst/symm_tot)
-        syst_err_down.append(down_tot * symm_syst/symm_tot)
-        syst_err_up_xs.append(up_tot * symm_syst/symm_tot * sm_crosssection)
-        syst_err_down_xs.append(down_tot * symm_syst/symm_tot * sm_crosssection)
-    systonly_histogram.set_err_up(syst_err_up)
-    systonly_histogram.set_err_down(syst_err_down)
-    systonly_histogram_xs.set_err_up(syst_err_up_xs)
-    systonly_histogram_xs.set_err_down(syst_err_down_xs)
-    return systonly_histogram, systonly_histogram_xs
+            symm_stat = 0.5*(abs(statonly_histogram.errs_up[i]) + abs(statonly_histogram.errs_down[i]))
+            sm_crosssection = combination.smxs[i]
+
+            if symm_tot>symm_stat:
+                symm_syst = sqrt(symm_tot**2-symm_stat**2)
+            else:
+                logging.warning(
+                    'For bin {0}, symm_tot={1} > symm_stat={2}. '
+                    'Taking sqrt(symm_stat**2-symm_tot**2) instead'
+                    .format(i, symm_tot, symm_stat)
+                    )
+                symm_syst = sqrt(symm_stat**2-symm_tot**2)
+            syst_err_up.append(up_tot * symm_syst/symm_tot)
+            syst_err_down.append(down_tot * symm_syst/symm_tot)
+            syst_err_up_xs.append(up_tot * symm_syst/symm_tot * sm_crosssection)
+            syst_err_down_xs.append(down_tot * symm_syst/symm_tot * sm_crosssection)
+        systonly_histogram.set_err_up(syst_err_up)
+        systonly_histogram.set_err_down(syst_err_down)
+        systonly_histogram_xs.set_err_up(syst_err_up_xs)
+        systonly_histogram_xs.set_err_down(syst_err_down_xs)
+        return systonly_histogram, systonly_histogram_xs
+
 
 @flag_as_option
 def plot_all_statsyst(args):
@@ -605,93 +704,6 @@ def rapidity_plot_statsyst(args):
     plot.draw_multiscans = False
     plot.top_y_max = 300
     plot.obsname = obs_name
-    plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
-    plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
-    plot.draw()
-    plot.wrapup()
-
-
-
-#____________________________________________________________________
-@flag_as_option
-def pth_smH_plot_statsyst_old(args):
-    obs_name = 'pth_smH'
-
-    sm_crosssections = get_obs(obs_name, 'combination').crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)
-
-    combination = differentials.scans.DifferentialSpectrum('combination',
-        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=False),
-        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
-        )
-    combination.color = 9
-    combination.no_overflow_label = True
-    combination.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
-    combination.set_sm(sm_crosssections)
-    combination.title = 'Total unc.'
-    combination.read()
-
-    combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly',
-        scandir = LatestPathsGetters.get_scan(obs_name, args, decay_channel='combination', statonly=True),
-        datacard = LatestPathsGetters.get_ws(obs_name, args, decay_channel='combination')
-        )
-    combination_statonly.set_sm(sm_crosssections)
-    combination_statonly.read()
-
-    # Calculate the syst-only errors
-    combination_histogram = combination.to_hist()
-    statonly_histogram = combination_statonly.to_hist()
-
-    systonly_histogram = deepcopy(combination_histogram)
-    systonly_histogram.title = 'Syst. unc.'
-    systonly_histogram.draw_method = 'repr_uncertainties_fully_filled_area'
-    systonly_histogram_xs = combination.to_hist_xs()
-    systonly_histogram_xs.title = 'Syst. unc.'
-    systonly_histogram_xs.draw_method = 'repr_uncertainties_fully_filled_area'
-
-    syst_err_up = []
-    syst_err_down = []
-    syst_err_up_xs = []
-    syst_err_down_xs = []
-    for i in xrange(combination_histogram.n_bins):
-        up_tot = abs(combination_histogram.errs_up[i])
-        down_tot = abs(combination_histogram.errs_down[i])
-        symm_tot = 0.5*(up_tot+down_tot)
-        symm_stat = 0.5*(abs(statonly_histogram.errs_up[i]) + abs(statonly_histogram.errs_down[i]))
-        sm_crosssection = sm_crosssections[i]
-
-        if symm_tot>symm_stat:
-            symm_syst = sqrt(symm_tot**2-symm_stat**2)
-        else:
-            logging.warning(
-                'For bin {0}, symm_tot={1} > symm_stat={2}. '
-                'Taking sqrt(symm_stat**2-symm_tot**2) instead'
-                .format(i, symm_tot, symm_stat)
-                )
-            symm_syst = sqrt(symm_stat**2-symm_tot**2)
-        syst_err_up.append(up_tot * symm_syst/symm_tot)
-        syst_err_down.append(down_tot * symm_syst/symm_tot)
-        syst_err_up_xs.append(up_tot * symm_syst/symm_tot * sm_crosssection)
-        syst_err_down_xs.append(down_tot * symm_syst/symm_tot * sm_crosssection)
-    systonly_histogram.set_err_up(syst_err_up)
-    systonly_histogram.set_err_down(syst_err_down)
-    systonly_histogram_xs.set_err_up(syst_err_up_xs)
-    systonly_histogram_xs.set_err_down(syst_err_down_xs)
-
-    # combination_histogram_xs = combination.to_hist_xs()
-    # statonly_histogram_xs = combination_statonly.to_hist_xs()
-    # systonly_histogram_xs = deepcopy(combination_histogram_xs)
-    # systonly_histogram_xs.title = 'Syst. only'
-    # systonly_histogram_xs.set_err_up([ 
-    #     sqrt(tot**2-stat**2) for tot, stat in zip(combination_histogram_xs.errs_up, statonly_histogram_xs.errs_up)
-    #     ])
-    # systonly_histogram_xs.set_err_down([ 
-    #     sqrt(tot**2-stat**2) for tot, stat in zip(combination_histogram_xs.errs_down, statonly_histogram_xs.errs_down)
-    #     ])
-    # systonly_histogram_xs.draw_method = 'repr_horizontal_bar_and_narrow_fill'
-
-    plot = differentials.plotting.plots.SpectraPlot('spectra_{0}_statsyst'.format(obs_name), [combination])
-    plot.obsname = obs_name
-    plot.obsunit = 'GeV'
     plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
     plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
     plot.draw()

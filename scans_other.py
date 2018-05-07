@@ -1,6 +1,6 @@
 from OptionHandler import flag_as_option, flag_as_parser_options
 
-import LatestPaths
+import LatestPaths, LatestBinning
 import sys
 
 # sys.path.append('src')
@@ -13,17 +13,27 @@ import differentialutils
 from time import strftime
 datestr = strftime( '%b%d' )
 
-import os
+import os, logging
 from os.path import *
+from math import sqrt
 
+#____________________________________________________________________
+# Total XS
 
 @flag_as_option
-def totalXS_scan(args):
+def totalXS_t2ws(args):
+    card = LatestPaths.card.inclusive[differentialutils.get_decay_channel_tag(args)]
+    t2ws = differentials.combine.t2ws.T2WS(card)
+    t2ws.add_map('.*/.*sideAcceptance.*:r[1.0,0.1,2.0]')
+    t2ws.add_map('.*/smH_INC_INC:r[1.0,0.1,2.0]')
+    t2ws.run()
+
+def totalXS_scan_config(args):
     if args.asimov:
-        Commands.Warning('This is probably not what I want')
+        logging.warning('This is probably not what I want')
         return
 
-    config = differentials.combine.CombineConfig(args)
+    config = differentials.combine.combine.CombineConfig(args)
     config.onBatch       = True
     config.queue         = 'short.q'
     config.nPoints       = 55
@@ -34,38 +44,179 @@ def totalXS_scan(args):
     config.PhysicsModelParameterRanges = [
         'r={0},{1}'.format( r_ranges[0], r_ranges[1] ),
         ]
-    config.subDirectory = 'out/Scan_TotalXS_{0}'.format(datestr)
+    config.subDirectory = 'out/Scan_{0}_totalXS'.format(datestr)
+    return config
 
-    config.datacard = LatestPaths.ws_combined_totalXS
+@flag_as_option
+def totalXS_scan(args):
+    config = totalXS_scan_config(args)
 
-    if args.asimov:
-        config.subDirectory += '_asimov'
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+    config.datacard = LatestPaths.ws.totalXS[decay_channel]
+    config.tags.append(decay_channel)
+
     config.make_unique_directory()
 
-    postfit = differentials.combine.CombinePostfit(config)
+    postfit = differentials.combine.combine.CombinePostfit(config)
     postfit.run()
     postfit_file = postfit.get_output()
 
     # Stat+syst scan (regular)
-    scan = differentials.combine.CombineScanFromPostFit(config)
+    scan = differentials.combine.combine.CombineScanFromPostFit(config)
     scan.run(postfit_file)
 
     # Stat-only scan
-    scan_stat_only = differentials.combine.CombinePostfitScanFromPostFit(config)
+    scan_stat_only = differentials.combine.combine.CombineScanFromPostFit(config)
     scan_stat_only.subDirectory += '_statonly'
     scan_stat_only.freezeNuisances.append('rgx{.*}')
     scan_stat_only.run(postfit_file)
 
 
+@flag_as_option
+def totalXS_plot(args):
+    scans = LatestPaths.scan.totalXS
+    scans_statonly = LatestPaths.scan.totalXS.statonly
+
+    
+    hgg = differentials.scans.Scan('r', scandir=scans.hgg)
+    hgg.color = differentials.core.safe_colors.red
+    hgg.draw_style = 'repr_smooth_line'
+    hgg.title = differentials.core.standard_titles['hgg']
+    hgg.no_bestfit_line = True
+    
+    hgg_statonly = differentials.scans.Scan('r', scandir=scans_statonly.hgg)
+    hgg_statonly.color = differentials.core.safe_colors.red
+    hgg_statonly.draw_style = 'repr_smooth_line'
+    hgg_statonly.line_style = 2
+    
+    hzz = differentials.scans.Scan('r', scandir=scans.hzz)
+    hzz.color = differentials.core.safe_colors.blue
+    hzz.draw_style = 'repr_smooth_line'
+    hzz.title = differentials.core.standard_titles['hzz']
+    hzz.no_bestfit_line = True
+    
+    hzz_statonly = differentials.scans.Scan('r', scandir=scans_statonly.hzz)
+    hzz_statonly.color = differentials.core.safe_colors.blue
+    hzz_statonly.draw_style = 'repr_smooth_line'
+    hzz_statonly.line_style = 2
+    
+    combination = differentials.scans.Scan('r', scandir=scans.combination)
+    combination.color = 1
+    combination.draw_style = 'repr_smooth_line'
+    combination.title = 'Comb. (total)'
+    
+    combination_statonly = differentials.scans.Scan('r', scandir=scans_statonly.combination)
+    combination_statonly.color = 14
+    combination_statonly.draw_style = 'repr_smooth_line'
+    combination_statonly.line_style = 2
+    combination_statonly.title = 'Comb. (stat. only)'
+    combination_statonly.no_bestfit_line = True
+
+    for scan in [
+        hgg,
+        hgg_statonly,
+        hzz,
+        hzz_statonly,
+        combination,
+        combination_statonly,
+        ]:
+        scan.read()
+        scan.multiply_x_by_constant(LatestBinning.YR4_totalXS)
+
+    plot = differentials.plotting.plots.MultiScanPlot('scans_totalXS')
+
+    plot.x_min = 0.4 * LatestBinning.YR4_totalXS
+    plot.x_max = 1.6 * LatestBinning.YR4_totalXS
+    plot.y_max = 5.5
+    plot.x_title = '#sigma_{tot}'
+
+    plot.add_scan(hgg)
+    plot.add_scan(hzz)
+    plot.add_scan(combination)
+    plot.add_scan(combination_statonly)
+
+    plot.draw()
+
+    plot.leg.SetNColumns(1)
+    plot.leg.set(
+        x1 = lambda c: c.GetLeftMargin() + 0.04,
+        x2 = lambda c: c.GetLeftMargin() + 0.35,
+        y1 = lambda c: 1-c.GetTopMargin() - 0.22,
+        y2 = lambda c: 1-c.GetTopMargin() - 0.01,
+        )
+
+    smbox = differentials.plotting.pywrappers.Box(
+        LatestBinning.YR4_totalXS-LatestBinning.YR4_totalXS_uncertainty,
+        0.0,
+        LatestBinning.YR4_totalXS+LatestBinning.YR4_totalXS_uncertainty,
+        3.0
+        )
+    smbox.color = differentials.core.safe_colors.green
+    smbox.Draw()
+
+    smline = differentials.plotting.pywrappers.Graph(
+        'sm', 'SM',
+        [LatestBinning.YR4_totalXS, LatestBinning.YR4_totalXS], [0.0, 3.0]
+        )
+    smline.color = differentials.core.safe_colors.green
+    smline._legend = plot.leg
+    smline.line_width = 1
+    smline.Draw('repr_basic_line')
+
+
+    xs = combination.unc.x_min
+    xs_err_full = combination.unc.symm_error
+    xs_err_statonly = combination_statonly.unc.symm_error
+    xs_err_systonly = sqrt(xs_err_full**2 -xs_err_statonly**2)
+
+    l = differentials.plotting.pywrappers.Latex(
+        differentials.plotting.canvas.c.GetLeftMargin() + 0.045,
+        1-differentials.plotting.canvas.c.GetTopMargin() - 0.24,
+        '#sigma_{{tot}} = {0:.1f}  #pm{1:.1f} (stat.) #pm{2:.1f} (syst.)  pb'.format(
+            # xBestfit, 0.5*(abs(left_stat)+abs(right_stat)), 0.5*(abs(left_syst)+abs(right_syst))
+            xs, xs_err_statonly, xs_err_systonly
+            )
+        )
+    l.SetNDC()
+    l.SetTextAlign(13)
+    l.SetTextColor(1)
+    l.SetTextSize(0.040)
+    l.SetTextFont(42)
+    l.Draw()
+
+    differentials.plotting.canvas.c.resize_temporarily(800,800)
+    plot.wrapup()
+
+    logging.info(
+        'Numerical values:'
+        '\nhgg:  {0} +- {1}'
+        '\nhzz:  {2} +- {3}'
+        '\ncomb: {4} +- {5}'
+        .format(
+            hgg.unc.x_min, hgg.unc.symm_error,
+            hzz.unc.x_min, hzz.unc.symm_error,
+            combination.unc.x_min, combination.unc.symm_error,
+            )
+        )
+
+
+#____________________________________________________________________
+# Ratio of BRs
 
 @flag_as_option
 def ratioBR_t2ws(args):
-    card = LatestPaths.card.pth_smH.combination
+    # card = LatestPaths.card.pth_smH.combination
+
+    # This is for inclusive
+    card = LatestPaths.card.inclusive.combination
     t2ws = differentials.combine.t2ws.T2WS(card, 'physicsModels/ExtendedMultiSignalModel.py')
+    t2ws.tags.append('ratioOfBRs')
+    t2ws.add_map('hzz.*/.*smH_INC_INC:hzz_BRmodifier')
+    t2ws.add_map('hgg.*/.*sideAcceptance:hgg_BRmodifier')
 
     t2ws.extra_options.append('--PO \'get_splines\'')
-    t2ws.add_expr('hgg_BRmodifier[1.0,-2.0,4.0]')
-    t2ws.add_expr('ratio_BR_hgg_hzz[0.086,0.0,0.5]')
+    t2ws.add_variable('hgg_BRmodifier', 1.0, -2.0, 4.0, is_POI=True)
+    t2ws.add_variable('ratio_BR_hgg_hzz', 0.086, 0.0, 0.5, is_POI=True)
 
     hzz_modifier_expr = (
         'expr::hzz_BRmodifier("@0*(@1/@2)/@3",'
@@ -77,138 +228,119 @@ def ratioBR_t2ws(args):
         )
     t2ws.add_expr(hzz_modifier_expr)
 
-    t2ws.add_map('hzz.*/.*:sum::r_hzz(hzz_BRmodifier)')
-    t2ws.add_map('hgg.*/.*:sum::r_hgg(hgg_BRmodifier)')
-
     t2ws.run()
-
-# Gives:
-# text2workspace.py
-#     suppliedInput/combination_pth_smH_Mar14.txt
-#     -o /mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/workspaces_Mar29/combination_pth_smH_Mar14_extendedMultiSignalModel.root
-#     -P physicsModels.ExtendedMultiSignalModel:extendedMultiSignalModel
-#     --PO verbose=2
-#     --PO 'higgsMassRange=123,127'
-#     --PO 'get_splines'
-#     --PO 'factory=hgg_BRmodifier[1.0,-2.0,4.0]'
-#     --PO 'factory=ratio_BR_hgg_hzz[0.086,0.0,0.5]'
-#     --PO 'factory=expr::hzz_BRmodifier("@0*(@1/@2)/@3",hgg_BRmodifier,#spline_hgg,#spline_hzz,ratio_BR_hgg_hzz)'
-#     --PO 'map=hzz.*/.*:sum::r_hzz(hzz_BRmodifier)'
-#     --PO 'map=hgg.*/.*:sum::r_hgg(hgg_BRmodifier)'
-# Will create a POI  sum::r_hzz(hzz_BRmodifier)  with factory  sum::r_hzz(hzz_BRmodifier)
-# Mapping  sum::r_hzz(hzz_BRmodifier)  to  ['hzz.*/.*']  patterns
-# Will create a POI  sum::r_hgg(hgg_BRmodifier)  with factory  sum::r_hgg(hgg_BRmodifier)
-# Mapping  sum::r_hgg(hgg_BRmodifier)  to  ['hgg.*/.*']  patterns
-# Making splines
-# Processing factory hgg_BRmodifier[1.0,-2.0,4.0]
-# Processing factory ratio_BR_hgg_hzz[0.086,0.0,0.5]
-# Processing factory expr::hzz_BRmodifier("@0*(@1/@2)/@3",hgg_BRmodifier,fbr_13TeV,BR_hzz,ratio_BR_hgg_hzz)
-# MH will be left floating within 123 and 127
-# [#0] ERROR:InputArguments -- RooWorkspace::defineSet(w) ERROR proposed set constituent "sum::r_hgg(hgg_BRmodifier)" is not in workspace
-# Traceback (most recent call last):
-#   File "/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/bin/slc6_amd64_gcc491/text2workspace.py", line 56, in <module>
-#     MB.doModel()
-#   File "/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v4_NewBinning/CMSSW_7_4_7/python/HiggsAnalysis/CombinedLimit/ModelTools.py", line 97, in doModel
-#     poiIter = self.out.set('POI').createIterator()
-# ReferenceError: attempt to access a null-pointer
-
-
-
-#     self.modelBuilder.doVar( 'hgg_BRmodifier[1.0,-2.0,4.0]' )
-#     # self.modelBuilder.doVar( 'hzz_BRmodifier[1.0,-2.0,4.0]' )
-
-
-#     # Load spline for HZZ BR (function of MH)
-#     self.SMH = SMHiggsBuilder(self.modelBuilder)
-#     datadir = os.environ['CMSSW_BASE'] + '/src/HiggsAnalysis/CombinedLimit/data/lhc-hxswg'
-#     self.SMH.textToSpline( 'BR_hzz', os.path.join( datadir, 'sm/br/BR4.txt' ), ycol=11 );
-#     spline_SMBR_hzz = self.modelBuilder.out.function('BR_hzz')
-
-#     # Seems to work:
-#     # self.modelBuilder.out.var('MH').setVal(125.09)
-#     # spline_SMBR_hzz.Print()
-
-#     # Load spling for Hgg BR
-#     spline_SMBR_hgg = self.modelBuilder.out.function('fbr_13TeV')
-
-#     #  --> Can't do this, has to be a spline
-#     # # HZZ BR from YR4 excel sheet at mH = 125.09
-#     # BR_hzz = 0.02641
-#     # self.modelBuilder.doVar( 'hzz_SMBR[{0}]'.format(BR_hzz) )
-#     # self.modelBuilder.out.var('hzz_SMBR').setConstant()
-
-#     # BR_hgg @ 125.09 GeV = 2.270E-03 = 0.00227
-#     # So BR_hgg/BR_hzz = 0.086
-#     # --> Varying ratio between 0.0 and 0.5 should suffice
-
-#     self.modelBuilder.doVar( 'ratio_BR_hgg_hzz[0.086,0.0,0.5]' )
-
-
-#     # ======================================
-#     # Create 'hzz_BRmodifier', as a function of 'hgg_BRmodifier' and 'ratio_BR_hgg_hzz'
-
-#     hzz_modifier_expr = 'expr::{name}("{formula}",{commaSeparatedParameters})'.format(
-#         name                     = 'hzz_BRmodifier',
-#         formula                  = '@0*(@1/@2)/@3',
-#         commaSeparatedParameters = ','.join([
-#             'hgg_BRmodifier',
-#             spline_SMBR_hgg.GetName(),
-#             spline_SMBR_hzz.GetName(),
-#             'ratio_BR_hgg_hzz'
-#             ])
-#         )
-#     print 'Processing expr:'
-#     print '    ',hzz_modifier_expr
-#     self.modelBuilder.factory_( hzz_modifier_expr )
-
-
-#     # for poiname in self.pois:
-#     #     if not poiname.startswith( 'r_' ): continue
-
-#     #     for channel in [ 'hzz', 'hgg' ]:
-#     #         newexpr = 'expr::{name}("{formula}",{commaSeparatedParameters})'.format(
-#     #             name                     = poiname.replace( 'r_', 'r_{0}_'.format(channel) ),
-#     #             formula                  = '@0*@1',
-#     #             commaSeparatedParameters = '{channel}_BRmodifier,{poiname}'.format( channel=channel, poiname=poiname )
-#     #             )
-#     #         print 'Processing expr:'
-#     #         print '    ',newexpr
-#     #         self.modelBuilder.factory_( newexpr )
-
-
-#     POIset = self.modelBuilder.out.set('POI')
-#     POIset.add( self.modelBuilder.out.var('hgg_BRmodifier') )
-#     POIset.add( self.modelBuilder.out.var('ratio_BR_hgg_hzz') )
-#     # POIset.add( self.modelBuilder.out.var('hzz_BRmodifier') )
-
-
-#     self.chapter( 'Starting model.getYieldScale()' )
-
-
-# def getYieldScale( self, bin, process ):
-
-#     if process in self.DC.signals and not 'OutsideAcceptance' in bin:
-#         if self.BinIsHzz( bin ):
-#             poi = 'hzz_BRmodifier'
-#         else:
-#             poi = 'hgg_BRmodifier'
-#     else:
-#         poi = 1.0
-
-
-#     string = "%s/%s" % (bin,process)
-#     print "Will scale ", string, " by ", poi
-#     if poi in ["1","0"]: return int(poi)
-#     return poi;
-
-
-
 
 @flag_as_option
 def ratioBR_scan(args):
-    pass
+    if args.asimov:
+        logging.warning('This is probably not what I want')
+        return
+
+    config = differentials.combine.combine.CombineConfig(args)
+    config.onBatch       = True
+    config.queue         = 'short.q'
+    config.nPoints       = 55
+    config.nPointsPerJob = config.nPoints
+
+    r_ranges = [ 0.06, 0.16 ]
+    config.POIs = [ 'ratio_BR_hgg_hzz' ]
+    config.PhysicsModelParameterRanges = [
+        'ratio_BR_hgg_hzz={0},{1}'.format( r_ranges[0], r_ranges[1] ),
+        ]
+    config.subDirectory = 'out/Scan_{0}_ratioOfBRs'.format(datestr)
+
+    config.datacard = LatestPaths.ws.ratioOfBRs
+
+    config.make_unique_directory()
+
+    postfit = differentials.combine.combine.CombinePostfit(config)
+    postfit.run()
+    postfit_file = postfit.get_output()
+
+    # Stat+syst scan (regular)
+    scan = differentials.combine.combine.CombineScanFromPostFit(config)
+    scan.run(postfit_file)
+
+    # Stat-only scan
+    scan_stat_only = differentials.combine.combine.CombineScanFromPostFit(config)
+    scan_stat_only.subDirectory += '_statonly'
+    scan_stat_only.freezeNuisances.append('rgx{.*}')
+    scan_stat_only.run(postfit_file)
 
 
+@flag_as_option
+def ratioBR_plot(args):
+    plot = differentials.plotting.plots.MultiScanPlot('scans_ratioOfBRs')
+
+    plot.x_min = 0.4 * LatestBinning.SM_ratio_of_BRs
+    plot.x_max = 1.6 * LatestBinning.SM_ratio_of_BRs
+    plot.y_max = 6.0
+    plot.x_title = '#frac{{BR({0})}}{{BR({1})}}'.format(
+        differentials.core.standard_titles['hgg'],
+        differentials.core.standard_titles['hzz']
+        )
+
+    ratioOfBRs_statonly = differentials.scans.Scan('ratio_BR_hgg_hzz', scandir=LatestPaths.scan.ratioOfBRs_statonly)
+    ratioOfBRs_statonly.read()
+    ratioOfBRs_statonly.color = 14
+    ratioOfBRs_statonly.draw_style = 'repr_smooth_line'
+    ratioOfBRs_statonly.title = 'Comb. (stat.)'
+    plot.add_scan(ratioOfBRs_statonly)
+
+    ratioOfBRs = differentials.scans.Scan('ratio_BR_hgg_hzz', scandir=LatestPaths.scan.ratioOfBRs)
+    ratioOfBRs.read()
+    ratioOfBRs.color = 1
+    # ratioOfBRs.draw_style = 'repr_smooth_line'
+    ratioOfBRs.draw_style = 'repr_basic_line'
+    ratioOfBRs.title = 'Comb. (total)'
+    plot.add_scan(ratioOfBRs)
+
+
+    plot.draw()
+
+    plot.base.GetXaxis().SetTitleSize(0.043)
+    plot.base.GetXaxis().SetTitleOffset(1.4)
+
+    plot.leg.SetNColumns(1)
+    plot.leg.set(
+        x1 = lambda c: c.GetLeftMargin() + 0.04,
+        x2 = lambda c: c.GetLeftMargin() + 0.35,
+        y1 = lambda c: 1-c.GetTopMargin() - 0.22,
+        y2 = lambda c: 1-c.GetTopMargin() - 0.01,
+        )
+
+    smline = differentials.plotting.pywrappers.Graph(
+        'sm', 'SM',
+        [LatestBinning.SM_ratio_of_BRs, LatestBinning.SM_ratio_of_BRs], [0.0, 3.0]
+        )
+    smline.color = differentials.core.safe_colors.green
+    smline._legend = plot.leg
+    smline.line_width = 1
+    smline.Draw('repr_basic_line')
+
+
+    xs = ratioOfBRs.unc.x_min
+    xs_err_full = ratioOfBRs.unc.symm_error
+    xs_err_statonly = ratioOfBRs_statonly.unc.symm_error
+    xs_err_systonly = sqrt(xs_err_full**2 -xs_err_statonly**2)
+
+    l = differentials.plotting.pywrappers.Latex(
+        differentials.plotting.canvas.c.GetLeftMargin() + 0.045,
+        1-differentials.plotting.canvas.c.GetTopMargin() - 0.24,
+        '{0} = {1:.3f}  #pm{2:.3f} (stat.) #pm{3:.3f} (syst.)'.format(
+            plot.x_title,
+            xs, xs_err_statonly, xs_err_systonly
+            )
+        )
+    l.SetNDC()
+    l.SetTextAlign(13)
+    l.SetTextColor(1)
+    l.SetTextSize(0.035)
+    l.SetTextFont(42)
+    l.Draw()
+
+    differentials.plotting.canvas.c.resize_temporarily(800,800)
+    plot.wrapup()
 
 
 

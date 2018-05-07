@@ -67,7 +67,7 @@ class QuickPlot(PlotBase):
         self.base.Draw()
 
         for obj, draw_str in self.objs:
-            obj._legend = self.leg
+            obj.legend = self.leg
             obj.Draw(draw_str)
 
     def wrapup(self):
@@ -107,7 +107,7 @@ class Single2DHistPlot(PlotBase):
             c.GetBottomMargin() + 0.09
             )
 
-        self.H2._legend = leg
+        self.H2.legend = leg
         self.H2.Draw(self.draw_str)
 
         H = self.H2.H2
@@ -197,11 +197,11 @@ class MultiScanPlot(PlotBase):
         c.Clear()
         c.set_margins()
 
-        base = utils.get_plot_base(
+        self.base = utils.get_plot_base(
             x_min=self.x_min, x_max=self.x_max, y_min=self.y_min, y_max=self.y_max,
             x_title=self.x_title, y_title='2#DeltaNLL'
             )
-        base.Draw('P')
+        self.base.Draw('P')
 
         sigma1_line = ROOT.TLine(self.x_min, 1.0, self.x_max, 1.0)
         ROOT.SetOwnership(sigma1_line, False)
@@ -218,25 +218,26 @@ class MultiScanPlot(PlotBase):
         for scan in self.scans:
             graph = scan.to_graph()
             graph.filter(y_max=3.5)
-            graph._legend = self.leg
+            graph.legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
             left_point, right_point = self.get_unc_points(scan, color=graph.color)
 
-            line_bestfit = ROOT.TGraph(2,
-                array('f', [scan.bestfit().x, scan.bestfit().x]),
-                array('f', [0.0, 3.0]),
-                )
-            ROOT.SetOwnership(line_bestfit, False)
-            line_bestfit.SetLineColor(graph.color)
-            if 'dashed' in getattr(graph, 'draw_style', 'repr_basic_line'):
-                line_bestfit.SetLineStyle(2)
-            line_bestfit.Draw('SAMEL')
+            if not hasattr(scan, 'no_bestfit_line'):
+                line_bestfit = ROOT.TGraph(2,
+                    array('f', [scan.bestfit().x, scan.bestfit().x]),
+                    array('f', [0.0, 3.0]),
+                    )
+                ROOT.SetOwnership(line_bestfit, False)
+                line_bestfit.SetLineColor(graph.color)
+                if 'dashed' in getattr(graph, 'draw_style', 'repr_basic_line'):
+                    line_bestfit.SetLineStyle(2)
+                line_bestfit.Draw('SAMEL')
 
 
         for graph in self.manual_graphs:
             graph.filter(y_max=3.5)
-            graph._legend = self.leg
+            graph.legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
             left_point, right_point = self.get_unc_points(graph, color=graph.color)
@@ -259,6 +260,9 @@ class MultiScanPlot(PlotBase):
 
     def get_unc_points(self, scan, color=1):
         """Should work in Graph as well"""
+
+        if not hasattr(scan, 'unc'):
+            scan.create_uncertainties()
 
         left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [1.0]))
         ROOT.SetOwnership(left_point, False)
@@ -345,7 +349,7 @@ class MultiContourPlot(PlotBase):
         self.histograms = []
         for scan in self.scans:
             histogram2D = scan.to_hist()
-            histogram2D._legend = self.legend
+            histogram2D.legend = self.legend
             if self.only_1sigma_contours:
                 histogram2D.Draw('repr_1sigma_contours_with_bestfit')
             else:
@@ -447,12 +451,12 @@ class BottomPanelPlot(PlotBase):
 
     def add_top(self, obj, draw_str=None, leg=None):
         if not(leg is None):
-            obj._legend = leg
+            obj.legend = leg
         self.top_objects.append((obj, draw_str))
 
     def add_bottom(self, obj, draw_str=None, leg=None):
         if not(leg is None):
-            obj._legend = leg
+            obj.legend = leg
         self.bottom_objects.append((obj, draw_str))
 
     def get_obj_extremum(self, obj, extremum_fn, only_positive=False):
@@ -773,7 +777,18 @@ class SpectraPlot(BottomPanelPlot):
 
         self.make_labels_for_overflow_spectra(self.spectra, self.obstitle)
         self.add_top(self.leg, '')
+
+
+        if len(self.top_objects) > 3:
+            # Make legend slightly bigger if many entries
+            y_old = self.leg._y1
+            self.leg.set(y1=lambda c: 1 - c.GetTopMargin() - 0.13,)
+            logging.info('Changed legend y1 from {0} to {1}'.format(y_old, self.leg._y1))
+
         super(SpectraPlot, self).draw()
+
+    # def wrapup(self):
+    #     super(SpectraPlot, self).wrapup()
 
 
 class BottomPanelPlotWithParametrizations(BottomPanelPlot):
@@ -928,8 +943,8 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
                 [ mu * xs for mu, xs in zip(mus, self.obs.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=self.last_bin_is_overflow)) ],
                 color=point.color
                 )
-            logging.trace('Setting {0}._legend to {1}'.format(xs_histogram, self.legend))
-            xs_histogram._legend = self.legend
+            logging.trace('Setting {0}.legend to {1}'.format(xs_histogram, self.legend))
+            xs_histogram.legend = self.legend
             self.add_top(xs_histogram, 'repr_basic_histogram')
 
     def draw_ptscan(self):

@@ -23,7 +23,13 @@ class Legend(object):
         self.legend.SetFillStyle(0)
         ROOT.SetOwnership(self.legend, False)
 
+        # first set defaults
+        self._x1 = lambda c: c.GetLeftMargin()
+        self._x2 = lambda c: 1. - c.GetRightMargin()
+        self._y1 = lambda c: 1. - c.GetTopMargin() - 0.15
+        self._y2 = lambda c: 1. - c.GetTopMargin()
         self.set(x1, y1, x2, y2)
+
         self.auto_n_columns = True
 
     def __getattr__(self, name):
@@ -34,26 +40,14 @@ class Legend(object):
         return getattr(self.legend, name)
 
     def set(self, x1=None, y1=None, x2=None, y2=None):
-        if x1 is None:
-            self._x1 = lambda c: c.GetLeftMargin()
-        else:
+        if not(x1 is None):
             self._x1 = x1
-
-        if x2 is None:
-            self._x2 = lambda c: 1. - c.GetRightMargin()
-        else:
+        if not(x2 is None):
             self._x2 = x2
-
-        if y1 is None:
-            self._y1 = lambda c: 1. - c.GetTopMargin() - 0.15
-        else:
+        if not(y1 is None):
             self._y1 = y1
-
-        if y2 is None:
-            self._y2 = lambda c: 1. - c.GetTopMargin()
-        else:
+        if not(y2 is None):
             self._y2 = y2
-
 
     def AddEntry(self, *args):
         """Save entries in a python list, but add them to the actual legend later"""
@@ -84,9 +78,54 @@ class Legend(object):
             self.legend.SetNColumns(self.n_columns_heuristic())
 
         for args in self._entries:
+            if 'MOVE_TO_BOTTOM' in args: continue
+            logging.debug('Adding entry with args: {0}'.format(args))
             self.legend.AddEntry(*args)
+        for args in self._entries:
+            if not('MOVE_TO_BOTTOM' in args): continue
+            logging.debug('Adding entry with args: {0}'.format(args))
+            args = [ arg for arg in args if arg != 'MOVE_TO_BOTTOM' ]
+            self.legend.AddEntry(*args)
+
         self.legend.Draw(drawStr)
 
+
+class Box(object):
+    def __init__(self, x1=None, y1=None, x2=None, y2=None, color=None):
+        super(Box, self).__init__()
+
+        self.fill_alpha = 0.2
+        if color is None:
+            self.color = 14
+        else:
+            self.color = color
+
+        self.set(x1, y1, x2, y2)
+
+    def set(self, x1=None, y1=None, x2=None, y2=None):
+        if x1 is None:
+            self.x1 = 0.0
+        else:
+            self.x1 = x1
+        if x2 is None:
+            self.x2 = 1.0
+        else:
+            self.x2 = x2
+        if y1 is None:
+            self.y1 = 0.0
+        else:
+            self.y1 = y1
+        if y2 is None:
+            self.y2 = 1.0
+        else:
+            self.y2 = y2
+
+    def Draw(self, draw_str=''):
+        self.box = ROOT.TBox(self.x1, self.y1, self.x2, self.y2)
+        ROOT.SetOwnership(self.box, False)
+        self.box.SetLineWidth(0)
+        self.box.SetFillColorAlpha(self.color, self.fill_alpha)
+        self.box.Draw()
 
 class ContourDummyLegend(Legend):
     """Special instance of Legend that creates some default objects and stores them in the legend"""
@@ -234,7 +273,6 @@ class CMS_Latex_lumi(Latex):
         super(CMS_Latex_lumi, self).Draw(*args, **kwargs)
 
 
-
 class Base(object):
     """Alternative for get_plot_base"""
 
@@ -283,7 +321,26 @@ class Base(object):
         self.H.Draw('P')
 
 
-class Histogram(object):
+
+
+class BasicDrawable(object):
+    """docstring for BasicDrawable"""
+    def __init__(self):
+        super(BasicDrawable, self).__init__()
+        self.legend = None
+        self.move_to_bottom_of_legend = False
+
+    def has_legend(self):
+        return not(self.legend is None)
+
+    def add_to_legend(self, leg, *args):
+        if leg is None: return
+        if self.move_to_bottom_of_legend:
+            args = list(args) + ['MOVE_TO_BOTTOM']
+        leg.AddEntry(*args)
+
+
+class Histogram(BasicDrawable):
     """docstring for Histogram"""
 
     color_cycle = global_color_cycle
@@ -324,8 +381,6 @@ class Histogram(object):
         self.line_width = 2
 
         self.last_bin_is_overflow = False
-        self._legend = None
-
 
     def set_last_bin_is_overflow(self, flag=True, method='SECONDTOLASTBINWIDTH', hard_value=None):
         logging.debug('Last bin is specified to be overflow, so the last bin boundary will be modified')
@@ -340,7 +395,6 @@ class Histogram(object):
             raise ValueError('Method \'{0}\' is not implemented'.format(method))
         logging.debug('Will replace last bin boundary {0} by {1}'.format(self.bin_boundaries[-1], new_last_bin_boundary))
         self.bin_boundaries[-1] = new_last_bin_boundary
-
 
     def x_min(self):
         return self.bin_boundaries[0]
@@ -408,6 +462,11 @@ class Histogram(object):
     def get_zeroes(self):
         return [0.0 for i in xrange(self.n_bins)]
 
+    # Draw methods
+    def Draw(self, draw_style):
+        logging.debug('Drawing Histogram {0} with draw_style {1}; legend: {2}'.format(self, draw_style, self.legend))
+        for obj, draw_str in getattr(self, draw_style)(self.legend):
+            obj.Draw(draw_str)
 
     def repr_basic_histogram(self, leg=None):
         H = ROOT.TH1F(
@@ -420,15 +479,12 @@ class Histogram(object):
         for i_bin in xrange(self.n_bins):
             H.SetBinContent( i_bin+1, self.bin_values[i_bin] )
 
-        if not(leg is None):
-            leg.AddEntry(H.GetName(), self.title, 'l')
+        self.add_to_legend(leg, H.GetName(), self.title, 'l')
 
         return [ (H, 'HISTSAME') ]
 
-
     def repr_horizontal_bar_and_narrow_fill(self, leg=None):
         return self.repr_horizontal_bars() + self.repr_uncertainties_narrow_filled_area(leg)
-
 
     def repr_horizontal_bars(self, leg=None):
         Tg = ROOT.TGraphErrors(
@@ -452,8 +508,7 @@ class Histogram(object):
         Tg, draw_str = self.repr_horizontal_bars()[0]
         Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
         Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
-        if not(leg is None):
-            leg.AddEntry( Tg.GetName(), self.title, 'PE' )
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'PE' )
         return [(Tg, draw_str)]
 
 
@@ -477,10 +532,35 @@ class Histogram(object):
         Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
         Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
 
-        if not(leg is None):
-            leg.AddEntry( Tg.GetName(), self.title, 'LF' )
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
 
         return [ (Tg, 'E2PSAME') ]
+
+    def repr_point_with_vertical_bar(self, leg=None):
+        Tg = ROOT.TGraphAsymmErrors(
+            self.n_bins,
+            array( 'f', self.get_bin_centers() ),
+            array( 'f', self.bin_values ),
+            array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
+            array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
+            array( 'f', self.errs_down ),
+            array( 'f', self.errs_up ),
+            )
+        ROOT.SetOwnership( Tg, False )
+        Tg.SetName( utils.get_unique_rootname() )
+
+        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
+        Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
+        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
+        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
+        Tg.SetLineWidth(   getattr(self, 'ErrorLineWidth',   1 ) )
+
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'PE' )
+
+        return [(Tg, 'PSAME')]
+
+    def repr_point_with_vertical_bar_and_horizontal_bar(self, leg=None):
+        return self.repr_point_with_vertical_bar(leg) + self.repr_horizontal_bars()
 
 
     def repr_uncertainties_narrow_filled_area(self, leg=None):
@@ -505,8 +585,7 @@ class Histogram(object):
         # Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
         Tg.SetFillColorAlpha(self.color, 0.30)
 
-        if not(leg is None):
-            leg.AddEntry( Tg.GetName(), self.title, 'LF' )
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'F' )
 
         return [ (Tg, 'E2PSAME') ]
 
@@ -533,48 +612,13 @@ class Histogram(object):
         # Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
         Tg.SetFillColorAlpha(self.color, 0.30)
 
-        if not(leg is None):
-            leg.AddEntry( Tg.GetName(), self.title, 'LF' )
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
 
         return [ (Tg, 'E2PSAME') ]
 
 
-    def repr_point_with_vertical_bar(self, leg=None):
 
-        Tg = ROOT.TGraphAsymmErrors(
-            self.n_bins,
-            array( 'f', self.get_bin_centers() ),
-            array( 'f', self.bin_values ),
-            array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
-            array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
-            array( 'f', self.errs_down ),
-            array( 'f', self.errs_up ),
-            )
-        ROOT.SetOwnership( Tg, False )
-        Tg.SetName( utils.get_unique_rootname() )
-
-        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
-        Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
-        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
-        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
-        Tg.SetLineWidth(   getattr(self, 'ErrorLineWidth',   1 ) )
-
-        if not(leg is None):
-            leg.AddEntry( Tg.GetName(), self.title, 'PE' )
-
-        return [(Tg, 'PSAME')]
-
-    def repr_point_with_vertical_bar_and_horizontal_bar(self, leg=None):
-        return self.repr_point_with_vertical_bar(leg) + self.repr_horizontal_bars()
-
-    def Draw(self, draw_style):
-        logging.debug('Drawing Histogram {0} with draw_style {1}; legend: {2}'.format(self, draw_style, self._legend))
-        for obj, draw_str in getattr(self, draw_style)(self._legend):
-            obj.Draw(draw_str)
-
-
-
-class Graph(object):
+class Graph(BasicDrawable):
     """docstring for Graph"""
 
     color_cycle = global_color_cycle
@@ -596,16 +640,13 @@ class Graph(object):
 
         self.fill_style = self.fill_style_cycle.next()
         self.line_width = 2
+        self.line_style = 1
 
-        # self.marker_style
-        # self.marker_size
+    def SetLineWidth(self, width):
+        self.line_width = width
 
-        # # self.fill_color = self.color
-        # # self.marker_color = self.color
-        # # self.line_color = self.color
-
-        self._legend = None
-
+    def SetLineStyle(self, style):
+        self.line_style = style
         
     def set_err_up(self, errs_up):
         self.errs_up = [ abs(i) for i in errs_up ]
@@ -653,9 +694,10 @@ class Graph(object):
 
         Tg.SetLineColor(self.color)
         Tg.SetLineWidth(self.line_width)
+        Tg.SetLineStyle(self.line_style)
 
         if not(leg is None):
-            leg.AddEntry( Tg.GetName(), self.title, 'L' )
+            self.add_to_legend(leg, Tg.GetName(), self.title, 'L' )
 
         return [(Tg, 'SAMEL')]
 
@@ -685,11 +727,11 @@ class Graph(object):
         return self.repr_smooth_line(leg) + self.repr_vertical_line_at_minimum()
 
     def Draw(self, draw_style):
-        for obj, draw_str in getattr(self, draw_style)(self._legend):
+        for obj, draw_str in getattr(self, draw_style)(self.legend):
             obj.Draw(draw_str)
 
 
-class Point(object):
+class Point(BasicDrawable):
     """docstring for Point"""
 
     color_cycle = global_color_cycle
@@ -698,7 +740,7 @@ class Point(object):
         super(Point, self).__init__()
         self.x = x
         self.y = y
-        self._legend = None
+        self.legend = None
 
         if color is None:
             self.color = self.color_cycle.next()
@@ -762,12 +804,12 @@ class Point(object):
         return self.repr_filled_diamond() + self.repr_empty_diamond()
 
     def Draw(self, draw_style='repr_basic'):
-        for obj, draw_str in getattr(self, draw_style)(self._legend):
+        for obj, draw_str in getattr(self, draw_style)(self.legend):
             obj.Draw(draw_str)
         
 
 
-class Histogram2D(object):
+class Histogram2D(BasicDrawable):
     """docstring for Histogram2D"""
 
     color_cycle = global_color_cycle
@@ -789,7 +831,7 @@ class Histogram2D(object):
         else:
             self.color = color
 
-        self._legend = None
+        self.legend = None
         self.H2 = None
         self.H2_array = None
         self.entries = []
@@ -952,12 +994,7 @@ class Histogram2D(object):
                 l.SetTextSize(0.02)
                 l.SetTextColor(color)
                 labels.append(l)
-
-            # if not(leg is None):
-            #     Tg = Tgs[0]
-            #     Tg.SetName(utils.get_unique_rootname())
-            #     leg.AddEntry(Tg.GetName(), self.title, 'l')
-            ret.extend([ (Tg, 'LSAME') for Tg in Tgs ])
+                ret.extend([ (Tg, 'LSAME') for Tg in Tgs ])
             ret.extend([ (l, '') for l in labels ])
         return ret
 
@@ -1014,7 +1051,7 @@ class Histogram2D(object):
         return self.repr_2D() + self.repr_1sigma_contours() + self.repr_2sigma_contours()
 
     def Draw(self, draw_style):
-        for obj, draw_str in getattr(self, draw_style)(self._legend):
+        for obj, draw_str in getattr(self, draw_style)(self.legend):
             obj.Draw(draw_str)
 
 

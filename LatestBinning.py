@@ -29,6 +29,7 @@ YR4_tH_W_associated = 0.000E+00
 
 YR4_totalXS         = YR4_ggF_n3lo + YR4_VBF + YR4_WH + YR4_ZH + YR4_ttH + YR4_bbH + YR4_tH_t_ch + YR4_tH_s_ch + YR4_tH_W_associated
 YR4_xH              = YR4_totalXS - YR4_ggF_n3lo
+YR4_totalXS_uncertainty = 2.5
 
 # YR4_totalXS = 55.70628722 # pb
 # YR4_ggHXS   = 48.58 # pb
