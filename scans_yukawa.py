@@ -137,6 +137,7 @@ def scan_yukawa_G1BKV(args):
     config.set_parameter_range('kappac', -14., 14.)
     config.set_parameter_range('kappa_V', -10000., 1.)
     config.hardPhysicsModelParameters.append('kappa_V=0.999')
+    config.floatNuisances.append('kappa_V')
     config.tags.append('G1BKV')
     config.datacard = yukawa_G.G1B
     differentialutils.run_postfit_fastscan_scan(config)

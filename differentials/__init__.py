@@ -6,6 +6,7 @@ import integral
 import pdffreezer
 import uncertaintycalculator
 import processinterpreter
+import systshapemaker
 
 # Sub-packages
 import plotting

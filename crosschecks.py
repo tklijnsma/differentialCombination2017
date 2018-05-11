@@ -1,7 +1,8 @@
 from OptionHandler import flag_as_option, flag_as_parser_options
 
-import os, logging, copy, sys, re
+import os, logging, copy, sys, re, numpy
 from array import array
+from math import sqrt
 
 import ROOT
 
@@ -13,6 +14,93 @@ from differentials.plotting.canvas import c
 
 
 #____________________________________________________________________
+
+
+class AcceptanceUncertaintyCalculator(object):
+    """docstring for AcceptanceUncertaintyCalculator"""
+    def __init__(self, npz_file):
+        super(AcceptanceUncertaintyCalculator, self).__init__()
+        self.npz_file = npz_file
+        self.npz = numpy.load(self.npz_file)
+        self.reinit_lists()
+
+    def reinit_lists(self):
+        self.central = []
+        self.up = []
+        self.down = []
+        self.symm = []
+
+    def get_index(self, binstr):
+        return int(re.match(r'bin(\d+)', binstr).group(1))
+
+    def get_keys(self):
+        r = self.npz.keys()
+        r.sort(key=lambda k: self.get_index(k))
+        return r
+
+    def binstr_to_proper_str(self, binstr):
+        index = self.get_index(binstr)
+        boundaries = [ 0., 15., 30., 45., 80., 120., 200., 350., 600. ]
+        if index < 8:
+            return '[{0:0d},{1:0d})'.format(boundaries[index], boundaries[index+1])
+        else:
+            return '[{0:0d},#infty)'.format(boundaries[index])
+
+    def get_unc_for_bin(self, A):
+        B = list(A[:].flatten())
+        logging.debug(B)
+        B.pop(7) # Remove ratio 4 scale variations (higher index first to not mess up the next pop)
+        B.pop(5) # Remove ratio 4 scale variations
+        central = B[0]
+        up   = abs(max(B))/central - 1
+        down = 1 - abs(min(B))/central
+        symm = 0.5*(abs(down)+abs(up))
+        return central, down, up, symm
+
+    def get_cud(self):
+        self.reinit_lists()
+        for k in self.get_keys():
+            logging.debug('Doing key {0}'.format(k))
+            central, down, up, symm = self.get_unc_for_bin(self.npz[k])
+            self.central.append(central)
+            self.up.append(up)
+            self.down.append(down)
+            self.symm.append(symm)
+        
+
+@flag_as_option
+def check_acceptance_uncertainties(args):
+    # Get acceptance uncertainties
+    auc = AcceptanceUncertaintyCalculator('suppliedInput/fromVittorio/scaleWeightVariationFullPhaseSpaceCombination_Pt.npz')
+    auc.get_cud()
+    logging.info('Found following set of acceptance uncertainties per bin: {0}'.format(auc.symm))
+
+    obstuple = LatestBinning.obstuple_pth_ggH
+    scandict = LatestPaths.scan.pth_ggH.asimov if args.asimov else LatestPaths.scan.pth_ggH.observed
+
+    systshapemaker = differentials.systshapemaker.SystShapeMaker()
+    systshapemaker.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
+
+    combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', scandict.combWithHbb)
+    combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb.read()
+
+    systonly_histogram, systonly_histogram_xs = systshapemaker.get_systonly_histogram(combWithHbb, scandict.combWithHbb_statonly)
+
+    # get symmetrized systematic uncertainty from histogram
+    symm = [ 0.5*(abs(up)+abs(down)) for down, up in zip(systonly_histogram.errs_down, systonly_histogram.errs_up) ]
+
+    logging.info('acceptance uncertainties: {0}'.format(auc.symm))
+    logging.info('syst error before adding: {0}'.format(symm))
+
+    symm_plus_AU = [ sqrt(s1**2+s2**2) for s1, s2 in zip(auc.symm, symm) ]
+    change_in_syst = [ after/before-1. for before, after in zip(symm, symm_plus_AU) ]
+
+    logging.info('syst error after adding:  {0}'.format(symm_plus_AU))
+    logging.info('syst error rel change:    {0}'.format(change_in_syst))
+
+    # Possibly continue here and add a similar relative change row for the total unc
+    # At that point all info should be there.
 
 
 @flag_as_option

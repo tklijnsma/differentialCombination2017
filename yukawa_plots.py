@@ -47,9 +47,13 @@ def all_plots_Yukawa(args):
     multicont_Yukawa_profiledTotalXS(args)
 
 scandict_G = differentials.core.AttrDict()
-scandict_G.G0A = LatestPaths.scan.yukawa.reweighted.asimov.combination
+# scandict_G.G0A = LatestPaths.scan.yukawa.reweighted.asimov.combination
+scandict_G.G0A = 'out/Scan_Yukawa_May11_combination_G0A_asimov'
 scandict_G.G0B = 'out/Scan_Yukawa_May11_combination_G0B_asimov_0'
+scandict_G.G1A = 'out/Scan_Yukawa_May11_combination_G1A_asimov'
 scandict_G.G1B = 'out/Scan_Yukawa_May11_combination_G1B_asimov'
+scandict_G.G2A = 'out/Scan_Yukawa_May11_combination_G2A_asimov'
+scandict_G.G1BKV = 'out/Scan_Yukawa_May11_combination_G1BKV_asimov'
 
 @flag_as_option
 def multicont_Yukawa_G0(args):
@@ -58,16 +62,28 @@ def multicont_Yukawa_G0(args):
     G0A.read()
 
     G0B = differentials.scans.Scan2D('G0B', x_coupling, y_coupling, scandir = scandict_G.G0B)
-    G0B.color = 2
+    G0B.color = 14
     G0B.read()
+
+    G1A = differentials.scans.Scan2D('G1A', x_coupling, y_coupling, scandir = scandict_G.G1A)
+    G1A.color = 8
+    G1A.read()
 
     G1B = differentials.scans.Scan2D('G1B', x_coupling, y_coupling, scandir = scandict_G.G1B)
     G1B.color = 3
     G1B.read()
 
+    # G1BKV = differentials.scans.Scan2D('G1BKV', x_coupling, y_coupling, scandir = scandict_G.G1BKV)
+    # G1BKV.color = 9
+    # G1BKV.read()
+
+    G2A = differentials.scans.Scan2D('G2A', x_coupling, y_coupling, scandir = scandict_G.G2A)
+    G2A.color = 2
+    G2A.read()
+
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_Yukawa_G0',
-        [G0A, G0B, G1B],
+        [G0A, G0B, G1A, G1B, G2A],
         x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
     plot.draw()
