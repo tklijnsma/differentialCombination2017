@@ -41,9 +41,12 @@ card.ptjet.hzz = 'suppliedInput/fromDavid/PTJET_NNLOPS_Nov28/smH/hzz4l_comb_13Te
 card.ptjet.combination = 'suppliedInput/combination_ptjet_Mar19.txt'
 
 card.inclusive = AttrDict()
-card.inclusive.hgg = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt'
+# Had unrenamed process names... this probably lead to unsimultaneous scaling of what should have been the same process!!
+# card.inclusive.hgg = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt'
+card.inclusive.hgg = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS_renamedProcesses.txt'
 card.inclusive.hzz = 'suppliedInput/fromDavid/differential_Nov27/smH/hzz4l_comb_13TeV_xs.txt'
-card.inclusive.combination = 'suppliedInput/combination_inclusive_Mar19.txt'
+# card.inclusive.combination = 'suppliedInput/combination_inclusive_Mar19.txt'
+card.inclusive.combination = 'suppliedInput/combination_inclusive_May09.txt'
 
 card.yukawa = AttrDict()
 card.yukawa.hgg = 'suppliedInput/Yukawa_hgg_pth_ggH_Mar08.txt'

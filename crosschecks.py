@@ -14,6 +14,37 @@ from differentials.plotting.canvas import c
 
 #____________________________________________________________________
 
+
+@flag_as_option
+def check_reweighting_for_inc_xs(args):
+    ws = LatestPaths.ws.yukawa.nominal.combination
+    w = differentials.core.get_ws(ws)
+
+    reweightor_names = [
+        'reweightor_ggH_PTH_0_15',
+        'reweightor_ggH_PTH_15_30',
+        'reweightor_ggH_PTH_30_45',
+        'reweightor_ggH_PTH_45_80',
+        'reweightor_ggH_PTH_80_120',
+        ]
+
+    weights = []
+    for name in reweightor_names:
+        weights.append(w.function(name).getVal())
+
+    smxs_Pier = [ 13.0137626356, 12.3785279848, 6.87788869197, 7.08329398674, 3.07720573252 ]
+    smxs_Vitt = [ 12.158274514, 12.6947320234, 8.0889999211, 9.15091631806, 3.78165937525 ]
+
+    mu = (
+        sum([ 1.0 * smxs for weight, smxs in zip(weights, smxs_Pier) ])
+        /
+        sum([ weight * smxs for weight, smxs in zip(weights, smxs_Vitt) ])
+        )
+
+    print 'Overall mu: {0}'.format(mu)
+
+
+
 class PDFDrawer(object):
     """docstring for PDFDrawer"""
     def __init__(self, ws):

@@ -46,6 +46,35 @@ def all_plots_Yukawa(args):
     multicont_Yukawa_highLumi(args)
     multicont_Yukawa_profiledTotalXS(args)
 
+scandict_G = differentials.core.AttrDict()
+scandict_G.G0A = LatestPaths.scan.yukawa.reweighted.asimov.combination
+scandict_G.G0B = 'out/Scan_Yukawa_May11_combination_G0B_asimov_0'
+scandict_G.G1B = 'out/Scan_Yukawa_May11_combination_G1B_asimov'
+
+@flag_as_option
+def multicont_Yukawa_G0(args):
+    G0A = differentials.scans.Scan2D('G0A', x_coupling, y_coupling, scandir = scandict_G.G0A)
+    G0A.color = 1
+    G0A.read()
+
+    G0B = differentials.scans.Scan2D('G0B', x_coupling, y_coupling, scandir = scandict_G.G0B)
+    G0B.color = 2
+    G0B.read()
+
+    G1B = differentials.scans.Scan2D('G1B', x_coupling, y_coupling, scandir = scandict_G.G1B)
+    G1B.color = 3
+    G1B.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_G0',
+        [G0A, G0B, G1B],
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        )
+    plot.draw()
+
+
+
+
 @flag_as_option
 def multicont_Yukawa(args):
     multicont_Yukawa_reweighted(args)

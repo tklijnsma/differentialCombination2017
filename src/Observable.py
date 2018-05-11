@@ -62,6 +62,10 @@ class Observable(object):
         return [ s * self.YR4_totalXS for s in self.shape ]
 
     #____________________________________________________________________
+    def inclusive_crosssection(self):
+        return sum(self.crosssection())
+
+    #____________________________________________________________________
     def crosssection_over_binwidth(self, normalize_by_second_to_last_bin_width=False):
         xs = self.crosssection()
         if self.lastBinIsOverflow:
@@ -108,6 +112,7 @@ class Observable(object):
         print 'binning:          ' + strList(self.binning)
         print 'xs:               ' + strList(xs)
         print 'xs_over_binwidth: ' + strList(xs_over_binwidth)
+        print 'inclusive xs:     ' + str(self.inclusive_crosssection())
 
     #____________________________________________________________________
     def BasicHistogram( self, what=None ):

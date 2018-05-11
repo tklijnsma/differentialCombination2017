@@ -97,6 +97,88 @@ def scan_yukawa(args):
     #     config.datacard = 'out/workspaces_Mar09/hgg_Yukawa_reweighted_nominal.root'
     differentialutils.run_postfit_fastscan_scan(config)
 
+
+yukawa_G = differentials.core.AttrDict()
+yukawa_G.G0A = 'out/workspaces_May11/combination_Yukawa_reweighted_G0A.root'
+yukawa_G.G0B = 'out/workspaces_May11/combination_Yukawa_G0B.root'
+yukawa_G.G1A = 'out/workspaces_May11/combination_Yukawa_reweighted_G1A.root'
+yukawa_G.G1B = 'out/workspaces_May11/combination_Yukawa_G1B.root'
+yukawa_G.G2A = 'out/workspaces_May11/combination_Yukawa_reweighted_G2A.root'
+
+@flag_as_option
+def scan_yukawa_G0B(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    config = basic_config(args)
+    config.queue         = 'short.q'
+    config.nPointsPerJob = 350
+    config.tags.append('G0B')
+    config.datacard = yukawa_G.G0B
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_yukawa_G1B(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    config = basic_config(args)
+    config.queue         = 'short.q'
+    config.nPointsPerJob = 350
+    config.set_parameter_range('kappab', -7., 7.)
+    config.set_parameter_range('kappac', -14., 14.)
+    config.tags.append('G1B')
+    config.datacard = yukawa_G.G1B
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_yukawa_G1BKV(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    config = basic_config(args)
+    config.queue         = 'short.q'
+    config.nPointsPerJob = 350
+    config.set_parameter_range('kappab', -7., 7.)
+    config.set_parameter_range('kappac', -14., 14.)
+    config.set_parameter_range('kappa_V', -10000., 1.)
+    config.hardPhysicsModelParameters.append('kappa_V=0.999')
+    config.tags.append('G1BKV')
+    config.datacard = yukawa_G.G1B
+    differentialutils.run_postfit_fastscan_scan(config)
+
+
+@flag_as_option
+def scan_yukawa_G0A(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    config = basic_config(args)
+    config.tags.append('G0A')
+    config.datacard = yukawa_G.G0A
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_yukawa_G1A(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    config = basic_config(args)
+    config.set_parameter_range('kappab', -7., 7.)
+    config.set_parameter_range('kappac', -14., 14.)
+    config.tags.append('G1A')
+    config.datacard = yukawa_G.G1A
+    differentialutils.run_postfit_fastscan_scan(config)
+
+@flag_as_option
+def scan_yukawa_G2A(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    config = basic_config(args)
+    config.tags.append('G2A')
+    config.datacard = yukawa_G.G2A
+    differentialutils.run_postfit_fastscan_scan(config)
+
+
+
+@flag_as_option
+def scan_yukawa_withBRuncertainties(args):
+    args = differentialutils.set_one_decay_channel(args, 'hzz', asimov=True)
+    config = basic_config(args)
+    config.tags.append('withBRuncertainties')
+    config.datacard = 'out/workspaces_May08/hzz_Yukawa_reweighted_withBRuncertainties.root'
+    differentialutils.run_postfit_fastscan_scan(config)
+
+
 @flag_as_option
 def scan_yukawa_unreweighted(args):
     config = basic_config(args)

@@ -72,7 +72,54 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
         .format(','.join([str(b) for b in obs.binning]))
         )
 
-    # Add the theory
+    add_theory(t2ws)
+
+    if apply_reweighting:
+        crosssections = obs.crosssection()
+        crosssections_str = ','.join([str(v) for v in crosssections])
+        t2ws.extra_options.append('--PO SMXS_of_input_ws={0}'.format(crosssections_str))
+        t2ws.tags.append('reweighted')
+    if apply_theory_uncertainties:
+        add_theory_uncertainties(t2ws)
+    return t2ws
+
+def base_t2ws_fitOnlyTotalXS(args, apply_theory_uncertainties=True, apply_reweighting=False):
+    t2ws = differentials.combine.t2ws.T2WS()
+
+    decay_channel = differentialutils.get_decay_channel_tag(args, allow_default=True)
+    t2ws.card = LatestPaths.card.inclusive[decay_channel]
+    t2ws.model_file = 'physicsModels/CouplingModel.py'
+    t2ws.model_name = 'couplingModel'
+    t2ws.name = decay_channel + '_Yukawa'
+
+    t2ws.extra_options.extend([
+        '--PO linearTerms=True',
+        '--PO splitggH=True',
+        '--PO FitOnlyTotalXS=True'
+        ])
+
+    if args.hzz:
+        t2ws.extra_options.append('--PO isOnlyHZZ=True' )
+    if args.hgg:
+        t2ws.extra_options.append('--PO isOnlyHgg=True' )
+
+    add_theory(t2ws)
+
+    if apply_reweighting:
+        logging.warning('Not sure if applying the reweighting is a good thing for the incl.')
+        obs = LatestBinning.obs_pth_ggH
+        obs.drop_bins_up_to_value(yukawa_exp_binning[-1]+1.0)
+        inc_smxs = obs.inclusive_crosssection()
+        t2ws.extra_options.append('--PO SMXS_of_input_ws={0}'.format(inc_smxs))
+
+    if apply_theory_uncertainties:
+        # 5.5% approximately, not very accurately calculated.
+        t2ws.extra_options.append('--PO inc_xs_uncertainty={0}'.format(0.055))
+
+    return t2ws
+
+
+def add_theory(t2ws):
     coupling_variations = FileFinder(
         muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.yukawa.filedir
         ).get()
@@ -88,14 +135,6 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
             .format(variation.kappab, variation.kappac, variation.theory_file)
             )
 
-    if apply_reweighting:
-        crosssections = obs.crosssection()
-        crosssections_str = ','.join([str(v) for v in crosssections])
-        t2ws.extra_options.append('--PO ReweightCrossSections={0}'.format(crosssections_str))
-        t2ws.tags.append('reweighted')
-    if apply_theory_uncertainties:
-        add_theory_uncertainties(t2ws)
-    return t2ws
 
 def add_theory_uncertainties(t2ws, uncorrelated=False):
     # Theory uncertainties
@@ -196,12 +235,62 @@ def t2ws_Yukawa_nominal(args):
     t2ws.run()
 
 @flag_as_option
+def t2ws_Yukawa_withBRuncertainties(args):
+    t2ws = base_t2ws(args)
+    t2ws.extra_options.append('--PO do_BR_uncertainties=True')
+    t2ws.tags.append('withBRuncertainties')
+    t2ws.run()
+
+@flag_as_option
 def t2ws_Yukawa_noReweighting(args):
     t2ws = base_t2ws(args, apply_reweighting=False)
     t2ws.tags.append('nominal')
     t2ws.run()
 
 
+# Scans for Giovanni
+@flag_as_option
+def t2ws_Yukawa_G0A(args):
+    # Basically nominal, but force asimov and hzz
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('G0A')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_G0B(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws_fitOnlyTotalXS(args)
+    t2ws.tags.append('G0B')
+    t2ws.run()
+
+
+@flag_as_option
+def t2ws_Yukawa_G1A(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('G1A')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_G1B(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws_fitOnlyTotalXS(args)
+    t2ws.tags.append('G1B')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_G2A(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('G2A')
+    t2ws.extra_options.append('--PO freely_floating_BRs=True')
+    t2ws.run()
+
+
+# 
 @flag_as_option
 def t2ws_Yukawa_noTheoryUnc(args):
     t2ws = base_t2ws(args, apply_theory_uncertainties=False)

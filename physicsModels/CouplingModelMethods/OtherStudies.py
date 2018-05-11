@@ -40,8 +40,8 @@ def MakeRatioOfBRsExpressions( self ):
     self.modelBuilder.factory_( hzz_modifier_expr )
 
 
-@flag_as_method
-def MakeTotalXSExpressions( self ):
+# @flag_as_method
+def MakeTotalXSExpressions_old( self ):
     self.chapter( 'Starting model.MakeTotalXSExpressions()' )
 
     self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,3.0]' )

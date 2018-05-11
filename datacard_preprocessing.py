@@ -16,24 +16,22 @@ import differentialutils
 #____________________________________________________________________
 # Text changes to datacards
 
+# Fixes to PTH workspaces
 @flag_as_option
 def rename_processes_hgg_pth_ggH(args):
     rename_processes_hgg_pth(
         'suppliedInput/fromVittorio/pT_newBins_Feb28/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_newBins.txt'
         )
-
 @flag_as_option
 def renumber_processes_hzz_pth_ggH(args):
     renumber_processes_hzz_pth(
         'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/hzz4l_comb_13TeV_xs.txt'
         )
-
 @flag_as_option
 def rename_processes_hgg_pth_smH(args):
     rename_processes_hgg_pth(
         'suppliedInput/fromVittorio/pT_newBins_Mar13_smH/Datacard_13TeV_differential_PtNNLOPS_newBins.txt'
         )
-
 @flag_as_option
 def renumber_processes_hzz_pth_smH(args):
     renumber_processes_hzz_pth(
@@ -57,6 +55,14 @@ def rename_processes_hgg_rapidity(args):
     rename_processes_hgg_differentials(
         'suppliedInput/fromVittorio/differential_AbsRapidityNNLOPS_newBins_Nov28/Datacard_13TeV_differential_AbsRapidityNNLOPS_newBins_combination.txt'
         )
+
+# Fixes to INC workspaces
+@flag_as_option
+def rename_processes_hgg_INC(args):
+    rename_processes_hgg_differentials(
+        'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt',
+        )
+
 
 #____________________________________________________________________
 # combineCards
@@ -610,6 +616,13 @@ def rename_processes_hgg_differentials(
     out = sub(
         r'(\W)InsideAcceptance_genJet2p5Pt0_([m\d]+)p0_(\d+)p0(\W)',
         r'\1smH_PTJ_\2_\3\4',
+        out
+        )
+
+    # INC renaming May09
+    out = sub(
+        r'(\W)InsideAcceptance_genInclusive_0p0_2p0(\W)',
+        r'\1smH_INC_INC\2',
         out
         )
 

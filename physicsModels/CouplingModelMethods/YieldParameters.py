@@ -10,7 +10,8 @@ class YieldParameterContainer(Container):
     """docstring for YieldParameterContainer"""
     instances = []
     bkg_yieldParameter = None
-    debug = True
+    # debug = True
+    debug = False
 
     @staticmethod
     def all_ggH_yieldParameters():
@@ -61,8 +62,18 @@ class YieldParameterContainer(Container):
             else:
                 raise RuntimeError( 'Process {0} has no clearly defined range'.format(process) )
         if self.debug:
-            print 'get_range_from_process called with process = {0}; left = {1}, right = {2}'.format(process, left, right)
+            print '\nget_range_from_process called with process = {0}; left = {1}, right = {2}'.format(process, left, right)
         return ( left, right )
+
+    def get_match_for_binproc(self, binproc):
+        if binproc.is_ggH:
+            return self.search_yieldParameter_in_left_right(binproc.left, binproc.right, self.ggH_yieldParameters)
+        elif binproc.is_xH:
+            return self.search_yieldParameter_in_left_right(binproc.left, binproc.right, self.xH_yieldParameters)
+        else:
+            raise NotImplementedError(
+                'Passed binproc is neither .is_ggH or .is_xH, for which getting a yieldParameter is not implemented.'
+                )
 
     def search_yieldParameter_in_left_right(self, left, right, some_list):
         if right is None:
@@ -183,6 +194,19 @@ def defineYieldParameters(self):
     # ======================================
     # Add modifiers to these yield parameters
 
+    if self.BRs_kappa_dependent or self.do_BR_uncertainties or self.freely_floating_BRs:
+        # Implementation of BR uncertainties;
+        # Not combinable with the couplingDependentBRs option!
+        scaleParameter = {
+            'hgg' : 'brmodifier_hgg',
+            'hzz' : 'brmodifier_hzz',
+            'hbb' : 'brmodifier_hbb' ,
+            }
+        for decayChannel in self.get_decay_channels():
+            yieldParameterContainer = self.yieldParameters_per_decay_channel[decayChannel]
+            for ggH_yieldParameter in yieldParameterContainer.ggH_yieldParameters:
+                ggH_yieldParameter.add_variable(scaleParameter[decayChannel])
+
     if self.MakeLumiScalable:
         self.modelBuilder.doVar('lumiScale[8.356546]')
         # Luminosity modifier works on all parameters
@@ -195,9 +219,9 @@ def defineYieldParameters(self):
         for OutsideAcceptance_yieldParameter in YieldParameterContainer.all_OutsideAcceptance_yieldParameters():
             OutsideAcceptance_yieldParameter.add_variable('lumiScale')
 
-    if not(self.ReweightedXS is None):
+    if not(self.SMXS_of_input_ws is None):
         # Reweighting only ggH now
-        for expectedXS, rooParametrization in zip( self.ReweightedXS, expRooParametrizations ):
+        for expectedXS, rooParametrization in zip( self.SMXS_of_input_ws, expRooParametrizations ):
             reweightor = RooFactoryInterface.RooFormulaVar( rooParametrization.name.replace('parametrization','reweightor') )
             # reweightor.formula = '{0}/{1}'.format(expectedXS, rooParametrization.SMXS)
             reweightor.formula = '{0}/{1}'.format(rooParametrization.SMXS, expectedXS)
@@ -252,58 +276,6 @@ def defineYieldParameters(self):
         self.modelBuilder.doVar('{0}[{1}]'.format(name, SMXS))
         SMXSset.append(name)
     self.modelBuilder.out.defineSet('SMXS', ','.join([p for p in SMXSset]))
-
-
-
-@flag_as_method
-def getYieldScale( self, bin, process ):
-
-    if self.verbose:
-        print 'Getting scale for process = {0:21}, bin = {1}'.format( process, bin )
-
-    # Retrieve the right YieldParameterContainer
-    if self.distinguish_between_decay_channels():
-        match = re.match( r'(h[a-zA-Z]+)_', bin )
-        if not match:
-            raise RuntimeError( 'Cannot determine decay channel for bin {0}'.format(bin) )
-        decayChannel = match.group(1)
-        yieldParameterContainer = self.yieldParameters_per_decay_channel[decayChannel]
-    else:
-        yieldParameterContainer = self.yieldParameters
-
-
-    # bkg
-    if not self.DC.isSignal[process]:
-        yieldParameter = yieldParameterContainer.bkg_yieldParameter.name
-
-    # OutsideAcceptance
-    elif 'OutsideAcceptance' in process:
-        yieldParameter = yieldParameterContainer.OutsideAcceptance_yieldParameter.name
-
-    # signal or xH
-    else:
-        if self.splitggH and 'xH' in process:
-            yieldParameter = yieldParameterContainer.find_corresponding_xH_yieldParameter(process)
-        elif self.FitOnlyNormalization:
-            yieldParameter = 'globalTotalXSmodifier'
-        elif ( self.splitggH and 'ggH' in process ) or ( 'smH' in process ):
-            yieldParameter = yieldParameterContainer.find_corresponding_ggH_yieldParameter(process)
-        else:
-            raise RuntimeError('Failure for process \'{0}\': Production process is not \'xH\', \'ggH\' or \'smH\''.format(process))
-
-    if self.verbose:
-        print '    --> Scaling with \'{0}\''.format( yieldParameter )
-        
-        # print '          test print:'
-        # try:
-        #     self.modelBuilder.out.var(yieldParameter).Print()
-        # except ReferenceError:
-        #     try:
-        #         self.modelBuilder.out.function(yieldParameter).Print()
-        #     except ReferenceError:
-        #         print '          yieldParameter \'{0}\' does not seem to be in the ws!!'.format(yieldParameter)
-
-    return yieldParameter
 
 
 @flag_as_method
@@ -402,23 +374,6 @@ def get_binStr(self, leftBound, rightBound):
             )
 
     return binStr
-
-@flag_as_method
-def distinguish_between_decay_channels(self):
-    if self.FitBR:
-        return True
-    return False
-
-@flag_as_method
-def get_decay_channels(self):
-    decayChannels = []
-    for b in self.DC.bins:
-        match = re.match( r'(h[a-zA-Z]+)_', b )
-        if match:
-            decayChannels.append(match.group(1))
-    decayChannels = list(set(decayChannels))
-
-    return decayChannels
 
 
 def find_contained_theory_bins(left, right, theory_bin_boundaries):

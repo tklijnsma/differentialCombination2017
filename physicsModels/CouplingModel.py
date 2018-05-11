@@ -9,7 +9,8 @@ methodhandler = MethodHandler([
     'physicsModels.CouplingModelMethods.Parametrization',
     'physicsModels.CouplingModelMethods.CouplingDependentBRs',
     'physicsModels.CouplingModelMethods.TheoryUncertainties',
-    'physicsModels.CouplingModelMethods.OtherStudies',
+    'physicsModels.CouplingModelMethods.getYieldScale',
+    # 'physicsModels.CouplingModelMethods.OtherStudies',
     ])
 
 class CouplingModel( PhysicsModel ):
@@ -32,6 +33,10 @@ class CouplingModel( PhysicsModel ):
         self.isOnlyHgg = False
         self.isOnlyHZZ = False
 
+        self.do_BR_uncertainties  = False # Meant for the non-scaling
+        self.BRs_kappa_dependent  = False
+        self.freely_floating_BRs  = False
+
         self.includeLinearTerms   = False
         self.splitggH             = False
         self.MakeLumiScalable     = False
@@ -39,8 +44,11 @@ class CouplingModel( PhysicsModel ):
         self.ProfileTotalXS       = False
         self.FitOnlyNormalization = False
         self.FitRatioOfBRs        = False
-        self.DoBRUncertainties    = False
-        self.ReweightedXS         = None
+        # self.DoBRUncertainties    = False
+
+        self.SMXS_of_input_ws     = None
+
+        self.inc_xs_uncertainty   = None
 
         self.theoryUncertaintiesPassed = False
         self.correlationMatrixPassed   = False
@@ -86,20 +94,30 @@ class CouplingModel( PhysicsModel ):
                 self.covarianceMatrix = self.readCorrelationMatrixFile( optionValue )
                 self.covarianceMatrixPassed = True
 
+            elif optionName == 'inc_xs_uncertainty':
+                self.inc_xs_uncertainty = float(optionValue)
+
             elif optionName == 'lumiScale':
                 self.MakeLumiScalable = eval(optionValue)
-            elif optionName == 'ReweightCrossSections':
-                self.ReweightedXS = [ float(v) for v in optionValue.split(',') ]
+            elif optionName == 'SMXS_of_input_ws':
+                self.SMXS_of_input_ws = [ float(v) for v in optionValue.split(',') ]
             elif optionName == 'FitBR':
                 self.FitBR = eval(optionValue)
             elif optionName == 'ProfileTotalXS':
                 self.ProfileTotalXS = eval(optionValue)
-            elif optionName == 'FitOnlyNormalization':
+            elif optionName == 'FitOnlyTotalXS':
                 self.FitOnlyNormalization = eval(optionValue)
             elif optionName == 'FitRatioOfBRs':
                 self.FitRatioOfBRs = eval(optionValue)
-            elif optionName == 'DoBRUncertainties':
-                self.DoBRUncertainties = eval(optionValue)
+            # elif optionName == 'DoBRUncertainties':
+            #     self.DoBRUncertainties = eval(optionValue)
+
+            elif optionName == 'BRs_kappa_dependent':
+                self.BRs_kappa_dependent = eval(optionValue)
+            elif optionName == 'do_BR_uncertainties':
+                self.do_BR_uncertainties = eval(optionValue)
+            elif optionName == 'freely_floating_BRs':
+                self.freely_floating_BRs = eval(optionValue)
 
             elif optionName == 'theory':
                 # Syntax: --PO theory=[ct=1,cg=1,file=some/path/.../] , brackets optional
@@ -148,9 +166,12 @@ class CouplingModel( PhysicsModel ):
         # Minor checks before continuing
         if self.FitBR and self.FitRatioOfBRs:
             raise self.CouplingModelError( 'Options FitBR and FitRatioOfBRs are exclusive!' )
-        if not(self.ReweightedXS is None):
-            if not( len(self.ReweightedXS) == len(self.manualExpBinBoundaries)-1 ):
-                raise self.CouplingModelError('Dim mismatch: len(ReweightCrossSections)={0}, but len(binBoundaries)-1={1}'.format(len(self.ReweightedXS), len(self.manualExpBinBoundaries)-1 ))
+        if not(self.SMXS_of_input_ws is None) and not self.FitOnlyNormalization:
+            if not( len(self.SMXS_of_input_ws) == len(self.manualExpBinBoundaries)-1 ):
+                raise self.CouplingModelError('Dim mismatch: len(ReweightCrossSections)={0}, but len(binBoundaries)-1={1}'.format(len(self.SMXS_of_input_ws), len(self.manualExpBinBoundaries)-1 ))
+
+        if self.BRs_kappa_dependent and not(self.do_BR_uncertainties):
+            print 'WARNING: Using kappa-dependent BRs, but no uncertainty associated with the BRs!'
 
 
     def doParametersOfInterest(self):
@@ -159,23 +180,33 @@ class CouplingModel( PhysicsModel ):
 
         if self.FitOnlyNormalization:
             self.makeParametrizationsFromTheory()
+
+            if self.BRs_kappa_dependent:
+                # Uncertainties depend on do_BR_uncertainties flag!
+                self.implement_scaling_BRs()
+
             self.MakeTotalXSExpressions()
-            self.modelBuilder.doVar('bkg_modifier[1.0]')
-            self.modelBuilder.out.var('bkg_modifier').setConstant(True)
-            self.modelBuilder.doVar('hgg_xH_modifier[1.0]')
-            self.modelBuilder.out.var('hgg_xH_modifier').setConstant(True)
-            self.modelBuilder.doVar('hzz_xH_modifier[1.0]')
-            self.modelBuilder.out.var('hzz_xH_modifier').setConstant(True)
             self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
+
+
         else:
             self.figureOutBinning()
             self.makeParametrizationsFromTheory()
-            if self.FitBR:
-                self.MakeWidthExpressions()
-            if self.ProfileTotalXS:
-                self.MakeTotalXSExpressions()
-            if self.FitRatioOfBRs:
-                self.MakeRatioOfBRsExpressions()
+
+            if self.freely_floating_BRs:
+                self.implement_freely_floating_BRs()
+            elif self.BRs_kappa_dependent:
+                # Uncertainties here depend on do_BR_uncertainties flag!
+                self.implement_scaling_BRs()
+            elif self.do_BR_uncertainties:
+                # If do_BR_uncertainties but not BRs_kappa_dependent, do the non-scaling
+                # so the BR uncertainties at least are implemented
+                self.implement_nonscaling_BR_uncertainties()
+
+            # Needs more thinking
+            # if self.ProfileTotalXS:
+            #     self.MakeTotalXSExpressions()
+
             self.defineYieldParameters()
             self.addTheoryUncertaintyNuisances()
 
@@ -247,6 +278,20 @@ class CouplingModel( PhysicsModel ):
                 line = '-' * 70,
                 text = text
                 )
+
+    def distinguish_between_decay_channels(self):
+        if self.FitBR or self.do_BR_uncertainties or self.BRs_kappa_dependent or self.freely_floating_BRs:
+            return True
+        return False
+
+    def get_decay_channels(self):
+        decayChannels = []
+        for b in self.DC.bins:
+            match = re.match( r'(h[a-zA-Z]+)_', b )
+            if match:
+                decayChannels.append(match.group(1))
+        decayChannels = list(set(decayChannels))
+        return decayChannels
 
     def BinIsHgg( self, bin ):
         # If the input is hardcoded to be only hzz or hgg:
