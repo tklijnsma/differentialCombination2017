@@ -79,6 +79,9 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True):
         crosssections_str = ','.join([str(v) for v in crosssections])
         t2ws.extra_options.append('--PO SMXS_of_input_ws={0}'.format(crosssections_str))
         t2ws.tags.append('reweighted')
+    else:
+        t2ws.tags.append('unreweighted')
+
     if apply_theory_uncertainties:
         add_theory_uncertainties(t2ws)
     return t2ws
@@ -111,10 +114,13 @@ def base_t2ws_fitOnlyTotalXS(args, apply_theory_uncertainties=True, apply_reweig
         obs.drop_bins_up_to_value(yukawa_exp_binning[-1]+1.0)
         inc_smxs = obs.inclusive_crosssection()
         t2ws.extra_options.append('--PO SMXS_of_input_ws={0}'.format(inc_smxs))
+        t2ws.tags.append('reweighted')
+    else:
+        t2ws.tags.append('unreweighted')
 
     if apply_theory_uncertainties:
-        # 5.5% approximately, not very accurately calculated.
-        t2ws.extra_options.append('--PO inc_xs_uncertainty={0}'.format(0.055))
+        # 0.0795 based on theory_uncertainty_on_inclusive_xs_yukawa (crosschecks.py)
+        t2ws.extra_options.append('--PO inc_xs_uncertainty={0}'.format(0.079528392665))
 
     return t2ws
 
@@ -247,6 +253,17 @@ def t2ws_Yukawa_noReweighting(args):
     t2ws.tags.append('nominal')
     t2ws.run()
 
+#____________________________________________________________________
+
+@flag_as_option
+def t2ws_Yukawa_scalingbbH(args):
+    # Basically nominal, but force asimov and hzz
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args)
+    t2ws.extra_options.append('--PO add_scaling_bbH=True')
+    t2ws.tags.append('scalingbbH')
+    t2ws.run()
+
 
 # Scans for Giovanni
 @flag_as_option
@@ -258,18 +275,59 @@ def t2ws_Yukawa_G0A(args):
     t2ws.run()
 
 @flag_as_option
+def t2ws_Yukawa_G0A_unreweighted(args):
+    # This is actually not interesting
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args, apply_reweighting=False)
+    t2ws.tags.append('G0A')
+    t2ws.run()
+
+@flag_as_option
 def t2ws_Yukawa_G0B(args):
     args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
     t2ws = base_t2ws_fitOnlyTotalXS(args)
     t2ws.tags.append('G0B')
     t2ws.run()
 
+@flag_as_option
+def t2ws_Yukawa_G0A_reweighted_scaledByMuTotalXS(args):
+    # Basically nominal, but force asimov and hzz
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args)
+    t2ws.tags.append('G0A')
+    t2ws.tags.append('scaledByMuTotalXS')
+    t2ws.extra_options.append('--PO scale_with_mu_totalXS=True')
+    t2ws.run()
+
+
+@flag_as_option
+def t2ws_Yukawa_G0B_reweighted(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws_fitOnlyTotalXS(args, apply_reweighting=True)
+    t2ws.tags.append('G0B')
+    t2ws.run()
 
 @flag_as_option
 def t2ws_Yukawa_G1A(args):
     args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args, apply_reweighting=False)
+    t2ws.tags.append('G1A')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_G1A_unreweighted(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
     t2ws = base_t2ws(args)
     t2ws.tags.append('G1A')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_G1B_reweighted(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws_fitOnlyTotalXS(args, apply_reweighting=True)
+    t2ws.tags.append('G1B')
     t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
     t2ws.run()
 
@@ -289,6 +347,35 @@ def t2ws_Yukawa_G2A(args):
     t2ws.extra_options.append('--PO freely_floating_BRs=True')
     t2ws.run()
 
+
+@flag_as_option
+def t2ws_Yukawa_G1A_reweighted_noTheoryUnc(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args, apply_reweighting=True, apply_theory_uncertainties=False)
+    t2ws.tags.append('G1A')
+    t2ws.tags.append('noTheoryUnc')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_G1B_reweighted_noTheoryUnc(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws_fitOnlyTotalXS(args, apply_reweighting=True, apply_theory_uncertainties=False)
+    t2ws.tags.append('G1B')
+    t2ws.tags.append('noTheoryUnc')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_G1A_reweighted_noTheoryUnc_scaledByMuTotalXS(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    t2ws = base_t2ws(args, apply_reweighting=True, apply_theory_uncertainties=False)
+    t2ws.tags.append('G1A')
+    t2ws.tags.append('noTheoryUnc')
+    t2ws.tags.append('scaledByMuTotalXS')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.extra_options.append('--PO scale_with_mu_totalXS=True')
+    t2ws.run()
 
 # 
 @flag_as_option

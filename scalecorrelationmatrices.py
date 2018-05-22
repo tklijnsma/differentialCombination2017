@@ -15,6 +15,7 @@ from OptionHandler import flag_as_option, flag_as_parser_options
 # import LatestBinning
 
 import differentials
+import LatestPaths
 
 import logging
 import copy
@@ -25,7 +26,7 @@ random.seed(1002)
 import sys
 sys.path.append('src')
 # import TheoryFileInterface
-import TheoryCommands
+# import TheoryCommands
 
 # from time import strftime
 # datestr = strftime('%b%d')
@@ -44,7 +45,7 @@ def scalecorrelations_parser_options(parser):
 def top_scalecorrelations(args):
     variations = differentials.theory.theory_utils.FileFinder(
         ct=1.0, cg=0.0, cb=1.0,
-        directory='out/theories_Mar05_tophighpt/'
+        directory=LatestPaths.theory.top.filedir
         ).get()
     sm = [v for v in variations if v.muR==1.0 and v.muF==1.0 and v.Q==1.0][0]
 

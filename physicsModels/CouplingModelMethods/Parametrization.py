@@ -1,6 +1,7 @@
 from physicsModels.MethodHandler import flag_as_method
 import physicsModels.RooFactoryInterface as RooFactoryInterface
 import numpy, itertools, sys
+from math import pi
 
 @flag_as_method
 def makeParametrizationsFromTheory(self):
@@ -33,7 +34,10 @@ def MakeTotalXSExpressions(self):
     self.chapter('Starting model.MakeTotalXSExpressions()')
     self.ParamB.import_expr_for_totalXS()
     self.ParamB.import_expr_for_totalXS_SM()
-    if self.ProfileTotalXS:
+
+    if self.scale_with_mu_totalXS:
+        self.ParamB.import_totalXS_modifier()
+    elif self.ProfileTotalXS:
         self.ParamB.import_floating_totalXS_modifier()
     elif self.FitOnlyNormalization:
         self.ParamB.import_totalXS_modifier()
@@ -189,6 +193,29 @@ class ParametrizationBuilder(object):
                     )
                 )
 
+    def import_radial_ktkg(self):
+        self.modelBuilder.doVar(
+            'theta[0.0,-0.75*{pi},0.25*{pi}]'
+            .format(pi)
+            )
+        self.modelBuilder.doVar(
+            'r[1.0,0.0,5.0]'
+            )
+        self.modelBuilder.factory_(
+            'expr::ct( "@0*Cos(@1)", r, theta )'
+            )
+        self.modelBuilder.factory_(
+            'expr::cg( "@0*Sin(@1)", r, theta )'
+            )
+
+        print '\nImported couplings ct and cg as dependent on radial variables theta and r:'
+        self.modelBuilder.out.var('theta').Print()
+        self.modelBuilder.out.var('r').Print()
+        self.modelBuilder.out.function('ct').Print()
+        self.modelBuilder.out.function('cg').Print()
+        sys.exit()
+
+
     def get_coupling_matrix(self):
         # Calculate the coupling matrix
         coupling_mat = []
@@ -210,8 +237,10 @@ class ParametrizationBuilder(object):
         inverse_coupling_matrix = self.get_inverse_coupling_matrix()
         # Parametrization for each bin
         parametrizations = []
+
         # Underflow (left extrapolation); always zero
         parametrizations.append( [ 0. for i in xrange(self.n_coefficients) ] )
+        
         for i in xrange(self.n_bins):
             # Column vector of ratios per theory in bin i
             ratios = numpy.array([ [theory.ratios[i]] for theory in self.theories ])
@@ -250,16 +279,24 @@ class ParametrizationBuilder(object):
             names_in_set.append( 'theoryBinBound{0}'.format(i) )
         self.modelBuilder.out.defineSet('theoryBinBoundaries', ','.join(names_in_set))
 
-
     def import_expr_for_totalXS(self):
         inc_xs_per_bin = []
+
+        # Remember the added underflow parametrization
+        underflow_bin_width = self.bin_boundaries[0] - 0.0
+        self.modelBuilder.factory_(
+            'expr::IncXS_underflow( "{0}*{1}*@0", parametrization0 )'
+            .format(underflow_bin_width, 0.0) # or a better guess than zero
+            )
+        inc_xs_per_bin.append('IncXS_underflow')
+
         for i in xrange(self.n_bins):
             binWidth = self.bin_boundaries[i+1] - self.bin_boundaries[i]
             self.modelBuilder.factory_(
                 'expr::IncXS{0}( "{1}*{2}*@0", parametrization{0} )'
-                .format(i, binWidth, self.SM.crosssection[i])
+                .format(i+1, binWidth, self.SM.crosssection[i])
                 )
-            inc_xs_per_bin.append( 'IncXS{0}'.format(i) )
+            inc_xs_per_bin.append( 'IncXS{0}'.format(i+1) )
         self.modelBuilder.factory_('sum::totalXS( {0} )'.format(','.join(inc_xs_per_bin)))
         self.modelBuilder.out.function('totalXS').Print()
 
@@ -278,12 +315,14 @@ class ParametrizationBuilder(object):
         # Useful for letting the totalXS be profiled in the fit
         self.modelBuilder.doVar( 'r_totalXS[1.0,0.0,3.0]' )
         self.modelBuilder.out.var('r_totalXS').Print()
-        self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS_SM, totalXS )' )
+        # self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS_SM, totalXS )' )
+        self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0*@1/@2", r_totalXS, totalXS, totalXS_SM )' )
         self.modelBuilder.out.function('totalXSmodifier').Print()
 
     def import_totalXS_modifier(self):
         # Useful for fitting only the normalization, and dropping shape information
-        self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0/@1", totalXS_SM, totalXS )' )
+        # self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0/@1", totalXS_SM, totalXS )' )
+        self.modelBuilder.factory_( 'expr::totalXSmodifier( "@0/@1", totalXS, totalXS_SM )' )
         self.modelBuilder.out.function('totalXSmodifier').Print()
 
 

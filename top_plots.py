@@ -32,6 +32,36 @@ top_x_max = 5.0
 top_y_min = -0.40
 top_y_max = 0.40
 
+
+#____________________________________________________________________
+@flag_as_option
+def multicont_Top_scalingttH(args):
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    scans = []
+    
+    combWithHbb = differentials.scans.Scan2D('combWithHbb', x_coupling, y_coupling, scandir=LatestPaths.scan.top.reweighted.asimov.combWithHbb)
+    combWithHbb.color = 2
+    combWithHbb.read()
+    scans.append(combWithHbb)
+
+    combWithHbb_scalingttH = differentials.scans.Scan2D('combWithHbb_scalingttH', x_coupling, y_coupling, scandir='out/Scan_May18_Top_combWithHbb_scalingttH_asimov')
+    combWithHbb_scalingttH.title = 'incl. scaling ttH'
+    combWithHbb_scalingttH.color = 1
+    combWithHbb_scalingttH.read()
+    scans.append(combWithHbb_scalingttH)
+    
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Top_scalingttH' + ('_asimov' if args.asimov else ''),
+        scans,
+        x_min=top_x_min, x_max=top_x_max, y_min=top_y_min, y_max=top_y_max,
+        )
+    # plot.legend.SetNColumns(2)
+    # plot.only_1sigma_contours = True
+    plot.draw()
+
+
+#____________________________________________________________________
+
 @flag_as_option
 def preapproval_plots_Top(args):
     points_on_contour_Top(args)

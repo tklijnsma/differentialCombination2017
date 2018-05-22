@@ -16,7 +16,8 @@ card.pth_ggH.hgg = 'suppliedInput/fromVittorio/pT_newBins_Feb28/Datacard_13TeV_d
 card.pth_ggH.hzz = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/hzz4l_comb_13TeV_xs_processesRenumbered.txt'
 card.pth_ggH.hbb = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
 card.pth_ggH.combination = 'suppliedInput/combination_pth_ggH_Mar01.txt'
-card.pth_ggH.combWithHbb = 'suppliedInput/combWithHbb_pth_ggH_Mar02.txt'
+# card.pth_ggH.combWithHbb = 'suppliedInput/combWithHbb_pth_ggH_Mar02.txt'
+card.pth_ggH.combWithHbb = 'suppliedInput/combWithHbb_pth_ggH_Mar02_xHNuisPar.txt'
 
 card.pth_smH = AttrDict()
 card.pth_smH.hgg = card.pth_ggH.hgg # scale ggH/xH by smH!
@@ -51,7 +52,8 @@ card.inclusive.combination = 'suppliedInput/combination_inclusive_May09.txt'
 card.yukawa = AttrDict()
 card.yukawa.hgg = 'suppliedInput/Yukawa_hgg_pth_ggH_Mar08.txt'
 card.yukawa.hzz = 'suppliedInput/Yukawa_hzz_pth_ggH_Mar08.txt'
-card.yukawa.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt'
+# card.yukawa.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt'
+card.yukawa.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08_xHNuisPar.txt'
 
 card.top = AttrDict()
 card.top.nominal = AttrDict()
@@ -71,7 +73,8 @@ ws.pth_ggH.hgg = 'out/workspaces_Mar02/ws_pth_ggH_hgg.root'
 ws.pth_ggH.hzz = 'out/workspaces_Feb28/ws_pth_ggH_hzz.root'
 ws.pth_ggH.hbb = 'out/workspaces_Mar02/ws_pth_ggH_hbb.root'
 ws.pth_ggH.combination = 'out/workspaces_Mar01/ws_pth_ggH_combination.root'
-ws.pth_ggH.combWithHbb = 'out/workspaces_Mar02/ws_pth_ggH_combWithHbb.root'
+# ws.pth_ggH.combWithHbb = 'out/workspaces_Mar02/ws_pth_ggH_combWithHbb.root'
+ws.pth_ggH.combWithHbb = 'out/workspaces_May17/ws_pth_ggH_combWithHbb.root' # Contains a nuisance for xH
 
 ws.pth_smH = AttrDict()
 ws.pth_smH.hgg = 'out/workspaces_Mar14/ws_pth_smH_hgg.root'
@@ -145,9 +148,13 @@ ws.topctcb.lumiScale = 'out/workspaces_Apr11/combWithHbb_TopCtCb_reweighted_noBi
 # Theory
 
 theory.top = AttrDict()
-theory.top.filedir = 'out/derivedTheoryFiles_Dec07_TopHighPt'
-theory.top.correlation_matrix = 'out/correlationMatrices_Nov24_Top/corrMat_exp.txt'
-theory.top.uncertainties = 'out/correlationMatrices_Nov24_Top/errors_for_corrMat_exp.txt'
+# theory.top.filedir = 'out/derivedTheoryFiles_Dec07_TopHighPt'
+# theory.top.correlation_matrix = 'out/correlationMatrices_Nov24_Top/corrMat_exp.txt'
+# theory.top.uncertainties = 'out/correlationMatrices_Nov24_Top/errors_for_corrMat_exp.txt'
+theory.top.filedir = 'out/theories_May17_tophighpt'
+theory.top.correlation_matrix = ''
+theory.top.uncertainties = ''
+
 
 theory.yukawa = AttrDict()
 theory.yukawa.filedir = 'out/theories_Mar09_yukawa_summed'
@@ -168,17 +175,21 @@ scan.pth_ggH.observed.hgg = [ 'out/Scan_Mar02_pth_ggH_hgg', 'out/Scan_Mar14_pth_
 scan.pth_ggH.observed.hzz = [ 'out/Scan_Mar02_pth_ggH_hzz', 'out/Scan_Mar14_pth_ggH_hzz_rescan' ]
 scan.pth_ggH.observed.hbb = 'out/Scan_Mar02_pth_ggH_hbb'
 scan.pth_ggH.observed.combination = 'out/Scan_Mar02_pth_ggH_combination'
-scan.pth_ggH.observed.combWithHbb = [ 'out/Scan_Mar02_pth_ggH_combWithHbb', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_0' ]
-scan.pth_ggH.observed.combWithHbb_statonly = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly'
 scan.pth_ggH.observed.combination_statonly = 'out/Scan_Mar20_pth_ggH_combination_statonly'
+scan.pth_ggH.observed.combWithHbb_noxHunc = [ 'out/Scan_Mar02_pth_ggH_combWithHbb', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_0' ]
+scan.pth_ggH.observed.combWithHbb_statonly_noxHunc = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly'
+scan.pth_ggH.observed.combWithHbb = 'out/Scan_May17_pth_ggH_combWithHbb'
+scan.pth_ggH.observed.combWithHbb_statonly = 'out/Scan_May17_pth_ggH_combWithHbb_statonly'
 scan.pth_ggH.asimov = AttrDict()
 scan.pth_ggH.asimov.hgg = [ 'out/Scan_Mar02_pth_ggH_hgg_asimov' ]
 scan.pth_ggH.asimov.hzz = [ 'out/Scan_Mar02_pth_ggH_hzz_asimov', 'out/Scan_Mar14_pth_ggH_hzz_rescan_asimov' ]
 scan.pth_ggH.asimov.hbb = 'out/Scan_Mar02_pth_ggH_hbb_asimov'
 scan.pth_ggH.asimov.combination = 'out/Scan_Mar02_pth_ggH_combination_asimov'
-scan.pth_ggH.asimov.combWithHbb = [ 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_asimov', 'out/Scan_Mar07_pth_ggH_combWithHbb_asimov' ]
-scan.pth_ggH.asimov.combWithHbb_statonly = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly_asimov'
 scan.pth_ggH.asimov.combination_statonly = 'out/Scan_Mar20_pth_ggH_combination_statonly_asimov'
+scan.pth_ggH.asimov.combWithHbb_noxHunc = [ 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_asimov', 'out/Scan_Mar07_pth_ggH_combWithHbb_asimov' ]
+scan.pth_ggH.asimov.combWithHbb_statonly_noxHunc = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly_asimov'
+# scan.pth_ggH.asimov.combWithHbb = [ 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_asimov', 'out/Scan_Mar07_pth_ggH_combWithHbb_asimov' ]
+# scan.pth_ggH.asimov.combWithHbb_statonly = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly_asimov'
 
 scan.pth_smH = AttrDict()
 scan.pth_smH.observed = AttrDict()

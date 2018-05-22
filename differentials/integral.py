@@ -40,7 +40,15 @@ class Integrator(object):
     def __init__(self, bin_boundaries, values):
         super(Integrator, self).__init__()
         if len(bin_boundaries)-1 != len(values):
-            raise ValueError('Length of given input lists do not match')
+            raise ValueError(
+                'Length of given input lists do not match'
+                '\nTried to initialize with {0} bin boundaries and {1} values'
+                '\nbin boundaries: {2}\nvalues: {3}'
+                .format(
+                    len(bin_boundaries), len(values),
+                    bin_boundaries, values
+                    )
+                )
         self.bin_boundaries = bin_boundaries
         self.values = values
         self.n_bins = len(self.bin_boundaries)-1

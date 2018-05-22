@@ -21,6 +21,7 @@ class T2WS(object):
         super(T2WS, self).__init__()
         self.name = name
         self.card = card
+        self.ignore_xH = True
 
         self.model_file = self.default_model_file
         if not(model_file is None):
@@ -80,6 +81,7 @@ class T2WS(object):
         processes = []
         for process, integer in zip(process_lines[0].split()[1:], process_lines[1].split()[1:]):
             if int(integer) <= 0 and not 'OutsideAcceptance' in process:
+                if self.ignore_xH and process.startswith('xH'): continue
                 processes.append(process)
         processes = list(set(processes))
         logging.debug('Determined list of processes from {0}: {1}'.format(self.card, processes))

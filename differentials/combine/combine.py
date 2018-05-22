@@ -90,12 +90,16 @@ class CombineConfig(object):
         self.freezeNuisances.append(name)
 
     def set_parameter_range(self, name, left, right):
-        # First check if parameter was already in the ranges somewhere (if so, it should be overridden)
+        self.del_parameter_range(name)
+        self.PhysicsModelParameterRanges.append('{0}={1},{2}'.format(name, left, right))
+
+    def del_parameter_range(self, name):
         for i, parstr in enumerate(self.PhysicsModelParameterRanges):
             if parstr.startswith(name + '='):
                 self.PhysicsModelParameterRanges.pop(i)
                 break
-        self.PhysicsModelParameterRanges.append('{0}={1},{2}'.format(name, left, right))
+
+
 
 
 #____________________________________________________________________

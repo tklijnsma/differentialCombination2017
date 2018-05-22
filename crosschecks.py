@@ -13,7 +13,330 @@ import differentialutils
 from differentials.plotting.canvas import c
 
 
+
 #____________________________________________________________________
+@flag_as_option
+def check_fiducial_vs_inclusive_shape(args):
+    # LatestBinning.shape_pth_smH
+    # LatestBinning.shape_pth_ggH
+    # LatestBinning.shape_pth_xH
+
+    auc = AcceptanceUncertaintyCalculator('suppliedInput/fromVittorio/scaleWeightVariationFullPhaseSpaceCombination_Pt.npz')
+    smH = auc.get_central_shape()
+
+    print LatestBinning.shape_pth_smH
+    print LatestBinning.shape_pth_ggH
+
+
+
+
+
+#____________________________________________________________________
+@flag_as_option
+def xH_systematic_uncertainty(args):
+    
+    ggH = LatestBinning.obs_pth_ggH
+    xH  = LatestBinning.obs_pth_xH
+
+    ggH.Print()
+
+    print
+
+    xH.Print()
+
+    print 'inclusive xH (pb):', LatestBinning.YR4_xH
+    print 'Unc on inclusive xH (pb): {0} (fraction: {1:.4f} )'.format(
+        LatestBinning.xH_unc_inclusive, LatestBinning.xH_unc_inclusive_fraction
+        )
+
+
+#____________________________________________________________________
+
+class CouplingDependenceOfFunction(object):
+    """docstring for CouplingDependenceOfFunction"""
+    def __init__(self):
+        super(CouplingDependenceOfFunction, self).__init__()
+        self.n_points = 100
+
+    def get_x_y(self, x_var, y_func, x_min=-10., x_max=10.):
+        x_axis = self.get_axis(self.n_points, x_min, x_max)
+        y_axis = []
+        init_val_x_var = x_var.getVal()
+        for x in x_axis:
+            x_var.setVal(x)
+            y_axis.append(y_func.getVal())
+        x_var.setVal(init_val_x_var)
+        return x_axis, y_axis
+
+    def get_axis(self, n_points, x_min, x_max):
+        dx = (x_max-x_min) / (n_points-1)
+        return [ x_min + i*dx for i in xrange(n_points) ]
+
+    def to_graph(self, x_axis, y_axis, title=''):
+        g = differentials.plotting.pywrappers.Graph(
+            differentials.plotting.plotting_utils.get_unique_rootname(),
+            title,
+            x_axis, y_axis
+            )
+        return g
+
+    def get_x_y_graph(self, x_var, y_func, x_min=-10., x_max=10.):
+        x_axis, y_axis = self.get_x_y(x_var, y_func, x_min, x_max)
+        return self.to_graph(x_axis, y_axis, '{0}({1})'.format(y_func.GetTitle(), x_var.GetTitle()) )
+
+
+@flag_as_option
+def plot_mu_parabolas(args):
+    ws = 'out/workspaces_May16/combination_Yukawa_reweighted_G1A_noTheoryUnc_scaledByMuTotalXS.root'
+    w = differentials.core.get_ws(ws)
+
+    mu_inc_unreweighted = w.function('totalXSmodifier')
+    kb = w.var('kappab')
+    kc = w.var('kappac')
+
+
+    calc = CouplingDependenceOfFunction()
+    g_kb = calc.get_x_y_graph(kb, mu_inc_unreweighted)
+    g_kc = calc.get_x_y_graph(kc, mu_inc_unreweighted)
+
+    plot = differentials.plotting.plots.QuickPlot(
+        'xy_' + mu_inc_unreweighted.GetTitle(),
+        x_min = -10., x_max = 10., y_min = 1., y_max = 3.
+        )
+    plot.x_title = '#kappa_{x}'
+    plot.y_title = mu_inc_unreweighted.GetTitle()
+    plot.add(g_kb, 'repr_basic_line')
+    plot.add(g_kc, 'repr_basic_line')
+    plot.draw()
+    plot.wrapup()
+
+
+@flag_as_option
+def crosscheck_htt_kappat_scaling(args):
+    exp_binning = LatestBinning.binning_pth
+    n_bins = len(exp_binning)-1
+
+    coupling_variations = differentials.theory.theory_utils.FileFinder(
+        cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.top.filedir
+        ).get()
+    sm = [ v for v in coupling_variations if v.ct==1.0 and v.cg==0.0 ][0]
+    coupling_variations.pop(coupling_variations.index(sm))
+
+    parametrization = differentials.parametrization.Parametrization()
+    parametrization.parametrize_by_matrix_inversion = True
+    parametrization.do_linear_terms = False
+    parametrization.c1_name = 'ct'
+    parametrization.c2_name = 'cg'
+    parametrization.c2_SM   = 0.0
+    for v in coupling_variations[:6]:
+        parametrization.add_variation(v.ct, v.cg, v.crosssection)
+    parametrization.parametrize()
+    parametrization.make_rebinner(sm.binBoundaries, exp_binning)
+
+
+    # Assume ttH shape is the same
+    # fraction_ttH_xH = LatestBinning.YR4_ttH / LatestBinning.YR4_xH
+    # smxs_ttH = [ fraction_ttH_xH * xs for xs in parametrization.evaluate(1.0, 0.0) ]
+    # smxs_ttH = [ s * LatestBinning.YR4_ttH for s in LatestBinning.shape_pth_xH ]
+    smxs_ttH = LatestBinning.obs_pth_ttH.crosssection()
+
+    # # Check at SM
+    # smxs_ggH = parametrization.get_xs_exp_integrated_per_bin(1., 0.)
+    # print sum(smxs_ttH), LatestBinning.YR4_ttH
+    # print sum(smxs_ggH), LatestBinning.YR4_ggF_n3lo
+    # for i in xrange(n_bins):
+    #     r = (
+    #         'bin {0}, left = {1:<6.1f}, smxs_ttH = {2:<7.4f}, smxs_ggH = {3:<7.4f}'
+    #         .format(
+    #             i, exp_binning[i], smxs_ttH[i], smxs_ggH[i]
+    #             )
+    #         )
+    #     print r
+    # sys.exit()
+
+    
+    # Function that calculates the fraction ttH / ggH per bin
+    def fraction_ttH(ct, cg, verbose=True):
+        r = []
+        xs_ggH = parametrization.get_xs_exp_integrated_per_bin(ct, cg)
+        if verbose: print '\nct = {0:5.2f}, cg={1:5.2f}'.format(ct, cg)
+        for i in xrange(n_bins):
+            ttH = ct*ct * smxs_ttH[i]
+            ggH = xs_ggH[i]
+            r.append(ttH/ggH)
+            if verbose:
+                print 'Bin {0}: ttH = {1:<8.4f}, ggH = {2:<8.4f}, fraction = {3}'.format(
+                    i, ttH, ggH, ttH/ggH
+                    )
+        return r
+
+    # observed:
+    # 0.6 < ct < 3.4
+    # -0.2 < cg < 0.04
+    ct_min = 0.6
+    ct_max = 3.4
+    cg_min = -0.2
+    cg_max = 0.04
+
+    points = [
+        ( 1.0, 0.0 ),
+        ( ct_max, 0.0 ),
+        ( ct_min, cg_max ),
+        ( ct_max, cg_min )
+        ]
+
+    histograms = []
+    for ct, cg in points:
+        histogram = differentials.plotting.pywrappers.Histogram(
+            differentials.plotting.plotting_utils.get_unique_rootname(),
+            '#kappa_{{t}} = {0}, c_{{g}} = {1}'.format(ct, cg),
+            exp_binning,
+            fraction_ttH(ct, cg),
+            # color = 2
+            )
+        histograms.append(histogram)
+
+    y_max = 1.25 * max([ H.y_max() for H in histograms ])
+
+    plot = differentials.plotting.plots.QuickPlot(
+        'ttH_fractions',
+        x_min = exp_binning[0], x_max=800.,
+        y_min = 0.0,
+        # y_max = 2.0,
+        y_max = y_max,
+        )
+    plot.x_title = 'p_{T} (GeV)'
+    plot.y_title = '(#kappa_{t}^{2} #sigma_{ttH}^{SM}) / #sigma_{ggH}(#kappa_{t},c_{g})'
+
+    for H in histograms:
+        plot.add(H, 'repr_basic_histogram')
+
+    plot.draw()
+    plot.wrapup()
+
+
+@flag_as_option
+def crosscheck_hbb_kappab_scaling(args):
+    coupling_variations = differentials.theory.theory_utils.FileFinder(
+        muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.yukawa.filedir
+        ).get()
+
+    sm = [ v for v in coupling_variations if v.kappab==1.0 and v.kappac==1.0 ][0]
+    coupling_variations.pop(coupling_variations.index(sm))
+
+    parametrization = differentials.parametrization.Parametrization()
+    parametrization.parametrize_by_matrix_inversion = True
+    parametrization.c1_name = 'kappab'
+    parametrization.c2_name = 'kappac'
+    for v in coupling_variations[:6]:
+        parametrization.add_variation(v.kappab, v.kappac, v.crosssection)
+    parametrization.parametrize()
+
+    # Assume bbH shape is the same
+    fraction_bbH_SM = LatestBinning.YR4_bbH / LatestBinning.YR4_ggF_n3lo
+    smxs_bbH = [ fraction_bbH_SM * xs for xs in parametrization.evaluate(1.0, 1.0) ]
+
+    n_bins = len(sm.crosssection)
+    # Function that calculates the fraction bbH / ggH per bin
+    def fraction_bbH(kappab, kappac):
+        r = []
+        xs_ggH = parametrization.evaluate(kappab, kappac)
+        for i in xrange(n_bins):
+            r.append(
+                kappab*kappab * smxs_bbH[i] / xs_ggH[i]
+                )
+        return r
+
+    # ( -2.1 < kb < 3.8 expected) 
+    # ( -8.6 < kc < 10.5 expected)
+    kb_min = -2.1
+    kb_max = 3.8
+    kc_min = -8.6
+    kc_max = 10.5
+
+    points = [
+        ( 1.0, 1.0 ),
+        ( 1.0, kc_min ),
+        ( 1.0, kc_max ),
+        ( kb_min, 1.0 ),
+        ( kb_max, 1.0 ),
+        ( kb_min, kc_min ),
+        ( kb_max, kc_max ),
+        ]
+
+    histograms = []
+    for kappab, kappac in points:
+        histogram = differentials.plotting.pywrappers.Histogram(
+            differentials.plotting.plotting_utils.get_unique_rootname(),
+            '#kappa_{{b}} = {0}, #kappa_{{c}} = {1}'.format(kappab, kappac),
+            sm.binBoundaries,
+            fraction_bbH(kappab, kappac),
+            # color = 2
+            )
+        histograms.append(histogram)
+
+    y_max = 1.25 * max([ H.y_max() for H in histograms ])
+
+    plot = differentials.plotting.plots.QuickPlot(
+        'bbH_fractions',
+        x_min = sm.binBoundaries[0], x_max=sm.binBoundaries[-1], y_min=0.0, y_max = y_max
+        )
+    plot.x_title = 'p_{T} (GeV)'
+    plot.y_title = '(#kappa_{b}^{2} #sigma_{bbH}^{SM}) / #sigma_{ggH}(#kappa_{b},#kappa_{c})'
+
+    for H in histograms:
+        plot.add(H, 'repr_basic_histogram')
+
+    plot.draw()
+    plot.wrapup()
+
+
+@flag_as_option
+def theory_uncertainty_on_inclusive_xs_yukawa(args):
+    get_inc_xs_uncertainty(LatestPaths.theory.yukawa.filedir_gluoninduced)
+    get_inc_xs_uncertainty(LatestPaths.theory.yukawa.filedir)
+
+
+def get_inc_xs_uncertainty(theory_filedir):
+    print '\nComputing inc xs uncertainty for {0}'.format(theory_filedir)
+
+    coupling_variations = differentials.theory.theory_utils.FileFinder(
+        kappab=1.0, kappac=1.0, directory=theory_filedir
+        ).get()
+
+    sm = [ v for v in coupling_variations if v.muR==1.0 and v.muF==1.0 and v.Q==1.0 ][0]
+    coupling_variations.pop(coupling_variations.index(sm))
+
+    def print_var(v, is_sm=False):
+        r = '  muR = {0}, muF = {1}, Q = {2}:  {3}'.format(v.muR, v.muF, v.Q, v.inc_xs)
+        if is_sm: r += ' (SM)'
+        print r
+
+    print 'Inc xs per scale variation:'
+    inc_xs = []
+    sm['inc_xs'] = sum(sm['crosssection_integrated'])
+    print_var(sm, is_sm=True)
+    for v in coupling_variations:
+        v['inc_xs'] = sum(v['crosssection_integrated'])
+        inc_xs.append(v.inc_xs)
+        print_var(v)
+
+    down = (sm.inc_xs - min(inc_xs)) / sm.inc_xs
+    up   = (max(inc_xs) - sm.inc_xs) / sm.inc_xs
+    symm = 0.5*(abs(up)+abs(down))
+
+    print 'Unc down: {0}'.format(down)
+    print 'Unc up  : {0}'.format(up)
+    print 'Unc symm: {0}'.format(symm)
+
+
+    print '  Double check for sm:'
+    n_bins = len(sm.binBoundaries)-1
+    smxs_inc = 0.0
+    for i in xrange(n_bins):
+        smxs_inc += sm.crosssection[i] * (sm.binBoundaries[i+1] - sm.binBoundaries[i])
+    print '  smxs_inc = {0} (from xs/GeV * bin widths)'.format(smxs_inc)
+    print '  smxs_inc = {0} (from sum(crosssection_integrated))'.format(sum(sm.crosssection_integrated))
 
 
 class AcceptanceUncertaintyCalculator(object):
@@ -67,6 +390,9 @@ class AcceptanceUncertaintyCalculator(object):
             self.down.append(down)
             self.symm.append(symm)
         
+    def get_central_shape(self):
+        self.get_cud()
+        return self.central
 
 @flag_as_option
 def check_acceptance_uncertainties(args):
@@ -99,8 +425,35 @@ def check_acceptance_uncertainties(args):
     logging.info('syst error after adding:  {0}'.format(symm_plus_AU))
     logging.info('syst error rel change:    {0}'.format(change_in_syst))
 
-    # Possibly continue here and add a similar relative change row for the total unc
-    # At that point all info should be there.
+
+    total_histogram = combWithHbb.to_hist()
+    total = [ 0.5*(abs(up)+abs(down)) for down, up in zip(total_histogram.errs_down, total_histogram.errs_up) ]
+    total_plus_AU = [ sqrt(s1**2+s2**2) for s1, s2 in zip(auc.symm, total) ]
+    change_in_total = [ after/before-1. for before, after in zip(total, total_plus_AU) ]
+
+
+    bounds = [ '0', '15', '30', '45', '80', '120', '200', '350', '600', 'infinity' ]
+    bounds_line = [ '[{0},{1})'.format(left, right) for left, right in zip(bounds[:-1], bounds[1:]) ]
+
+    table_py = [
+        ['Bins'] + bounds_line,
+        ['Acc. uncertainties'] + auc.symm,
+        ['Rel. change in syst. unc.'] + change_in_syst,
+        ['Rel. change in tot. unc.'] + change_in_total,
+        ]
+    table = differentials.plotting.tables.Table()
+    table.from_list(table_py)
+
+    formatter = differentials.plotting.tables.Formatter(
+        include_sign = False,
+        n_decimals = 1,
+        is_percentage = True,
+        )
+    table.formatter = formatter
+    table.max_col_width = 28
+
+    print table.repr_terminal()
+    print table.repr_twiki()
 
 
 @flag_as_option
@@ -123,13 +476,11 @@ def check_reweighting_for_inc_xs(args):
     smxs_Pier = [ 13.0137626356, 12.3785279848, 6.87788869197, 7.08329398674, 3.07720573252 ]
     smxs_Vitt = [ 12.158274514, 12.6947320234, 8.0889999211, 9.15091631806, 3.78165937525 ]
 
-    mu = (
-        sum([ 1.0 * smxs for weight, smxs in zip(weights, smxs_Pier) ])
-        /
-        sum([ weight * smxs for weight, smxs in zip(weights, smxs_Vitt) ])
-        )
+    mu = sum(smxs_Pier) / sum(smxs_Vitt)
 
     print 'Overall mu: {0}'.format(mu)
+    print '  sum(smxs) Pier (up to 120 GeV): {0}'.format(sum(smxs_Pier))
+    print '  sum(smxs) Vitt (up to 120 GeV): {0}'.format(sum(smxs_Vitt))
 
 
 

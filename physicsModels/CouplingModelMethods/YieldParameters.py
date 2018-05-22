@@ -133,8 +133,6 @@ def defineYieldParameters(self):
             print '\n' + '- '*30
             print 'Processing bin {0}, from {1} to {2}'.format(iExpBin, expBoundLeft, expBoundRight)
         expRooParametrization = self.make_parametrization_for_experimental_bin(expBoundLeft, expBoundRight)
-        print
-        self.commit_parseable_to_ws(expRooParametrization)
         expRooParametrizations.append(expRooParametrization)
     self.modelBuilder.out.defineSet( 'parametrizations_exp', ','.join([ p.name for p in expRooParametrizations ]) )
 
@@ -155,7 +153,7 @@ def defineYieldParameters(self):
             c = YieldParameterContainer()
             for rooParametrization in expRooParametrizations:
                 ggH_yieldParameter = RooFactoryInterface.RooProduct('r_{0}_{1}'.format(decayChannel, rooParametrization.binStr))
-                ggH_yieldParameter.add_variable(rooParametrization.name)
+                if not self.scale_with_mu_totalXS: ggH_yieldParameter.add_variable(rooParametrization.name)
                 ggH_yieldParameter.left = rooParametrization.left
                 ggH_yieldParameter.right = rooParametrization.right
                 c.ggH_yieldParameters.append(ggH_yieldParameter)
@@ -171,7 +169,7 @@ def defineYieldParameters(self):
         c = YieldParameterContainer()
         for rooParametrization in expRooParametrizations:
             ggH_yieldParameter = RooFactoryInterface.RooProduct('r_{0}'.format(rooParametrization.binStr))
-            ggH_yieldParameter.add_variable(rooParametrization.name)
+            if not self.scale_with_mu_totalXS: ggH_yieldParameter.add_variable(rooParametrization.name)
             ggH_yieldParameter.left = rooParametrization.left
             ggH_yieldParameter.right = rooParametrization.right
             c.ggH_yieldParameters.append(ggH_yieldParameter)
@@ -193,6 +191,10 @@ def defineYieldParameters(self):
 
     # ======================================
     # Add modifiers to these yield parameters
+
+    if self.scale_with_mu_totalXS:
+        for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
+            ggH_yieldParameter.add_variable('totalXSmodifier')
 
     if self.BRs_kappa_dependent or self.do_BR_uncertainties or self.freely_floating_BRs:
         # Implementation of BR uncertainties;
@@ -228,8 +230,12 @@ def defineYieldParameters(self):
             rooParametrization.reweightor = reweightor
             self.commit_parseable_to_ws(reweightor)
         for ggH_yieldParameter in YieldParameterContainer.all_ggH_yieldParameters():
-            parametrization_name = [ v for v in ggH_yieldParameter.variables if 'parametrization' in v ][0]
-            reweightor_name = parametrization_name.replace('parametrization', 'reweightor')
+            try:
+                parametrization_name = [ v for v in ggH_yieldParameter.variables if 'parametrization' in v ][0]
+                reweightor_name = parametrization_name.replace('parametrization', 'reweightor')
+            except:
+                # Not super reliable code, but can't think of a better alternative now
+                reweightor_name = 'reweightor_ggH_PTH_{0}_{1}'.format(int(ggH_yieldParameter.left), int(ggH_yieldParameter.right))
             ggH_yieldParameter.add_variable(reweightor_name)
 
     if self.FitBR:
@@ -316,7 +322,11 @@ def make_parametrization_for_experimental_bin(self, leftBound, rightBound):
         )
 
     # Create average rooParametrization and import
-    rooParametrization = RooFactoryInterface.RooParametrization('parametrization_{0}'.format(binStr), verbose=True)
+    param_name = 'parametrization_{0}'.format(binStr)
+    if self.add_scaling_ttH or self.add_scaling_bbH:
+        param_name_onlyggH = 'parametrization_onlyggH_{0}'.format(binStr)
+
+    rooParametrization = RooFactoryInterface.RooParametrization((param_name_onlyggH if self.add_scaling_ttH or self.add_scaling_bbH else param_name), verbose=True)
     rooParametrization.variables.extend(self.couplings)
     for coefficient, couplingList in zip( average_coefficients, self.couplingCombinations ):
         rooParametrization.add_term( coefficient, couplingList )
@@ -334,16 +344,71 @@ def make_parametrization_for_experimental_bin(self, leftBound, rightBound):
     #     self.modelBuilder.out.function(rooParametrization.name).Print()
     #     print ''
 
-    # Attach for easy access
-    rooParametrization.binStr = binStr
-    rooParametrization.SMXS   = SMXS
-    rooParametrization.left   = leftBound
-    rooParametrization.right  = rightBound
+    self.commit_parseable_to_ws(rooParametrization)
+    r = rooParametrization
 
-    return rooParametrization
+    if self.add_scaling_ttH:
+        print '\nAdding a ttH contribution'
+        # VERY HACKY - dict to get the smxs (inc) per bin for ttH based on the leftBound
+        smxs_ttH = {
+            0.0   : 0.0088732634975160398, # 0.0160,
+            15.0  : 0.024477853344548599,  # 0.0436,
+            30.0  : 0.038060522980862765,  # 0.0601,
+            45.0  : 0.10732424239143175,   # 0.1448,
+            80.0  : 0.11704719163510231,   # 0.1158,
+            120.0 : 0.12867092630627588,   # 0.0915,
+            200.0 : 0.067338028700826821,  # 0.0301,
+            350.0 : 0.013496510364609565,  # 0.0043,
+            600.  : 0.0012114607788262016, # 0.0004,
+            }[leftBound]
+        print '  Found smxs_ttH = {0} (in {1} to {2})'.format(smxs_ttH, leftBound, rightBound)
+        fraction = smxs_ttH / SMXS
+        print '  fraction = {0}/{1} = {2}'.format(smxs_ttH, SMXS, fraction)
+
+        ttH_contribution = RooFactoryInterface.RooParametrization('ttH_{0}'.format(binStr).replace('ggH_',''), verbose=True)
+        ttH_contribution.add_variable('ct')
+        ttH_contribution.add_term(fraction, ['ct', 'ct'])
+        ttH_contribution.add_term(-fraction, [])
+        self.commit_parseable_to_ws(ttH_contribution)
+
+    if self.add_scaling_bbH:
+        print '\nAdding a bbH contribution'
+        if 'cb' in self.couplings:
+            cb_varname = 'cb'
+        elif 'kappab' in self.couplings:
+            cb_varname = 'kappab'
+        else:
+            raise RuntimeError('Trying to implement a bbH scaling, but there seems to be no b-coupling (cb or kappab)')
+        print '  Using variable {0} as kappa_b'.format(cb_varname)
+        smxs_ggH_inc = self.modelBuilder.out.var('totalXS_SM').getVal()
+        smxs_bbH_inc = 4.863E-01 # YR4 number
+        fraction = smxs_bbH_inc / smxs_ggH_inc
+        print '  fraction = {0}/{1} = {2}'.format(smxs_ggH_inc, smxs_bbH_inc, fraction)
+
+        bbH_contribution = RooFactoryInterface.RooParametrization('bbH_{0}'.format(binStr).replace('ggH_',''), verbose=True)
+        bbH_contribution.add_variable(cb_varname)
+        bbH_contribution.add_term(fraction, [cb_varname, cb_varname])
+        bbH_contribution.add_term(-fraction, [])
+        self.commit_parseable_to_ws(bbH_contribution)
+
+    if self.add_scaling_ttH or self.add_scaling_bbH:
+        contributions = [ param_name_onlyggH ] # start with just ggH
+        if self.add_scaling_ttH: contributions.append(ttH_contribution.name)
+        if self.add_scaling_bbH: contributions.append(bbH_contribution.name)
+        ggH_plus_contributions = RooFactoryInterface.RooAddition(param_name, variables=contributions)
+        self.commit_parseable_to_ws(ggH_plus_contributions)
+        r = ggH_plus_contributions
+        
+    # Attach for easy access
+    r.binStr = binStr
+    r.SMXS   = SMXS
+    r.left   = leftBound
+    r.right  = rightBound
+    return r
 
 @flag_as_method
 def commit_parseable_to_ws(self, parameter):
+    print
     _v = parameter.verbose
     parameter.verbose = True
     self.modelBuilder.factory_(parameter.parse())

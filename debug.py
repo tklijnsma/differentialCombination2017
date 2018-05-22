@@ -34,6 +34,10 @@ datestr = strftime('%b%d')
 # Main
 ########################################
 
+@flag_as_option
+def debug_test_ctcg_files(args):
+    differentials.theory.ctcg_interpreter.create_all_ctcg()
+
 
 @flag_as_option
 def debug_scan_hgg_Mar15_pth_ggH_GT600_bestfit(args):

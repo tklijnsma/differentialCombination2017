@@ -151,39 +151,9 @@ def pth_ggH_plot(args):
     obs_name = 'pth_ggH'
     obstuple = LatestBinning.obstuple_pth_ggH
     scandict = LatestPaths.scan.pth_ggH.asimov if args.asimov else LatestPaths.scan.pth_ggH.observed
+    systshapemaker = differentials.systshapemaker.SystShapeMaker()
 
-    # hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
-    # hgg.color = differentials.core.safe_colors.red
-    # hgg.no_overflow_label = True
-    # hgg.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'# 
-    # hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    # hgg.read()
-    # spectra.append(hgg)
-
-    # hzz = differentials.scans.DifferentialSpectrum('hzz', scandict.hzz)
-    # hzz.color = differentials.core.safe_colors.blue
-    # hzz.no_overflow_label = True
-    # hzz.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'# 
-    # hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    # hzz.read()
-    # spectra.append(hzz)
-
-    # hbb = differentials.scans.DifferentialSpectrum('hbb', scandict.hbb)
-    # hbb.drop_first_bin()
-    # hbb.color = differentials.core.safe_colors.green
-    # hbb.no_overflow_label = True
-    # hbb.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
-    # hbb.set_sm(obstuple.hbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    # hbb.read()
-    # spectra.append(hbb)
-
-    # combination = differentials.scans.DifferentialSpectrum('combination', scandict.combination)
-    # combination.color = 14
-    # combination.no_overflow_label = True
-    # combination.draw_method = 'repr_point_with_vertical_bar'
-    # combination.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    # combination.read()
-    # spectra.append(combination)
+    smxs_for_plotting = obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True)
 
     combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', scandict.combWithHbb)
     combWithHbb.color = 1
@@ -191,27 +161,36 @@ def pth_ggH_plot(args):
     # combWithHbb.draw_method = 'repr_point_with_vertical_bar'
     combWithHbb.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
     combWithHbb.title = 'Combination'
-    combWithHbb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb.set_sm(smxs_for_plotting)
     combWithHbb.read()
     spectra.append(combWithHbb)
 
-    # Get syst only shape
     combWithHbb_statonly = differentials.scans.DifferentialSpectrum('combWithHbb_statonly', scandict.combWithHbb_statonly)
     combWithHbb_statonly.color = 1
     combWithHbb_statonly.no_overflow_label = True
     combWithHbb_statonly.draw_method = 'repr_point_with_vertical_bar'
-    combWithHbb_statonly.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    combWithHbb_statonly.set_sm(smxs_for_plotting)
     combWithHbb_statonly.read()
-    systshapemaker = differentials.systshapemaker.SystShapeMaker()
     systonly_histogram, systonly_histogram_xs = systshapemaker.get_systonly_histogram(combWithHbb, combWithHbb_statonly)
 
-    if args.table:
-        table = differentials.plotting.tables.SpectraTable('pth_ggH', [s for s in spectra if not s is hbb])
-        table.add_symm_improvement_row(hgg, combWithHbb)
-        table.add_symm_improvement_row(hgg, combination)
-        table.add_symm_improvement_row(combination, combWithHbb)
-        logging.info('Table:\n{0}'.format( table.repr_terminal() ))
-        return
+    combWithHbb_noxHunc = differentials.scans.DifferentialSpectrum('combWithHbb_noxHunc', scandict.combWithHbb_noxHunc)
+    combWithHbb_noxHunc.color = 2
+    combWithHbb_noxHunc.no_overflow_label = True
+    # combWithHbb_noxHunc.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb_noxHunc.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
+    combWithHbb_noxHunc.title = 'no xH unc.'
+    combWithHbb_noxHunc.set_sm(smxs_for_plotting)
+    combWithHbb_noxHunc.read()
+    spectra.append(combWithHbb_noxHunc)
+
+    combWithHbb_statonly_noxHunc = differentials.scans.DifferentialSpectrum('combWithHbb_statonly_noxHunc', scandict.combWithHbb_statonly_noxHunc)
+    combWithHbb_statonly_noxHunc.color = 2
+    combWithHbb_statonly_noxHunc.no_overflow_label = True
+    combWithHbb_statonly_noxHunc.draw_method = 'repr_point_with_vertical_bar'
+    combWithHbb_statonly_noxHunc.set_sm(smxs_for_plotting)
+    combWithHbb_statonly_noxHunc.read()
+    systonly_histogram_noxHunc, systonly_histogram_xs_noxHunc = systshapemaker.get_systonly_histogram(combWithHbb_noxHunc, combWithHbb_statonly_noxHunc)
+    systonly_histogram_xs_noxHunc.title = 'no xH unc. (syst.)'
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: 1.0 - c.GetRightMargin() - 0.11,
@@ -227,15 +206,58 @@ def pth_ggH_plot(args):
         spectra
         )
     plot.leg.SetNColumns(3)
+
     if systshapemaker.success:
+        plot.add_top(systonly_histogram_xs_noxHunc, systonly_histogram_xs_noxHunc.draw_method, plot.leg)
+        plot.add_bottom(systonly_histogram_noxHunc, systonly_histogram_noxHunc.draw_method)
         plot.add_top(systonly_histogram_xs, systonly_histogram_xs.draw_method, plot.leg)
         plot.add_bottom(systonly_histogram, systonly_histogram.draw_method)
+
     plot.draw_multiscans = True
     plot.obsname = obs_name
     plot.obsunit = 'GeV'
     plot.add_top(l, '')
     plot.leg.SetNColumns(3)
     # plot.scans_x_min = -110.
+    plot.draw()
+    plot.wrapup()
+
+
+@flag_as_option
+def pth_ggH_plot_hbbOOAcomparison(args):
+    spectra = []
+    obs_name = 'pth_ggH'
+    obstuple = LatestBinning.obstuple_pth_ggH
+    obstuple.hbb.drop_first_bin()
+
+    # Floating
+    hbb = differentials.scans.DifferentialSpectrum('hbb', LatestPaths.scan.pth_ggH.asimov.hbb)
+    hbb.drop_first_bin()
+    hbb.color = differentials.core.safe_colors.green
+    hbb.no_overflow_label = True
+    hbb.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
+    hbb.set_sm(obstuple.hbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    hbb.read()
+    spectra.append(hbb)
+
+    hbb_fixedOOA = differentials.scans.DifferentialSpectrum('hbb_fixedOOA', 'out/Scan_May16_pth_ggH_hbb_fixedOOA_asimov_0')
+    hbb_fixedOOA.color = differentials.core.safe_colors.red
+    hbb_fixedOOA.no_overflow_label = True
+    hbb_fixedOOA.draw_method = 'repr_point_with_vertical_bar_and_horizontal_bar'
+    hbb_fixedOOA.set_sm(obstuple.hbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+    hbb_fixedOOA.read()
+    for scan in hbb_fixedOOA.scans:
+        scan.draw_style = 'repr_dashed_line'
+    spectra.append(hbb_fixedOOA)
+
+    plot = differentials.plotting.plots.SpectraPlot(
+        'spectra_hbbOOAcomparison_{0}'.format(obs_name) + ('_asimov' if args.asimov else ''),
+        spectra
+        )
+    plot.leg.SetNColumns(3)
+    plot.draw_multiscans_all_in_one_plot = True
+    plot.obsname = obs_name
+    plot.obsunit = 'GeV'
     plot.draw()
     plot.wrapup()
 

@@ -114,6 +114,8 @@ def getYieldScale( self, bin, process ):
                 r = 'r_smH_INC'
         else:
             r = 1
+
+        if self.verbose: sys.stdout.write('r = {0}\n'.format(r))
         return r
 
     # Retrieve the right YieldParameterContainer

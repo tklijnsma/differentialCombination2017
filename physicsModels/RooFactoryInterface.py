@@ -113,7 +113,7 @@ class RooAddition(RooFactoryInterface):
 
     def parse(self):
         expr = 'sum::{0}({1})'.format( self.name, ','.join(self.variables) )
-        if verbose:
+        if self.verbose:
             print 'Parsed addition for \'{0}\':'.format(self.name)
             print expr
         return expr

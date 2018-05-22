@@ -38,7 +38,14 @@ datestr = strftime('%b%d')
 top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600. ]
 
 
-def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, drop_last_bin=False, do_kappat_kappag=True):
+def base_t2ws(args,
+        apply_theory_uncertainties=True,
+        apply_reweighting=True,
+        drop_last_bin=False,
+        do_kappat_kappag=True,
+        add_scaling_ttH=False,
+        ):
+
     decay_channel = differentialutils.get_decay_channel_tag(args)
     # card = LatestPaths.card.pth_ggH[decay_channel]
     t2ws = differentials.combine.t2ws.T2WS()
@@ -75,7 +82,7 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, dro
     if do_kappat_kappag:
         logging.warning('Doing variations for kappa_t / kappa_g')
         coupling_variations = FileFinder(
-            cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory='out/theories_Mar05_tophighpt'
+            cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.top.filedir
             ).get()
         sm = [ v for v in coupling_variations if v.ct==1.0 and v.cg==0.0 ][0]
         coupling_variations.pop(coupling_variations.index(sm))
@@ -90,7 +97,7 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, dro
     else:
         logging.warning('Doing variations for kappa_t / kappa_b')
         coupling_variations = FileFinder(
-            cg=0.0, muR=1.0, muF=1.0, Q=1.0, directory='out/theories_Mar05_tophighpt'
+            cg=0.0, muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.top.filedir
             ).get()
         sm = [ v for v in coupling_variations if v.ct==1.0 and v.cb==1.0 ][0]
         coupling_variations.pop(coupling_variations.index(sm))
@@ -105,11 +112,15 @@ def base_t2ws(args, apply_theory_uncertainties=True, apply_reweighting=True, dro
 
     if apply_reweighting:
         t2ws.extra_options.append(
-            '--PO ReweightCrossSections={0}'.format(','.join([str(v) for v in obs.crosssection()]))
+            '--PO SMXS_of_input_ws={0}'.format(','.join([str(v) for v in obs.crosssection()]))
             )
         t2ws.tags.append('reweighted')
     if apply_theory_uncertainties:
         add_theory_uncertainties(t2ws)
+    if add_scaling_ttH:
+        t2ws.extra_options.append('--PO add_scaling_ttH=True')
+        t2ws.tags.append('scalingttH')
+
     return t2ws
 
 def add_theory_uncertainties(t2ws, uncorrelated=False):
@@ -162,6 +173,24 @@ def all_t2ws_Top(args_original):
     # for fn in fns:
     #     try_call_function_with_args(fn, args)
 
+#____________________________________________________________________
+@flag_as_option
+def t2ws_Top_radialctcg(args):
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, add_scaling_ttH=True)
+    t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
+    t2ws.extra_options.append('--PO radial_coord_for_ctcg=True')
+    t2ws.tags.append('radialctcg')
+    t2ws.run()
+
+#____________________________________________________________________
+@flag_as_option
+def t2ws_Top_scalingttH(args):
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, add_scaling_ttH=True)
+    # t2ws.card = LatestPaths.card.top.nominal[differentialutils.get_decay_channel_tag(args)]
+    t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
+    t2ws.run()
 
 #____________________________________________________________________
 @flag_as_option

@@ -1,3 +1,4 @@
+import differentials
 import core
 from core import AttrDict
 import ROOT
@@ -135,6 +136,11 @@ class Parametrization(object):
         xs_exp = self.rebinner.rebin_values(xs_theory)
         return xs_exp
 
+    def get_xs_exp_integrated_per_bin(self, c1, c2):
+        xs_exp = self.get_xs_exp(c1, c2)
+        xs_exp_integrated_per_bin = [ xs*bw for xs, bw in zip(xs_exp, self.bin_widths) ]
+        return xs_exp_integrated_per_bin
+
     def get_mus_exp(self, c1, c2):
         xs_exp = self.get_xs_exp(c1, c2)
         mu_exp = [ xs / xs_SM for xs, xs_SM in zip(xs_exp, self.xs_exp_SM) ]
@@ -142,9 +148,10 @@ class Parametrization(object):
 
     def make_rebinner(self, theory_binning, exp_binning):
         self.rebinner = differentials.integral.Rebinner(
-            bin_boundaries_old = exp_binning,
-            bin_boundaries_new = theory_binning
+            bin_boundaries_old = theory_binning,
+            bin_boundaries_new = exp_binning
             )
+        self.bin_widths = [ r-l for l, r in zip(exp_binning[:-1], exp_binning[1:]) ]
 
     def set_SM(self):
         self.xs_theory_SM = self.evaluate(self.c1_SM, self.c2_SM)

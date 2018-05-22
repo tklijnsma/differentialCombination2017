@@ -102,26 +102,36 @@ class TopTheory(object):
                 d[key] = value
         return d
 
+    def get_smxs_per_GeV(self):
+        if not self.sm_is_defined:
+            raise RuntimeError('Run TopTheory.set_sm(sm) with the SM variation first')
+
+        if self.bin_boundaries[0] == self.sm.bin_boundaries[0]:
+            return self.sm.xs_per_GeV
+        else:
+            # For the high pt variations, the values before the spectrum begins should be dropped
+            start_index = self.sm.bin_boundaries.index(self.bin_boundaries[0])
+            return self.sm.xs_per_GeV[start_index:]
+
     def get_columns(self):
         columns = core.read_data(self.d.path, columns=True, make_float=True)
         self.bin_centers = columns[0]
         self.n_bins = len(self.bin_centers)
         self.bin_boundaries = bin_heuristic.get_bin_boundaries(self.bin_centers)
+
         if self.d.first_column_is_xs:
             logging.warning('Dividing cross section in {0} by factor 2.27'.format(self.d.path))
             self.xs_per_GeV = [ v/2.27 for v in columns[1] ]
             if self.d.is_SM:
                 self.ratio = [ 1.0 for xs in self.xs_per_GeV ]
             elif self.sm_is_defined:
-                # HIER VERDER
-                # Kijken of 2.27 implementatie een beetje oke is
-                self.ratio = [ xs / sm_xs for xs, sm_xs in zip(self.xs_per_GeV, self.sm.xs_per_GeV) ]
+                self.ratio = [ xs / sm_xs for xs, sm_xs in zip(self.xs_per_GeV, self.get_smxs_per_GeV()) ]
             else:
                 raise RuntimeError('Run TopTheory.set_sm(sm) with the SM variation first')
         else:
             self.ratio = columns[1]
             if self.sm_is_defined:
-                self.xs_per_GeV = [ ratio * sm_xs for ratio, sm_xs in zip(self.ratio, self.sm.xs_per_GeV) ]
+                self.xs_per_GeV = [ ratio * sm_xs for ratio, sm_xs in zip(self.ratio, self.get_smxs_per_GeV()) ]
             else:
                 raise RuntimeError('Run TopTheory.set_sm(sm) with the SM variation first')
         bin_widths = [ r-l for r, l in zip(self.bin_boundaries[1:], self.bin_boundaries[:-1]) ]

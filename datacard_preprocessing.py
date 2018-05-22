@@ -11,6 +11,7 @@ import differentials
 import differentials.core as core
 from OptionHandler import flag_as_option, flag_as_parser_options
 import LatestPaths
+import LatestBinning
 import differentialutils
 
 #____________________________________________________________________
@@ -62,6 +63,13 @@ def rename_processes_hgg_INC(args):
     rename_processes_hgg_differentials(
         'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt',
         )
+
+# Adding an xH nuisance parameter to the combined ggH datacard
+@flag_as_option
+def add_xH_nuisance_parameter_to_ggH_card(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb')
+    # add_xH_nuisance_parameter('suppliedInput/combWithHbb_pth_ggH_Mar02.txt')
+    add_xH_nuisance_parameter('suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt', 24, 20, 43)
 
 
 #____________________________________________________________________
@@ -505,6 +513,59 @@ def renumber_processes_hzz_pth(datacard_file):
     # Write to file
     out_file = datacard_file.replace( '.txt', '_processesRenumbered.txt' )
     write_to_file(out_file, ''.join(lines))
+
+
+def add_xH_nuisance_parameter(datacard_file, name_width=24, lnN_width=23, col_width=46):
+    with open( datacard_file, 'r' ) as datacard_fp:
+        lines = datacard_fp.readlines()
+
+    for i_line, line in enumerate(lines):
+        if line.startswith('process '):
+            names = line.split()[1:]
+            i_name_line = i_line
+            break
+    else:
+        raise RuntimeError(
+            'Reached end of file while searching two lines '
+            'that start with \'process\'; datacard {0} is faulty.'
+            .format(datacard_file)
+            )
+
+    nuis_name = 'CMS_xH_incxs'
+    nuis_line = [ '{0:{nwidth}}{1:{lwidth}}'.format(nuis_name, 'lnN', nwidth=name_width, lwidth=lnN_width) ]
+
+    nuis_size = 1. + LatestBinning.xH_unc_inclusive_fraction
+    nuis_size_str = '{0:<{cwidth}.5f}'.format(nuis_size, cwidth=col_width)
+    nuis_no_influence_str = '{0:{cwidth}}'.format('-', cwidth=col_width)
+
+    for name in names:
+        if name.startswith('xH'):
+            nuis_line.append(nuis_size_str)
+        else:
+            nuis_line.append(nuis_no_influence_str)
+
+    lines.append(''.join(nuis_line) + '\n')
+
+
+    # Change kmax, the number of nuisance parameters
+    for i_line, line in enumerate(lines):
+        if line.startswith('kmax '):
+            components = line.split()
+            kmax_old = int(components[1])
+            kmax_new = kmax_old + 1
+            new_line = line.replace('kmax {0}'.format(kmax_old), 'kmax {0}'.format(kmax_new))
+            lines[i_line] = new_line
+            break
+    else:
+        raise RuntimeError(
+            'Reached end of file while searching a line that starts with \'kmax\'; file {0} is faulty'
+            .format(datacard_file)
+            )
+
+    
+    out_file = datacard_file.replace( '.txt', '_xHNuisPar.txt' )
+    write_to_file(out_file, ''.join(lines))
+
 
 
 

@@ -33,7 +33,70 @@ def format_number(number, decimals=2, force_sign=False, verbose_log=False):
     return ret
 
 
+class Formatter(object):
+    """docstring for Formatter"""
+    def __init__(
+        self,
+        is_percentage = False,
+        n_decimals = 1,
+        include_sign = True,
+        escape_chars = False,
+        fixed_width = None,
+        alignment = 'left',
+        ):
+        super(Formatter, self).__init__()
+        self.is_percentage = is_percentage
+        self.n_decimals = n_decimals
+        self.include_sign = include_sign
+        self.escape_chars = escape_chars
+        self.fixed_width = fixed_width
+        self.alignment = alignment
+
+    def format(self, value):
+        if isinstance(value, float) or isinstance(value, int):
+            return self.format_number(value)
+        else:
+            return value
+
+    def format_number(self, number):
+        if self.is_percentage:
+            number *= 100.
+        r = (
+            '{0:{sign}.{n_decimals}f}'
+            .format(
+                number,
+                sign = ( '+' if self.include_sign else '' ),
+                n_decimals = self.n_decimals,
+                )
+            )
+        if self.is_percentage: r += ('\\%' if self.escape_chars else '%' )
+
+        if self.fixed_width:
+            r = '{0:{alignment}{fixed_width}}'.format(
+                r,
+                alignment = ('<' if alignment == 'left' else '>'),
+                fixed_width = self.fixed_width
+                )
+
+        return r
+
+
+
 class Cell(object):
+    """docstring for Cell"""
+
+    def __init__(self, value=0.0):
+        super(Cell, self).__init__()
+        self.value = value
+        self.formatter = None # Fill this at repr-time or manually right before it
+
+    def repr_terminal(self):
+        if self.formatter is None:
+            self.formatter = Formatter()
+        return self.formatter.format(self.value)
+
+
+class CellBin(Cell):
     """docstring for Bin"""
     def __init__(self):
         self.center    = 0.0
@@ -67,9 +130,9 @@ class Cell(object):
         return ret
 
 
-class SymmetricImprovementCell(Cell):
+class SymmetricImprovementCellBin(CellBin):
     def __init__(self):
-        super(SymmetricImprovementCell, self).__init__()
+        super(SymmetricImprovementCellBin, self).__init__()
         self.symm_improvement = 0.0
 
     def repr_terminal(self):
@@ -125,15 +188,12 @@ class Row(object):
         self.bin_boundaries = []
         self.table = table  # Pointer to parent
 
-    def append(self, i):
-        self.row.append(i)
-
     def from_spectrum(self, spectrum):
         self.name = spectrum.name
         self.bin_boundaries = spectrum.binning()
         self.n_bins = len(self.bin_boundaries)-1
         for i_scan, scan in enumerate(spectrum.scans):
-            cell = Cell()
+            cell = CellBin()
             cell.left     = self.bin_boundaries[i_scan]
             cell.right    = self.bin_boundaries[i_scan+1]
             cell.center   = scan.unc.x_min
@@ -146,15 +206,70 @@ class Row(object):
                 cell.err_down *= xs
             self.cells.append(cell)
 
+    def from_list_of_numbers(self, numbers):
+        for number in numbers:
+            cell = Cell(number)
+            self.cells.append(cell)
 
-class SpectraTable(object):
+
+class Table(object):
+    """docstring for Table"""
+    def __init__(self):
+        super(Table, self).__init__()
+        self.header = []
+        self.rows = []
+        self.formatter = None
+        self.max_col_width = 20
+
+    def add_row(self, values):
+        row = Row(self)
+        row.from_list_of_numbers(values)
+        self.rows.append(row)
+
+    def from_list(self, table):
+        for row in table:
+            self.add_row(row)
+        
+    def cells(self):
+        cells = []
+        for row in self.rows:
+            cells.extend(row.cells)
+        return cells
+
+    def apply_formatter(self):
+        if not(self.formatter is None):
+            for cell in self.cells():
+                cell.formatter = self.formatter
+
+    def repr_terminal(self):
+        self.apply_formatter()
+        table = [  ]
+        for row in self.rows:
+            repr_row = [row.name]
+            for cell in row.cells:
+                repr_row.append(cell.repr_terminal())
+            table.append(repr_row)
+        return repr_rectangular_table(table, max_col_width=self.max_col_width)
+
+    def repr_twiki(self):
+        self.apply_formatter()
+        table = [  ]
+        for row in self.rows:
+            repr_row = [row.name]
+            for cell in row.cells:
+                repr_row.append(cell.repr_terminal())
+            table.append(repr_row)
+        r = repr_rectangular_table(table, max_col_width=self.max_col_width, sep=' | ', newline_sep= ' |\n')
+        r += ' |'
+        return r
+
+
+class SpectraTable(Table):
     """docstring for SpectraTable"""
     def __init__(self, name, spectra=None, do_xs=False, last_bin_is_overflow=False):
         self.name = name
         self.last_bin_is_overflow = last_bin_is_overflow
         self.do_xs = do_xs
-        self.header = []
-        self.rows = []
         if not(spectra is None):
             self.spectra = spectra
             self.read_spectra()
@@ -181,7 +296,7 @@ class SpectraTable(object):
         for i_bin in xrange(row_old.n_bins):
             err_old = row_old.cells[i_bin].symm_err()
             err_new = row_new.cells[i_bin].symm_err()
-            symm_cell = SymmetricImprovementCell()
+            symm_cell = SymmetricImprovementCellBin()
             symm_cell.left = row_old.bin_boundaries[i_bin]
             symm_cell.right = row_old.bin_boundaries[i_bin+1]
             try:
@@ -336,6 +451,10 @@ def repr_rectangular_table(table, min_col_width=1, max_col_width=20, sep='  ', n
 
 
 def format_str_to_width(text, width):
+    if width == 0: width = 1
+    if not isinstance(width, int):
+        raise TypeError('width should be an int, but found: {0}'.format(width))
+
     if len(text) > width:
         text = text[:width-3] + '...'
     ret = '{0:{width}}'.format( text, width=width )

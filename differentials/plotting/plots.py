@@ -686,6 +686,8 @@ class SpectraPlot(BottomPanelPlot):
         self.obsunit = None
 
         self.draw_multiscans = False
+        self.draw_multiscans_all_in_one_plot = False
+
         self.scans_x_min = -10.0
         self.scans_x_max = 10.0
 
@@ -738,14 +740,29 @@ class SpectraPlot(BottomPanelPlot):
             self.add_top(l, '')
             i_label += 1
 
-    def draw(self):
-        if self.draw_multiscans:
+
+    def draw_multiscans_fn(self):
+        if self.draw_multiscans_all_in_one_plot or self.draw_multiscans:
+            differentials.plotting.canvas.reset_global_color_cyle()
+            differentials.plotting.pywrappers.Graph.color_cycle = differentials.plotting.canvas.global_color_cycle
+
+        if self.draw_multiscans_all_in_one_plot:
+            plot = MultiScanPlot(self.plotname + '_scans_all')
             for spectrum in self.spectra:
-                differentials.plotting.canvas.reset_global_color_cyle()
-                differentials.plotting.pywrappers.Graph.color_cycle = differentials.plotting.canvas.global_color_cycle
+                plot.scans.extend(spectrum.scans)
+            plot.x_min = self.scans_x_min
+            plot.x_max = self.scans_x_max
+            plot.draw()
+            plot.wrapup()
+        elif self.draw_multiscans:
+            for spectrum in self.spectra:
                 spectrum.scans_x_min = self.scans_x_min
                 spectrum.scans_x_max = self.scans_x_max
                 spectrum.plot_scans(self.plotname + '_scans_' + spectrum.name)
+
+
+    def draw(self):
+        self.draw_multiscans_fn()
 
         self.obstitle = core.standard_titles.get(self.obsname, self.obsname)
 

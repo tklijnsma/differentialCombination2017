@@ -36,6 +36,9 @@ class CouplingModel( PhysicsModel ):
         self.do_BR_uncertainties  = False # Meant for the non-scaling
         self.BRs_kappa_dependent  = False
         self.freely_floating_BRs  = False
+        
+        self.add_scaling_ttH      = False
+        self.add_scaling_bbH      = False
 
         self.includeLinearTerms   = False
         self.splitggH             = False
@@ -43,7 +46,7 @@ class CouplingModel( PhysicsModel ):
         self.FitBR                = False
         self.ProfileTotalXS       = False
         self.FitOnlyNormalization = False
-        self.FitRatioOfBRs        = False
+        self.scale_with_mu_totalXS = False
         # self.DoBRUncertainties    = False
 
         self.SMXS_of_input_ws     = None
@@ -63,11 +66,33 @@ class CouplingModel( PhysicsModel ):
         self.SM_HIGG_DECAYS.append( 'hss' )
 
 
+        self.boolean_options = []
+        self.make_boolean_option('radial_coord_for_ctcg')
+
+
+    def make_boolean_option(self, option_name, default=False):
+        self.boolean_options.append(option_name)
+        setattr(self, option_name, default)
+
+
     def setPhysicsOptions( self, physOptions ):
         self.chapter( 'Starting model.setPhysicsOptions()' )
 
         for physOption in physOptions:
             optionName, optionValue = physOption.split('=',1)
+
+            # First check the default list
+            option_is_boolean = False
+            for boolean_option_name in self.boolean_options:
+                if optionName == boolean_option_name:
+                    boolean = eval(optionValue)
+                    if not isinstance(boolean, bool):
+                        raise TypeError('Variable %s should be True or False' % optionName)
+                    setattr(self, boolean_option_name, boolean)
+                    option_is_boolean = True
+                    break
+            if option_is_boolean: continue
+
             if False: pass
             elif optionName == 'splitggH':
                 self.splitggH = eval(optionValue)
@@ -107,8 +132,8 @@ class CouplingModel( PhysicsModel ):
                 self.ProfileTotalXS = eval(optionValue)
             elif optionName == 'FitOnlyTotalXS':
                 self.FitOnlyNormalization = eval(optionValue)
-            elif optionName == 'FitRatioOfBRs':
-                self.FitRatioOfBRs = eval(optionValue)
+            elif optionName == 'scale_with_mu_totalXS':
+                self.scale_with_mu_totalXS = eval(optionValue)
             # elif optionName == 'DoBRUncertainties':
             #     self.DoBRUncertainties = eval(optionValue)
 
@@ -118,6 +143,11 @@ class CouplingModel( PhysicsModel ):
                 self.do_BR_uncertainties = eval(optionValue)
             elif optionName == 'freely_floating_BRs':
                 self.freely_floating_BRs = eval(optionValue)
+            
+            elif optionName == 'add_scaling_ttH':
+                self.add_scaling_ttH = eval(optionValue)
+            elif optionName == 'add_scaling_bbH':
+                self.add_scaling_bbH = eval(optionValue)
 
             elif optionName == 'theory':
                 # Syntax: --PO theory=[ct=1,cg=1,file=some/path/.../] , brackets optional
@@ -192,6 +222,9 @@ class CouplingModel( PhysicsModel ):
         else:
             self.figureOutBinning()
             self.makeParametrizationsFromTheory()
+
+            if self.scale_with_mu_totalXS or self.add_scaling_bbH:
+                self.MakeTotalXSExpressions()
 
             if self.freely_floating_BRs:
                 self.implement_freely_floating_BRs()

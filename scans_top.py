@@ -159,6 +159,20 @@ def basic_config_ctcb(args):
     return config
 
 
+@flag_as_option
+def scan_top_scalingttH(args):
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    config = basic_config(args)
+    # config.datacard = 'out/workspaces_May17/combWithHbb_Top_reweighted_scalingttH.root'
+    config.datacard = 'out/workspaces_May18/combWithHbb_Top_reweighted_scalingttH.root'
+    config.tags.append('scalingttH')
+    config.set_parameter_range('ct', -0.4, 4.4)
+    config.set_parameter_range('cg', -0.28, 0.1)
+    config.nPoints = 60*60
+    config.nPointsPerJob = 6
+    differentialutils.run_postfit_fastscan_scan(config)
+
+
 #____________________________________________________________________
 @flag_as_option
 def scan_top_nominal_all(real_args):

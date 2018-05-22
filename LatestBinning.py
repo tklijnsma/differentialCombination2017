@@ -3,6 +3,8 @@ sys.path.append('src')
 from Observable import Observable
 from collections import namedtuple
 from copy import deepcopy
+from math import sqrt
+import numpy
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
@@ -90,6 +92,13 @@ obs_pth_ggH.YR4_totalXS = YR4_ggF_n3lo
 obs_pth_xH = Observable( name = 'pth_xH', title = 'p_{T}^{H} (xH)', shape = shape_pth_xH, binning = binning_pth )
 obs_pth_xH.YR4_totalXS = YR4_xH
 
+# xH individual shapes
+ttH_npz = numpy.load('suppliedInput/fromVittorio/FullPhaseSpace_spectrumNNLOPS_ttH_Pt.npz')
+shape_pth_ttH = normalize(ttH_npz['spectrum'])
+obs_pth_ttH = Observable( name = 'pth_ttH', title = 'p_{T}^{H} (ttH)', shape = shape_pth_ttH, binning = binning_pth )
+obs_pth_ttH.YR4_totalXS = YR4_ttH
+
+# Different binning schemes for HZZ and Hbb
 hzz_binMerging_pth   = [ 0, 1, [2,3], [4,5], [6,7,8] ]
 obs_pth_smH_hzzBinning = obs_pth_smH.mergeBins(hzz_binMerging_pth)
 obs_pth_ggH_hzzBinning = obs_pth_ggH.mergeBins(hzz_binMerging_pth)
@@ -136,3 +145,48 @@ obstuple_rapidity = AttrDict(
     combination = obs_yh,
     combWithHbb = obs_yh,
     )
+
+
+
+#____________________________________________________________________
+# xH uncertainty, inclusive
+
+# Uncertainties per mode, all in percentages of total XS
+# first one is scale, second PDF, third alpha_s
+uncs_VBF             = [ 0.35, 2.1, 0.05 ]
+uncs_WH              = [ 0.6, 1.7, 0.9 ]
+uncs_ZH              = [ 3.4, 1.3, 0.9 ]
+uncs_ttH             = [ 7.5, 3.0, 2.0 ]
+uncs_bbH             = [ 22.0 ]
+uncs_tH_t_ch         = [ 10.6, 3.5, 1.2 ]
+uncs_tH_s_ch         = [ 2.1, 2.2, 0.2 ]
+uncs_tH_W_associated = [ 5.8, 6.1, 1.5 ]
+
+unc_squared_per_mode = lambda uncs, xs: sum([ (0.01*unc * xs)**2 for unc in uncs ])
+
+tot_unc_squared = 0.0
+tot_unc_squared += unc_squared_per_mode(uncs_VBF, YR4_VBF)
+tot_unc_squared += unc_squared_per_mode(uncs_WH, YR4_WH)
+tot_unc_squared += unc_squared_per_mode(uncs_ZH, YR4_ZH)
+tot_unc_squared += unc_squared_per_mode(uncs_ttH, YR4_ttH)
+tot_unc_squared += unc_squared_per_mode(uncs_bbH, YR4_bbH)
+tot_unc_squared += unc_squared_per_mode(uncs_tH_t_ch, YR4_tH_t_ch)
+tot_unc_squared += unc_squared_per_mode(uncs_tH_s_ch, YR4_tH_s_ch)
+tot_unc_squared += unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associated)
+
+xH_unc_inclusive = sqrt(tot_unc_squared)
+xH_unc_inclusive_fraction = xH_unc_inclusive / YR4_xH
+
+if __name__ == "__main__":
+    print 'Unc from VBF:             ', sqrt(unc_squared_per_mode(uncs_VBF, YR4_VBF))
+    print 'Unc from WH:              ', sqrt(unc_squared_per_mode(uncs_WH, YR4_WH))
+    print 'Unc from ZH:              ', sqrt(unc_squared_per_mode(uncs_ZH, YR4_ZH))
+    print 'Unc from ttH:             ', sqrt(unc_squared_per_mode(uncs_ttH, YR4_ttH))
+    print 'Unc from bbH:             ', sqrt(unc_squared_per_mode(uncs_bbH, YR4_bbH))
+    print 'Unc from tH_t_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_t_ch, YR4_tH_t_ch))
+    print 'Unc from tH_s_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_s_ch, YR4_tH_s_ch))
+    print 'Unc from tH_W_associated: ', sqrt(unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associated))
+    print
+    print 'YR4_xH:                   ', YR4_xH
+    print 'xH_unc_inclusive:         ', xH_unc_inclusive
+    print 'xH_unc_inclusive_fraction:', xH_unc_inclusive_fraction

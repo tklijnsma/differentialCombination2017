@@ -119,6 +119,27 @@ def rapidity_scan(args):
     postfit_and_scan(args, config)
 
 
+@flag_as_option
+def pth_ggH_scan_hbb_floatingOOA(args):
+    args = differentialutils.set_one_decay_channel(args, 'hbb', asimov=True)
+    ws = LatestPaths.ws.pth_ggH['hbb']
+    config = differential_config(args, ws, 'pth_ggH')
+    config.tags.append('floatingOOA')
+    postfit_and_scan(args, config)
+
+@flag_as_option
+def pth_ggH_scan_hbb_fixedOOA(args):
+    args = differentialutils.set_one_decay_channel(args, 'hbb', asimov=True)
+    ws = LatestPaths.ws.pth_ggH['hbb']
+    config = differential_config(args, ws, 'pth_ggH')
+    config.POIs.pop(config.POIs.index('r_ggH_PTH_200_350'))
+    config.FLOAT_OTHER_POIS = False
+    config.del_parameter_range('r_ggH_PTH_200_350')
+    config.freezeNuisances.append('r_ggH_PTH_200_350')
+    config.tags.append('fixedOOA')
+    postfit_and_scan(args, config)
+
+
 #____________________________________________________________________
 # Helpers
 
@@ -142,8 +163,8 @@ def differential_config(args, ws, obs_name):
     if args.hzz or args.hbb:
         base_config.nPointsPerJob = base_config.nPoints
     if args.combWithHbb:
-        base_config.nPoints = 150
-        base_config.nPointsPerJob = 2
+        base_config.nPoints = 100
+        base_config.nPointsPerJob = 4
     if args.hbb or args.combWithHbb:
         base_config.minimizer_settings = [
             '--cminDefaultMinimizerType Minuit2',
@@ -170,7 +191,7 @@ def differential_config(args, ws, obs_name):
     if args.hbb:
         POIrange = [ -10.0, 10.0 ]
     if args.combWithHbb:
-        POIrange = [ 0.0, 8.5 ]
+        POIrange = [ -1.0, 6.0 ]
     if args.lumiScale:
         POIrange = [ 0.7, 1.3 ]
         base_config.nPoints = 35
@@ -264,18 +285,29 @@ def basic_t2ws(obsname, decay_channel):
         )
     return t2ws
 
+# @flag_as_option
+# def pth_ggH_t2ws(args):
+#     t2ws = basic_t2ws('pth_ggH', differentialutils.get_decay_channel_tag(args))
+#     if args.hzz:
+#         t2ws.extra_options.append('--PO \'binning=0,15,30,80,200\'')
+#     if args.hbb:
+#         t2ws.extra_options.append('--PO \'binning=200,350,600\'')
+#         # t2ws.extra_options.append('--PO \'binning=350,600\'')
+#     t2ws.run()
+
 @flag_as_option
 def pth_ggH_t2ws(args):
     t2ws = basic_t2ws('pth_ggH', differentialutils.get_decay_channel_tag(args))
     if args.hzz:
-        t2ws.extra_options.append('--PO \'binning=0,15,30,80,200\'')
-    if args.hbb:
-        t2ws.extra_options.append('--PO \'binning=200,350,600\'')
-        # t2ws.extra_options.append('--PO \'binning=350,600\'')
+        t2ws.make_maps_from_processes(add_overflow=True)
+    else:
+        t2ws.make_maps_from_processes()
     t2ws.run()
+
 
 @flag_as_option
 def pth_smH_t2ws(args):
+    raise NotImplementedError('Do the same thing as for ggH')
     t2ws = basic_t2ws('pth_smH', differentialutils.get_decay_channel_tag(args))
     if args.hzz:
         t2ws.extra_options.append('--PO \'binning=0,15,30,80,200\'')
