@@ -7,6 +7,7 @@ import pdffreezer
 import uncertaintycalculator
 import processinterpreter
 import systshapemaker
+import onedimscanner
 
 # Sub-packages
 import plotting

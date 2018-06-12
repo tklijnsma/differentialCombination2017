@@ -7,7 +7,7 @@ from differentials.core import AttrDict
 import scipy
 scipyversion = scipy.__version__.split('.')[1]
 if int(scipyversion) < 15:
-    logging.error('Failed to load scipy.optimize; need to pass the python environment')
+    # logging.error('Failed to load scipy.optimize; need to pass the python environment')
     _optimize_loaded = False
 else:
     import scipy.optimize
@@ -32,10 +32,10 @@ def divide_by_binwidth(xss, binning, do_overflow=True):
     widths = [ r-l for l, r in zip(binning[:-1], binning[1:]) ]
     xs_per_GeV = [ xs/width for xs, width in zip(xss, widths) ]
     if do_overflow:
-        logging.warning(
-            'Normalizing last bin of xs_per_GeV by second to last bin '
-            '(only suitable for plotting!)'
-            )
+        # logging.warning(
+        #     'Normalizing last bin of xs_per_GeV by second to last bin '
+        #     '(only suitable for plotting!)'
+        #     )
         xs_per_GeV[-1] = xss[-1] / widths[-2]
     return xs_per_GeV
 smxs_per_GeV = divide_by_binwidth(smxs, sm_binning)

@@ -68,6 +68,7 @@ class CouplingModel( PhysicsModel ):
 
         self.boolean_options = []
         self.make_boolean_option('radial_coord_for_ctcg')
+        self.make_boolean_option('constrain_ratio_bb_ZZ')
 
 
     def make_boolean_option(self, option_name, default=False):
@@ -318,6 +319,10 @@ class CouplingModel( PhysicsModel ):
         return False
 
     def get_decay_channels(self):
+        if self.isOnlyHgg:
+            return ['hgg']
+        if self.isOnlyHZZ:
+            return ['hzz']
         decayChannels = []
         for b in self.DC.bins:
             match = re.match( r'(h[a-zA-Z]+)_', b )

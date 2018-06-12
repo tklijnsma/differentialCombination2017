@@ -148,6 +148,7 @@ def defineYieldParameters(self):
     # Open up RooProducts for all yield parameters; need more parameters in the case of distinction between decay channels
     if self.distinguish_between_decay_channels():
         decayChannels = self.get_decay_channels()
+        assert len(decayChannels) > 0
         self.yieldParameters_per_decay_channel = {}
         for decayChannel in decayChannels:
             c = YieldParameterContainer()
@@ -208,6 +209,8 @@ def defineYieldParameters(self):
             yieldParameterContainer = self.yieldParameters_per_decay_channel[decayChannel]
             for ggH_yieldParameter in yieldParameterContainer.ggH_yieldParameters:
                 ggH_yieldParameter.add_variable(scaleParameter[decayChannel])
+            for xH_yieldParameter in yieldParameterContainer.xH_yieldParameters:
+                xH_yieldParameter.add_variable(scaleParameter[decayChannel])
 
     if self.MakeLumiScalable:
         self.modelBuilder.doVar('lumiScale[8.356546]')
@@ -388,7 +391,7 @@ def make_parametrization_for_experimental_bin(self, leftBound, rightBound):
         bbH_contribution = RooFactoryInterface.RooParametrization('bbH_{0}'.format(binStr).replace('ggH_',''), verbose=True)
         bbH_contribution.add_variable(cb_varname)
         bbH_contribution.add_term(fraction, [cb_varname, cb_varname])
-        bbH_contribution.add_term(-fraction, [])
+        # bbH_contribution.add_term(-fraction, []) # bbH is not in the xH processes!! no need to subtract
         self.commit_parseable_to_ws(bbH_contribution)
 
     if self.add_scaling_ttH or self.add_scaling_bbH:

@@ -1,13 +1,17 @@
 from physicsModels.MethodHandler import flag_as_method
 import physicsModels.RooFactoryInterface as RooFactoryInterface
 import numpy, itertools, sys
-from math import pi
 
 @flag_as_method
 def makeParametrizationsFromTheory(self):
     self.ParamB = ParametrizationBuilder(self)
     self.ParamB.check_input_dimensions()
-    self.ParamB.import_couplings()
+
+    if self.radial_coord_for_ctcg:
+        self.ParamB.import_radial_ktkg()
+    else:
+        self.ParamB.import_couplings()
+
     self.ParamB.get_coupling_combinations()
 
     self.parametrizations = self.ParamB.get_parametrization_coefficients()
@@ -26,7 +30,12 @@ def makeParametrizationsFromTheory(self):
     # Some sets for easy access after t2ws
     self.ParamB.import_bin_boundaries_as_set()
     self.modelBuilder.out.defineSet( 'parametrizations', ','.join([ p.name for p in self.rooParametrizations ]) )
-    self.modelBuilder.out.defineSet( 'POI', ','.join(self.couplings) )
+    
+    if self.radial_coord_for_ctcg:
+        self.modelBuilder.out.defineSet('POI', 'r,theta')
+    else:
+        self.modelBuilder.out.defineSet('POI', ','.join(self.couplings))
+
     self.modelBuilder.out.defineSet( 'couplings', ','.join(self.couplings) )
 
 @flag_as_method
@@ -195,17 +204,17 @@ class ParametrizationBuilder(object):
 
     def import_radial_ktkg(self):
         self.modelBuilder.doVar(
-            'theta[0.0,-0.75*{pi},0.25*{pi}]'
-            .format(pi)
+            'theta[0.0,{0},{1}]'
+            .format(-0.75*3.14159265359, 0.25*3.14159265359)
             )
         self.modelBuilder.doVar(
             'r[1.0,0.0,5.0]'
             )
         self.modelBuilder.factory_(
-            'expr::ct( "@0*Cos(@1)", r, theta )'
+            'expr::ct( "@0*TMath::Cos(@1)", r, theta )'
             )
         self.modelBuilder.factory_(
-            'expr::cg( "@0*Sin(@1)", r, theta )'
+            'expr::cg( "@0*TMath::Sin(@1)", r, theta )'
             )
 
         print '\nImported couplings ct and cg as dependent on radial variables theta and r:'
@@ -213,7 +222,6 @@ class ParametrizationBuilder(object):
         self.modelBuilder.out.var('r').Print()
         self.modelBuilder.out.function('ct').Print()
         self.modelBuilder.out.function('cg').Print()
-        sys.exit()
 
 
     def get_coupling_matrix(self):

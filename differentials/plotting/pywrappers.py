@@ -1,4 +1,4 @@
-import itertools
+import itertools, copy
 
 import ROOT
 import plotting_utils as utils
@@ -8,20 +8,19 @@ import logging
 import differentials
 import differentials.logger
 
+import numpy
 from array import array
 
 class Legend(object):
     """Wrapper for TLegend class that allows flexible drawing of a legend on a multi panel plot"""
+
+
     def __init__(
             self,
             x1=None, y1=None, x2=None, y2=None,
             ):
 
-        self._entries = []
-        self.legend = ROOT.TLegend(0., 1., 0., 1.)
-        self.legend.SetBorderSize(0)
-        self.legend.SetFillStyle(0)
-        ROOT.SetOwnership(self.legend, False)
+        self.clear()
 
         # first set defaults
         self._x1 = lambda c: c.GetLeftMargin()
@@ -32,12 +31,29 @@ class Legend(object):
 
         self.auto_n_columns = True
 
+        self.stylesheet = StyleSheet()
+        self.stylesheet.plot_priority = 9000
+
+
     def __getattr__(self, name):
         """
         Reroutes calls TLegendMultiPanel.xxxx to TLegendMultiPanel.legend.xxxx
         This method should only be called if the attribute could not be found in TLegendMultiPanel
         """
         return getattr(self.legend, name)
+
+    def style(self):
+        return self.stylesheet
+
+    def clear(self):
+        self._entries = []
+        self.set_new_legend()
+
+    def set_new_legend(self):
+        self.legend = ROOT.TLegend(0., 1., 0., 1.)
+        self.legend.SetBorderSize(0)
+        self.legend.SetFillStyle(0)
+        ROOT.SetOwnership(self.legend, False)
 
     def set(self, x1=None, y1=None, x2=None, y2=None):
         if not(x1 is None):
@@ -51,7 +67,7 @@ class Legend(object):
 
     def AddEntry(self, *args):
         """Save entries in a python list, but add them to the actual legend later"""
-        self._entries.append(args)
+        self._entries.insert(0, args)
 
     def SetNColumns(self, value):
         self.auto_n_columns = False
@@ -172,7 +188,7 @@ class ContourDummyLegend(Legend):
             self.AddEntry(self.dummySM.GetName(), 'SM', 'p')
             self.dummySM.Draw('P')
         if not self.disable_bestfit:
-            self.AddEntry(self.dummybestfit.GetName(), 'Bestfit', 'p')
+            self.AddEntry(self.dummybestfit.GetName(), 'Best fit', 'p')
             self.dummybestfit.Draw('P')        
         super(ContourDummyLegend, self).Draw(draw_str)
 
@@ -323,12 +339,91 @@ class Base(object):
 
 
 
+class StyleSheet(object):
+    """doc"""
+    def __init__(self, **kwargs):
+        super(StyleSheet, self).__init__()
+
+        self.color = 1
+        self.line_color = None
+        self.marker_color = None
+        self.fill_color = None
+
+        self.fill_color_alpha = 1.0
+
+        self.line_style = 1
+        self.marker_style = 8
+        self.fill_style = None
+
+        self.line_width = 2
+        self.error_bar_line_width = 1
+
+        self.marker_size = 1
+
+        self.plot_priority = 10
+
+        self.bin_center_offset = 0.0
+
+        self.x_width = 0.0
+
+        for key, value in kwargs.iteritems():
+            setattr(self, key, value)
+
+
+    def get_line_color(self):
+        if self.line_color is None:
+            return self.color
+        return self.line_color
+
+    def get_marker_color(self):
+        if self.marker_color is None:
+            return self.color
+        return self.marker_color
+
+    def get_fill_color(self):
+        if self.fill_color is None:
+            return self.color
+        return self.fill_color
+
+
+    def apply(self, O):
+        # Colors, falls back to self.color if None
+        if hasattr(O, 'SetLineColor'): O.SetLineColor(self.get_line_color())
+        if hasattr(O, 'SetMarkerColor'): O.SetMarkerColor(self.get_marker_color())
+
+        if self.fill_color_alpha != 1.0:
+            if hasattr(O, 'SetFillColorAlpha'):
+                O.SetFillColorAlpha(self.get_fill_color(), self.fill_color_alpha)
+            elif hasattr(O, 'SetFillColor'):
+                O.SetFillColor(self.get_fill_color())
+        elif not(self.fill_style is None):
+            if hasattr(O, 'SetFillColor'): O.SetFillColor(self.get_fill_color())
+
+        if hasattr(O, 'SetLineStyle'): O.SetLineStyle(self.line_style)
+        if hasattr(O, 'SetMarkerStyle'): O.SetMarkerStyle(self.marker_style)
+        if not(self.fill_style is None) and hasattr(O, 'SetFillStyle'): O.SetFillStyle(self.fill_style)
+
+        if hasattr(O, 'SetMarkerSize'): O.SetMarkerSize(self.marker_size)
+
+        if hasattr(O, 'SetLineWidth'): O.SetLineWidth(self.line_width)
+
+    def copy(self, **kwargs):
+        new = copy.deepcopy(self)
+        for key, value in kwargs.iteritems():
+            setattr(new, key, value)
+        return new
+
+
 class BasicDrawable(object):
     """docstring for BasicDrawable"""
+
+    default_stylesheet = StyleSheet()
+
     def __init__(self):
         super(BasicDrawable, self).__init__()
         self.legend = None
         self.move_to_bottom_of_legend = False
+        self.stylesheets = [ BasicDrawable.default_stylesheet.copy() ]
 
     def has_legend(self):
         return not(self.legend is None)
@@ -339,6 +434,17 @@ class BasicDrawable(object):
             args = list(args) + ['MOVE_TO_BOTTOM']
         leg.AddEntry(*args)
 
+    def apply_style(self, O):
+        for sheet in self.stylesheets:
+            sheet.apply(O)
+
+    def style(self):
+        # For easy access to overwriting simple attributes
+        return self.stylesheets[-1]
+
+    def add_stylesheet(self, sheet):
+        self.stylesheets.append(sheet)
+
 
 class Histogram(BasicDrawable):
     """docstring for Histogram"""
@@ -348,7 +454,10 @@ class Histogram(BasicDrawable):
 
     def __init__(self, name, title, bin_boundaries, bin_values, color=None):
         super(Histogram, self).__init__()
-        self.name = name
+        if name == 'auto':
+            self.name = utils.get_unique_rootname()
+        else:
+            self.name = name
         self.title = title
 
         if len(bin_boundaries) != len(bin_values)+1:
@@ -367,20 +476,58 @@ class Histogram(BasicDrawable):
         self.n_bins = len(bin_boundaries)-1
 
         self.has_uncertainties = False
-        if color is None:
-            self.color = self.color_cycle.next()
-        else:
-            self.color = color
 
-        self.fill_style = self.fill_style_cycle.next()
-        self.fill_color = self.color
-        self.marker_style = 8
-        self.marker_size = 0
-        self.marker_color = self.color
-        self.line_color = self.color
-        self.line_width = 2
+        self.style().color = color if not(color is None) else self.color_cycle.next()
+        # self.style().fill_style = self.fill_style_cycle.next()
+
+        # if color is None:
+        #     self.color = self.color_cycle.next()
+        # else:
+        #     self.color = color
+        # self.fill_style = self.fill_style_cycle.next()
+        # self.fill_color = self.color
+        # self.marker_style = 8
+        # self.marker_size = 0
+        # self.marker_color = self.color
+        # self.line_color = self.color
+        # self.line_width = 2
 
         self.last_bin_is_overflow = False
+        self.mergemap = None
+
+
+    def map_binning_to_fixed_binwidth(self, reference_bounds=None):
+        if reference_bounds is None:
+            reference_bounds = self.bin_boundaries[:]
+
+        new_bounds = []
+        for bound in self.bin_boundaries:
+            if not bound in reference_bounds:
+                raise ValueError(
+                    'Bound {0} is not in the reference_bounds {1}.'
+                    ' name = {2}, bin_boundaries = {3}'
+                    .format(bound, reference_bounds, self.name, self.bin_boundaries)
+                    )
+            i = reference_bounds.index(bound)
+            new_bounds.append(float(i))
+        # print 'Mapped {0} to {1} for {2}'.format(
+        #     self.bin_boundaries, new_bounds, self.name
+        #     )
+        self.reference_bounds = reference_bounds
+        self.bin_boundaries = new_bounds
+        self.get_merged_bins_from_reference(range(len(reference_bounds)))
+
+
+    def get_merged_bins_from_reference(self, reference_bounds):
+        self.mergemap = {}
+        self.mergemap_indexed = {}
+        for left, right in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:]):
+            i_left = reference_bounds.index(left)
+            i_right = reference_bounds.index(right)
+
+            self.mergemap[left] = reference_bounds[i_left:i_right+1]
+            self.mergemap_indexed[self.bin_boundaries.index(left)] = range(i_left, i_right+1)
+
 
     def set_last_bin_is_overflow(self, flag=True, method='SECONDTOLASTBINWIDTH', hard_value=None):
         logging.debug('Last bin is specified to be overflow, so the last bin boundary will be modified')
@@ -453,6 +600,29 @@ class Histogram(BasicDrawable):
     def get_bin_centers(self):
         return [ 0.5*(left+right) for left, right in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:]) ]
 
+    def get_offset_bin_centers(self):
+        if self.style().bin_center_offset == 0.0:
+            bin_centers = self.get_bin_centers()
+        else:
+            bin_centers = []
+            for center, width in zip(self.get_bin_centers(), self.get_bin_widths()):
+                bin_centers.append( center + self.style().bin_center_offset * width )
+        return bin_centers
+
+    def get_offset_bin_centers_onlynonmerged(self):
+        if self.mergemap is None:
+            return self.get_offset_bin_centers()
+        bin_centers = []
+        for left, right in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:]):
+            width = right - left
+            center = 0.5*(left+right)
+            containing_bounds = self.mergemap[left]
+            if len(containing_bounds) <= 2:
+                # Only offset if bin is not merged
+                center += self.style().bin_center_offset * width
+            bin_centers.append(center)
+        return bin_centers
+
     def get_bin_widths(self):
         return [ right-left for left, right in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:]) ]
 
@@ -462,30 +632,137 @@ class Histogram(BasicDrawable):
     def get_zeroes(self):
         return [0.0 for i in xrange(self.n_bins)]
 
+    def get_half_bin_widths_offsetcorrected(self, centers):
+        width_left = []
+        width_right = []
+        for left, right, center in zip(self.bin_boundaries[:-1], self.bin_boundaries[1:], centers):
+            width_left.append(center-left)
+            width_right.append(right-center)
+        return width_left, width_right
+
+    #____________________________________________________________________
+
+    # Standard TGraph with settable x uncertainties
+    def y_error_TGraph(self, centers, x_widths_left, x_widths_right):
+        Tg = ROOT.TGraphAsymmErrors(
+            self.n_bins,
+            array( 'f', centers ),
+            array( 'f', self.bin_values ),
+            array( 'f', x_widths_left ),
+            array( 'f', x_widths_right ),
+            array( 'f', self.errs_down ),
+            array( 'f', self.errs_up ),
+            )
+        ROOT.SetOwnership(Tg, False)
+        Tg.SetName(utils.get_unique_rootname())
+        return Tg
+
+    def y_error_TGraph_no_offset(self, x_widths):
+        centers = self.get_bin_centers()
+        return self.y_error_TGraph(centers, x_widths, x_widths)
+
+    def y_error_TGraph_offset(self, x_widths):
+        centers = self.get_offset_bin_centers()
+        return self.y_error_TGraph(centers, x_widths, x_widths)
+
+    def y_error_TGraph_offset_onlynonmerged(self, x_widths):
+        centers = self.get_offset_bin_centers_onlynonmerged()
+        return self.y_error_TGraph(centers, x_widths, x_widths)
+
+    # Legacy
+    def repr_basic_histogram(self, leg=None):
+        return self.repr_basic(leg)
+
+    #____________________________________________________________________
     # Draw methods
     def Draw(self, draw_style):
         logging.debug('Drawing Histogram {0} with draw_style {1}; legend: {2}'.format(self, draw_style, self.legend))
         for obj, draw_str in getattr(self, draw_style)(self.legend):
             obj.Draw(draw_str)
 
-    def repr_basic_histogram(self, leg=None):
+    # Basic line
+    def repr_basic(self, leg=None):
         H = ROOT.TH1F(
             utils.get_unique_rootname(), '',
             len(self.bin_boundaries)-1, array( 'f', self.bin_boundaries)
             )
         ROOT.SetOwnership( H, False )
-        H.SetLineColor(self.color)
-        H.SetLineWidth(2)
         for i_bin in xrange(self.n_bins):
             H.SetBinContent( i_bin+1, self.bin_values[i_bin] )
 
-        self.add_to_legend(leg, H.GetName(), self.title, 'l')
+        _tmp_fill_style = self.style().fill_style
+        self.style().fill_style = None
+        self.apply_style(H)
+        self.style().fill_style = _tmp_fill_style
 
+        self.add_to_legend(leg, H.GetName(), self.title, 'l')
         return [ (H, 'HISTSAME') ]
 
-    def repr_horizontal_bar_and_narrow_fill(self, leg=None):
-        return self.repr_horizontal_bars() + self.repr_uncertainties_narrow_filled_area(leg)
+    def repr_basic_dashed(self, leg=None):
+        H, _ = self.repr_basic(leg)[0]
+        H.SetLineStyle(2)
+        return [(H, _)]
 
+
+    #____________________________________________________________________
+    # Basic vertical bar representations
+    def repr_vertical_bar_nolegend(self, leg=None):
+        Tg = self.y_error_TGraph_offset_onlynonmerged(x_widths = self.get_zeroes())
+        self.apply_style(Tg)
+        Tg.SetLineWidth(self.style().error_bar_line_width)
+        return [(Tg, 'PSAME0')]
+
+    def repr_narrow_bar(self, leg=None):
+        if self.style().fill_style is None and self.style().fill_color_alpha == 1.0:
+            self.style().fill_style = next(self.fill_style_cycle)
+        Tg = self.y_error_TGraph_offset_onlynonmerged(x_widths = [ 0.1*w for w in self.get_bin_widths() ])
+        self.apply_style(Tg)
+        return [ (Tg, 'E2PSAME') ]
+
+    def repr_full_bar(self, leg=None):
+        if self.style().fill_style is None and self.style().fill_color_alpha == 1.0:
+            self.style().fill_style = next(self.fill_style_cycle)
+        Tg = self.y_error_TGraph_no_offset(x_widths = [ 0.5*w for w in self.get_bin_widths() ])
+        self.apply_style(Tg)
+        Tg.SetMarkerSize(0)
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
+        return [ (Tg, 'E2PSAME') ]
+
+    # Add legend representations
+    def repr_vertical_bar(self, leg=None):
+        Tg, _ = self.repr_vertical_bar_nolegend()[0]
+        self.add_to_legend(leg, Tg.GetName(), self.title, 'PE' )
+        return [(Tg, _)]
+
+    def repr_narrow_bar_onlyfill_legend(self, leg=None):
+        Tg, _ = self.repr_narrow_bar()[0]
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'F' )
+        return [(Tg, _)]
+
+    def repr_narrow_bar_linefill_legend(self, leg=None):
+        Tg, _ = self.repr_narrow_bar()[0]
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
+        return [(Tg, _)]
+
+    def repr_full_bar_onlyfill_legend(self, leg=None):
+        Tg, _ = self.repr_full_bar()[0]
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'F' )
+        return [(Tg, _)]
+
+    def repr_full_bar_linefill_legend(self, leg=None):
+        Tg, _ = self.repr_full_bar()[0]
+        self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
+        return [(Tg, _)]
+
+    # Combinations with basic
+    def repr_basic_with_narrow_fill(self, leg=None):
+        return self.repr_basic_histogram() + self.repr_narrow_bar_linefill_legend(leg=leg)
+    
+    def repr_basic_with_full_fill(self, leg=None):
+        return self.repr_basic_histogram() + self.repr_full_bar_linefill_legend(leg=leg)
+
+
+    # Horizontal bars
     def repr_horizontal_bars(self, leg=None):
         Tg = ROOT.TGraphErrors(
             self.n_bins,
@@ -496,21 +773,55 @@ class Histogram(BasicDrawable):
             )
         ROOT.SetOwnership( Tg, False )
         Tg.SetName( utils.get_unique_rootname() )
-
+        self.apply_style(Tg)
         Tg.SetMarkerSize(0)
-        Tg.SetMarkerColor(self.color)
-        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
-        Tg.SetLineWidth(   getattr(self, 'ErrorLineWidth',   1 ) )
-
+        self.add_to_legend(leg, Tg.GetName(), self.title, 'PE' )
         return [ (Tg, 'EPSAME') ]
+
+    def repr_horizontal_bars_dashed(self, leg=None):
+        Tg, _ = self.repr_horizontal_bars(leg)[0]
+        Tg.SetLineStyle(2)
+        return [ (Tg, _) ]
+
+    def repr_horizontal_bars_for_merged_bins(self, leg=None):
+        r = []
+        for bound, value in zip(self.bin_boundaries[:-1], self.bin_values):
+            containing_bounds = self.mergemap[bound]
+            if len(containing_bounds) > 2:
+                line = ROOT.TLine(
+                    containing_bounds[0], value, containing_bounds[-1], value
+                    )
+                ROOT.SetOwnership(line, False)
+                self.apply_style(line)
+                line.SetLineStyle(2)
+                r.append((line, ''))
+        return r
+
+
+    # Horizontal + vertical representations
+    def repr_vertical_bar_with_horizontal_lines_dashed(self, leg=None):
+        return self.repr_vertical_bar(leg) + self.repr_horizontal_bars_dashed()
+
+    def repr_vertical_bar_with_horizontal_lines_dashed_onlymerged(self, leg=None):
+        return self.repr_vertical_bar(leg) + self.repr_horizontal_bars_for_merged_bins()
+
+
+
+    #____________________________________________________________________
+
+    def repr_point_with_vertical_bar_with_dashed_horizontal_bars(self, leg=None):
+        return self.repr_point_with_vertical_bar(leg) + self.repr_horizontal_bars_dashed()
+
+    def repr_point_with_vertical_bar_with_horizontal_bars_for_merged_bins(self, leg=None):
+        return self.repr_point_with_vertical_bar(leg) + self.repr_horizontal_bars_for_merged_bins()
 
     def repr_point_with_horizontal_bar(self, leg=None):
         Tg, draw_str = self.repr_horizontal_bars()[0]
-        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
-        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
-        self.add_to_legend(leg,  Tg.GetName(), self.title, 'PE' )
+        Tg.SetMarkerSize(self.style().marker_size)
         return [(Tg, draw_str)]
 
+    def repr_horizontal_bar_and_narrow_fill(self, leg=None):
+        return self.repr_horizontal_bars() + self.repr_uncertainties_narrow_filled_area(leg)
 
     def repr_uncertainties_filled_area(self, leg=None):
         Tg = ROOT.TGraphAsymmErrors(
@@ -524,22 +835,14 @@ class Histogram(BasicDrawable):
             )
         ROOT.SetOwnership( Tg, False )
         Tg.SetName( utils.get_unique_rootname() )
-    
-        Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
-        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
-        Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
-        Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
-        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
-        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
-
+        self.apply_style(Tg)
         self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
-
         return [ (Tg, 'E2PSAME') ]
 
     def repr_point_with_vertical_bar(self, leg=None):
         Tg = ROOT.TGraphAsymmErrors(
             self.n_bins,
-            array( 'f', self.get_bin_centers() ),
+            array( 'f', self.get_offset_bin_centers() ),
             array( 'f', self.bin_values ),
             array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
             array( 'f', [ 0.0 for i in xrange(self.n_bins) ] ),
@@ -548,20 +851,13 @@ class Histogram(BasicDrawable):
             )
         ROOT.SetOwnership( Tg, False )
         Tg.SetName( utils.get_unique_rootname() )
-
-        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
-        Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
-        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
-        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
-        Tg.SetLineWidth(   getattr(self, 'ErrorLineWidth',   1 ) )
-
+        self.apply_style(Tg)
+        Tg.SetLineWidth(self.style().error_bar_line_width)
         self.add_to_legend(leg,  Tg.GetName(), self.title, 'PE' )
-
-        return [(Tg, 'PSAME')]
+        return [(Tg, 'PSAME0')]
 
     def repr_point_with_vertical_bar_and_horizontal_bar(self, leg=None):
         return self.repr_point_with_vertical_bar(leg) + self.repr_horizontal_bars()
-
 
     def repr_uncertainties_narrow_filled_area(self, leg=None):
         Tg = ROOT.TGraphAsymmErrors(
@@ -575,18 +871,11 @@ class Histogram(BasicDrawable):
             )
         ROOT.SetOwnership( Tg, False )
         Tg.SetName( utils.get_unique_rootname() )
-    
-        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
-        Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
-        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
-        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
 
-        # Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
-        # Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
-        Tg.SetFillColorAlpha(self.color, 0.30)
+        self.style().fill_color_alpha = 0.3
+        self.apply_style(Tg)
 
         self.add_to_legend(leg,  Tg.GetName(), self.title, 'F' )
-
         return [ (Tg, 'E2PSAME') ]
 
 
@@ -603,17 +892,10 @@ class Histogram(BasicDrawable):
         ROOT.SetOwnership( Tg, False )
         Tg.SetName( utils.get_unique_rootname() )
     
-        Tg.SetMarkerStyle( getattr(self, 'setMarkerStyle', 8 ) )
-        Tg.SetMarkerSize(  getattr(self, 'setMarkerSize',  0 ) )
-        Tg.SetMarkerColor( getattr(self, 'setMarkerColor', self.color ) )
-        Tg.SetLineColor(   getattr(self, 'setLineColor',   self.color ) )
-
-        # Tg.SetFillStyle(   getattr(self, 'setFillStyle',   3245 ) )
-        # Tg.SetFillColor(   getattr(self, 'setFillColor',   self.color ) )
-        Tg.SetFillColorAlpha(self.color, 0.30)
+        self.style().fill_color_alpha = 0.3
+        self.apply_style(Tg)
 
         self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
-
         return [ (Tg, 'E2PSAME') ]
 
 
@@ -625,8 +907,11 @@ class Graph(BasicDrawable):
     fill_style_cycle = itertools.cycle([ 3245, 3254, 3205 ])
 
     def __init__(self, name, title, xs, ys, color=None):
-        super(Graph, self).__init__()
-        self.name = name
+        super(Graph, self).__init__()        
+        if name == 'auto':
+            self.name = utils.get_unique_rootname()
+        else:
+            self.name = name
         self.title = title
 
         self.xs = xs
@@ -641,6 +926,12 @@ class Graph(BasicDrawable):
         self.fill_style = self.fill_style_cycle.next()
         self.line_width = 2
         self.line_style = 1
+
+    def smooth_y(self, window_size=3):
+        ys = numpy.array(self.ys)
+        window = numpy.ones(window_size) / window_size
+        ys_smooth = numpy.convolve(ys, window, mode='same')
+        self.ys = list(ys_smooth)
 
     def SetLineWidth(self, width):
         self.line_width = width
@@ -822,7 +1113,10 @@ class Histogram2D(BasicDrawable):
             color=None
             ):
         super(Histogram2D, self).__init__()
-        self.name = name
+        if name == 'auto':
+            self.name = utils.get_unique_rootname()
+        else:
+            self.name = name
         self.title = title
 
         self.has_uncertainties = False
@@ -957,9 +1251,19 @@ class Histogram2D(BasicDrawable):
             )
         ROOT.SetOwnership(self.H2, False)
 
+        min_z = 9999.
+        min_x = 9999.
+        min_y = 9999.
         for i_x in xrange(self.n_bins_x):
             for i_y in xrange(self.n_bins_y):
-                self.H2.SetBinContent(i_x+1, i_y+1, self.H2_array[i_x][i_y])
+                z = self.H2_array[i_x][i_y]
+                self.H2.SetBinContent(i_x+1, i_y+1, z)
+                if z < min_z: # Simultaneously look for minimum
+                    min_z = z
+                    min_x = self.x_bin_centers[i_x]
+                    min_y = self.y_bin_centers[i_y]
+        self.fill_bestfit(min_x, min_y)
+
 
     def fill_bestfit(self, x, y):
         self._filled_bestfit = True
@@ -1015,6 +1319,9 @@ class Histogram2D(BasicDrawable):
         Tgs = utils.get_contours_from_H2(self.H2, 2.30)
         if not(self.contour_filter_method is None):
             Tgs = getattr(self.contour_filter, self.contour_filter_method)(Tgs)[:1]
+        if len(Tgs) == 0:
+            logging.error('Could not extract 1 sigma contours from {0} ({1})'.format(self.name, self.title))
+            return []
         for Tg in Tgs:
             Tg.SetLineColor(self.color)
             Tg.SetLineWidth(2)
@@ -1028,6 +1335,9 @@ class Histogram2D(BasicDrawable):
         Tgs = utils.get_contours_from_H2(self.H2, 6.18)
         if not(self.contour_filter_method is None):
             Tgs = getattr(self.contour_filter, self.contour_filter_method)(Tgs)[:1]
+        if len(Tgs) == 0:
+            logging.error('Could not extract 2 sigma contours from {0} ({1})'.format(self.name, self.title))
+            return []
         for Tg in Tgs:
             Tg.SetLineColor(self.color)
             Tg.SetLineWidth(2)
@@ -1123,4 +1433,46 @@ class Histogram2D(BasicDrawable):
                 )
             )
         return extrema
+
+
+
+    def quickplot(
+        self,
+        plotname='auto',
+        x_min=None, x_max=None, y_min=None, y_max=None,
+        draw_method='repr_2D_with_contours',
+        x_title='x', y_title='y',
+        x_sm=1.0, y_sm=1.0,
+        ):
+        """Meant for a quick test plot, not finalized plots"""
+
+        from differentials.plotting.plots import Single2DHistPlot
+        if plotname == 'auto':
+            plotname = 'quickhistplot_{0}'.format(self.name)
+        if x_min is None:
+            x_min = self.x_bin_boundaries[0]
+        if x_max is None:
+            x_max = self.x_bin_boundaries[-1]
+        if y_min is None:
+            y_min = self.y_bin_boundaries[0]
+        if y_max is None:
+            y_max = self.y_bin_boundaries[-1]
+
+        plot = differentials.plotting.plots.Single2DHistPlot(
+            plotname,
+            self,
+            x_min = x_min,
+            x_max = x_max,
+            y_min = y_min,
+            y_max = y_max,
+            draw_str = draw_method
+            )
+        plot.set_ranges_by_contour = False
+        plot.x_title = x_title
+        plot.y_title = y_title
+        plot.x_SM = x_sm
+        plot.y_SM = y_sm
+        plot.draw()
+        plot.wrapup()
+
 

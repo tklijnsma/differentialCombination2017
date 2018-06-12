@@ -11,12 +11,17 @@ scan = AttrDict()
 #____________________________________________________________________
 # Text datacards
 
+card.pth_ggH_noXHunc = AttrDict()
+card.pth_ggH_noXHunc.hgg = 'suppliedInput/fromVittorio/pT_newBins_Feb28/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_newBins_renamedProcesses.txt'
+card.pth_ggH_noXHunc.hzz = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/hzz4l_comb_13TeV_xs_processesRenumbered.txt'
+card.pth_ggH_noXHunc.hbb = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
+card.pth_ggH_noXHunc.combination = 'suppliedInput/combination_pth_ggH_Mar01.txt'
+card.pth_ggH_noXHunc.combWithHbb = 'suppliedInput/combWithHbb_pth_ggH_Mar02.txt'
 card.pth_ggH = AttrDict()
-card.pth_ggH.hgg = 'suppliedInput/fromVittorio/pT_newBins_Feb28/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_newBins_renamedProcesses.txt'
-card.pth_ggH.hzz = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/hzz4l_comb_13TeV_xs_processesRenumbered.txt'
-card.pth_ggH.hbb = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt'
-card.pth_ggH.combination = 'suppliedInput/combination_pth_ggH_Mar01.txt'
-# card.pth_ggH.combWithHbb = 'suppliedInput/combWithHbb_pth_ggH_Mar02.txt'
+card.pth_ggH.hgg = 'suppliedInput/fromVittorio/pT_newBins_Feb28/Datacard_13TeV_differential_PtGghPlusHxNNLOPS_newBins_renamedProcesses_xHNuisPar.txt'
+card.pth_ggH.hzz = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/hzz4l_comb_13TeV_xs_processesRenumbered_xHNuisPar.txt'
+card.pth_ggH.hbb = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb_xHNuisPar.txt'
+card.pth_ggH.combination = 'suppliedInput/combination_pth_ggH_Mar01_xHNuisPar.txt'
 card.pth_ggH.combWithHbb = 'suppliedInput/combWithHbb_pth_ggH_Mar02_xHNuisPar.txt'
 
 card.pth_smH = AttrDict()
@@ -49,10 +54,13 @@ card.inclusive.hzz = 'suppliedInput/fromDavid/differential_Nov27/smH/hzz4l_comb_
 # card.inclusive.combination = 'suppliedInput/combination_inclusive_Mar19.txt'
 card.inclusive.combination = 'suppliedInput/combination_inclusive_May09.txt'
 
+card.yukawa_noXHunc = AttrDict()
+card.yukawa_noXHunc.hgg = 'suppliedInput/Yukawa_hgg_pth_ggH_Mar08.txt'
+card.yukawa_noXHunc.hzz = 'suppliedInput/Yukawa_hzz_pth_ggH_Mar08.txt'
+card.yukawa_noXHunc.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt'
 card.yukawa = AttrDict()
-card.yukawa.hgg = 'suppliedInput/Yukawa_hgg_pth_ggH_Mar08.txt'
-card.yukawa.hzz = 'suppliedInput/Yukawa_hzz_pth_ggH_Mar08.txt'
-# card.yukawa.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt'
+card.yukawa.hgg = 'suppliedInput/Yukawa_hgg_pth_ggH_Mar08_xHNuisPar.txt'
+card.yukawa.hzz = 'suppliedInput/Yukawa_hzz_pth_ggH_Mar08_xHNuisPar.txt'
 card.yukawa.combination = 'suppliedInput/Yukawa_combination_pth_ggH_Mar08_xHNuisPar.txt'
 
 card.top = AttrDict()
@@ -124,6 +132,12 @@ ws.yukawa.nominal = AttrDict()
 ws.yukawa.nominal.combination = 'out/workspaces_Mar09/combination_Yukawa_reweighted_nominal.root'
 ws.yukawa.nominal.hgg = 'out/workspaces_Mar09/hgg_Yukawa_reweighted_nominal.root'
 ws.yukawa.nominal.hzz = 'out/workspaces_Mar15/hzz_Yukawa_reweighted_nominal.root'
+
+ws.yukawa.couplingdependentBRs = AttrDict()
+ws.yukawa.couplingdependentBRs.combination = 'out/workspaces_May22/combination_Yukawa_reweighted_scalingbbH_couplingdependentBRs.root'
+ws.yukawa.couplingdependentBRs.hgg = 'out/workspaces_May26/hgg_Yukawa_reweighted_scalingbbH_couplingdependentBRs.root'
+ws.yukawa.couplingdependentBRs.hzz = 'out/workspaces_May26/hzz_Yukawa_reweighted_scalingbbH_couplingdependentBRs.root'
+
 
 ws.yukawa.unreweighted = AttrDict()
 ws.yukawa.unreweighted.combination = 'out/workspaces_Mar09/combination_Yukawa_nominal.root'

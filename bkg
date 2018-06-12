@@ -15,3 +15,6 @@ fi
 LOGFILE="$name.log"
 # nohup $COMMANDLINE </dev/null >command.log 2>&1 &
 nohup $COMMANDLINE </dev/null >$LOGFILE 2>&1 &
+pid=$!
+echo "$pid : $LOGFILE : $COMMANDLINE" >> bkglogs/pids.txt
+echo $pid

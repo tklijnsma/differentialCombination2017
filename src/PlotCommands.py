@@ -1928,6 +1928,9 @@ def ContourDummyLegend(
 def PlotCorrelationMatrix(
         container
         ):
+
+    c = ROOT.TCanvas( 'cnew', 'cnew', 1000, 800 )
+
     numpy.set_printoptions( precision=2, linewidth=100 )
 
     POIs = Commands.ListPOIs(container.ws)
@@ -1950,11 +1953,10 @@ def PlotCorrelationMatrix(
     # Make plot
 
     c.Clear()
-    SetCMargins(
-        TopMargin   = 0.08,
-        RightMargin = 0.14,
-        BottomMargin = 0.17,
-        )
+    c.SetLeftMargin(0.14)
+    c.SetTopMargin(0.08)
+    c.SetRightMargin(0.14)
+    c.SetBottomMargin(0.17)
 
     titleDict = {
         'PTH' : 'p_{T}^{H} (GeV)',
@@ -2016,7 +2018,7 @@ def PlotCorrelationMatrix(
     # Set some style
 
     ROOT.gStyle.SetHistMinimumZero() # To draw the "0", otherwise ROOT leaves it empty
-    ROOT.gStyle.SetPaintTextFormat('1.2g')
+    ROOT.gStyle.SetPaintTextFormat('1.1g')
 
     n_stops = 3
     stops  = [ 0.0, 0.5, 1.0 ]
@@ -2036,7 +2038,8 @@ def PlotCorrelationMatrix(
     Commands.GetCMSLumi()
 
     plotname = 'corrMat_' + basename(container.corrRootFile).replace('/','').replace('higgsCombine_','').replace('higgsCombine','').replace('.root','').replace('.','_')
-    SaveC( plotname )
+    # SaveC( plotname )
+    c.SaveAs('plots_Jun04/' + plotname + '.pdf')
 
     # Set back to default
     numpy.set_printoptions( precision=8, linewidth=75 )

@@ -401,6 +401,10 @@ def ptjet_t2ws(args):
 # Correlation matrices
 ########################################
 
+sys.path.append('src')
+import Commands
+import PlotCommands
+
 @flag_as_option
 def all_corrMats(args):
     corrMat_pth_smH(args)
@@ -411,12 +415,14 @@ def all_corrMats(args):
 
 @flag_as_option
 def corrMat_pth_smH(args):
-    ws = LatestPathsGetters.get_ws('pth_smH', args)
+    # ws = LatestPathsGetters.get_ws('pth_smH', args)
+    ws = LatestPaths.ws.pth_smH.combWithHbb
     Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
 
 @flag_as_option
 def corrMat_pth_ggH(args):
-    ws = LatestPathsGetters.get_ws('pth_ggH', args)
+    # ws = LatestPathsGetters.get_ws('pth_ggH', args)
+    ws = LatestPaths.ws.pth_ggH.combWithHbb
     Commands.ComputeCorrMatrix( ws, asimov=args.asimov, onBatch = False )
 
 @flag_as_option
@@ -436,39 +442,42 @@ def corrMat_rapidity(args):
 
 @flag_as_option
 def plotCorrelationMatrices(args):
-
-    pth_smH = Container()
-    # pth_smH.ws           = LatestPaths.ws_combined_smH
-    pth_smH.ws           = LatestPathsGetters.get_ws('pth_smH', args)
-    pth_smH.corrRootFile = LatestPaths.correlationMatrix_PTH
+    # pth_smH = Container()
+    pth_smH = differentials.core.AttrDict()
+    # pth_smH.ws           = LatestPathsGetters.get_ws('pth_smH', args)
+    pth_smH.ws = 'corrMat_Jun04_ws_pth_smH_combWithHbb/higgsCombine_POSTFIT_ws_pth_smH_combWithHbb.MultiDimFit.mH125.root'
+    # pth_smH.corrRootFile = LatestPaths.correlationMatrix_PTH
+    pth_smH.corrRootFile = 'corrMat_Jun04_ws_pth_smH_combWithHbb/higgsCombine_CORRMAT_ws_pth_smH_combWithHbb.MultiDimFit.mH125.root'
     pth_smH.xTitle       = 'p_{T}^{H} (GeV)'
     PlotCommands.PlotCorrelationMatrix( pth_smH )
 
-    pth_ggH = Container()
-    # pth_ggH.ws           = LatestPaths.ws_combined_ggH_xHfixed
-    pth_ggH.ws           = LatestPathsGetters.get_ws('pth_ggH', args)
-    pth_ggH.corrRootFile = LatestPaths.correlationMatrix_PTH_ggH
-    pth_ggH.xTitle       = 'p_{T}^{H} (GeV) (non-ggH fixed to SM)'
+    # pth_ggH = Container()
+    pth_ggH = differentials.core.AttrDict()
+    # pth_ggH.ws           = LatestPathsGetters.get_ws('pth_ggH', args)
+    pth_ggH.ws = 'corrMat_Jun04_ws_pth_ggH_combWithHbb/higgsCombine_POSTFIT_ws_pth_ggH_combWithHbb.MultiDimFit.mH125.root'
+    # pth_ggH.corrRootFile = LatestPaths.correlationMatrix_PTH_ggH
+    pth_ggH.corrRootFile = 'corrMat_Jun04_ws_pth_ggH_combWithHbb/higgsCombine_CORRMAT_ws_pth_ggH_combWithHbb.MultiDimFit.mH125.root'
+    pth_ggH.xTitle       = 'p_{T}^{H} (GeV) (ggH)'
     PlotCommands.PlotCorrelationMatrix( pth_ggH )
 
-    njets = Container()
-    # njets.ws           = LatestPaths.ws_combined_smH_NJ
-    njets.ws           = LatestPathsGetters.get_ws('njets', args)
-    njets.corrRootFile = LatestPaths.correlationMatrix_NJ
-    njets.xTitle       = 'N_{jets}'
-    PlotCommands.PlotCorrelationMatrix( njets )
+    # njets = Container()
+    # # njets.ws           = LatestPaths.ws_combined_smH_NJ
+    # njets.ws           = LatestPathsGetters.get_ws('njets', args)
+    # njets.corrRootFile = LatestPaths.correlationMatrix_NJ
+    # njets.xTitle       = 'N_{jets}'
+    # PlotCommands.PlotCorrelationMatrix( njets )
 
-    rapidity = Container()
-    # rapidity.ws           = LatestPaths.ws_combined_smH_YH
-    rapidity.ws           = LatestPathsGetters.get_ws('rapidity', args)
-    rapidity.corrRootFile = LatestPaths.correlationMatrix_YH
-    rapidity.xTitle       = '|y_{H}|'
-    PlotCommands.PlotCorrelationMatrix( rapidity )
+    # rapidity = Container()
+    # # rapidity.ws           = LatestPaths.ws_combined_smH_YH
+    # rapidity.ws           = LatestPathsGetters.get_ws('rapidity', args)
+    # rapidity.corrRootFile = LatestPaths.correlationMatrix_YH
+    # rapidity.xTitle       = '|y_{H}|'
+    # PlotCommands.PlotCorrelationMatrix( rapidity )
 
-    ptjet = Container()
-    # ptjet.ws           = LatestPaths.ws_combined_smH_PTJ
-    ptjet.ws           = LatestPathsGetters.get_ws('ptjet', args)
-    ptjet.corrRootFile = LatestPaths.correlationMatrix_PTJ
-    ptjet.xTitle       = 'p_{T}^{j1}'
-    PlotCommands.PlotCorrelationMatrix( ptjet )
+    # ptjet = Container()
+    # # ptjet.ws           = LatestPaths.ws_combined_smH_PTJ
+    # ptjet.ws           = LatestPathsGetters.get_ws('ptjet', args)
+    # ptjet.corrRootFile = LatestPaths.correlationMatrix_PTJ
+    # ptjet.xTitle       = 'p_{T}^{j1}'
+    # PlotCommands.PlotCorrelationMatrix( ptjet )
 

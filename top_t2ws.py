@@ -47,8 +47,8 @@ def base_t2ws(args,
         ):
 
     decay_channel = differentialutils.get_decay_channel_tag(args)
-    # card = LatestPaths.card.pth_ggH[decay_channel]
     t2ws = differentials.combine.t2ws.T2WS()
+    t2ws.card = LatestPaths.card.pth_ggH[decay_channel]
     t2ws.model_file = 'physicsModels/CouplingModel.py'
     t2ws.model_name = 'couplingModel'
 
@@ -136,61 +136,87 @@ def add_theory_uncertainties(t2ws, uncorrelated=False):
 
 
 #____________________________________________________________________
-def set_decay_channel(args, given_channel):
-    for decay_channel in ['hgg', 'hzz', 'combination', 'hbb', 'combWithHbb']:
-        setattr(args, decay_channel, False)
-    setattr(args, given_channel, True)
-
-
-import traceback
-def try_call_function_with_args(fn, args):
-    try:
-        fn(args)
-    except Exception as exc:
-        print traceback.format_exc()
-        print exc
-        pass
-
-@flag_as_option
-def all_t2ws_Top(args_original):
-    args = copy.deepcopy(args_original)
-    for decay_channel in ['hgg', 'hzz', 'combination', 'combWithHbb']:
-        logging.info('\n\n' + '*'*80)
-        logging.info('Running t2ws_Top_nominal on decay channel {0}'.format(decay_channel))
-        set_decay_channel(args, decay_channel)
-        try_call_function_with_args(t2ws_Top_nominal, args)
-
-    # set_decay_channel(args, 'combination')
-    # fns = [
-    #     t2ws_Top_noTheoryUnc,
-    #     t2ws_Top_uncorrelatedTheoryUnc,
-    #     t2ws_Top_lumiScale,
-    #     t2ws_Top_BRcouplingDependency,
-    #     t2ws_Top_profiledTotalXS,
-    #     t2ws_Top_fitRatioOfBRs,
-    #     t2ws_Top_fitOnlyNormalization,
-    #     ]
-    # for fn in fns:
-    #     try_call_function_with_args(fn, args)
-
-#____________________________________________________________________
-@flag_as_option
-def t2ws_Top_radialctcg(args):
-    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
-    t2ws = base_t2ws(args, add_scaling_ttH=True)
-    t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
-    t2ws.extra_options.append('--PO radial_coord_for_ctcg=True')
-    t2ws.tags.append('radialctcg')
-    t2ws.run()
-
-#____________________________________________________________________
 @flag_as_option
 def t2ws_Top_scalingttH(args):
-    args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
     t2ws = base_t2ws(args, add_scaling_ttH=True)
-    # t2ws.card = LatestPaths.card.top.nominal[differentialutils.get_decay_channel_tag(args)]
-    t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
+    # t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
     t2ws.run()
+
+@flag_as_option
+def t2ws_Top_scalingttH_floatingBRs(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, add_scaling_ttH=True)
+    # t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
+    t2ws.extra_options.append('--PO freely_floating_BRs=True')
+    t2ws.tags.append('floatingBRs')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Top_scalingttH_floatingBRs_constrainedbbZZ(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, add_scaling_ttH=True)
+    # t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
+    t2ws.extra_options.append('--PO freely_floating_BRs=True')
+    t2ws.extra_options.append('--PO constrain_ratio_bb_ZZ=True')
+    t2ws.tags.append('floatingBRs')
+    t2ws.tags.append('constrainedbbZZ')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Top_scalingttH_couplingdependentBRs(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, add_scaling_ttH=True)
+    # t2ws.card = LatestPaths.card.pth_ggH.combWithHbb
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.tags.append('couplingdependentBRs')
+    t2ws.run()
+
+#____________________________________________________________________
+@flag_as_option
+def t2ws_TopCtCb_scalingbbHttH(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, do_kappat_kappag=False)
+    t2ws.extra_options.append('--PO add_scaling_ttH=True')
+    t2ws.extra_options.append('--PO add_scaling_bbH=True')
+    t2ws.tags.append('scalingbbHttH')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_TopCtCb_scalingbbHttH_couplingdependentBRs(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, do_kappat_kappag=False)
+    t2ws.extra_options.append('--PO add_scaling_ttH=True')
+    t2ws.extra_options.append('--PO add_scaling_bbH=True')
+    t2ws.tags.append('scalingbbHttH')
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.tags.append('couplingdependentBRs')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_TopCtCb_scalingbbHttH_floatingBRs(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, do_kappat_kappag=False)
+    t2ws.extra_options.append('--PO add_scaling_ttH=True')
+    t2ws.extra_options.append('--PO add_scaling_bbH=True')
+    t2ws.tags.append('scalingbbHttH')
+    t2ws.extra_options.append('--PO freely_floating_BRs=True')
+    t2ws.tags.append('floatingBRs')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_TopCtCb_scalingbbHttH_floatingBRs_constrainedbbZZ(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
+    t2ws = base_t2ws(args, do_kappat_kappag=False)
+    t2ws.extra_options.append('--PO add_scaling_ttH=True')
+    t2ws.extra_options.append('--PO add_scaling_bbH=True')
+    t2ws.tags.append('scalingbbHttH')
+    t2ws.extra_options.append('--PO freely_floating_BRs=True')
+    t2ws.extra_options.append('--PO constrain_ratio_bb_ZZ=True')
+    t2ws.tags.append('floatingBRs')
+    t2ws.tags.append('constrainedbbZZ')
+    t2ws.run()
+
 
 #____________________________________________________________________
 @flag_as_option

@@ -87,13 +87,109 @@ def all_scans_Yukawa(args_original):
 
 
 #____________________________________________________________________
+# NO
+# no bbH!
+# @flag_as_option
+# def scan_yukawa_scalingbbH(args):
+#     args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+#     config = basic_config(args)
+#     config.tags.append('scalingbbH')
+#     config.datacard = 'out/workspaces_May18/combination_Yukawa_reweighted_scalingbbH.root'
+#     differentialutils.run_postfit_fastscan_scan(config)
+
+# @flag_as_option
+# def scan_yukawa_scalingbbH_floatingBRs(args):
+#     args = differentialutils.set_one_decay_channel(args, 'combination')
+#     config = basic_config(args)
+#     config.tags.append('scalingbbH')
+#     config.tags.append('floatingBRs')
+
+#     config.set_parameter_range('kappab', -50., 50.)
+#     config.set_parameter_range('kappac', -90., 90.)
+#     config.nPoints       = 40*40
+#     config.nPointsPerJob = 20
+#     config.queue         = 'all.q'
+
+#     config.datacard = 'out/workspaces_May22/combination_Yukawa_reweighted_scalingbbH_floatingBRs.root'
+#     # differentialutils.run_postfit_fastscan_scan(config)
+#     differentialutils.run_postfit_scan(config)
+
+# @flag_as_option
+# def scan_yukawa_scalingbbH_couplingdependentBRs(args):
+#     config = basic_config(args)
+#     config.tags.append('scalingbbH')
+#     config.tags.append('couplingdependentBRs')
+
+#     config.set_parameter_range('kappab', -2., 2.)
+#     config.set_parameter_range('kappac', -8., 8.)
+#     config.nPoints       = 50*50
+#     config.nPointsPerJob = 16
+#     config.queue         = 'short.q'
+
+#     config.card = LatestPaths.ws.yukawa.couplingdependentBRs[config.decay_channel]
+#     differentialutils.run_postfit_fastscan_scan(config)
+
+approval = differentials.core.AttrDict()
+approval.floatingBRs = differentials.core.AttrDict()
+approval.couplingdependentBRs = differentials.core.AttrDict()
+
+approval.floatingBRs.combination = 'out/workspaces_May30/combination_Yukawa_reweighted_floatingBRs.root'
+approval.floatingBRs.hgg         = 'out/workspaces_Jun07/hgg_Yukawa_reweighted_floatingBRs.root'
+approval.floatingBRs.hzz         = 'out/workspaces_Jun11/hzz_Yukawa_reweighted_floatingBRs.root'
+
+approval.couplingdependentBRs.combination = 'out/workspaces_May30/combination_Yukawa_reweighted_couplingdependentBRs.root'
+approval.couplingdependentBRs.hgg         = 'out/workspaces_Jun07/hgg_Yukawa_reweighted_couplingdependentBRs.root'
+approval.couplingdependentBRs.hzz         = 'out/workspaces_Jun11/hzz_Yukawa_reweighted_couplingdependentBRs.root'
+
 @flag_as_option
-def scan_yukawa_scalingbbH(args):
-    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+def scan_yukawa_NONscalingbbH_floatingBRs(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combination')
     config = basic_config(args)
-    config.tags.append('scalingbbH')
-    config.datacard = 'out/workspaces_May18/combination_Yukawa_reweighted_scalingbbH.root'
+    config.tags.append('NONscalingbbH')
+    config.tags.append('floatingBRs')
+
+    config.set_parameter_range('kappab', -50., 50.)
+    config.set_parameter_range('kappac', -90., 90.)
+    config.nPoints       = 35*35
+
+    # For asimov, around 15 min per point for the combination
+    config.nPointsPerJob = 5
+    config.queue         = 'short.q'
+
+    if args.hzz:
+        config.set_parameter_range('kappab', -10., 20.)
+        config.set_parameter_range('kappac', -50., 50.)
+        config.nPointsPerJob = 300
+        config.queue         = 'short.q'
+
+    config.datacard = approval.floatingBRs[config.decay_channel]
+    differentialutils.run_postfit_scan(config)
+
+
+@flag_as_option
+def scan_yukawa_NONscalingbbH_couplingdependentBRs(args):
+    # args = differentialutils.set_one_decay_channel(args, 'combination')
+    config = basic_config(args)
+    config.tags.append('NONscalingbbH')
+    config.tags.append('couplingdependentBRs')
+
+    config.set_parameter_range('kappab', -2., 2.)
+    config.set_parameter_range('kappac', -8., 8.)
+    config.nPoints       = 30*30
+    config.nPointsPerJob = 5
+    config.queue         = 'short.q'
+
+    if args.hzz:
+        config.set_parameter_range('kappab', -5., 5.)
+        config.set_parameter_range('kappac', -15., 15.)
+        config.nPointsPerJob = 300
+        config.queue         = 'short.q'
+
+    config.datacard = approval.couplingdependentBRs[config.decay_channel]
     differentialutils.run_postfit_fastscan_scan(config)
+
+
+
 
 #____________________________________________________________________
 

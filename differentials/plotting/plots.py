@@ -6,7 +6,7 @@ from canvas import c
 import differentials
 import differentials.core as core
 
-import logging
+import logging, sys
 from math import isnan, isinf, log10, sqrt
 from array import array
 from collections import namedtuple
@@ -53,8 +53,14 @@ class QuickPlot(PlotBase):
         self.y_title = 'y'
         differentials.plotting.canvas.reset_global_color_cyle()
 
+        self.do_legend = True
+
     def add(self, obj, draw_str):
         self.objs.append([obj, draw_str])
+
+    def clear(self):
+        self.objs = []
+        self.leg.clear()
 
     def draw(self):
         c.Clear()
@@ -71,7 +77,7 @@ class QuickPlot(PlotBase):
             obj.Draw(draw_str)
 
     def wrapup(self):
-        self.leg.Draw()
+        if self.do_legend: self.leg.Draw()
         super(QuickPlot, self).wrapup()
 
 
@@ -95,6 +101,8 @@ class Single2DHistPlot(PlotBase):
         differentials.plotting.canvas.reset_global_color_cyle()
         self.set_ranges_by_contour = True
 
+        self.x_SM = None
+        self.y_SM = None
 
     def draw(self):
         c.Clear()
@@ -149,7 +157,10 @@ class Single2DHistPlot(PlotBase):
             pywrappers.CMS_Latex_type().Draw()
             pywrappers.CMS_Latex_lumi().Draw()
 
-        pywrappers.Point(self.H2.bestfit().x, self.H2.bestfit().y).Draw('repr_SM_point')
+        if self.x_SM is None: self.x_SM = self.H2.bestfit().x
+        if self.y_SM is None: self.y_SM = self.H2.bestfit().y
+        pywrappers.Point(self.x_SM, self.y_SM).Draw('repr_SM_point')
+
         self.H2.Draw('repr_bestfitpoint') # Redraw since the SM frequently overlaps the BF for Asimov
 
         pywrappers.ContourDummyLegend(
@@ -293,7 +304,7 @@ class MultiScanPlot(PlotBase):
 
 class MultiContourPlot(PlotBase):
     """docstring for MultiContourPlot"""
-    def __init__(self, plotname, scans, x_min=None, x_max=None, y_min=None, y_max=None):
+    def __init__(self, plotname, scans, x_min=None, x_max=None, y_min=None, y_max=None, x_title=None, y_title=None):
         super(MultiContourPlot, self).__init__(plotname)
 
         self.scans = scans
@@ -306,12 +317,23 @@ class MultiContourPlot(PlotBase):
         self.draw_individual_contours = True
         self.only_1sigma_contours = False
         self.set_ranges_by_contour = False
+        self.draw_bestfit_point = True
+
+        self.use_first_scan_as_base = True
+        self.only_1sigma_contours_for_secondary = True
 
         self.x_SM = 1.0
         self.y_SM = 1.0
 
-        self.x_title = getattr(scans[0], 'x_title', 'x')
-        self.y_title = getattr(scans[0], 'y_title', 'y')
+        if x_title is None:
+            self.x_title = getattr(scans[0], 'x_title', 'x')
+        else:
+            self.x_title = x_title
+
+        if y_title is None:    
+            self.y_title = getattr(scans[0], 'y_title', 'y')
+        else:
+            self.y_title = y_title
 
         self.base = pywrappers.Base(x_title=self.x_title, y_title=self.y_title)
 
@@ -321,10 +343,41 @@ class MultiContourPlot(PlotBase):
             lambda c: 1 - c.GetRightMargin() - 0.01,
             lambda c: c.GetBottomMargin() + 0.09
             )
+        self.legend.set(
+            lambda c: c.GetLeftMargin() + 0.02,
+            lambda c: 1. - c.GetTopMargin() - 0.20,
+            lambda c: c.GetLeftMargin() + 0.24,
+            lambda c: 1. - c.GetTopMargin() - 0.01,
+            )
+        self.legend.SetBorderSize(1)
+        self.legend.SetFillStyle(1001)
+        self.legend.SetNColumns(1)
 
-    def pre_draw(self):
-        super(MultiContourPlot, self).pre_draw()
-        self.base.Draw()
+        self.cdl = pywrappers.ContourDummyLegend(
+            lambda c: c.GetLeftMargin() + 0.07,
+            lambda c: 1. - c.GetTopMargin() - 0.1,
+            lambda c: 1. - c.GetRightMargin() - 0.01,
+            lambda c: 1. - c.GetTopMargin() - 0.01,
+            )
+        # self.cdl.set(
+        #     lambda c: c.GetLeftMargin() + 0.02,
+        #     lambda c: 1. - c.GetTopMargin() - 0.22,
+        #     lambda c: c.GetLeftMargin() + 0.16,
+        #     lambda c: 1. - c.GetTopMargin() - 0.01,
+        #     )
+        self.cdl.set(
+            lambda c: c.GetLeftMargin() + 0.02,
+            lambda c: c.GetBottomMargin() + 0.02,
+            lambda c: c.GetLeftMargin() + 0.48,
+            lambda c: c.GetBottomMargin() + 0.07,
+            )
+        self.cdl.SetBorderSize(1)
+        self.cdl.SetFillStyle(1001)
+        # self.cdl.SetNColumns(1)
+
+    # def pre_draw(self):
+    #     super(MultiContourPlot, self).pre_draw()
+    #     self.base.Draw()
 
     def extrema_from_contours(self, H2s):
         x_min = 10e9
@@ -345,12 +398,29 @@ class MultiContourPlot(PlotBase):
 
     def draw(self):
         super(MultiContourPlot, self).draw()
+        c.resize_temporarily(870, 800)
+        c.SetRightMargin(0.11)
+
+        if self.use_first_scan_as_base:
+            if isinstance(self.scans[0], differentials.plotting.pywrappers.Histogram2D):
+                self.base_hist = self.scans[0]
+            else:
+                self.base_hist = self.scans[0].to_hist()
+            self.base, draw_str = self.base_hist.repr_2D()[0]
+            self.base.Draw(draw_str)
+        else:
+            self.base.Draw()
 
         self.histograms = []
-        for scan in self.scans:
-            histogram2D = scan.to_hist()
+        for scan in self.scans[::-1]:
+            if isinstance(scan, differentials.plotting.pywrappers.Histogram2D):
+                histogram2D = scan
+            else:
+                histogram2D = scan.to_hist()
             histogram2D.legend = self.legend
             if self.only_1sigma_contours:
+                histogram2D.Draw('repr_1sigma_contours_with_bestfit')
+            elif self.only_1sigma_contours_for_secondary and scan != self.scans[0]:
                 histogram2D.Draw('repr_1sigma_contours_with_bestfit')
             else:
                 histogram2D.Draw('repr_contours')
@@ -365,7 +435,12 @@ class MultiContourPlot(PlotBase):
             if self.y_min is None: self.y_min = min([H.y_min() for H in self.histograms])
             if self.x_max is None: self.x_max = max([H.x_max() for H in self.histograms])
             if self.y_max is None: self.y_max = max([H.y_max() for H in self.histograms])
-        self.base.set(x_min=self.x_min, y_min=self.y_min, x_max=self.x_max, y_max=self.y_max)
+        
+        if self.use_first_scan_as_base:
+            self.base.GetXaxis().SetRangeUser(self.x_min, self.x_max)
+            self.base.GetYaxis().SetRangeUser(self.y_min, self.y_max)
+        else:
+            self.base.set(x_min=self.x_min, y_min=self.y_min, x_max=self.x_max, y_max=self.y_max)
 
         self.base.GetXaxis().SetTitle(self.x_title)
         self.base.GetYaxis().SetTitle(self.y_title)
@@ -376,19 +451,17 @@ class MultiContourPlot(PlotBase):
 
         SM_point = pywrappers.Point(self.x_SM, self.y_SM)
         SM_point.Draw('repr_SM_point')
-        for histogram in self.histograms:
-            histogram.Draw('repr_bestfitpoint') # Redraw since the SM frequently overlaps the BF for Asimov
+
+        if self.draw_bestfit_point:
+            for histogram in self.histograms:
+                histogram.Draw('repr_bestfitpoint') # Redraw since the SM frequently overlaps the BF for Asimov
 
         if not self.disable_CMS_labels:
             pywrappers.CMS_Latex_type().Draw()
             pywrappers.CMS_Latex_lumi().Draw()
 
-        pywrappers.ContourDummyLegend(
-            c.GetLeftMargin() + 0.07,
-            1. - c.GetTopMargin() - 0.1,
-            1. - c.GetRightMargin() - 0.01,
-            1. - c.GetTopMargin() - 0.01,
-            ).Draw()
+        if not(self.draw_bestfit_point): self.cdl.disable_bestfit = True
+        self.cdl.Draw()
 
         self.wrapup()
 
@@ -397,8 +470,25 @@ class MultiContourPlot(PlotBase):
         c.RedrawAxis()
         self.save()        
         if self.draw_individual_contours:
+            if self.draw_bestfit_point:
+                draw_style = 'repr_2D_with_contours'
+            else:
+                draw_style = 'repr_2D_with_contours_no_bestfit'
             for scan in self.scans:
-                scan.plot(self.plotname + '_' + scan.name)
+                plotname = self.plotname + '_' + scan.name
+                if isinstance(scan, differentials.scans.Scan2D):
+                    scan.x_sm = self.x_SM
+                    scan.y_sm = self.y_SM
+                    scan.plot(plotname, draw_style=draw_style)
+                elif isinstance(scan, differentials.plotting.pywrappers.Histogram2D):
+                    scan.quickplot(
+                        plotname, draw_method=draw_style,
+                        x_sm = self.x_SM, y_sm = self.y_SM,
+                        x_title = self.x_title, y_title = self.y_title
+                        )
+                else:
+                    logging.error('Object {0} could not be plotted individually'.format(scan))
+
 
 
 class BottomPanelPlot(PlotBase):
@@ -439,6 +529,14 @@ class BottomPanelPlot(PlotBase):
         self.bottom_y_min = None
         self.bottom_y_max = None
         self.has_legend = False
+
+        self.fixed_widths = False
+        self.add_raster_bottom = False
+
+
+    def make_fixed_widths(self, reference_bounds):
+        self.fixed_widths = True
+        self.reference_bounds = reference_bounds
 
     def make_legend(self):
         self.has_legend = True
@@ -510,18 +608,72 @@ class BottomPanelPlot(PlotBase):
         objs = [obj for obj, _ in self.top_objects]
         x_min = self.get_extremum('x_min', 0.001, objs, possible_overwrite_key='top_x_min', minimum=True)
         x_max = self.get_extremum('x_max', 1.000, objs, possible_overwrite_key='top_x_max', minimum=False)
-        y_min = self.get_extremum('y_min', 0.001, objs, possible_overwrite_key='top_y_min', minimum=True, only_positive=True)
-        y_max = self.get_extremum('y_max', 1.000, objs, possible_overwrite_key='top_y_max', minimum=False, only_positive=True)
+
+        add_margin = False
+        if self.top_y_min is None and self.top_y_max is None:
+            add_margin = True
+
+        y_min_abs = self.get_extremum('y_min', 0.001, objs, possible_overwrite_key='top_y_min', minimum=True, only_positive=True)
+        y_max_abs = self.get_extremum('y_max', 1.000, objs, possible_overwrite_key='top_y_max', minimum=False, only_positive=True)
+
+        if add_margin:
+            # Add some margins
+            if self.top_log_scale:
+                y_max = y_max_abs + (y_max_abs/y_min_abs)**0.2 * y_max_abs
+                y_min = 0.5*y_min_abs
+            else:
+                dy = y_max_abs - y_min_abs
+                y_min -= 0.1*dy
+                y_max += 0.1*dy
+        else:
+            y_min = y_min_abs
+            y_max = y_max_abs
+
         return x_min, y_min, x_max, y_max
 
     def get_bottom_extrema(self):
         logging.debug('Getting extrema for bottom objects')
         objs = [obj for obj, _ in self.bottom_objects]
+
+        add_margin = False
+        if self.bottom_y_min is None and self.bottom_y_max is None:
+            add_margin = True
+
         x_min = self.get_extremum('x_min', 0.001, objs,  possible_overwrite_key='bottom_x_min', minimum=True)
         x_max = self.get_extremum('x_max', 1.000, objs,  possible_overwrite_key='bottom_x_max', minimum=False)
         y_min = self.get_extremum('y_min', 0.001, objs,  possible_overwrite_key='bottom_y_min', minimum=True, only_positive=False)
         y_max = self.get_extremum('y_max', 1.000, objs,  possible_overwrite_key='bottom_y_max', minimum=False, only_positive=False)
+
+        if add_margin:
+            dy = y_max - y_min
+            y_min -= 0.1*dy
+            y_max += 0.1*dy
+
         return x_min, y_min, x_max, y_max
+
+
+    def sort_objs_priority(self, objs):
+        def get_priority(obj_str_tuple):
+            obj = obj_str_tuple[0]
+            if not hasattr(obj, 'style'):
+                return 10
+            else:
+                return obj.style().plot_priority
+        objs.sort(key=get_priority) # Highest priority should be last in list (drawn list = on top)
+
+    def add_lines_at_bin_boundaries(self, bounds, stylesheet=None):
+        self.add_raster_bottom = True
+        self.add_raster_bottom_bounds = bounds
+        if stylesheet is None:
+            stylesheet = differentials.plotting.pywrappers.StyleSheet(line_width=1, color=17)
+        self.add_raster_bottom_style = stylesheet
+
+    def draw_lines_at_bin_boundaries(self, bounds, y_min, y_max, stylesheet):
+        for bound in bounds:
+            line = ROOT.TLine(bound, y_min, bound, y_max)
+            ROOT.SetOwnership(line, False)
+            stylesheet.apply(line)
+            line.Draw()
 
     def draw(self):
         super(BottomPanelPlot, self).draw()
@@ -581,17 +733,6 @@ class BottomPanelPlot(PlotBase):
         toppad.cd()
         top_x_min, top_y_min, top_x_max, top_y_max = self.get_top_extrema()
 
-        # Add some margins
-        if self.top_log_scale:
-            y_max_abs = top_y_max
-            y_min_abs = top_y_min
-            top_y_max = y_max_abs + (y_max_abs/y_min_abs)**0.2 * y_max_abs
-            top_y_min = 0.5*y_min_abs
-        else:
-            dy = top_y_max - top_y_min
-            top_y_min -= 0.1*dy
-            top_y_max += 0.1*dy
-
         base_top = utils.get_plot_base(
             x_min=top_x_min, x_max=top_x_max, y_min=top_y_min, y_max=top_y_max,
             x_title='Observable', y_title='#sigma (unit)'
@@ -612,29 +753,50 @@ class BottomPanelPlot(PlotBase):
             )
         base_bottom.Draw('P')
 
+
+        #____________________________________________________________________
         # Draw the actual objects
+
         toppad.cd()
         if self.top_log_scale:
             toppad.SetLogy()
 
+        self.sort_objs_priority(self.top_objects)
+        self.sort_objs_priority(self.bottom_objects)
+
         logging.debug('top_objects: {0}'.format(self.top_objects))
         for obj, drawStr in self.top_objects:
             logging.debug('Attempting to draw obj: {0}, drawStr: {1}'.format(obj, drawStr))
+
+            if self.fixed_widths and hasattr(obj, 'map_binning_to_fixed_binwidth'):
+                obj.map_binning_to_fixed_binwidth(self.reference_bounds)
+
             if drawStr is None:
                 obj.Draw()
             else:
                 obj.Draw(drawStr)
 
         bottompad.cd()
+
+        # Draw raster lines first if necessary:
+        if self.add_raster_bottom:
+            self.draw_lines_at_bin_boundaries(
+                self.add_raster_bottom_bounds, bottom_y_min, bottom_y_max, self.add_raster_bottom_style
+                )
+
         logging.debug('bottom_objects: {0}'.format(self.bottom_objects))
         for obj, drawStr in self.bottom_objects:
             logging.debug('Attempting to draw obj: {0}, drawStr: {1}'.format(obj, drawStr))
+
+            if self.fixed_widths and hasattr(obj, 'map_binning_to_fixed_binwidth'):
+                obj.map_binning_to_fixed_binwidth(self.reference_bounds)
+
             if drawStr is None:
                 obj.Draw()
             else:
                 obj.Draw(drawStr)
 
-
+        #____________________________________________________________________
         # Process titles, ticks, labels
         toppad.cd()
         # base_top = self.top_objects[0][0]
@@ -659,8 +821,44 @@ class BottomPanelPlot(PlotBase):
             pywrappers.CMS_Latex_type(text_size=0.08).Draw()
             pywrappers.CMS_Latex_lumi(text_size=0.07).Draw()
 
+
+        self.height_ratio = height_ratio
+        self.base_top = base_top
+        self.base_bottom = base_bottom
         self.bottompad = bottompad
         self.toppad = toppad
+        toppad.cd()
+
+
+    def replace_bin_labels(self, new_labels):
+        self.bottompad.cd()
+
+        # 'Delete' original labels
+        self.base_bottom.GetXaxis().SetLabelOffset(999.)
+
+        # text_size = 0.035*self.height_ratio
+        text_size = self.base_top.GetYaxis().GetLabelSize() * self.height_ratio
+
+        y = lambda c: c.GetBottomMargin() - 0.01*self.height_ratio
+
+        x_min = self.base_bottom.GetXaxis().GetXmin()
+        x_max = self.base_bottom.GetXaxis().GetXmax()
+        dx = x_max - x_min
+        left_margin = self.bottompad.GetLeftMargin()
+        right_margin = self.bottompad.GetRightMargin()
+        x_to_NDC = lambda x: left_margin + (x/dx * (1.-left_margin-right_margin))
+
+        for i, lbl in enumerate(new_labels):
+            x = x_to_NDC(i)
+            l = differentials.plotting.pywrappers.Latex(
+                x, y,
+                lbl
+                )
+            l.SetNDC()
+            l.SetTextSize(text_size)
+            l.SetTextAlign(23)
+            l.SetTextFont(42)
+            l.Draw()
 
 
     def wrapup(self):
@@ -680,7 +878,8 @@ class SpectraPlot(BottomPanelPlot):
         self.spectra = spectra
         self.plotname = plotname
         # self.plot = differentials.plotting.multipanel.BottomPanelPlot(plotname)
-        self.y_title_bottom = '#mu'
+        # self.y_title_bottom = '#mu'
+        self.y_title_bottom = 'Ratio to prediction'
 
         self.obsname = 'obs_name'
         self.obsunit = None
@@ -690,6 +889,10 @@ class SpectraPlot(BottomPanelPlot):
 
         self.scans_x_min = -10.0
         self.scans_x_max = 10.0
+
+        self.fix_x_max_for_spectra = True
+
+        self.overflow_label_base_offset = 0.5
 
         self.leg = pywrappers.Legend(
             lambda c: c.GetLeftMargin() + 0.01,
@@ -708,35 +911,50 @@ class SpectraPlot(BottomPanelPlot):
 
     def make_labels_for_overflow_spectra(self, spectra, obs_name):
         x_min, y_min, x_max, y_max = self.get_top_extrema()
-        y_overflow = max([ s.scans[-1].unc.right_bound * s.smxs[-1] for s in spectra ])
-        text_size = 0.03
-
+        text_size = 0.025
+        
+        # Also take second to last bin width as the text overlaps
+        y_overflow = max(
+            max([ s.scans[-1].unc.right_bound * s.smxs[-1] for s in spectra ]),
+            max([ s.scans[-2].unc.right_bound * s.smxs[-2] for s in spectra ])
+            )
+        
         i_label = 0
         for spectrum in spectra:
             if getattr(spectrum, 'no_overflow_label', False): continue
+
             y_overflow_NDC = lambda c, i_lambda=i_label: (
-                c.GetBottomMargin()
-                + log10(y_overflow/y_min)/log10(y_max/y_min) * ( 1.0 - c.GetTopMargin() - c.GetBottomMargin() )
-                + i_lambda * 4.5*text_size
-                + 2.5*text_size
+                self.overflow_label_base_offset + i_lambda * 2.0*text_size
                 )
+            # y_overflow_NDC = lambda c, i_lambda=i_label: (
+            #     c.GetBottomMargin()
+            #     + log10(y_overflow/y_min)/log10(y_max/y_min) * ( 1.0 - c.GetTopMargin() - c.GetBottomMargin() )
+            #     + i_lambda * 2.0*text_size
+            #     + 1.5*text_size
+            #     )
 
             binning = spectrum.binning()
             scale = binning[-2] - binning[-3]
             scale_text = str(int(scale)) if float(scale).is_integer() else '{0:.2f}'.format(scale)
+            left_bin = binning[-2]
+            left_bin_text = str(int(left_bin)) if float(left_bin).is_integer() else '{0:.2f}'.format(left_bin)
+
             l = pywrappers.Latex(
                     lambda c: 1. - c.GetRightMargin() - 0.01,
                     y_overflow_NDC,
-                    '#int_{{#lower[0.3]{{{0}}}}}^{{#lower[0.0]{{#infty}}}}#sigma({1}) d{1} / {2}'.format(
-                        binning[-2],
+                    '#Delta#sigma({1} > {0}) / {2}'.format(
+                        left_bin_text,
                         obs_name,
                         scale_text
                         )
                     )
+
             l.SetNDC()
             l.SetTextSize(text_size)
-            l.SetTextColor(spectrum.color)
+            l.SetTextColor(spectrum.style().color)
             l.SetTextAlign(31)
+            # l.SetTextAlign(33)
+            l.SetTextFont(42)
             self.add_top(l, '')
             i_label += 1
 
@@ -781,31 +999,20 @@ class SpectraPlot(BottomPanelPlot):
             if not spectrum._is_read:
                 spectrum.read()
 
-        if self.spectra[0].last_bin_is_overflow():
+        if self.spectra[0].last_bin_is_overflow() and self.fix_x_max_for_spectra:
             # Make sure overflow bins are aligned
             x_max = max([ 2*s.binning()[-2]-s.binning()[-3] for s in self.spectra ])
             for spectrum in self.spectra:
                 spectrum.hard_x_max = x_max
 
-        self.make_SM_line(self.spectra, leg=self.leg)
         for spectrum in self.spectra:
             self.add_bottom(spectrum.to_hist(), spectrum.draw_method)
             self.add_top(spectrum.to_hist_xs(), spectrum.draw_method, leg=self.leg)
 
         self.make_labels_for_overflow_spectra(self.spectra, self.obstitle)
         self.add_top(self.leg, '')
-
-
-        if len(self.top_objects) > 3:
-            # Make legend slightly bigger if many entries
-            y_old = self.leg._y1
-            self.leg.set(y1=lambda c: 1 - c.GetTopMargin() - 0.13,)
-            logging.info('Changed legend y1 from {0} to {1}'.format(y_old, self.leg._y1))
-
         super(SpectraPlot, self).draw()
 
-    # def wrapup(self):
-    #     super(SpectraPlot, self).wrapup()
 
 
 class BottomPanelPlotWithParametrizations(BottomPanelPlot):
@@ -932,6 +1139,8 @@ class BottomPanelPlotWithParametrizations(BottomPanelPlot):
         self.add_top(SM_xs, 'repr_basic_histogram', self.legend)
 
         parametrization = differentials.parametrization.WSParametrization(self.ws_file)
+        parametrization.try_to_include_brmodifiers = True
+
         for point in self.points:
             parametrization.set(self.scan2D.x_variable, point.x)
             parametrization.set(self.scan2D.y_variable, point.y)

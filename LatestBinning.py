@@ -147,7 +147,6 @@ obstuple_rapidity = AttrDict(
     )
 
 
-
 #____________________________________________________________________
 # xH uncertainty, inclusive
 
@@ -177,16 +176,48 @@ tot_unc_squared += unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associate
 xH_unc_inclusive = sqrt(tot_unc_squared)
 xH_unc_inclusive_fraction = xH_unc_inclusive / YR4_xH
 
+uncs_ggF = [ 5.65, 3.2 ]
+tot_unc_squared += unc_squared_per_mode(uncs_ggF, YR4_ggF_n3lo)
+smH_unc_inclusive = sqrt(tot_unc_squared)
+smH_unc_inclusive_fraction = smH_unc_inclusive / YR4_totalXS
+
+#____________________________________________________________________
+# smH uncertainties
+
+add_quad = lambda *args: sqrt(sum([ x**2 for x in args ]))
+def add_unc(obs, unc_file):
+    xs = obs.crosssection()
+    shape_unc_perc = list(numpy.load(unc_file)['uncetainty'])
+    # Add in quadrature with incl xs uncertainty from YR4
+    # Do this all in 'percent-space'
+    unc_perc = [ add_quad(err, smH_unc_inclusive_fraction) for err in shape_unc_perc ]
+    obs.unc_fraction = unc_perc
+
+add_unc(obs_yh, 'suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_AbsRapidity.npz')
+add_unc(obs_ptjet, 'suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_Jet2p5Pt0.npz')
+add_unc(obs_njets, 'suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_Njets2p5.npz')
+add_unc(obs_pth_smH, 'suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_Pt.npz')
+add_unc(obs_pth_ggH, 'suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_ggH_Pt.npz')
+
+
 if __name__ == "__main__":
-    print 'Unc from VBF:             ', sqrt(unc_squared_per_mode(uncs_VBF, YR4_VBF))
-    print 'Unc from WH:              ', sqrt(unc_squared_per_mode(uncs_WH, YR4_WH))
-    print 'Unc from ZH:              ', sqrt(unc_squared_per_mode(uncs_ZH, YR4_ZH))
-    print 'Unc from ttH:             ', sqrt(unc_squared_per_mode(uncs_ttH, YR4_ttH))
-    print 'Unc from bbH:             ', sqrt(unc_squared_per_mode(uncs_bbH, YR4_bbH))
-    print 'Unc from tH_t_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_t_ch, YR4_tH_t_ch))
-    print 'Unc from tH_s_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_s_ch, YR4_tH_s_ch))
-    print 'Unc from tH_W_associated: ', sqrt(unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associated))
-    print
-    print 'YR4_xH:                   ', YR4_xH
-    print 'xH_unc_inclusive:         ', xH_unc_inclusive
-    print 'xH_unc_inclusive_fraction:', xH_unc_inclusive_fraction
+    # print 'Unc from VBF:             ', sqrt(unc_squared_per_mode(uncs_VBF, YR4_VBF))
+    # print 'Unc from WH:              ', sqrt(unc_squared_per_mode(uncs_WH, YR4_WH))
+    # print 'Unc from ZH:              ', sqrt(unc_squared_per_mode(uncs_ZH, YR4_ZH))
+    # print 'Unc from ttH:             ', sqrt(unc_squared_per_mode(uncs_ttH, YR4_ttH))
+    # print 'Unc from bbH:             ', sqrt(unc_squared_per_mode(uncs_bbH, YR4_bbH))
+    # print 'Unc from tH_t_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_t_ch, YR4_tH_t_ch))
+    # print 'Unc from tH_s_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_s_ch, YR4_tH_s_ch))
+    # print 'Unc from tH_W_associated: ', sqrt(unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associated))
+    # print
+    # print 'YR4_xH:                   ', YR4_xH
+    # print 'xH_unc_inclusive:         ', xH_unc_inclusive
+    # print 'xH_unc_inclusive_fraction:', xH_unc_inclusive_fraction
+
+    # print 'smH_unc_inclusive:         ', smH_unc_inclusive
+    # print 'smH_unc_inclusive_fraction:', smH_unc_inclusive_fraction
+
+
+    print list(numpy.load('suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_AbsRapidity.npz')['uncetainty'])
+
+    print obs_yh.unc_fraction

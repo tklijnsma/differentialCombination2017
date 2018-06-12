@@ -40,9 +40,24 @@ class SystShapeMaker(object):
         try:
             logging.info('Getting syst-only shape for combination')
             systonly_histogram, systonly_histogram_xs = self.get_systonly_histogram_notry(combination, combination_statonly)
-            systonly_histogram.draw_method = 'repr_uncertainties_narrow_filled_area'
-            systonly_histogram_xs.draw_method = 'repr_uncertainties_narrow_filled_area'
-            systonly_histogram_xs.move_to_bottom_of_legend = True
+
+            sheet = combination.style().copy(
+                plot_priority = combination.style().plot_priority - 1,
+                marker_size=0,
+                line_width = 0,
+                line_color = 0,
+                fill_style = 1001,
+                fill_color = core.safe_colors['lightblue']
+                )
+            systonly_histogram.add_stylesheet(sheet)
+            systonly_histogram_xs.add_stylesheet(sheet)
+
+            # systonly_histogram.draw_method = 'repr_uncertainties_narrow_filled_area'
+            # systonly_histogram_xs.draw_method = 'repr_uncertainties_narrow_filled_area'
+            systonly_histogram.draw_method = 'repr_narrow_bar_onlyfill_legend'
+            systonly_histogram_xs.draw_method = 'repr_narrow_bar_onlyfill_legend'
+
+            # systonly_histogram_xs.move_to_bottom_of_legend = True
             self.success = True
             return systonly_histogram, systonly_histogram_xs
         except Exception as exc:

@@ -43,6 +43,7 @@ class CombineConfig(object):
         self.onBatch                     = True
         self.queue                       = 'all.q'
         self.jobPriority                 = 0
+        self.suppress_output             = False
 
         self.datacard                    = 'somedatacard.root'
         self.subDirectory                = ''
@@ -53,6 +54,8 @@ class CombineConfig(object):
         self.PhysicsModelParameterRanges = []
         self.floatNuisances              = []
         self.freezeNuisances             = []
+        self.saveNuisances               = []
+        self.saveFunctions               = []
 
         self.extraOptions                = []
 
@@ -100,6 +103,53 @@ class CombineConfig(object):
                 break
 
 
+    def set_parameter(self, name, value, hard=False):
+        self.del_parameter(name)
+        s = '{0}={1}'.format(name, value)
+        if hard:
+            self.hardPhysicsModelParameters.append(s)
+        else:
+            self.PhysicsModelParameters.append(s)
+
+    def del_parameter(self, name):
+        for i, parstr in enumerate(self.hardPhysicsModelParameters):
+            if parstr.startswith(name + '='):
+                self.hardPhysicsModelParameters.pop(i)
+                break
+        for i, parstr in enumerate(self.PhysicsModelParameters):
+            if parstr.startswith(name + '='):
+                self.PhysicsModelParameters.pop(i)
+                break
+
+
+    def freeze_parameter(self, name):
+        self.del_parameter_from_floating_or_freezing(name)
+        self.freezeNuisances.append(name)
+
+    def float_parameter(self, name):
+        self.del_parameter_from_floating_or_freezing(name)
+        self.freezeNuisances.append(name)
+
+    def del_parameter_from_floating_or_freezing(self, name):
+        for i, nuis in enumerate(self.freezeNuisances):
+            if nuis == name:
+                self.freezeNuisances.pop(i)
+                break
+        for i, nuis in enumerate(self.floatNuisances):
+            if nuis == name:
+                self.floatNuisances.pop(i)
+                break
+
+
+    def set_poi(self, name):
+        self.del_poi(self, name)
+        self.POIs.append(name)
+
+    def del_poi(self, name):
+        for i_poi, poi in enumerate(self.POIs):
+            if poi == name:
+                self.POIs.pop(i_poi)
+                break
 
 
 #____________________________________________________________________
@@ -120,6 +170,7 @@ class BaseCombineScan(object):
         self.extraOptions = self.input.extraOptions
 
         self.set_only_hard_physics_model_parameters = False
+        self.dont_define_POIs = False
 
         self.freezeNuisances = self.input.freezeNuisances[:]
 
@@ -146,7 +197,7 @@ class BaseCombineScan(object):
 
     def get_parameter_settings(self):
         cmd = []
-        if len(self.input.POIs) > 0:
+        if len(self.input.POIs) > 0 and not(self.dont_define_POIs):
             cmd.append( '-P ' + ' -P '.join(self.input.POIs) )
         if len(self.input.PhysicsModelParameterRanges) > 0:
             cmd.append( '--setPhysicsModelParameterRanges ' + ':'.join(self.input.PhysicsModelParameterRanges) )
@@ -186,8 +237,11 @@ class BaseCombineScan(object):
             '-m {0}'.format( self.input.DEFAULT_MASS ),
             ])
 
+        if self.input.suppress_output:
+            cmd.append('-v -1')
+
         if self.input.asimov:
-            cmd.append( '-t -1' )
+            cmd.append('-t -1')
 
         cmd.extend(self.input.minimizer_settings)
 
@@ -206,6 +260,12 @@ class BaseCombineScan(object):
 
         if len(self.extraOptions) > 0:
             cmd.extend(self.extraOptions)
+
+        if len(self.input.saveNuisances) > 0:
+            cmd.append('--saveSpecifiedNuis ' + ','.join(self.input.saveNuisances))
+
+        if len(self.input.saveFunctions) > 0:
+            cmd.append('--saveSpecifiedFunc ' + ','.join(self.input.saveFunctions))
 
         if self.onBatch:
             if 't3' in os.environ['HOSTNAME']:
@@ -283,7 +343,7 @@ class BaseCombineScan(object):
             jobman_fp.write(contents)
 
 
-#____________________________________________________________________
+            #____________________________________________________________________
 class CombinePostfit(BaseCombineScan):
 
     def __init__(self, *args, **kwargs):
@@ -307,6 +367,48 @@ class CombinePostfit(BaseCombineScan):
         cmd.append( '--saveWorkspace' )
 
         return cmd
+
+
+#____________________________________________________________________
+class CombineScanSinglePoints(BaseCombineScan):
+
+    def __init__(self, *args, **kwargs):
+        super(CombineScanSinglePoints, self).__init__(*args, **kwargs)
+        self.onBatch = True
+        self.dont_define_POIs = True
+        self.input.FLOAT_OTHER_POIS = False
+        self.points = []
+        self._i_current_point = 0
+
+    def add_point(self, **kwargs):
+        self.points.append(kwargs)
+
+    def get_task_name(self):
+        return '_ONEPOINT_{0}_'.format(self._i_current_point) + ( 'ASIMOV_' if self.input.asimov else '' ) + self.input.get_name()
+
+    def parse_command(self):
+        return super(CombineScanSinglePoints, self).parse_command()
+
+    def run(self):
+        output = ''
+
+        for i_point, point in enumerate(self.points):
+            self._i_current_point = i_point
+
+            # Set the parameters for this specific point
+            for name, value in point.iteritems():
+                self.input.set_parameter(name, value)
+                self.input.freeze_parameter(name)
+                self.freezeNuisances = self.input.freezeNuisances[:]
+
+            # Compile command, submit and collect output
+            cmd = self.parse_command()
+            with core.enterdirectory(self.subDirectory):
+                output += self.execute_command(cmd)
+        
+        self.register_jobids_in_jobmanager(output)
+
+
 
 #____________________________________________________________________
 class CombineOnlyPostfit(BaseCombineScan):

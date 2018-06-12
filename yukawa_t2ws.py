@@ -154,45 +154,31 @@ def add_theory_uncertainties(t2ws, uncorrelated=False):
     t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theory_uncertainties))
 
 
-# def add_theory_uncertainties(t2ws, uncorrelated=False):
-#     TheoryFileInterface.SetFileFinderDir(LatestPaths.derivedTheoryFiles_YukawaSummed)
 
-#     t2ws.extra_options.append(
-#         '--PO SM=[kappab=1,kappac=1,file={0}]'.format(
-#             TheoryFileInterface.FileFinder(kappab=1, kappac=1, muR=1, muF=1, Q=1, expectOneFile=True )
-#             )
-#         )
-#     possible_theories = []
-#     for kappab in [ -2, -1, 0, 1, 2 ]:
-#         for kappac in [ -10, -5, 0, 1, 5, 10 ]:
-#             if (kappab == 1 and kappac == 1 ) or (kappab == 0 and kappac == 0 ): continue
-#             else:
-#                 possible_theories.append(
-#                     '--PO theory=[kappab={0},kappac={1},file={2}]'.format(
-#                         kappab, kappac,
-#                         TheoryFileInterface.FileFinder(kappab=kappab, kappac=kappac, muR=1, muF=1, Q=1, expectOneFile=True )
-#                         )
-#                     )
-#     t2ws.extra_options.extend(random.sample(possible_theories, 6))
-
-#     # Theory uncertainties
-#     correlationMatrix   = LatestPaths.correlationMatrix_Yukawa
-#     theoryUncertainties = LatestPaths.theoryUncertainties_Yukawa
-#     if uncorrelated:
-#         correlationMatrix = LatestPaths.correlationMatrix_Yukawa_Uncorrelated # Uncorrelated
-#         t2ws.tags.append('uncorrelatedTheoryUnc')
-
-#     t2ws.extra_options.append('--PO correlationMatrix={0}'.format(correlationMatrix))
-#     t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theoryUncertainties))
-#     # t2ws.tags.append('withTheoryUncertainties') # Pretty much the default anyway
 
 #____________________________________________________________________
-def set_decay_channel(args, given_channel):
-    for decay_channel in ['hgg', 'hzz', 'combination', 'hbb', 'combWithHbb']:
-        setattr(args, decay_channel, False)
-    setattr(args, given_channel, True)
+@flag_as_option
+def t2ws_Yukawa_NOTscalingbbH(args):
+    t2ws = base_t2ws(args)
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_NOTscalingbbH_floatingBRs(args):
+    t2ws = base_t2ws(args)
+    t2ws.extra_options.append('--PO freely_floating_BRs=True')
+    t2ws.tags.append('floatingBRs')
+    t2ws.run()
+
+@flag_as_option
+def t2ws_Yukawa_NOTscalingbbH_couplingdependentBRs(args):
+    t2ws = base_t2ws(args)
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.tags.append('couplingdependentBRs')
+    t2ws.run()
 
 
+
+#____________________________________________________________________
 import traceback
 def try_call_function_with_args(fn, args):
     try:
@@ -254,17 +240,39 @@ def t2ws_Yukawa_noReweighting(args):
     t2ws.run()
 
 #____________________________________________________________________
+# bbH scaling is NOT necessary for kb/kc!
 
-@flag_as_option
-def t2ws_Yukawa_scalingbbH(args):
-    # Basically nominal, but force asimov and hzz
-    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
-    t2ws = base_t2ws(args)
-    t2ws.extra_options.append('--PO add_scaling_bbH=True')
-    t2ws.tags.append('scalingbbH')
-    t2ws.run()
+# @flag_as_option
+# def t2ws_Yukawa_scalingbbH(args):
+#     # Basically nominal, but force asimov and hzz
+#     # args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+#     t2ws = base_t2ws(args)
+#     t2ws.extra_options.append('--PO add_scaling_bbH=True')
+#     t2ws.tags.append('scalingbbH')
+#     t2ws.run()
 
+# @flag_as_option
+# def t2ws_Yukawa_scalingbbH_floatingBRs(args):
+#     # args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+#     t2ws = base_t2ws(args)
+#     t2ws.extra_options.append('--PO add_scaling_bbH=True')
+#     t2ws.tags.append('scalingbbH')
+#     t2ws.extra_options.append('--PO freely_floating_BRs=True')
+#     t2ws.tags.append('floatingBRs')
+#     t2ws.run()
 
+# @flag_as_option
+# def t2ws_Yukawa_scalingbbH_couplingdependentBRs(args):
+#     # Basically nominal, but force asimov and hzz
+#     # args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+#     t2ws = base_t2ws(args)
+#     t2ws.extra_options.append('--PO add_scaling_bbH=True')
+#     t2ws.tags.append('scalingbbH')
+#     t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+#     t2ws.tags.append('couplingdependentBRs')
+#     t2ws.run()
+
+#____________________________________________________________________
 # Scans for Giovanni
 @flag_as_option
 def t2ws_Yukawa_G0A(args):

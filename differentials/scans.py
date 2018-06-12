@@ -1,5 +1,5 @@
 import os.path
-import glob, re, copy
+import glob, re, copy, math, sys
 
 import logging
 import core
@@ -7,6 +7,7 @@ import plotting
 from plotting.canvas import c
 import plotting.plotting_utils as utils
 from uncertaintycalculator import UncertaintyCalculator
+from spline2d import Spline2DFactory
 
 from collections import namedtuple
 from array import array
@@ -26,8 +27,10 @@ class DifferentialSpectrum(object):
         'hzz' : 'H#rightarrowZZ',
         'combination' : 'Combination',
         'hbb' : 'H#rightarrowbb',
-        'combWithHbb' : 'Comb. with H#rightarrowbb',
+        'combWithHbb' : 'Combination',
         }
+
+    default_style = plotting.pywrappers.StyleSheet()
 
     def __init__(self, name, scandirs, auto_determine_POIs=True, datacard=None):
         self.name = name
@@ -54,6 +57,16 @@ class DifferentialSpectrum(object):
 
         self.scans_x_min = -10.0
         self.scans_x_max = 10.0
+
+        self.has_x_max = False
+
+        self.stylesheets = [ DifferentialSpectrum.default_style.copy() ]
+
+    def style(self):
+        return self.stylesheets[-1]
+
+    def add_stylesheet(self, sheet):
+        self.stylesheets.append(sheet)
 
     def set_sm(self, smxs):
         self.smxs = smxs
@@ -124,7 +137,19 @@ class DifferentialSpectrum(object):
 
     def binning(self):
         binning = core.binning_from_POIs(self.POIs)
+        if self.has_x_max:
+            if self.x_max < binning[-2]:
+                raise ValueError(
+                    'The histogram is given an x_max of {0}, but overwriting the last'
+                    'bin boundary would break the order of the boundaries: {1}'
+                    .format(self.x_max, binning)
+                    )
+            binning[-1] = self.x_max
         return binning
+
+    def give_x_max(self, x_max):
+        self.has_x_max = True
+        self.x_max = x_max
 
     def drop_bins_up_to_value(self, value):
         _POIs_before = self.POIs[:]
@@ -141,6 +166,10 @@ class DifferentialSpectrum(object):
     def drop_first_bin(self):
         dropped_POI = self.POIs.pop(0)
         logging.info('Dropped POI {0}'.format(dropped_POI))
+        if self._is_read:
+            self.scans.pop(0)
+        if self.smxs_set:
+            self.smxs.pop(0)
 
     def last_bin_is_overflow(self):
         if self.binning()[-1] == 10000.:
@@ -151,11 +180,11 @@ class DifferentialSpectrum(object):
         return core.first_bin_is_underflow(self.POIs)
 
     def process_overflow_and_underflow(self, histogram):
-        if self.last_bin_is_overflow():
-            if not(self.hard_x_max is None):
-                histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
-            else:
-                histogram.set_last_bin_is_overflow()
+        # if self.last_bin_is_overflow():
+        #     if not(self.hard_x_max is None):
+        #         histogram.set_last_bin_is_overflow(method='HARDVALUE', hard_value=self.hard_x_max)
+        #     else:
+        #         histogram.set_last_bin_is_overflow()
         if self.first_bin_is_underflow():
             histogram.drop_first_bin()
 
@@ -169,7 +198,8 @@ class DifferentialSpectrum(object):
         histogram.set_err_up([ s.unc.right_error for s in self.scans ])
         histogram.set_err_down([ s.unc.left_error for s in self.scans ])
         self.process_overflow_and_underflow(histogram)
-        if not(self.color is None): histogram.color = self.color
+        # if not(self.color is None): histogram.color = self.color
+        histogram.add_stylesheet(self.style())
         return histogram
 
     def to_hist_xs(self):
@@ -183,6 +213,7 @@ class DifferentialSpectrum(object):
         histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
         self.process_overflow_and_underflow(histogram)
         if not(self.color is None): histogram.color = self.color
+        histogram.add_stylesheet(self.style())
         return histogram
 
     def to_hist_sm(self):
@@ -195,20 +226,26 @@ class DifferentialSpectrum(object):
         # histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
         # histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
         self.process_overflow_and_underflow(histogram)
-        histogram.color = 16
+        histogram.add_stylesheet(self.style().copy(
+            color=16,
+            plot_priority = self.style().plot_priority - 5
+            ))
         return histogram
 
     def to_hist_smxs(self):
         histogram = plotting.pywrappers.Histogram(
             utils.get_unique_rootname(),
-            'SM',
+            core.standard_titles['SM_Vittorio'],
             self.binning(),
             self.smxs
             )
         # histogram.set_err_up([ s.unc.right_error * xs for s, xs in zip(self.scans, self.smxs) ])
         # histogram.set_err_down([ s.unc.left_error * xs for s, xs in zip(self.scans, self.smxs) ])
         self.process_overflow_and_underflow(histogram)
-        histogram.color = 16
+        histogram.add_stylesheet(self.style().copy(
+            color=16,
+            plot_priority = self.style().plot_priority - 5
+            ))
         return histogram
 
 
@@ -243,7 +280,7 @@ class ScanPrimitive(object):
         'hzz' : 'H#rightarrowZZ',
         'combination' : 'Combination',
         'hbb' : 'H#rightarrowbb',
-        'combWithHbb' : 'Comb. with H#rightarrowbb',
+        # 'combWithHbb' : 'Comb. with H#rightarrowbb',
         # 
         'kappac' : '#kappa_{c}',
         'kappab' : '#kappa_{b}',
@@ -326,7 +363,7 @@ class ScanPrimitive(object):
                 )
         return variables                            
 
-    def read_chain(self, root_files, variables, filter_x=False):
+    def read_chain(self, root_files, variables, filter_x=False, return_chain=False):
         chain = ROOT.TChain(self.tree_name)
         for root_file in root_files:
             chain.Add(root_file)
@@ -360,7 +397,12 @@ class ScanPrimitive(object):
                 )
 
         entries.sort(key=lambda entry: (entry.x, entry.y))
-        return entries
+
+        if return_chain:
+            return entries, chain
+        else:
+            return entries
+
 
     def filter_entries(self, inplace=True):
         passed_entries = []
@@ -453,9 +495,8 @@ class Scan(ScanPrimitive):
 
     def read(self):
         root_files = self.collect_root_files()
-
         if self.save_all_variables:
-            variables = self.get_list_of_variables_in_tree(self, root_files)
+            variables = self.get_list_of_variables_in_tree(root_files)
             if not(self.x_variable in variables) or not(self.y_variable in variables):
                 raise RuntimeError(
                     'Variables x:{0} and/or y:{1} are not in the found list of variables:\n'
@@ -464,7 +505,6 @@ class Scan(ScanPrimitive):
                     )
         else:
             variables = [ self.x_variable, self.y_variable ]
-
         self.entries = self.read_chain(root_files, variables)
         self.filter_entries()
 
@@ -522,6 +562,8 @@ class Scan2D(ScanPrimitive):
             self.globpat = '*' + globpat + '*'
         self.color = color
 
+        self.draw_bestfit_point = True
+
         logging.debug(
             'New scan instance:'
             '\nx_variable = {0}'
@@ -546,11 +588,33 @@ class Scan2D(ScanPrimitive):
         else:
             variables = [ self.x_variable, self.y_variable, self.z_variable ]
 
-        self.entries = self.read_chain(root_files, variables)
+        self.entries, self.chain = self.read_chain(root_files, variables, return_chain=True)
         self.filter_entries()
 
     # def bestfit(self):
     #     return self.entries[self.deltaNLL().index(0.0)]
+
+    def to_spline(self, x_min, x_max, y_min, y_max, eps=2.2, deltaNLL_cutoff=30.):
+        factory = Spline2DFactory()
+        factory.x_var = self.x_variable
+        factory.y_var = self.y_variable
+        factory.z_var = self.z_variable
+
+        factory.x_min = x_min
+        factory.x_max = x_max
+        factory.y_min = y_min
+        factory.y_max = y_max
+
+        bestfit = self.bestfit()
+        factory.fill_bestfit(bestfit.x, bestfit.y)
+
+        factory.eps = eps
+        factory.deltaNLL_cutoff = deltaNLL_cutoff
+
+        factory.tree = self.chain
+        spline = factory.make_spline()
+        return spline
+
 
     def to_hist(self):
         histogram2D = plotting.pywrappers.Histogram2D(
@@ -591,12 +655,15 @@ class Scan2D(ScanPrimitive):
         plotting.pywrappers.CMS_Latex_lumi().Draw()
         plotting.pywrappers.Point(self.x_sm, self.y_sm).Draw('repr_SM_point')
 
-        plotting.pywrappers.ContourDummyLegend(
+        cdl = plotting.pywrappers.ContourDummyLegend(
             c.GetLeftMargin() + 0.01,
             1. - c.GetTopMargin() - 0.1,
             1. - c.GetRightMargin() - 0.01,
             1. - c.GetTopMargin() - 0.01,
-            ).Draw()
+            )
+        if draw_style == 'repr_2D_with_contours_no_bestfit':
+            cdl.disable_bestfit = True
+        cdl.Draw()
 
         c.Update()
         c.RedrawAxis()
@@ -660,4 +727,129 @@ class Scan2D(ScanPrimitive):
             color=self.color
             )
         return graph
+
+    #____________________________________________________________________
+    # Not nice code here
+
+    def get_thetas(self):
+        histogram2D = self.to_hist()
+        xs = []
+        ys = []
+        twodeltaNLLs = []
+        for i_center, x in enumerate(histogram2D.x_bin_centers):
+            all_deltaNNLs = histogram2D.H2_array[i_center][:]
+            all_ys = histogram2D.y_bin_centers
+
+            min_deltaNLL = 9999.
+            for y, deltaNLL in zip(all_ys, all_deltaNNLs):
+                y_on_line = -1./12. * x
+                if y < 0.8 * y_on_line: continue
+                if deltaNLL < min_deltaNLL:
+                    min_deltaNLL = deltaNLL
+                    min_y = y
+
+            ys.append(min_y)
+            xs.append(x)
+            twodeltaNLLs.append(min_deltaNLL)
+        thetas = [ math.atan2(y, x) for x, y in zip(xs, ys) ]
+        thetas, twodeltaNLLs = [ list(l) for l in zip(*sorted(zip(thetas, twodeltaNLLs))) ]
+
+        graph = plotting.pywrappers.Graph(
+            utils.get_unique_rootname(),
+            'theta',
+            thetas,
+            twodeltaNLLs,
+            color=self.color
+            )
+        return graph
+
+    def get_thetas_along_x(self, x_min, x_max, y):
+        scanner = ThetaScanner(self.to_hist())
+        return scanner.get_thetas_along_x(x_min, x_max, y)
+
+    def get_thetas_along_y(self, y_min, y_max, x):
+        scanner = ThetaScanner(self.to_hist())
+        return scanner.get_thetas_along_y(y_min, y_max, x)
+
+
+class ThetaScanner(object):
+    """docstring for ThetaScanner"""
+    def __init__(self, H):
+        super(ThetaScanner, self).__init__()
+        self.H = H
+
+    def closest_match(self, x, list_of_bin_centers):
+        dx_min = 9999.
+        i_min = -1
+        x_best = 9999
+        for i, x_bin_center in enumerate(list_of_bin_centers):
+            dx = abs(x-x_bin_center)
+            if dx < dx_min:
+                dx_min = dx
+                i_min = i
+                x_best = x_bin_center
+        return i_min, x_best
+
+    def closest_match_x(self, x):
+        return self.closest_match(x, self.H.x_bin_centers)
+
+    def closest_match_y(self, y):
+        return self.closest_match(y, self.H.y_bin_centers)
+
+    def theta(self, x, y):
+        return math.atan2(y, x)
+
+    def sort_thetas(self, thetas, deltaNLLs):
+        thetas, deltaNLLs = [ list(l) for l in zip(*sorted(zip(thetas, deltaNLLs))) ]
+        return thetas, deltaNLLs
+
+    def get_thetas_along_x(self, x_min, x_max, y):
+        ix_min, x_min = self.closest_match_x(x_min)
+        ix_max, x_max = self.closest_match_x(x_max)
+        iy, y = self.closest_match_y(y)
+        logging.info(
+            'Getting theta from x = {0} to x = {1} at y = {2}'
+            .format(x_min, x_max, y)
+            )
+        if ix_min > ix_max:
+            (ix_min, ix_max) = (ix_max, ix_min)
+
+        thetas = []
+        deltaNLLs = []
+        for ix in xrange(ix_min, ix_max+1):
+            x = self.H.x_bin_centers[ix]
+            deltaNLL = self.H.H2_array[ix][iy]
+
+            thetas.append(self.theta(x, y))
+            deltaNLLs.append(deltaNLL)
+
+        thetas, deltaNLLs = self.sort_thetas(thetas, deltaNLLs)
+        return thetas, deltaNLLs
+
+
+    def get_thetas_along_y(self, y_min, y_max, x):
+        iy_min, y_min = self.closest_match_y(y_min)
+        iy_max, y_max = self.closest_match_y(y_max)
+        ix, x = self.closest_match_x(x)
+        logging.info(
+            'Getting theta from y = {0} to y = {1} at x = {2}'
+            .format(y_min, y_max, x)
+            )
+        if iy_min > iy_max:
+            (iy_min, iy_max) = (iy_max, iy_min)
+
+        thetas = []
+        deltaNLLs = []
+        for iy in xrange(iy_min, iy_max+1):
+            y = self.H.y_bin_centers[iy]
+            deltaNLL = self.H.H2_array[ix][iy]
+
+            thetas.append(self.theta(x, y))
+            deltaNLLs.append(deltaNLL)
+
+        thetas, deltaNLLs = self.sort_thetas(thetas, deltaNLLs)
+        return thetas, deltaNLLs
+
+
+
 

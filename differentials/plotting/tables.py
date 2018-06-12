@@ -267,6 +267,7 @@ class Table(object):
 class SpectraTable(Table):
     """docstring for SpectraTable"""
     def __init__(self, name, spectra=None, do_xs=False, last_bin_is_overflow=False):
+        super(SpectraTable, self).__init__()
         self.name = name
         self.last_bin_is_overflow = last_bin_is_overflow
         self.do_xs = do_xs

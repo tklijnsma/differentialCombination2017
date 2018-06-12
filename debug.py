@@ -14,6 +14,7 @@ import LatestPathsGetters
 import LatestBinning
 
 import differentials
+import differentialutils
 
 import os.path
 import logging
@@ -33,6 +34,202 @@ datestr = strftime('%b%d')
 ########################################
 # Main
 ########################################
+
+@flag_as_option
+def testing_spline2d(args):
+    x_coupling = 'ct'
+    y_coupling = 'cg'
+
+    x_min = 0.0
+    x_max = 2.5
+    y_min = -0.065
+    y_max = 0.08
+
+    x_min = -0.1
+    x_max = 2.0
+    y_min = -0.05
+    y_max = 0.085
+
+
+    args = differentialutils.set_one_decay_channel(args, 'combWithHbb')
+    if args.asimov:
+        scandir = 'out/Scan_May22_Top_combWithHbb_scalingttH_couplingdependentBRs_asimov'
+    else:
+        scandir = 'out/Scan_May31_Top_combWithHbb_scalingttH_couplingdependentBRs'
+
+    scalingttH = differentials.scans.Scan2D(
+        'scalingttH', x_coupling, y_coupling,
+        scandir = scandir
+        )
+    scalingttH.title = 'Combination (incl. bbH / BR(#vec{#kappa}))'
+    scalingttH.color = 1
+    scalingttH.read()
+    unsplined_hist = scalingttH.to_hist()
+
+    spline = scalingttH.to_spline(
+        x_min = x_min,
+        x_max = x_max,
+        y_min = y_min,
+        y_max = y_max,
+        )
+    spline.add_noise_selector(
+        lambda ct, cg: (cg  <  (1./12.)-0.02 - (1./12.)*ct)
+        )
+    spline.add_noise_selector(
+        lambda ct, cg: (cg  >  (1./12.)+0.04 - (1./13.)*ct)
+        )
+
+    splined_hist = spline.to_hist()
+    splined_hist.color = 1
+
+
+    plot = differentials.plotting.plots.Single2DHistPlot(
+        'debug_unsplined',
+        unsplined_hist,
+        x_min = x_min,
+        x_max = x_max,
+        y_min = y_min,
+        y_max = y_max,
+        )
+    plot.set_ranges_by_contour = False
+    plot.x_SM = 1.0
+    plot.y_SM = 0.0
+    plot.x_title = '#kappa_{t}'
+    plot.y_title = 'c_{g}'
+    plot.draw()
+    plot.wrapup()
+
+    plot = differentials.plotting.plots.Single2DHistPlot(
+        'debug_splined',
+        splined_hist,
+        x_min = x_min,
+        x_max = x_max,
+        y_min = y_min,
+        y_max = y_max,
+        )
+    plot.set_ranges_by_contour = False
+    plot.x_SM = 1.0
+    plot.y_SM = 0.0
+    plot.x_title = '#kappa_{t}'
+    plot.y_title = 'c_{g}'
+    plot.draw()
+    plot.wrapup()
+
+
+    #____________________________________________________________________
+    # Get 1d
+
+    ct_graph = get_1d_x(unsplined_hist)
+    get_unc_for_graph(ct_graph)
+    ct_graph.draw_style = 'repr_smooth_line'
+    ct_graph.title = '{0} observed; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+        differentials.core.standard_titles['ct'],
+        ct_graph.unc.left_bound, ct_graph.unc.right_bound
+        )
+    ct_graph.color = 1
+
+    differentials.plotting.canvas.c.resize_temporarily(850, 800)
+    plot = differentials.plotting.plots.MultiScanPlot('onekappascan_ct')
+    plot.manual_graphs.append(ct_graph)
+    # plot.manual_graphs.append(exp1D)
+    plot.x_title = differentials.core.standard_titles['ct']
+    plot.x_min = x_min
+    plot.x_max = x_max
+    plot.leg.SetNColumns(1)
+    plot.leg._y1 = lambda c: 1. - c.GetTopMargin() - 0.20
+    plot.draw()
+    plot.wrapup()
+
+
+    cg_graph = get_1d_y(unsplined_hist)
+    get_unc_for_graph(cg_graph)
+    cg_graph.draw_style = 'repr_smooth_line'
+    cg_graph.title = '{0} observed; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+        differentials.core.standard_titles['cg'],
+        cg_graph.unc.left_bound, cg_graph.unc.right_bound
+        )
+    cg_graph.color = 1
+
+    differentials.plotting.canvas.c.resize_temporarily(850, 800)
+    plot = differentials.plotting.plots.MultiScanPlot('onekappascan_cg')
+    plot.manual_graphs.append(cg_graph)
+    # plot.manual_graphs.append(exp1D)
+    plot.x_title = differentials.core.standard_titles['cg']
+    plot.x_min = y_min
+    plot.x_max = y_max
+    plot.leg.SetNColumns(1)
+    plot.leg._y1 = lambda c: 1. - c.GetTopMargin() - 0.20
+    plot.draw()
+    plot.wrapup()
+
+
+
+
+
+def get_1d_x(histogram2D):
+    # Histogram should be filled with 2*deltaNLL!!
+    xs = []
+    deltaNLLs = []
+
+    x_bestfit = histogram2D.bestfit().x
+    plugin_bestfit = True
+
+    for i_center, center in enumerate(histogram2D.x_bin_centers):
+        deltaNLL = min(histogram2D.H2_array[i_center][:])
+
+        if plugin_bestfit and center > x_bestfit:
+            xs.append(x_bestfit)
+            deltaNLLs.append(0.0)
+            plugin_bestfit = False
+
+        xs.append(center)
+        deltaNLLs.append(deltaNLL)
+
+    graph = differentials.plotting.pywrappers.Graph(
+        differentials.plotting.plotting_utils.get_unique_rootname(),
+        'title',
+        xs,
+        deltaNLLs
+        )
+    return graph
+
+def get_1d_y(histogram2D):
+    # Histogram should be filled with 2*deltaNLL!!
+    xs = []
+    deltaNLLs = []
+
+    x_bestfit = histogram2D.bestfit().y
+    plugin_bestfit = True
+
+    for i_center, center in enumerate(histogram2D.y_bin_centers):
+        deltaNLL = min([ row[i_center] for row in histogram2D.H2_array ])
+
+        if plugin_bestfit and center > x_bestfit:
+            xs.append(x_bestfit)
+            deltaNLLs.append(0.0)
+            plugin_bestfit = False
+
+        xs.append(center)
+        deltaNLLs.append(deltaNLL)
+
+    graph = differentials.plotting.pywrappers.Graph(
+        differentials.plotting.plotting_utils.get_unique_rootname(),
+        'title',
+        xs,
+        deltaNLLs
+        )
+    return graph
+
+
+
+
+uncertaintycalculator = differentials.uncertaintycalculator.UncertaintyCalculator()
+def get_unc_for_graph(graph):
+    graph.unc = uncertaintycalculator.create_uncertainties(
+        graph.xs,
+        [ 0.5*y for y in graph.ys ] # Histogram has 2dNLL, but unc calculator expects dNLL
+        )
+
 
 @flag_as_option
 def debug_test_ctcg_files(args):

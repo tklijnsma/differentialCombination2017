@@ -23,6 +23,8 @@ datestr = strftime( '%b%d' )
 
 import ROOT
 from array import array
+import sys
+import copy
 
 ########################################
 # Main
@@ -36,6 +38,17 @@ yukawa_x_min = -35
 yukawa_x_max = 35
 yukawa_y_min = -11
 yukawa_y_max = 12
+
+couplingdependentBRs_x_min = -8.
+couplingdependentBRs_x_max = 8.
+couplingdependentBRs_y_min = -2.
+couplingdependentBRs_y_max = 2.
+
+floatingBRs_x_min = -75.
+floatingBRs_x_max = 75.
+floatingBRs_y_min = -30.
+floatingBRs_y_max = 40.
+
 
 @flag_as_option
 def all_plots_Yukawa(args):
@@ -65,30 +78,312 @@ scandict_G.G1B_reweighted = 'out/Scan_Yukawa_May14_combination_G1B_reweighted_as
 # scandict_G.G0B_reweighted = 'out/Scan_Yukawa_May16_combination_G0B_reweighted_asimov'
 scandict_G.G0B_reweighted = 'out/Scan_Yukawa_May17_combination_G0B_reweighted_asimov'
 
+# approval = differentials.core.AttrDict()
+# approval.scalingbbH_couplingdependentBRs = differentials.core.AttrDict()
+# approval.scalingbbH_couplingdependentBRs.data = 'out/Scan_Yukawa_May24_combination_scalingbbH_couplingdependentBRs'
+# approval.scalingbbH_couplingdependentBRs.asimov = 'out/Scan_Yukawa_May22_combination_scalingbbH_couplingdependentBRs_asimov'
+# approval.scalingbbH_fixedSMBRs = 'out/Scan_Yukawa_May18_combination_scalingbbH_asimov'
+
+
+approval = differentials.core.AttrDict.create_tree(['fixedBRs', 'couplingdependentBRs', 'floatingBRs'], ['asimov', 'observed'])
+
+approval.couplingdependentBRs.asimov.combination   = 'out/Scan_Yukawa_Jun05_combination_NONscalingbbH_couplingdependentBRs_asimov'
+approval.couplingdependentBRs.observed.combination = 'out/Scan_Yukawa_May30_combination_NONscalingbbH_couplingdependentBRs'
+approval.couplingdependentBRs.observed.hgg         = 'out/Scan_Yukawa_Jun07_hgg_NONscalingbbH_couplingdependentBRs'
+approval.couplingdependentBRs.observed.hzz         = 'out/Scan_Yukawa_Jun11_hzz_NONscalingbbH_couplingdependentBRs'
+
+# approval.floatingBRs.asimov.combination   = 'out/Scan_Yukawa_May24_combination_NONscalingbbH_floatingBRs_asimov'
+approval.floatingBRs.asimov.combination   = 'out/Scan_Yukawa_Jun09_combination_NONscalingbbH_floatingBRs_asimov'
+approval.floatingBRs.observed.combination = 'out/Scan_Yukawa_May30_combination_NONscalingbbH_floatingBRs'
+approval.floatingBRs.observed.hgg         = 'out/Scan_Yukawa_Jun07_hgg_NONscalingbbH_floatingBRs'
+approval.floatingBRs.observed.hzz         = 'out/Scan_Yukawa_Jun11_hzz_NONscalingbbH_floatingBRs_0'
+
+
+#____________________________________________________________________
+def latest_couplingdependentBRs(args, decay_channel=None, asimov=None, splined=False):
+    if not(asimov is None): args = differentialutils.force_asimov(args, asimov)
+    if decay_channel is None: decay_channel = differentialutils.get_decay_channel_tag(args)
+    scandir = approval.couplingdependentBRs['asimov' if args.asimov else 'observed'][decay_channel]
+
+    scan = differentials.scans.Scan2D(
+        'kbkc_{0}'.format(decay_channel), x_coupling, y_coupling,
+        scandir = scandir
+        )
+    scan.title = differentials.core.standard_titles.get(decay_channel, decay_channel)
+    scan.color = 1
+    scan.read()
+    if splined: return spline_couplingdependentBRs(scan)
+    return scan
+
+def spline_couplingdependentBRs(scan):
+    # Careful with ranges; too far outside causes noise
+    spline = scan.to_spline(
+        x_min = -8.,
+        x_max = 8.,
+        y_min = -1.8,
+        y_max = 2.1,
+        )
+    spline.disallow_negativity = False
+    hist = spline.to_hist(nx=300, ny=300)
+    hist.color = scan.color
+    hist.name  = scan.name + '_splined'
+    hist.title = scan.title
+    return hist
+
+def latest_floatingBRs(args, decay_channel=None, asimov=None, splined=False):
+    if not(asimov is None): args = differentialutils.force_asimov(args, asimov)
+    if not(decay_channel is None): args = differentialutils.set_one_decay_channel(args, decay_channel)
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+    scandir = approval.floatingBRs['asimov' if args.asimov else 'observed'][decay_channel]
+
+    scan = differentials.scans.Scan2D(
+        'kbkc_{0}'.format(decay_channel), x_coupling, y_coupling,
+        scandir = scandir
+        )
+    scan.title = differentials.core.standard_titles.get(decay_channel, decay_channel)
+    scan.color = 1
+    scan.read()
+    if splined: return spline_floatingBRs(args, scan)
+    return scan
+
+def spline_floatingBRs(args, scan):
+    # Careful with ranges; too far outside causes noise
+    x_min = -75.
+    x_max = 75.
+    y_min = -30.
+    y_max = 40.
+    eps = 2.2
+    deltaNLL_cutoff = 30.
+    if args.hzz:
+        x_min = -35.
+        x_max = 40.
+        y_min = -9.
+        y_max = 19.
+        eps   = 2.5
+        deltaNLL_cutoff = 10.
+    spline = scan.to_spline(
+        x_min = x_min,
+        x_max = x_max,
+        y_min = y_min,
+        y_max = y_max,
+        eps = eps,
+        deltaNLL_cutoff = deltaNLL_cutoff
+        )
+    spline.disallow_negativity = False
+    hist = spline.to_hist(nx=300, ny=300)
+    hist.color = scan.color
+    hist.name  = scan.name + '_splined'
+    hist.title = scan.title
+    return hist
+
+
+#____________________________________________________________________
+@flag_as_option
+def multicont_Yukawa_NONscalingbbH_floatingBRs(args):
+    scans = []
+    scans.append(latest_floatingBRs(args, decay_channel='combination', splined=True))
+    if not args.asimov:
+        hzz = latest_floatingBRs(args, decay_channel='hzz', splined=True)
+        # hzz = latest_floatingBRs(args, decay_channel='hzz', splined=False)
+        hzz.color = differentials.core.safe_colors.blue
+        scans.append(hzz)
+        hgg = latest_floatingBRs(args, decay_channel='hgg', splined=True)
+        hgg.color = differentials.core.safe_colors.red
+        scans.append(hgg)
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_floatingBRs' + ('_asimov' if args.asimov else ''),
+        scans,
+        x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
+        x_min=floatingBRs_x_min, x_max=floatingBRs_x_max, y_min=floatingBRs_y_min, y_max=floatingBRs_y_max
+        )
+    plot.draw()
 
 @flag_as_option
-def multicont_Yukawa_scalingbbH(args):
-    G0A = differentials.scans.Scan2D('nominal', x_coupling, y_coupling, scandir = scandict_G.G0A)
-    G0A.title = 'Nominal'
-    G0A.color = 2
-    G0A.read()
+def multicont_Yukawa_NONscalingbbH_couplingdependentBRs(args):
+    scans = []
+    scans.append(latest_couplingdependentBRs(args, decay_channel='combination', splined=True))
+    if not args.asimov:
+        hzz = latest_couplingdependentBRs(args, decay_channel='hzz', splined=True)
+        hzz.color = differentials.core.safe_colors.blue
+        scans.append(hzz)
+        hgg = latest_couplingdependentBRs(args, decay_channel='hgg', splined=True)
+        hgg.color = differentials.core.safe_colors.red
+        scans.append(hgg)
 
-    scalingbbH = differentials.scans.Scan2D('scalingbbH', x_coupling, y_coupling, scandir = 'out/Scan_Yukawa_May18_combination_scalingbbH_asimov')
-    scalingbbH.title = 'incl. scaling bbH'
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_couplingdependentBRs' + ('_asimov' if args.asimov else ''),
+        scans,
+        x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
+        x_min=couplingdependentBRs_x_min, x_max=couplingdependentBRs_x_max, y_min=couplingdependentBRs_y_min, y_max=couplingdependentBRs_y_max
+        )
+    plot.draw()
+
+@flag_as_option
+def multicont_Yukawa_NONscalingbbH(args):
+    if args.asimov:
+        scandir = 'out/Scan_Yukawa_May11_combination_G0A_asimov'
+    else:
+        scandir = LatestPaths.scan.yukawa.reweighted.observed.combination
+
+    NONscalingbbH = differentials.scans.Scan2D(
+        'NONscalingbbH', x_coupling, y_coupling,
+        scandir = scandir
+        )
+    NONscalingbbH.title = 'Combination (incl. bbH / BRs fixed)'
+    NONscalingbbH.color = 1
+    NONscalingbbH.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_NONscalingbbH' + ('_asimov' if args.asimov else ''),
+        [ NONscalingbbH ],
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        )
+    plot.draw()
+
+#____________________________________________________________________
+@flag_as_option
+def onedimscans_Yukawa_scalingbbH_couplingdependentBRs(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    obs2D = latest_couplingdependentBRs(args, splined=True)
+    exp2D = latest_couplingdependentBRs(args, splined=True, asimov=True)
+    onedimscans_Yukawa('kappab', obs2D, exp2D, x_min=-4.0, x_max=4.0, apply_smoothing=True, tag='couplingdependentBRs')
+    onedimscans_Yukawa('kappac', obs2D, exp2D, x_min=-15., x_max=15., apply_smoothing=True, tag='couplingdependentBRs')
+
+@flag_as_option
+def onedimscans_Yukawa_scalingbbH_floatingBRs(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination')
+    obs2D = latest_floatingBRs(args, splined=True)
+    exp2D = latest_floatingBRs(args, splined=True, asimov=True)
+    onedimscans_Yukawa('kappab', obs2D, exp2D, x_min=-40.0, x_max=30.0, tag='floatingBRs')
+    onedimscans_Yukawa('kappac', obs2D, exp2D, x_min=-75., x_max=75., tag='floatingBRs')
+
+def onedimscans_Yukawa(kappa, obs2D, exp2D, x_min, x_max, apply_smoothing=False, tag=None):
+    onedimscanner_obs = differentials.onedimscanner.OneDimScanner(
+        obs2D,
+        'kappac', 'kappab'
+        )
+    obs1D = onedimscanner_obs.get_1d(kappa)
+    obs1D.draw_style = 'repr_smooth_line'
+    obs1D.title = '{0} observed; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+        differentials.core.standard_titles[kappa],
+        obs1D.unc.left_bound, obs1D.unc.right_bound
+        )
+    obs1D.color = 1
+    if apply_smoothing: obs1D.smooth_y(10)
+
+    onedimscanner_exp = differentials.onedimscanner.OneDimScanner(
+        exp2D,
+        'kappac', 'kappab'
+        )
+    exp1D = onedimscanner_exp.get_1d(kappa)
+    exp1D.draw_style = 'repr_dashed_line'
+    exp1D.title = '{0} expected; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+        differentials.core.standard_titles[kappa],
+        exp1D.unc.left_bound, exp1D.unc.right_bound
+        )
+    exp1D.color = 1
+    if apply_smoothing: exp1D.smooth_y(10)
+
+    plotname = 'onekappascan_kbkc'
+    if not(tag is None): plotname += '_' + tag
+    plotname += '_' + kappa
+
+    differentials.plotting.canvas.c.resize_temporarily(850, 800)
+    plot = differentials.plotting.plots.MultiScanPlot(plotname)
+    plot.manual_graphs.append(obs1D)
+    plot.manual_graphs.append(exp1D)
+    plot.x_title = differentials.core.standard_titles[kappa]
+    plot.x_min = x_min
+    plot.x_max = x_max
+    plot.leg.SetNColumns(1)
+    plot.leg._y1 = lambda c: 1. - c.GetTopMargin() - 0.20
+    plot.draw()
+    plot.wrapup()
+
+    texstr_var = lambda cmdname, value: '\\newcommand{{\\{0}}}{{{1:.1f}}}'.format(cmdname, value)
+    print texstr_var('{0}LeftAsimov'.format(kappa), exp1D.unc.left_bound)
+    print texstr_var('{0}RightAsimov'.format(kappa), exp1D.unc.right_bound)
+    print texstr_var('{0}LeftObserved'.format(kappa), obs1D.unc.left_bound)
+    print texstr_var('{0}RightObserved'.format(kappa), obs1D.unc.right_bound)
+
+
+
+#____________________________________________________________________
+
+@flag_as_option
+def multicont_Yukawa_scalingbbH_couplingdependentBRs(args):
+    if args.asimov:
+        scandir = approval.scalingbbH_couplingdependentBRs.asimov
+    else:
+        scandir = approval.scalingbbH_couplingdependentBRs.data
+
+    scalingbbH = differentials.scans.Scan2D(
+        'scalingbbH', x_coupling, y_coupling,
+        scandir = scandir
+        )
+    scalingbbH.title = 'Combination (incl. bbH / BR(#vec{#kappa}))'
     scalingbbH.color = 1
     scalingbbH.read()
 
     plot = differentials.plotting.plots.MultiContourPlot(
-        'multicont_Yukawa_scalingbbH',
-        [ 
-            G0A,
-            scalingbbH,
-            ],
+        'multicont_Yukawa_scalingbbH_couplingdependentBRs' + ('_asimov' if args.asimov else ''),
+        [ scalingbbH ],
         x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
         )
     plot.draw()
 
 
+@flag_as_option
+def multicont_Yukawa_scalingbbH_floatingBRs(args):
+    if args.asimov:
+        scandir = 'out/Scan_Yukawa_May23_combination_scalingbbH_floatingBRs_asimov_1'
+    else:
+        scandir = 'out/Scan_Yukawa_May24_combination_scalingbbH_floatingBRs'
+
+    scalingbbH = differentials.scans.Scan2D(
+        'scalingbbH', x_coupling, y_coupling,
+        scandir = scandir
+        )
+    scalingbbH.title = 'Combination (incl. bbH / BRs free)'
+    scalingbbH.color = 1
+    scalingbbH.read()
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_scalingbbH_floatingBRs' + ('_asimov' if args.asimov else ''),
+        [ scalingbbH ],
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        )
+    plot.draw()
+
+
+@flag_as_option
+def multicont_Yukawa_scalingbbH(args):
+    scans = []
+    compare_bbH = False
+
+    if compare_bbH:
+        G0A = differentials.scans.Scan2D('nominal', x_coupling, y_coupling, scandir = scandict_G.G0A)
+        G0A.title = 'Nominal'
+        G0A.color = 2
+        G0A.read()
+        scans.append(G0A)
+
+    scalingbbH = differentials.scans.Scan2D('scalingbbH', x_coupling, y_coupling, scandir = 'out/Scan_Yukawa_May18_combination_scalingbbH_asimov')
+    scalingbbH.title = 'incl. scaling bbH'
+    scalingbbH.color = 1
+    scalingbbH.read()
+    scans.append(scalingbbH)
+
+    plot = differentials.plotting.plots.MultiContourPlot(
+        'multicont_Yukawa_scalingbbH' + ( '_comparebbH' if compare_bbH else '' ),
+        scans,
+        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        )
+    plot.draw()
+
+
+#____________________________________________________________________
 @flag_as_option
 def multicont_Yukawa_G2A(args):
     G2A = differentials.scans.Scan2D('G2A', x_coupling, y_coupling, scandir = scandict_G.G2A)
@@ -272,7 +567,7 @@ def multicont_Yukawa_reweighted_paper(args):
     hzz.read()
 
     plot = differentials.plotting.plots.Single2DHistPlot(
-        'multicont_Yukaw_paper' + ('_asimov' if args.asimov else ''),
+        'multicont_Yukawa_paper' + ('_asimov' if args.asimov else ''),
         combination.to_hist()
         )
 
@@ -543,8 +838,13 @@ def multicont_Yukawa_atfchi2(args):
 
 @flag_as_option
 def points_on_contour_Yukawa(args):
-    scandict_2D = LatestPaths.scan.yukawa.reweighted.asimov if args.asimov else LatestPaths.scan.yukawa.reweighted.observed
-    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir=scandict_2D.combination)
+    if args.asimov:
+        scandir = LatestPaths.scan.yukawa.reweighted.asimov.combination
+    else:
+        # scandir = LatestPaths.scan.yukawa.reweighted.observed.combination
+        scandir = approval.scalingbbH_couplingdependentBRs.data
+
+    combination = differentials.scans.Scan2D('combination', x_coupling, y_coupling, scandir=scandir)
     combination.color = 1
     combination.read()
 
@@ -565,7 +865,8 @@ def points_on_contour_Yukawa(args):
     # ws = LatestPaths.ws_combined_TopHighPt
     # ws = LatestPaths.ws_combined_Yukawa
     # ws = 'out/workspaces_Feb01/combinedCard_Nov03_CouplingModel_Yukawa_withTheoryUncertainties.root'
-    ws = LatestPaths.ws.yukawa.nominal.combination
+    # ws = LatestPaths.ws.yukawa.nominal.combination
+    ws = 'out/workspaces_May30/combination_Yukawa_reweighted_couplingdependentBRs.root'
 
     # ======================================
     # Load into plot

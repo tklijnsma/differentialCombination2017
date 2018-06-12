@@ -3,7 +3,9 @@ import physicsModels.RooFactoryInterface as RooFactoryInterface
 
 from HiggsAnalysis.CombinedLimit.SMHiggsBuilder import SMHiggsBuilder
 
+import ROOT
 import sys
+import math
 
 
 @flag_as_method
@@ -21,10 +23,54 @@ def implement_freely_floating_BRs(self):
     self.chapter('Defining freely floating BRs')
     self.modelBuilder.doVar('brmodifier_hgg[1.0,-1000.0,1000.0]')
     self.modelBuilder.doVar('brmodifier_hzz[1.0,-1000.0,1000.0]')
-    self.modelBuilder.doVar('brmodifier_hbb[1.0,-1000.0,1000.0]')
+    
+    if self.constrain_ratio_bb_ZZ:
+        self.implement_constrain_ratio_bb_ZZ()
+        self.modelBuilder.out.function('brmodifier_hbb').Print()
+    else:
+        self.modelBuilder.doVar('brmodifier_hbb[1.0,-1000.0,1000.0]')
+        self.modelBuilder.out.var('brmodifier_hbb').Print()
+    
     self.modelBuilder.out.var('brmodifier_hgg').Print()
     self.modelBuilder.out.var('brmodifier_hzz').Print()
-    self.modelBuilder.out.var('brmodifier_hbb').Print()
+    
+
+@flag_as_method
+def implement_constrain_ratio_bb_ZZ(self):
+    # Apply a constraint on the ratio bb/ZZ based on HIG-17-031
+    mean = 0.84
+    up = 0.38
+    down = -0.27
+    symm = 0.5*(abs(down)+abs(up))
+    symm_perc = symm / mean
+
+    self.modelBuilder.doVar('delta_ratio_bb_ZZ[0.0,-10.0,10.0]')
+    self.DC.systs.append(
+        ( 'delta_ratio_bb_ZZ', False, 'param', ['0', '1'], [] )
+        )
+    self.modelBuilder.out.var('delta_ratio_bb_ZZ').Print()
+
+    scaler = ROOT.ProcessNormalization('modifier_bb_ZZ', '')
+    scaler.addLogNormal(
+        math.exp(symm_perc),
+        self.modelBuilder.out.var('delta_ratio_bb_ZZ')
+        )
+    self.modelBuilder.out._import(scaler)
+    self.modelBuilder.out.function(scaler.GetName()).Print()
+
+    self.modelBuilder.factory_('prod::brmodifier_hbb(modifier_bb_ZZ, brmodifier_hzz)')
+
+
+    # scaler = ROOT.ProcessNormalization('ratio_bb_ZZ', '')
+    # scaler.addLogNormal(
+    #     math.exp(symm_perc),
+    #     self.modelBuilder.out.var('delta_ratio_bb_ZZ')
+    #     )
+    # self.modelBuilder.out._import(scaler)
+    # self.modelBuilder.out.function('ratio_bb_ZZ').Print()
+
+    # self.modelBuilder.factory_('prod::brmodifier_hbb(ratio_bb_ZZ, brmodifier_hzz)')
+
 
 @flag_as_method
 def implement_scaling_BRs(self):

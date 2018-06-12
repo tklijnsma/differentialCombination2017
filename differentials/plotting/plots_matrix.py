@@ -98,6 +98,8 @@ class CorrelationMatrixPlot(plots.PlotBase):
             l.SetTextAlign(13)
             l.Draw()
 
+        self.H = H
+
 
 class CorrelationMatrixFromCombinePlot(CorrelationMatrixPlot):
     """docstring for CorrelationMatrixFromCombinePlot"""
@@ -135,4 +137,7 @@ class CorrelationMatrixFromCombinePlot(CorrelationMatrixPlot):
             self.get_correlation_matrix_from_ws()
         super(CorrelationMatrixFromCombinePlot, self).draw()
 
+        self.H.GetYaxis().SetTitle(self.H.GetXaxis().GetTitle())
+        self.H.GetYaxis().SetTitleSize(self.H.GetXaxis().GetTitleSize())
+        self.H.GetYaxis().SetTitleOffset(1.9)
 

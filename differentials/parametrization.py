@@ -12,51 +12,37 @@ class WSParametrization(object):
         self.ws_file = ws_file
         with core.openroot(ws_file) as ws_fp:
             self.w = ws_fp.Get('w')
+
         self.old_style = False
-        self.yield_parameters = []
+
+        self.try_to_include_brmodifiers = False
+
         self.smxs = []
+        self.parametrizations = []
+        self.ggH_yield_parameters = [] # Taking into account also brmodifiers for example
 
-    def get_yield_parameters(self):
-        yp_list = self.get_yield_parameter_arglist()
-        for i in xrange(yp_list.getSize()):
-            yp = yp_list[i]
-            yp_name = yp.GetName()
-            logging.debug('Found yield parameter: '.format(yp))
+        self.smxs_xH = []
+        self.xH_yield_parameters = []
 
-            if not(self.old_style) and yp_name.startswith('r_'):
-                new_yp_name = yp_name.replace('r_', 'parametrization_')
-                logging.info('Taking {0} instead of {1}'.format(new_yp_name, yp_name))
-                new_yp = self.w.function(new_yp_name)
-                if new_yp == None:
-                    logging.error('Variable {0} does not exist in ws; taking {1} instead'.format(new_yp_name, yp_name))
-                else:
-                    yp = new_yp
-            self.yield_parameters.append(yp)
+        self.decay_channel = None
+        self.is_dc_specific = False
 
-    def get_yield_parameter_arglist(self):
-        # if self.set_exists('all_ggH_yieldParameters'):
-            # logging.debug('Found set called all_ggH_yieldParameters')
-            # argset = self.w.set('all_ggH_yieldParameters')
-        if self.set_exists('parametrizations_exp'):
-            logging.debug('Found set called parametrizations_exp')
-            argset = self.w.set('parametrizations_exp')
-        elif self.set_exists('yieldParameters'):
-            logging.debug('Found set called yieldParameters')
-            self.old_style = True
-            argset = self.w.set('yieldParameters')
-        else:
-            raise RuntimeError(
-                'Sets \'{0}\' and \'{1}\' do not exist in {2}'
-                .format('all_ggH_yieldParameters', 'yieldParameters', self.ws_file)
+
+
+    def arglist_to_pylist(self, arglist):
+        pylist = []
+        for i in xrange(arglist.getSize()):
+            pylist.append(arglist[i])
+        return pylist
+
+    def prod_list(self, l1, l2):
+        if not len(l1) == len(l2):
+            raise ValueError(
+                'Inconsistent list length for prod_list: Found {0} in l1, and {1} in l2'
+                .format(len(l1), len(l2))
                 )
-            # raise RuntimeError(
-            #     'Set \'{0}\' does not exist in {1}'
-            #     .format(set_name, self.ws_file)
-            #     )
-        ROOT.SetOwnership(argset, False)
-        arglist = ROOT.RooArgList(argset)
-        ROOT.SetOwnership(arglist, False)
-        return arglist
+        return [ e1 * e2 for e1, e2 in zip(l1, l2) ]
+
 
     def set_exists(self, set_name):
         logging.debug('Checking if set {0} exists'.format(set_name))
@@ -66,6 +52,16 @@ class WSParametrization(object):
             return False
         else:
             return True
+
+    def get_argset_as_pylist(self, set_name):
+        if not self.set_exists(set_name):
+            raise ValueError('Workspace has no set {0}'.format(set_name))
+        argset = self.w.set(set_name)
+        ROOT.SetOwnership(argset, False)
+        arglist = ROOT.RooArgList(argset)
+        ROOT.SetOwnership(arglist, False)
+        return self.arglist_to_pylist(arglist)
+
 
     def set(self, name, value):
         logging.debug('Setting {0} to {1}'.format(name, value))
@@ -77,29 +73,127 @@ class WSParametrization(object):
                 )
         roovar.setVal(value)
 
+    def set_kwargs(self, kwargs):
+        for name, value in kwargs.iteritems():
+            self.set(name, value)
+
     def set_smxs(self, smxs):
         self.smxs = smxs
 
-    def get_mus_exp(self, **kwargs):
-        if len(self.yield_parameters) == 0:
-            self.get_yield_parameters()
+    def get_smxs_from_ws(self, set_name='SMXS'):
+        xs_pars = self.get_argset_as_pylist(set_name)
+        self.smxs = [ p.getVal() for p in xs_pars ]
 
-        for name, value in kwargs.iteritems():
-            self.set(name, value)
-        mus = [ yp.getVal() for yp in self.yield_parameters ]
-        return mus
+
+    #____________________________________________________________________
+    # For the parametrization only (ignoring other modifiers e.g. BR)
+
+    def get_parametrizations_from_ggH_yield_parameters(self, ggH_yield_parameters):
+        parametrizations = []
+        for ggH_yp in ggH_yield_parameters:
+            param_name = ggH_yp.GetName().replace('r_', 'parametrization_')
+            parametrizations.append(self.w.function(param_name))
+        return parametrizations
+
+    def get_parametrizations(self):
+        self.parametrizations = []
+
+        if self.try_to_include_brmodifiers:
+            if self.set_exists('all_ggH_yieldParameters'):
+                # Get the parametrizations from the full ggH modifier (simply replace 'r_' by 'parametrization_' in the name)
+                logging.debug('Found set called all_ggH_yieldParameters')
+                ggH_yield_parameters = self.get_argset_as_pylist('all_ggH_yieldParameters')
+                self.parametrizations = ggH_yield_parameters
+            else:
+                raise RuntimeError(
+                    'Tried to include brmodifiers but something went wrong'
+                    )
+            return
+
+        if self.set_exists('parametrizations_exp'):
+            # Newest way, parametrizations binned for exp are stored directly
+            logging.debug('Found set called parametrizations_exp')
+            self.parametrizations = self.get_argset_as_pylist('parametrizations_exp')
+
+        elif self.set_exists('all_ggH_yieldParameters'):
+            # Get the parametrizations from the full ggH modifier (simply replace 'r_' by 'parametrization_' in the name)
+            logging.debug('Found set called all_ggH_yieldParameters')
+            ggH_yield_parameters = self.get_argset_as_pylist('all_ggH_yieldParameters')
+            self.parametrizations = self.get_parametrizations_from_ggH_yield_parameters(ggH_yield_parameters)
+
+        elif self.set_exists('yieldParameters'):
+            logging.debug('Found set called yieldParameters')
+            ggH_yield_parameters = self.get_argset_as_pylist('yieldParameters')
+            self.parametrizations = self.get_parametrizations_from_ggH_yield_parameters(ggH_yield_parameters)
+
+        else:
+            raise RuntimeError(
+                'Could not find any appropriately named set that could contain parametrizations in {0}'
+                .format(self.ws_file)
+                )
+
+    def get_mus_exp(self, **kwargs):
+        if len(self.parametrizations) == 0:
+            self.get_parametrizations()
+        self.set_kwargs(kwargs)
+        return [ param.getVal() for param in self.parametrizations ]
 
     def get_xs_exp(self, **kwargs):
         if len(self.smxs)==0:
             raise RuntimeError('Need to set smxs to a list of xs first')
         mus = self.get_mus_exp(**kwargs)
-        if not len(mus) == len(self.smxs):
-            raise ValueError(
-                'Found {0} yield parameters, and {1} smxs'
-                .format(len(mus), len(self.smxs))
-                )
-        return [ mu * xs for mu, xs in zip(mus, self.smxs) ]
+        return self.prod_list(mus, self.smxs)
 
+    def get_shape_exp(self, **kwargs):
+        xss = self.get_xs_exp(**kwargs)
+        shape = [ xs/sum(xss) for xs in xss ]
+        return shape
+
+    #____________________________________________________________________
+    # Full ggH yield parameter; similar to the parametrization, but also
+    # including br modifications etc.
+
+    def select_decay_channel(self, dc):
+        self.decay_channel = dc
+        self.is_dc_specific = True
+
+    def filter_for_decay_channel(self, list_of_pars):
+        return [ p for p in list_of_pars if self.decay_channel in p.GetName() ]
+
+
+    def get_mus_exp_ggH(self, **kwargs):
+        if len(self.ggH_yield_parameters)==0:
+            self.ggH_yield_parameters = self.get_argset_as_pylist('all_ggH_yieldParameters')
+            if self.is_dc_specific:
+                self.ggH_yield_parameters = self.filter_for_decay_channel(self.ggH_yield_parameters)
+        self.set_kwargs(kwargs)
+        return [ yp.getVal() for yp in self.ggH_yield_parameters ]
+
+    def get_xs_exp_ggH(self, **kwargs):
+        if len(self.smxs)==0:
+            raise RuntimeError('Need to set smxs to a list of xs first')
+        mus = self.get_mus_exp_ggH(**kwargs)
+        return self.prod_list(mus, self.smxs)
+
+    #____________________________________________________________________
+    # xH specific
+
+    def set_smxs_xH(self, smxs):
+        self.smxs_xH = smxs
+
+    def get_mus_exp_xH(self, **kwargs):
+        if len(self.xH_yield_parameters) == 0:
+            self.xH_yield_parameters = self.get_argset_as_pylist('all_xH_yieldParameters')
+            if self.is_dc_specific:
+                self.xH_yield_parameters = self.filter_for_decay_channel(self.xH_yield_parameters)
+        self.set_kwargs(kwargs)
+        return [ yp.getVal() for yp in self.xH_yield_parameters ]
+
+    def get_xs_exp_xH(self, **kwargs):
+        if len(self.smxs_xH)==0:
+            raise RuntimeError('Need to set smxs_xH to a list of xs first')
+        mus = self.get_mus_exp_xH(**kwargs)
+        return self.prod_list(mus, self.smxs_xH)
 
 
 

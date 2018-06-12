@@ -14,6 +14,258 @@ from differentials.plotting.canvas import c
 
 
 
+
+
+
+
+
+#____________________________________________________________________
+class WSParametrizationCtCb(differentials.parametrization.WSParametrization):
+
+    def __init__(self, ws):
+        super(WSParametrizationCtCb, self).__init__(ws)
+        # Set the sm xs
+        self.get_smxs_from_ws()
+        self.set_smxs_xH(LatestBinning.obs_pth_xH.crosssection())
+        self.exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600., 800. ]
+        self.select_decay_channel('hgg')
+        self.tag = ''
+
+    def get_histogram(self, ys):
+        return differentials.plotting.pywrappers.Histogram(
+            differentials.plotting.plotting_utils.get_unique_rootname(),
+            '',
+            self.exp_binning,
+            ys,
+            )
+
+    def get_hist_ggH(self, ct, cb):
+        xs = self.get_xs_exp_ggH(ct=ct, cb=cb)
+        hist = self.get_histogram(xs)
+        hist.title = 'ggH (#kappa_{{t}} = {0}, #kappa_{{b}} = {1})'.format(ct, cb)
+        if len(self.tag) > 0: hist.title = self.tag + ':' + hist.title
+        return hist
+
+    def get_hist_xH(self, ct, cb):
+        xs = self.get_xs_exp_xH(ct=ct, cb=cb)
+        hist = self.get_histogram(xs)
+        hist.title = 'xH (#kappa_{{t}} = {0}, #kappa_{{b}} = {1})'.format(ct, cb)
+        if len(self.tag) > 0: hist.title = self.tag + ':' + hist.title
+        return hist
+
+    def get_hist_smH(self, ct, cb):
+        xs_ggH = self.get_xs_exp_ggH(ct=ct, cb=cb)
+        xs_xH = self.get_xs_exp_xH(ct=ct, cb=cb)
+        xs = [ x1+x2 for x1, x2 in zip(xs_ggH, xs_xH) ]
+        hist = self.get_histogram(xs)
+        hist.title = 'smH (#kappa_{{t}} = {0}, #kappa_{{b}} = {1})'.format(ct, cb)
+        if len(self.tag) > 0: hist.title = self.tag + ':' + hist.title
+        return hist
+
+
+@flag_as_option
+def check_ctcb_xHBRscaling(args):
+
+    ws_noBRscaling = 'out/workspaces_May28/combWithHbb_TopCtCb_reweighted_scalingbbHttH_couplingdependentBRs.root'
+    ws_xHBRscaling = 'out/workspaces_May29/combWithHbb_TopCtCb_reweighted_scalingbbHttH_couplingdependentBRs.root'
+
+    noBRscaling = WSParametrizationCtCb(ws_noBRscaling)
+    xHBRscaling = WSParametrizationCtCb(ws_xHBRscaling)
+    xHBRscaling.tag = 'xH_scaling'
+
+    points = [
+        ( 1.0, 1.0 ),
+        ( 0.5, 0.0 ),
+        ( 1.65, 1.4 ),
+        ]
+
+    plotname = 'xcheck_xHBRscaling'
+    plot = differentials.plotting.plots.QuickPlot(
+        plotname,
+        x_min = 0., x_max= 350., y_min=0., y_max=20.
+        )
+    plot.x_title = 'pT'
+    plot.y_title = '#sigma'
+
+    for ct, cb in points:
+        plot.clear()
+        colors = iter([ 2, 4, 3, 8, 9, 42 ])
+        plot.plotname = plotname + '_ct{0}_cb{1}'.format(differentials.core.float_to_str(ct), differentials.core.float_to_str(cb))
+
+        color = next(colors)
+        smH_noBRscaling = noBRscaling.get_hist_smH(ct, cb)
+        smH_xHBRscaling = xHBRscaling.get_hist_smH(ct, cb)
+        smH_noBRscaling.color = color
+        smH_xHBRscaling.color = color
+
+        color = next(colors)
+        ggH_noBRscaling = noBRscaling.get_hist_ggH(ct, cb)
+        ggH_xHBRscaling = xHBRscaling.get_hist_ggH(ct, cb)
+        ggH_noBRscaling.color = color
+        ggH_xHBRscaling.color = color
+
+        color = next(colors)
+        xH_noBRscaling = noBRscaling.get_hist_xH(ct, cb)
+        xH_xHBRscaling = xHBRscaling.get_hist_xH(ct, cb)
+        xH_noBRscaling.color = color
+        xH_xHBRscaling.color = color
+
+        plot.add(smH_noBRscaling, 'repr_basic_histogram')
+        plot.add(smH_xHBRscaling, 'repr_basic_dashed_histogram')
+
+        plot.add(ggH_noBRscaling, 'repr_basic_histogram')
+        plot.add(ggH_xHBRscaling, 'repr_basic_dashed_histogram')
+
+        plot.add(xH_noBRscaling, 'repr_basic_histogram')
+        plot.add(xH_xHBRscaling, 'repr_basic_dashed_histogram')
+
+        plot.draw()
+        plot.wrapup()
+
+
+
+persistence = []
+new_tcolor_index = 5001
+def make_lighter_color(color):
+    tcolor = ROOT.gROOT.GetColor(color)
+    r = tcolor.GetRed()
+    b = tcolor.GetBlue()
+    g = tcolor.GetGreen()
+    new_r = min(1.0, r + 4./256.)
+    new_b = min(1.0, b + 4./256.)
+    new_g = min(1.0, g + 4./256.)
+
+    print 'old r: {0}, new r: {1}'.format(r, new_r)
+    print 'old b: {0}, new b: {1}'.format(b, new_b)
+    print 'old g: {0}, new g: {1}'.format(g, new_g)
+
+    global new_tcolor_index
+    new_tcolor_index += 1
+    new_color_index = new_tcolor_index
+
+    new_tcolor = ROOT.TColor(new_color_index, new_r, new_b, new_g)
+    ROOT.SetOwnership(new_tcolor, False)
+    persistence.append(new_tcolor)
+    return new_tcolor.GetNumber()
+
+#____________________________________________________________________
+class ShapeGetterFromWS(object):
+    """Wrapper around WSParametrization"""
+    def __init__(self, ws):
+        super(ShapeGetterFromWS, self).__init__()
+        self.ws = ws
+        
+        self.parametrization = differentials.parametrization.WSParametrization(ws)
+        self.smxs = [ roovar.getVal() for roovar in differentials.core.read_set(ws, 'SMXS', return_names=False) ]
+        self.parametrization.set_smxs(self.smxs)
+        self.exp_binning = [ 0., 15., 30., 45., 80., 120. ]
+
+    def get_shape_histogram(self, kb, kc):
+        shape = self.parametrization.get_shape_exp(kappab=kb, kappac=kc)
+        histogram = differentials.plotting.pywrappers.Histogram(
+            differentials.plotting.plotting_utils.get_unique_rootname(),
+            '#kappa_{{b}} = {0}, #kappa_{{c}} = {1}'.format(kb, kc),
+            self.exp_binning,
+            shape,
+            # color = 2
+            )
+        return histogram
+
+
+@flag_as_option
+def check_shapes(args):
+
+    ggH = ShapeGetterFromWS('out/workspaces_May24/combination_Yukawa_reweighted_floatingBRs.root')
+    ggH_plus_bbH = ShapeGetterFromWS('out/workspaces_May22/combination_Yukawa_reweighted_scalingbbH_floatingBRs.root')
+
+    # plot_parametrizations_in_workspace_for_some_points(
+    #     ggH_plus_bbH,
+    #     plotname = 'xcheck_shapes_ggH_plus_bbH'
+    #     )
+
+    # plot_parametrizations_in_workspace_for_some_points(
+    #     ggH,
+    #     plotname = 'xcheck_shapes_ggH'
+    #     )
+    
+    # shapes for some specific points for both
+    points = [
+        ( 1.0, 1.0 ),
+        ( 40.0, 1.0 ),
+        ( -40.0, 1.0 ),
+        ]
+
+    plot = differentials.plotting.plots.QuickPlot(
+        'xcheck_shapes_directcompare',
+        x_min = 0., x_max= 120., y_min=0., y_max=0.55
+        )
+    plot.x_title = 'pT'
+    plot.y_title = 'Shape'
+
+    colors = iter([ 2, 4, 3, 8, 9, 42 ])
+    for kb, kc in points:
+        color = next(colors)
+
+        hist_ggH = ggH.get_shape_histogram(kb, kc)
+        hist_ggH.color = color
+
+        hist_ggH_plus_bbH = ggH_plus_bbH.get_shape_histogram(kb, kc)
+        hist_ggH_plus_bbH.color = color
+        hist_ggH_plus_bbH.title += ' (incl. bbH)'
+        hist_ggH_plus_bbH.line_width = 4
+
+        plot.add(hist_ggH, 'repr_basic_histogram')
+        plot.add(hist_ggH_plus_bbH, 'repr_basic_dashed_histogram')
+
+    plot.draw()
+    plot.wrapup()
+
+
+
+
+def plot_parametrizations_in_workspace_for_some_points(
+    shapegetter,
+    plotname='xcheck_shapes'
+    ):
+
+    points = [
+        ( 1., 1. ),
+        # 
+        ( 10., 1. ),
+        ( 10., 10. ),
+        ( 1., 10. ),
+        ( -10., 1. ),
+        ( -10., -10. ),
+        ( 1., -10. ),
+        ( 10., -10. ),
+        ( -10., 10. ),
+        # 
+        ( 10000., 1. ),
+        ( 10000., 10000. ),
+        ( 1., 10000. ),
+        ( -10000., 1. ),
+        ( -10000., -10000. ),
+        ( 1., -10000. ),
+        ( 10000., -10000. ),
+        ( -10000., 10000. ),
+        ]
+
+    histograms = [ shapegetter.get_shape_histogram(kb, kc) for kb, kc in points ]
+
+    plot = differentials.plotting.plots.QuickPlot(
+        plotname,
+        x_min = 0., x_max= 120., y_min=0., y_max=1.0
+        )
+    plot.x_title = 'pT'
+    plot.y_title = 'Shape'
+
+    for histogram in histograms:
+        plot.add(histogram, 'repr_basic_histogram')
+
+    plot.draw()
+    plot.wrapup()
+
+
 #____________________________________________________________________
 @flag_as_option
 def check_fiducial_vs_inclusive_shape(args):
@@ -26,8 +278,6 @@ def check_fiducial_vs_inclusive_shape(args):
 
     print LatestBinning.shape_pth_smH
     print LatestBinning.shape_pth_ggH
-
-
 
 
 

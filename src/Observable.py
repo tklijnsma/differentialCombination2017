@@ -26,10 +26,14 @@ class Observable(object):
         self.lastBinIsOverflow = lastBinIsOverflow
         self.nBins = len(self.shape)
 
+        # Set empty uncertainties
+        self.unc_fraction = [ 0. for s in shape ]
+
     #____________________________________________________________________
     def drop_first_bin(self):
         self.shape = self.shape[1:]
         self.binning = self.binning[1:]
+        self.unc_fraction = self.unc_fraction[1:]
         self.nBins -= 1
         logging.debug(
             'Obs {0}: First bin dropped, remaining bins: {1}'
@@ -40,6 +44,7 @@ class Observable(object):
     def drop_last_bin(self):
         self.shape = self.shape[:-1]
         self.binning = self.binning[:-1]
+        self.unc_fraction[:-1]
         self.nBins -= 1
         self.lastBinIsOverflow=False
         logging.debug(
@@ -74,9 +79,14 @@ class Observable(object):
             xs_o_binwidth = [ xs[i] / ( self.binning[i+1]-self.binning[i] ) for i in xrange(self.nBins) ]
 
         if normalize_by_second_to_last_bin_width:
-            xs_o_binwidth[-1] /= ( self.binning[-2]-self.binning[-3] )
+            xs_o_binwidth[-1] = xs[-1] / ( self.binning[-2]-self.binning[-3] )
 
         return xs_o_binwidth
+
+    #____________________________________________________________________
+    def unc_xs_over_binwidth(self, normalize_by_second_to_last_bin_width=False):
+        xss = self.crosssection_over_binwidth(normalize_by_second_to_last_bin_width)
+        return [ xs * unc for xs, unc in zip(xss, self.unc_fraction) ]
 
     #____________________________________________________________________
     def mergeBins( self, mergeList ):

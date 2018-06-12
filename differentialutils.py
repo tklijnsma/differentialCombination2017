@@ -29,7 +29,21 @@ def run_postfit_fastscan_scan(config):
     pointwisescan.run(postfit_file, fastscan_file)
 
 
-def run_postfit_scan(config):
+def run_postfit_scan(config, postfit_file=None):
+    # Make sure no previous run directory is overwritten
+    config.make_unique_directory()
+
+    if postfit_file is None:
+        postfit = combine.CombinePostfit(config)
+        postfit.run()
+        postfit_file = postfit.get_output()
+    else:
+        postfit_file = os.path.abspath(postfit_file)
+
+    scan = combine.CombineScanFromPostFit(config)
+    scan.run(postfit_file)
+
+def run_postfit_fastscan(config):
     # Make sure no previous run directory is overwritten
     config.make_unique_directory()
 
@@ -37,8 +51,8 @@ def run_postfit_scan(config):
     postfit.run()
     postfit_file = postfit.get_output()
 
-    scan = combine.CombineScanFromPostFit(config)
-    scan.run(postfit_file)
+    fastscan = combine.CombineFastScan(config)
+    fastscan.run(postfit_file)
 
 def scan_directly(config):
     # Make sure no previous run directory is overwritten
@@ -95,9 +109,9 @@ def set_one_decay_channel(real_args, decay_channel, asimov=None):
         args.asimov = asimov
     return args
 
-def force_asimov(real_args):
+def force_asimov(real_args, asimov=True):
     args = copy.deepcopy(real_args)
-    args.asimov = True
+    args.asimov = asimov
     return args
 
 def try_call_function_with_args(fn, args):

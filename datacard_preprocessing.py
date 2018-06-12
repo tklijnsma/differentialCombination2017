@@ -71,6 +71,12 @@ def add_xH_nuisance_parameter_to_ggH_card(args):
     # add_xH_nuisance_parameter('suppliedInput/combWithHbb_pth_ggH_Mar02.txt')
     add_xH_nuisance_parameter('suppliedInput/Yukawa_combination_pth_ggH_Mar08.txt', 24, 20, 43)
 
+@flag_as_option
+def add_xH_nuisance_parameter_to_ggH_card(args):
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+    card = LatestPaths.card.pth_ggH_noXHunc[decay_channel]
+    add_xH_nuisance_parameter(card, 24, 20, 43)
+
 
 #____________________________________________________________________
 # combineCards
@@ -154,6 +160,15 @@ def combine_cards_for_observable(args, obsname):
 
 #____________________________________________________________________
 # Yukawa
+
+@flag_as_option
+def add_xH_Yukawa(real_args):
+    args = copy.deepcopy(real_args)
+    for dc in ['hgg', 'hzz', 'combination']:
+        if dc == 'combination': continue
+        differentialutils.set_one_decay_channel(args, dc)
+        card = LatestPaths.card.yukawa_noXHunc[dc]
+        add_xH_nuisance_parameter(card, 24, 20, 43)
 
 @flag_as_option
 def combine_all_cards_Yukawa(real_args):
@@ -551,6 +566,7 @@ def add_xH_nuisance_parameter(datacard_file, name_width=24, lnN_width=23, col_wi
     for i_line, line in enumerate(lines):
         if line.startswith('kmax '):
             components = line.split()
+            if components[1] == '*': break # * means no reason to track number of nuisances
             kmax_old = int(components[1])
             kmax_new = kmax_old + 1
             new_line = line.replace('kmax {0}'.format(kmax_old), 'kmax {0}'.format(kmax_new))

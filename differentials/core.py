@@ -23,6 +23,19 @@ class AttrDict(dict):
         d = copy.deepcopy({ key : getattr(self, key) for key in self.keys() })
         return AttrDict(**d)
 
+    @staticmethod
+    def create_tree(*args):
+        base = AttrDict()
+        terminal_nodes = [base]
+        for branches in args:
+            new_terminal_nodes = []
+            for node in terminal_nodes:
+                for branch in branches:
+                    setattr(node, branch, AttrDict())
+                    new_terminal_nodes.append(getattr(node, branch))
+            terminal_nodes = new_terminal_nodes
+        return base
+
 
 def deprecated(fn):
     def decorated(*args):
@@ -99,14 +112,16 @@ safe_colors = AttrDict(
     red = 628,
     blue = 601,
     green = 419,
+    lightblue = 851,
     )
 
 standard_titles = {
-    'hgg' : 'H#rightarrow#gamma#gamma',
-    'hzz' : 'H#rightarrowZZ',
+    'hgg' : 'H #rightarrow #gamma#gamma',
+    'hzz' : 'H #rightarrow ZZ',
     'combination' : 'Combination',
-    'hbb' : 'H#rightarrowbb',
-    'combWithHbb' : 'Comb. with H#rightarrowbb',
+    'hbb' : 'H #rightarrow bb',
+    # 'combWithHbb' : 'Comb. with H#rightarrowbb',
+    'combWithHbb' : 'Combination',
     # 
     'kappac' : '#kappa_{c}',
     'kappab' : '#kappa_{b}',
@@ -120,6 +135,9 @@ standard_titles = {
     'njets'    : 'N_{jets}',
     'ptjet'    : 'p_{T}^{jet}',
     'rapidity' : '|y_{H}|',
+    # 
+    # 'SM_Vittorio'       : 'ggH aMC@NLO, NNLOPS + HX',
+    'SM_Vittorio'       : 'aMC@NLO, NNLOPS',
     }
 def get_standard_title(name):
     return standard_titles.get(name, name)
@@ -146,6 +164,12 @@ def execute(cmd, capture_output=False, ignore_testmode=False, py_capture_output=
             return output
         else:
             os.system(cmd_exec)
+
+
+def get_axis(n_points, x_min, x_max):
+    dx = (x_max-x_min)/float(n_points-1)
+    return [ x_min + i*dx for i in xrange(n_points) ]
+
 
 def float_to_str(number, nDecimals=None):
     number = float(number)
