@@ -105,7 +105,8 @@ obs_pth_ggH_hzzBinning = obs_pth_ggH.mergeBins(hzz_binMerging_pth)
 
 obs_pth_smH_hbbBinning = deepcopy(obs_pth_smH)
 obs_pth_ggH_hbbBinning = deepcopy(obs_pth_ggH)
-for i in xrange(6):
+# !!!: Dropping up to 350 now!! 200-350 no longer included; careful when multiplying this with a scan!
+for i in xrange(7):
     obs_pth_smH_hbbBinning.drop_first_bin()
     obs_pth_ggH_hbbBinning.drop_first_bin()
 
@@ -210,14 +211,12 @@ if __name__ == "__main__":
     # print 'Unc from tH_s_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_s_ch, YR4_tH_s_ch))
     # print 'Unc from tH_W_associated: ', sqrt(unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associated))
     # print
-    # print 'YR4_xH:                   ', YR4_xH
-    # print 'xH_unc_inclusive:         ', xH_unc_inclusive
-    # print 'xH_unc_inclusive_fraction:', xH_unc_inclusive_fraction
+    print 'YR4_xH:                   ', YR4_xH
+    print 'xH_unc_inclusive:         ', xH_unc_inclusive
+    print 'xH_unc_inclusive_fraction:', xH_unc_inclusive_fraction
 
-    # print 'smH_unc_inclusive:         ', smH_unc_inclusive
-    # print 'smH_unc_inclusive_fraction:', smH_unc_inclusive_fraction
+    print 'smH_unc_inclusive:         ', smH_unc_inclusive
+    print 'smH_unc_inclusive_fraction:', smH_unc_inclusive_fraction
 
-
-    print list(numpy.load('suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_AbsRapidity.npz')['uncetainty'])
-
-    print obs_yh.unc_fraction
+    # print list(numpy.load('suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFullPhaseSpaceCombination_AbsRapidity.npz')['uncetainty'])
+    # print obs_yh.unc_fraction

@@ -8,6 +8,7 @@ from plotting.canvas import c
 import plotting.plotting_utils as utils
 from uncertaintycalculator import UncertaintyCalculator
 from spline2d import Spline2DFactory
+from onedimscanfilter import OneDimScanFilter
 
 from collections import namedtuple
 from array import array
@@ -32,26 +33,30 @@ class DifferentialSpectrum(object):
 
     default_style = plotting.pywrappers.StyleSheet()
 
-    def __init__(self, name, scandirs, auto_determine_POIs=True, datacard=None):
+    def __init__(self, name, scandirs=None, POIs=None):
         self.name = name
-        if isinstance(scandirs, basestring): scandirs = [scandirs]
-        self.scandirs = scandirs
+
+        self.scandirs = []
+        if not(scandirs is None):
+            if isinstance(scandirs, basestring): scandirs = [scandirs]
+            self.scandirs = scandirs
+
         self.scans = []
 
-        self.auto_determine_POIs = auto_determine_POIs
-        self.datacard = datacard
-        if not(datacard is None):
+        if POIs is None:
+            self.auto_determine_POIs = True
+            self.POIs = []
+        else:
             self.auto_determine_POIs = False
-        elif not(auto_determine_POIs) and datacard is None:
-            raise ValueError('Either auto_determine_POIs must be True, or a workspace must be passed')
+            self.POIs = POIs
 
-        self.POIs = []
         self.title = self.standard_titles.get(name, name)
         self.smxs = []
         self.smxs_set = False
         self.color = None
         self.draw_method = 'repr_horizontal_bar_and_narrow_fill'
         self.hard_x_max = None
+
         self.get_POIs()
         self._is_read = False
 
@@ -59,8 +64,14 @@ class DifferentialSpectrum(object):
         self.scans_x_max = 10.0
 
         self.has_x_max = False
-
         self.stylesheets = [ DifferentialSpectrum.default_style.copy() ]
+
+        self.root_files_for_POI = {}
+
+    def add_POI(self, POI, root_files):
+        self.POIs.append(POI)
+        if isinstance(root_files, basestring): root_files = [root_files]
+        self.root_files_for_POI[POI] = root_files
 
     def style(self):
         return self.stylesheets[-1]
@@ -104,8 +115,8 @@ class DifferentialSpectrum(object):
     def get_POIs(self):
         if self.auto_determine_POIs:
             self.POIs = self.get_POIs_from_scandir()
-        else:
-            self.POIs = self.get_POIs_from_datacard()
+        # else:
+        #     self.POIs = self.get_POIs_from_datacard()
 
     def read(self):
         if self._is_read:
@@ -120,6 +131,7 @@ class DifferentialSpectrum(object):
                     globpat=POI
                     )
                 scan.scandirs.extend(self.scandirs)
+                scan.root_files.extend(self.root_files_for_POI.get(POI, []))
                 scan.read()
                 scan.create_uncertainties()
                 self.scans.append(scan)
@@ -132,6 +144,8 @@ class DifferentialSpectrum(object):
         plot.scans = self.scans
         plot.x_min = self.scans_x_min
         plot.x_max = self.scans_x_max
+        plot.y_min = self.scans_y_min
+        plot.y_max = self.scans_y_max
         plot.draw()
         plot.wrapup()
 
@@ -364,15 +378,22 @@ class ScanPrimitive(object):
         return variables                            
 
     def read_chain(self, root_files, variables, filter_x=False, return_chain=False):
+        if len(root_files) == 0:
+            raise RuntimeError(
+                'No root files were passed to read_chain; scandirs = {0}'.format(self.scandirs)
+                )
+
         chain = ROOT.TChain(self.tree_name)
         for root_file in root_files:
             chain.Add(root_file)
 
-        Entry = namedtuple('Entry', variables + ['x', 'y'] + (['z'] if hasattr(self, 'z_variable') else []))
+        # Entry = namedtuple('Entry', variables + ['x', 'y'] + (['z'] if hasattr(self, 'z_variable') else []))
+
         entries = []
         for event in chain:
             if filter_x and getattr(event, self.x_variable) in [e.x for e in entries]: continue
-            entry_dict = {}
+            # entry_dict = {}
+            entry_dict = core.AttrDict()
             for var_name in variables:
                 entry_dict[var_name] = getattr(event, var_name)
                 if var_name == self.x_variable:
@@ -389,11 +410,12 @@ class ScanPrimitive(object):
                     .format(self.x_variable, entry_dict['x'], self.y_variable, entry_dict['y'])
                     )
                 continue
-            entries.append(Entry(**entry_dict))
+            # entries.append(Entry(**entry_dict))
+            entries.append(entry_dict)
 
         if len(entries) == 0:
             raise RuntimeError(
-                'No entries were found'
+                'No entries were found; looked in root files such as {0}'.format(root_files[0])
                 )
 
         entries.sort(key=lambda entry: (entry.x, entry.y))
@@ -408,7 +430,8 @@ class ScanPrimitive(object):
         passed_entries = []
         for entry in self.entries:
             if entry.deltaNLL < self.deltaNLL_threshold:
-                POIs = [ k for k in entry._fields if k.startswith('r_') ]
+                # POIs = [ k for k in entry._fields if k.startswith('r_') ]
+                POIs = [ k for k in entry.keys() if k.startswith('r_') ]
                 if len(POIs) == 0:
                     POI = 'x'
                 else:
@@ -461,6 +484,13 @@ class ScanPrimitive(object):
                 )
         return self.entries[i_bestfit]
 
+    def filter(self, fn):
+        bestfit = self.bestfit()
+        new_entries = []
+        for entry in self.entries:
+            if entry is bestfit or fn(entry): new_entries.append(entry)
+        self.entries = new_entries
+
 
 class Scan(ScanPrimitive):
     """docstring for Scan"""
@@ -493,7 +523,7 @@ class Scan(ScanPrimitive):
         if read_immediately: self.read()
 
 
-    def read(self):
+    def read(self, keep_chain=False):
         root_files = self.collect_root_files()
         if self.save_all_variables:
             variables = self.get_list_of_variables_in_tree(root_files)
@@ -505,8 +535,30 @@ class Scan(ScanPrimitive):
                     )
         else:
             variables = [ self.x_variable, self.y_variable ]
-        self.entries = self.read_chain(root_files, variables)
+        if keep_chain:
+            self.entries, self.chain = self.read_chain(root_files, variables, return_chain=True)
+        else:
+            self.entries = self.read_chain(root_files, variables)
         self.filter_entries()
+
+
+    def filter_entries(self):
+        super(Scan, self).filter_entries()
+
+        scanfilter = OneDimScanFilter(self.x(), self.y())
+        scanfilter.filter_clear_nonsense()
+        scanfilter.raise_by_minimum()
+
+        # Rebuild from the filtered x
+        new_entries = []
+        for ix, x in enumerate(scanfilter.xs):
+            for entry in self.entries:
+                if entry.x == x:
+                    entry.y = scanfilter.ys[ix]
+                    entry.deltaNLL = scanfilter.ys[ix]
+                    new_entries.append(entry)
+        self.entries = new_entries
+
 
     def create_uncertainties(self, inplace=True):
         logging.debug('Determining uncertainties for scan (x={0}, y={1})'.format(self.x_variable, self.y_variable))
@@ -533,6 +585,25 @@ class Scan(ScanPrimitive):
         if hasattr(self, 'color'): graph.color = self.color
         if hasattr(self, 'draw_style'): graph.draw_style = self.draw_style
         return graph
+
+    def get_spline_factory(self, x_min, x_max, cutstring_addition=''):
+        factory = Spline2DFactory()
+        factory.x_var = self.x_variable
+        factory.z_var = self.y_variable
+        factory.x_min = x_min
+        factory.x_max = x_max
+        factory.cutstring_addition = cutstring_addition
+        factory.tree = self.chain
+        bestfit = self.bestfit()
+        factory.fill_bestfit(bestfit.x)
+        return factory
+
+    def to_spline(self, x_min, x_max, eps=2.2, deltaNLL_cutoff=30., cutstring_addition=''):
+        factory = self.get_spline_factory(x_min, x_max, cutstring_addition)
+        factory.eps = eps
+        factory.deltaNLL_cutoff = deltaNLL_cutoff
+        spline = factory.make_spline_1D()
+        return spline
 
 
 
@@ -594,26 +665,33 @@ class Scan2D(ScanPrimitive):
     # def bestfit(self):
     #     return self.entries[self.deltaNLL().index(0.0)]
 
-    def to_spline(self, x_min, x_max, y_min, y_max, eps=2.2, deltaNLL_cutoff=30.):
+
+    def get_spline_factory(self, x_min, x_max, y_min, y_max, cutstring_addition=''):
         factory = Spline2DFactory()
         factory.x_var = self.x_variable
         factory.y_var = self.y_variable
         factory.z_var = self.z_variable
-
         factory.x_min = x_min
         factory.x_max = x_max
         factory.y_min = y_min
         factory.y_max = y_max
-
+        factory.cutstring_addition = cutstring_addition
+        factory.tree = self.chain
         bestfit = self.bestfit()
         factory.fill_bestfit(bestfit.x, bestfit.y)
+        return factory
 
+    def to_spline(self, x_min, x_max, y_min, y_max, eps=2.2, deltaNLL_cutoff=30., cutstring_addition=''):
+        factory = self.get_spline_factory(x_min, x_max, y_min, y_max, cutstring_addition)
         factory.eps = eps
         factory.deltaNLL_cutoff = deltaNLL_cutoff
-
-        factory.tree = self.chain
         spline = factory.make_spline()
         return spline
+
+    def to_polyfit(self, x_min, x_max, y_min, y_max, cutstring_addition=''):
+        factory = self.get_spline_factory(x_min, x_max, y_min, y_max, cutstring_addition)
+        polyfit = factory.make_polyfit()
+        return polyfit
 
 
     def to_hist(self):

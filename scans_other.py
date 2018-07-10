@@ -80,17 +80,16 @@ def totalXS_plot(args):
     scans = LatestPaths.scan.totalXS
     scans_statonly = LatestPaths.scan.totalXS.statonly
 
-    
     hgg = differentials.scans.Scan('r', scandir=scans.hgg)
     hgg.color = differentials.core.safe_colors.red
     hgg.draw_style = 'repr_smooth_line'
     hgg.title = differentials.core.standard_titles['hgg']
     hgg.no_bestfit_line = True
-    
-    hgg_statonly = differentials.scans.Scan('r', scandir=scans_statonly.hgg)
-    hgg_statonly.color = differentials.core.safe_colors.red
-    hgg_statonly.draw_style = 'repr_smooth_line'
-    hgg_statonly.line_style = 2
+
+    # hgg_statonly = differentials.scans.Scan('r', scandir=scans_statonly.hgg)
+    # hgg_statonly.color = differentials.core.safe_colors.red
+    # hgg_statonly.draw_style = 'repr_smooth_line'
+    # hgg_statonly.line_style = 2
     
     hzz = differentials.scans.Scan('r', scandir=scans.hzz)
     hzz.color = differentials.core.safe_colors.blue
@@ -98,10 +97,10 @@ def totalXS_plot(args):
     hzz.title = differentials.core.standard_titles['hzz']
     hzz.no_bestfit_line = True
     
-    hzz_statonly = differentials.scans.Scan('r', scandir=scans_statonly.hzz)
-    hzz_statonly.color = differentials.core.safe_colors.blue
-    hzz_statonly.draw_style = 'repr_smooth_line'
-    hzz_statonly.line_style = 2
+    # hzz_statonly = differentials.scans.Scan('r', scandir=scans_statonly.hzz)
+    # hzz_statonly.color = differentials.core.safe_colors.blue
+    # hzz_statonly.draw_style = 'repr_smooth_line'
+    # hzz_statonly.line_style = 2
     
     combination = differentials.scans.Scan('r', scandir=scans.combination)
     combination.color = 1
@@ -109,7 +108,7 @@ def totalXS_plot(args):
     combination.title = 'Combination'
     
     combination_statonly = differentials.scans.Scan('r', scandir=scans_statonly.combination)
-    combination_statonly.color = 14
+    combination_statonly.color = 11
     combination_statonly.draw_style = 'repr_smooth_line'
     combination_statonly.line_style = 2
     combination_statonly.title = 'Stat. uncertainty'
@@ -117,35 +116,53 @@ def totalXS_plot(args):
 
     for scan in [
         hgg,
-        hgg_statonly,
+        # hgg_statonly,
         hzz,
-        hzz_statonly,
+        # hzz_statonly,
         combination,
         combination_statonly,
         ]:
-        scan.read()
+        scan.read(keep_chain=True)
         scan.multiply_x_by_constant(LatestBinning.YR4_totalXS)
+        scan.create_uncertainties()
 
     plot = differentials.plotting.plots.MultiScanPlot('scans_totalXS')
 
+    # plot.x_min = 0.0
     plot.x_min = 0.4 * LatestBinning.YR4_totalXS
     plot.x_max = 1.6 * LatestBinning.YR4_totalXS
     plot.y_max = 5.5
     plot.x_title = '#sigma_{tot} (pb)'
 
-    plot.add_scan(hgg)
-    plot.add_scan(hzz)
-    plot.add_scan(combination)
-    plot.add_scan(combination_statonly)
+    # plot.add_scan(hgg)
+    # plot.add_scan(hzz)
+    # plot.add_scan(combination)
+    # plot.add_scan(combination_statonly)
+
+    for scan in [
+            hgg, hzz, combination, combination_statonly
+            ]:
+        spline = scan.to_spline(x_min = 0.5, x_max = 1.7)
+        graph = spline.to_graph(nx=1500)
+        graph.multiply_x_by_constant(LatestBinning.YR4_totalXS)
+        graph.color = scan.color
+        graph.title = scan.title
+        # graph.line_width = 5
+        # graph.line_style = 2
+        if scan is combination:
+            graph.draw_bestfit = True
+        plot.manual_graphs.append(graph)
 
     plot.draw()
 
     plot.leg.SetNColumns(1)
     plot.leg.set(
-        x1 = lambda c: c.GetLeftMargin() + 0.04,
-        # x2 = lambda c: c.GetLeftMargin() + 0.35,
-        x2 = lambda c: 1.-c.GetRightMargin() - 0.15,
-        y1 = lambda c: 1-c.GetTopMargin() - 0.22,
+        x1 = lambda c: c.GetLeftMargin() + 0.0,
+        x2 = lambda c: c.GetLeftMargin() + 0.79,
+        # x1 = lambda c: c.GetLeftMargin() + 0.04,
+        # # x2 = lambda c: c.GetLeftMargin() + 0.35,
+        # x2 = lambda c: 1.-c.GetRightMargin() - 0.15,
+        y1 = lambda c: 1-c.GetTopMargin() - 0.25,
         y2 = lambda c: 1-c.GetTopMargin() - 0.01,
         )
 
@@ -168,14 +185,14 @@ def totalXS_plot(args):
         LatestBinning.YR4_totalXS - LatestBinning.smH_unc_inclusive,
         0.0,
         LatestBinning.YR4_totalXS + LatestBinning.smH_unc_inclusive,
-        3.0
+        plot.y_cutoff
         )
     smbox.color = differentials.core.safe_colors.green
     smbox.Draw()
 
     smline = differentials.plotting.pywrappers.Graph(
         'sm', 'SM',
-        [LatestBinning.YR4_totalXS, LatestBinning.YR4_totalXS], [0.0, 3.0]
+        [LatestBinning.YR4_totalXS, LatestBinning.YR4_totalXS], [0.0, plot.y_cutoff]
         )
     smline.color = differentials.core.safe_colors.green
     # smline._legend = plot.leg
@@ -190,7 +207,7 @@ def totalXS_plot(args):
 
     l = differentials.plotting.pywrappers.Latex(
         differentials.plotting.canvas.c.GetLeftMargin() + 0.045,
-        1-differentials.plotting.canvas.c.GetTopMargin() - 0.24,
+        1-differentials.plotting.canvas.c.GetTopMargin() - 0.26,
         '#sigma_{{tot}} = {0:.1f}  #pm{1:.1f} (stat.) #pm{2:.1f} (syst.)  pb'.format(
             # xBestfit, 0.5*(abs(left_stat)+abs(right_stat)), 0.5*(abs(left_syst)+abs(right_syst))
             xs, xs_err_statonly, xs_err_systonly
@@ -302,8 +319,8 @@ def ratioBR_scan(args):
 def ratioBR_plot(args):
     plot = differentials.plotting.plots.MultiScanPlot('scans_ratioOfBRs')
 
-    plot.x_min = 0.4 * LatestBinning.SM_ratio_of_BRs
-    plot.x_max = 1.6 * LatestBinning.SM_ratio_of_BRs
+    plot.x_min = 0.3 * LatestBinning.SM_ratio_of_BRs
+    plot.x_max = 1.7 * LatestBinning.SM_ratio_of_BRs
     plot.y_max = 6.0
     plot.x_title = '#frac{{BR({0})}}{{BR({1})}}'.format(
         differentials.core.standard_titles['hgg'],
@@ -311,20 +328,35 @@ def ratioBR_plot(args):
         )
 
     ratioOfBRs_statonly = differentials.scans.Scan('ratio_BR_hgg_hzz', scandir=LatestPaths.scan.ratioOfBRs_statonly)
-    ratioOfBRs_statonly.read()
-    ratioOfBRs_statonly.color = 14
+    ratioOfBRs_statonly.read(keep_chain=True)
+    ratioOfBRs_statonly.color = 11
     ratioOfBRs_statonly.draw_style = 'repr_smooth_line'
     ratioOfBRs_statonly.title = 'Stat. uncertainty'
-    plot.add_scan(ratioOfBRs_statonly)
+    ratioOfBRs_statonly.create_uncertainties()
+    # plot.add_scan(ratioOfBRs_statonly)
 
     ratioOfBRs = differentials.scans.Scan('ratio_BR_hgg_hzz', scandir=LatestPaths.scan.ratioOfBRs)
-    ratioOfBRs.read()
+    ratioOfBRs.read(keep_chain=True)
     ratioOfBRs.color = 1
     # ratioOfBRs.draw_style = 'repr_smooth_line'
     ratioOfBRs.draw_style = 'repr_basic_line'
     ratioOfBRs.title = 'Combination'
-    plot.add_scan(ratioOfBRs)
+    ratioOfBRs.create_uncertainties()
+    # plot.add_scan(ratioOfBRs)
 
+    for scan in [
+            ratioOfBRs_statonly, ratioOfBRs
+            ]:
+        spline = scan.to_spline(x_min = 0.06, x_max = 0.145)
+        graph = spline.to_graph(nx=1500)
+        # graph.multiply_x_by_constant(LatestBinning.YR4_totalXS)
+        graph.color = scan.color
+        graph.title = scan.title
+        # graph.line_width = 5
+        # graph.line_style = 2
+        if scan is ratioOfBRs:
+            graph.draw_bestfit = True
+        plot.manual_graphs.append(graph)
 
     plot.draw()
 
@@ -333,8 +365,8 @@ def ratioBR_plot(args):
 
     plot.leg.SetNColumns(1)
     plot.leg.set(
-        x1 = lambda c: c.GetLeftMargin() + 0.04,
-        x2 = lambda c: c.GetLeftMargin() + 0.75,
+        x1 = lambda c: c.GetLeftMargin() + 0.0,
+        x2 = lambda c: c.GetLeftMargin() + 0.81,
         y1 = lambda c: 1-c.GetTopMargin() - 0.22,
         y2 = lambda c: 1-c.GetTopMargin() - 0.01,
         )
@@ -345,11 +377,11 @@ def ratioBR_plot(args):
             differentials.core.standard_titles['hgg'],
             differentials.core.standard_titles['hzz']
             ),
-        [LatestBinning.SM_ratio_of_BRs, LatestBinning.SM_ratio_of_BRs], [0.0, 3.0]
+        [LatestBinning.SM_ratio_of_BRs, LatestBinning.SM_ratio_of_BRs], [0.0, plot.y_cutoff]
         )
     smline.color = differentials.core.safe_colors.green
     smline.legend = plot.leg
-    smline.line_width = 1
+    smline.line_width = 2
     smline.Draw('repr_basic_line')
 
 

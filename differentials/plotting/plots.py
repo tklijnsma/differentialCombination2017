@@ -197,6 +197,8 @@ class MultiScanPlot(PlotBase):
         self.x_title = 'POI'
         differentials.plotting.canvas.reset_global_color_cyle()
 
+        self.y_cutoff = 3.15
+
         self.scans = []
         self.manual_graphs = []
 
@@ -210,7 +212,7 @@ class MultiScanPlot(PlotBase):
 
         self.base = utils.get_plot_base(
             x_min=self.x_min, x_max=self.x_max, y_min=self.y_min, y_max=self.y_max,
-            x_title=self.x_title, y_title='2#DeltaNLL'
+            x_title=self.x_title, y_title=core.get_standard_title('dnll')
             )
         self.base.Draw('P')
 
@@ -220,15 +222,15 @@ class MultiScanPlot(PlotBase):
         sigma1_line.SetLineStyle(2)
         sigma1_line.Draw()
 
-        sigma2_line = ROOT.TLine(self.x_min, 2.0, self.x_max, 2.0)
-        ROOT.SetOwnership(sigma2_line, False)
-        sigma2_line.SetLineColor(14)
-        sigma2_line.SetLineStyle(2)
-        sigma2_line.Draw()
+        # sigma2_line = ROOT.TLine(self.x_min, 2.0, self.x_max, 2.0)
+        # ROOT.SetOwnership(sigma2_line, False)
+        # sigma2_line.SetLineColor(14)
+        # sigma2_line.SetLineStyle(2)
+        # sigma2_line.Draw()
 
         for scan in self.scans:
             graph = scan.to_graph()
-            graph.filter(y_max=3.5)
+            graph.filter(y_max=self.y_cutoff)
             graph.legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
@@ -237,7 +239,7 @@ class MultiScanPlot(PlotBase):
             if not hasattr(scan, 'no_bestfit_line'):
                 line_bestfit = ROOT.TGraph(2,
                     array('f', [scan.bestfit().x, scan.bestfit().x]),
-                    array('f', [0.0, 3.0]),
+                    array('f', [0.0, 1.0]),
                     )
                 ROOT.SetOwnership(line_bestfit, False)
                 line_bestfit.SetLineColor(graph.color)
@@ -247,26 +249,29 @@ class MultiScanPlot(PlotBase):
 
 
         for graph in self.manual_graphs:
-            graph.filter(y_max=3.5)
+            graph.filter(y_max=3.15)
             graph.legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
             left_point, right_point = self.get_unc_points(graph, color=graph.color)
 
-            x_bestfit = graph.unc.x_min
-            line_bestfit = ROOT.TGraph(2,
-                array('f', [x_bestfit, x_bestfit]),
-                array('f', [0.0, 3.0]),
-                )
-            ROOT.SetOwnership(line_bestfit, False)
-            line_bestfit.SetLineColor(graph.color)
-            if 'dashed' in getattr(graph, 'draw_style', 'repr_basic_line'):
-                line_bestfit.SetLineStyle(2)
-            line_bestfit.Draw('SAMEL')
+            if getattr(graph, 'draw_bestfit', False):
+                x_bestfit = graph.unc.x_min
+                line_bestfit = ROOT.TGraph(2,
+                    array('f', [x_bestfit, x_bestfit]),
+                    array('f', [0.0, self.y_cutoff]),
+                    )
+                ROOT.SetOwnership(line_bestfit, False)
+                line_bestfit.SetLineColor(graph.color)
+                if 'dashed' in getattr(graph, 'draw_style', 'repr_basic_line'):
+                    line_bestfit.SetLineStyle(2)
+                line_bestfit.Draw('SAMEL')
 
 
         pywrappers.CMS_Latex_type().Draw()
         pywrappers.CMS_Latex_lumi().Draw()
+
+        utils.format_plot_base(self.base)
 
 
     def get_unc_points(self, scan, color=1):
@@ -320,6 +325,8 @@ class MultiContourPlot(PlotBase):
         self.draw_bestfit_point = True
 
         self.use_first_scan_as_base = True
+        self.base_is_set_manually = False
+
         self.only_1sigma_contours_for_secondary = True
 
         self.x_SM = 1.0
@@ -379,6 +386,16 @@ class MultiContourPlot(PlotBase):
     #     super(MultiContourPlot, self).pre_draw()
     #     self.base.Draw()
 
+    def set_base(self, hist, draw_str='COLZ'):
+        if isinstance(hist, differentials.plotting.pywrappers.Histogram2D):
+            self.base, draw_str = hist.repr_2D()[0]
+            self.base_draw_str = draw_str
+        else:
+            self.base = hist
+            self.base_draw_str = draw_str
+        self.use_first_scan_as_base = False
+        self.base_is_set_manually = True
+
     def extrema_from_contours(self, H2s):
         x_min = 10e9
         x_max = -10e9
@@ -399,7 +416,7 @@ class MultiContourPlot(PlotBase):
     def draw(self):
         super(MultiContourPlot, self).draw()
         c.resize_temporarily(870, 800)
-        c.SetRightMargin(0.11)
+        c.SetRightMargin(0.13)
 
         if self.use_first_scan_as_base:
             if isinstance(self.scans[0], differentials.plotting.pywrappers.Histogram2D):
@@ -408,8 +425,14 @@ class MultiContourPlot(PlotBase):
                 self.base_hist = self.scans[0].to_hist()
             self.base, draw_str = self.base_hist.repr_2D()[0]
             self.base.Draw(draw_str)
+        elif self.base_is_set_manually:
+            self.base.Draw(self.base_draw_str)
         else:
             self.base.Draw()
+
+        self.base.GetZaxis().SetTitle('-2#Delta ln L')
+        self.base.GetZaxis().SetTitleSize(0.04)
+        self.base.GetZaxis().SetTitleOffset(0.9)
 
         self.histograms = []
         for scan in self.scans[::-1]:
@@ -436,7 +459,7 @@ class MultiContourPlot(PlotBase):
             if self.x_max is None: self.x_max = max([H.x_max() for H in self.histograms])
             if self.y_max is None: self.y_max = max([H.y_max() for H in self.histograms])
         
-        if self.use_first_scan_as_base:
+        if self.use_first_scan_as_base or self.base_is_set_manually:
             self.base.GetXaxis().SetRangeUser(self.x_min, self.x_max)
             self.base.GetYaxis().SetRangeUser(self.y_min, self.y_max)
         else:
@@ -444,9 +467,9 @@ class MultiContourPlot(PlotBase):
 
         self.base.GetXaxis().SetTitle(self.x_title)
         self.base.GetYaxis().SetTitle(self.y_title)
-        self.base.GetXaxis().SetTitleSize(0.06)
+        self.base.GetXaxis().SetTitleSize(0.065)
         self.base.GetXaxis().SetLabelSize(0.05)
-        self.base.GetYaxis().SetTitleSize(0.06)
+        self.base.GetYaxis().SetTitleSize(0.065)
         self.base.GetYaxis().SetLabelSize(0.05)
 
         SM_point = pywrappers.Point(self.x_SM, self.y_SM)
@@ -468,6 +491,22 @@ class MultiContourPlot(PlotBase):
     def wrapup(self):
         c.Update()
         c.RedrawAxis()
+
+        l = c.GetLeftMargin()
+        r = 1. - c.GetRightMargin()
+        b = c.GetBottomMargin()
+        t = 1. - c.GetTopMargin()
+
+        top_line = ROOT.TLine(l, t, r, t)
+        top_line.SetNDC()
+        ROOT.SetOwnership(top_line, False)
+        top_line.Draw()
+        
+        right_line = ROOT.TLine(r, b, r, t)
+        right_line.SetNDC()
+        ROOT.SetOwnership(right_line, False)
+        right_line.Draw()
+
         self.save()        
         if self.draw_individual_contours:
             if self.draw_bestfit_point:
@@ -509,13 +548,15 @@ class BottomPanelPlot(PlotBase):
 
         self.top_bottom_margin = 0.02
         self.top_top_margin    = 0.10
-        self.top_left_margin   = 0.14
-        self.top_right_margin  = 0.02
+        self.top_left_margin   = 0.19
+        self.top_right_margin  = 0.03
 
-        self.bottom_bottom_margin = 0.30
+        # self.bottom_bottom_margin = 0.30
+        self.bottom_bottom_margin = 0.35
         self.bottom_top_margin    = 0.00
-        self.bottom_left_margin   = 0.14
-        self.bottom_right_margin  = 0.02
+        # self.bottom_left_margin   = 0.14
+        self.bottom_left_margin   = 0.19
+        self.bottom_right_margin  = 0.03
 
         self.top_log_scale = True
         self.CMS_labels = True
@@ -532,6 +573,7 @@ class BottomPanelPlot(PlotBase):
 
         self.fixed_widths = False
         self.add_raster_bottom = False
+        self.lumi_text_size = 0.07
 
 
     def make_fixed_widths(self, reference_bounds):
@@ -661,8 +703,10 @@ class BottomPanelPlot(PlotBase):
                 return obj.style().plot_priority
         objs.sort(key=get_priority) # Highest priority should be last in list (drawn list = on top)
 
-    def add_lines_at_bin_boundaries(self, bounds, stylesheet=None):
+    def add_lines_at_bin_boundaries(self, bounds=None, stylesheet=None):
         self.add_raster_bottom = True
+        if bounds is None:
+            bounds = self.spectra[0].binning()[1:-1]
         self.add_raster_bottom_bounds = bounds
         if stylesheet is None:
             stylesheet = differentials.plotting.pywrappers.StyleSheet(line_width=1, color=17)
@@ -801,7 +845,11 @@ class BottomPanelPlot(PlotBase):
         toppad.cd()
         # base_top = self.top_objects[0][0]
         base_top.GetXaxis().SetLabelOffset(999.)
+        base_top.GetXaxis().SetLabelSize(0.05)
+        base_top.GetYaxis().SetLabelSize(0.05)
+
         base_top.GetYaxis().SetTitle(self.y_title_top)
+        base_top.GetYaxis().SetTitleSize(0.08)
 
         bottompad.cd()
         # base_bottom = self.bottom_objects[0][0]
@@ -812,14 +860,21 @@ class BottomPanelPlot(PlotBase):
 
         base_bottom.GetYaxis().SetTitle(self.y_title_bottom)
         base_bottom.GetXaxis().SetTitle(self.x_title)
-        base_bottom.GetXaxis().SetTitleSize(base_top.GetXaxis().GetTitleSize() * height_ratio)
+        # base_bottom.GetXaxis().SetTitleSize(base_top.GetXaxis().GetTitleSize() * height_ratio)
+        base_bottom.GetXaxis().SetTitleSize(0.075 * height_ratio)
         base_bottom.GetYaxis().SetTitleSize(base_top.GetYaxis().GetTitleSize() * height_ratio)
-        base_bottom.GetYaxis().SetTitleOffset(1./height_ratio)
+        base_bottom.GetYaxis().SetTitleOffset(0.9*1./height_ratio)
+
+        # FIX for the longer "ratio to prediction" text
+        # Title slightly smaller and fix offset a bit
+        base_bottom.GetYaxis().SetTitleSize(0.05 * height_ratio)
+        base_bottom.GetYaxis().SetTitleOffset(1.4 * 1./height_ratio)
+
 
         if not self.disable_CMS_labels:
             toppad.cd()
             pywrappers.CMS_Latex_type(text_size=0.08).Draw()
-            pywrappers.CMS_Latex_lumi(text_size=0.07).Draw()
+            pywrappers.CMS_Latex_lumi(text_size=self.lumi_text_size).Draw()
 
 
         self.height_ratio = height_ratio
@@ -830,7 +885,7 @@ class BottomPanelPlot(PlotBase):
         toppad.cd()
 
 
-    def replace_bin_labels(self, new_labels):
+    def replace_bin_labels(self, new_labels, offset=0.0):
         self.bottompad.cd()
 
         # 'Delete' original labels
@@ -846,7 +901,7 @@ class BottomPanelPlot(PlotBase):
         dx = x_max - x_min
         left_margin = self.bottompad.GetLeftMargin()
         right_margin = self.bottompad.GetRightMargin()
-        x_to_NDC = lambda x: left_margin + (x/dx * (1.-left_margin-right_margin))
+        x_to_NDC = lambda x: left_margin + ((x/dx+offset) * (1.-left_margin-right_margin))
 
         for i, lbl in enumerate(new_labels):
             x = x_to_NDC(i)
@@ -883,12 +938,15 @@ class SpectraPlot(BottomPanelPlot):
 
         self.obsname = 'obs_name'
         self.obsunit = None
+        self.obstitle = None
 
         self.draw_multiscans = False
         self.draw_multiscans_all_in_one_plot = False
 
         self.scans_x_min = -10.0
         self.scans_x_max = 10.0
+        self.scans_y_min = 0.
+        self.scans_y_max = 5.0
 
         self.fix_x_max_for_spectra = True
 
@@ -901,6 +959,13 @@ class SpectraPlot(BottomPanelPlot):
             lambda c: 1 - c.GetTopMargin()
             )
 
+        self.has_reference_bounds = False
+        self.reference_bounds = None
+
+    def set_reference_bounds(self, bounds):
+        self.has_reference_bounds = True
+        self.reference_bounds = bounds
+
     def make_SM_line(self, spectra_original, leg=None):
         spectra = spectra_original[:]
         spectra.sort(key=lambda s: -len(s.scans))
@@ -911,7 +976,7 @@ class SpectraPlot(BottomPanelPlot):
 
     def make_labels_for_overflow_spectra(self, spectra, obs_name):
         x_min, y_min, x_max, y_max = self.get_top_extrema()
-        text_size = 0.025
+        text_size = 0.04
         
         # Also take second to last bin width as the text overlaps
         y_overflow = max(
@@ -970,28 +1035,34 @@ class SpectraPlot(BottomPanelPlot):
                 plot.scans.extend(spectrum.scans)
             plot.x_min = self.scans_x_min
             plot.x_max = self.scans_x_max
+            plot.y_min = self.scans_y_min
+            plot.y_max = self.scans_y_max
             plot.draw()
             plot.wrapup()
         elif self.draw_multiscans:
             for spectrum in self.spectra:
                 spectrum.scans_x_min = self.scans_x_min
                 spectrum.scans_x_max = self.scans_x_max
+                spectrum.scans_y_min = self.scans_y_min
+                spectrum.scans_y_max = self.scans_y_max
                 spectrum.plot_scans(self.plotname + '_scans_' + spectrum.name)
 
 
     def draw(self):
         self.draw_multiscans_fn()
 
-        self.obstitle = core.standard_titles.get(self.obsname, self.obsname)
+        if self.obstitle is None:
+            self.obstitle = core.standard_titles.get(self.obsname, self.obsname)
 
         self.x_title = self.obstitle 
         if self.obsunit:
             self.x_title += ' ({0})'.format(self.obsunit)
 
-        self.y_title_top = '#Delta#sigma/#Delta{0} (pb{1})'.format(
-            self.obstitle,
-            '/' + self.obsunit if not(self.obsunit is None) else ''
-            )
+        if self.y_title_top == '':
+            self.y_title_top = '#Delta#sigma/#Delta{0} (pb{1})'.format(
+                self.obstitle,
+                '/' + self.obsunit if not(self.obsunit is None) else ''
+                )
 
         for spectrum in self.spectra:
             if not spectrum.smxs_set:
@@ -1006,8 +1077,13 @@ class SpectraPlot(BottomPanelPlot):
                 spectrum.hard_x_max = x_max
 
         for spectrum in self.spectra:
-            self.add_bottom(spectrum.to_hist(), spectrum.draw_method)
-            self.add_top(spectrum.to_hist_xs(), spectrum.draw_method, leg=self.leg)
+            hist_ratio = spectrum.to_hist()
+            hist_xs = spectrum.to_hist_xs()
+            if self.has_reference_bounds:
+                hist_ratio.get_merged_bins_from_reference(self.reference_bounds)
+                hist_xs.get_merged_bins_from_reference(self.reference_bounds)
+            self.add_bottom(hist_ratio, spectrum.draw_method)
+            self.add_top(hist_xs, spectrum.draw_method, leg=self.leg)
 
         self.make_labels_for_overflow_spectra(self.spectra, self.obstitle)
         self.add_top(self.leg, '')

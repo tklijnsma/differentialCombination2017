@@ -119,6 +119,13 @@ def scan_top_scalingttH_couplingdependentBRs(args):
         config.nPointsPerJob = 300
         config.queue = 'short.q'
 
+    if args.asimov and args.hgg:
+        # Special scan for Vittorio
+        config.nPoints = 20*20
+        config.nPointsPerJob = 5
+        config.set_parameter_range('ct', -0.3, 5.3)
+        config.set_parameter_range('cg', -0.12, 0.2)
+
     differentialutils.run_postfit_fastscan_scan(config)
 
 @flag_as_option
@@ -129,13 +136,19 @@ def scan_top_scalingttH_floatingBRs_constrainedbbZZ(args):
     config.tags.append('floatingBRs')
     config.tags.append('constrainedbbZZ')
 
-    config.nPoints = 30*30
+    # config.nPoints = 30*30
     # Around 4.5 hours (good max of 6 hours) for 8 points (combWithHbb, observed)
     # Reasonably constant, can go up to 12 points
     # Keep same ranges for hgg/hzz for now
+    # config.nPointsPerJob = 12
+    # config.set_parameter_range('ct', -4.2, 4.2) 
+    # config.set_parameter_range('cg', -0.30, 0.30)
+
+    config.nPoints = 100*100
     config.nPointsPerJob = 12
-    config.set_parameter_range('ct', -4.2, 4.2) 
-    config.set_parameter_range('cg', -0.30, 0.30)
+    config.set_parameter_range('ct', -6.0, 6.0) 
+    config.set_parameter_range('cg', -0.45, 0.45)
+
     if args.hzz:
         config.nPointsPerJob = 300
         config.queue = 'short.q'
@@ -191,11 +204,18 @@ def scan_topctcb_scalingbbHttH_floatingBRs_constrainedbbZZ(args):
     config.tags.append('scalingbbHttH')
     config.tags.append('floatingBRs')
     config.tags.append('constrainedbbZZ')
-    # around max 5, occasionally 5.5 hours for 7 points; can go up to 12
-    config.set_parameter_range('ct', -7.0, 7.0)
-    config.set_parameter_range('cb', -17., 17.)
-    config.nPoints = 25*25
+
+    # # around max 5, occasionally 5.5 hours for 7 points; can go up to 12
+    # config.set_parameter_range('ct', -7.0, 7.0)
+    # config.set_parameter_range('cb', -17., 17.)
+    # config.nPoints = 25*25
+    # config.nPointsPerJob = 10
+
+    config.set_parameter_range('ct', -3.5, 3.5)
+    config.set_parameter_range('cb', -15.5, 15.5)
+    config.nPoints = 60*60
     config.nPointsPerJob = 10
+
     if args.hzz:
         config.nPointsPerJob = 300
         config.queue = 'short.q'

@@ -10,7 +10,6 @@ Thomas Klijnsma
 from OptionHandler import flag_as_option
 
 import LatestPaths
-import LatestPathsGetters
 import LatestBinning
 
 import differentials

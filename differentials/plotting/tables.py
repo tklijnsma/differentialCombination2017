@@ -85,6 +85,8 @@ class Formatter(object):
 class Cell(object):
     """docstring for Cell"""
 
+    print_method = None
+
     def __init__(self, value=0.0):
         super(Cell, self).__init__()
         self.value = value
@@ -98,6 +100,7 @@ class Cell(object):
 
 class CellBin(Cell):
     """docstring for Bin"""
+
     def __init__(self):
         self.center    = 0.0
         self.err_up    = 0.0
@@ -118,16 +121,30 @@ class CellBin(Cell):
 
     def repr_terminal(self):
         self.absolutize()
-        f = lambda n: '{0:+.2f}'.format(n)
-        ret = (
-            '{center}  {up}/{down}'
-            .format(
-                center = f(self.center),
-                down   = f(self.err_down),
-                up     = f(self.err_up),
+        if self.print_method == 'symmunc':
+            f = lambda n: '{0:.2f}%'.format(100.*n)
+            ret = f(self.symm_err())
+            return ret
+        else:
+            f = lambda n: '{0:+.1f}'.format(n)
+            ret = (
+                '{center}  {up}/{down}'
+                .format(
+                    center = f(self.center),
+                    down   = f(self.err_down),
+                    up     = f(self.err_up),
+                    )
                 )
-            )
-        return ret
+            return ret
+
+
+class CellEmpty(Cell):
+    """docstring for CellEmpty"""
+    def __init__(self):
+        super(CellEmpty, self).__init__()
+    
+    def repr_terminal(self):
+        return '-'
 
 
 class SymmetricImprovementCellBin(CellBin):
@@ -211,6 +228,14 @@ class Row(object):
             cell = Cell(number)
             self.cells.append(cell)
 
+    def prepend_empty_cells(self, n_cells):
+        empty_cells = [ CellEmpty() for i in xrange(n_cells) ]
+        self.cells = empty_cells + self.cells
+
+    def append_empty_cells(self, n_cells):
+        empty_cells = [ CellEmpty() for i in xrange(n_cells) ]
+        self.cells = self.cells + empty_cells
+
 
 class Table(object):
     """docstring for Table"""
@@ -274,6 +299,7 @@ class SpectraTable(Table):
         if not(spectra is None):
             self.spectra = spectra
             self.read_spectra()
+        self.print_only_symm_unc = False
 
     def read_spectra(self):
         for spectrum in self.spectra:
@@ -283,6 +309,12 @@ class SpectraTable(Table):
             self.rows.append(row)
         self.get_bin_boundaries()
         self.make_header()
+        self.reference_row = self.rows[0]
+
+    def add_unc_percentage_row(self, spectrum):
+        row = Row(self)
+        row.from_spectrum(spectrum)
+        self.rows.append(row)
 
     def add_symm_improvement_row(self, spectrum_old, spectrum_new):
         row_old = Row(self)
@@ -325,17 +357,35 @@ class SpectraTable(Table):
         logging.info('Set bin_boundaries={0}'.format(self.bin_boundaries))
 
     def get_degree_of_multispan(self, cell):
+        if isinstance(cell, CellEmpty): return 1
         i_left = self.bin_boundaries.index(cell.left)
         i_right = self.bin_boundaries.index(cell.right)
         degree = i_right - i_left
         return degree
 
+    def add_empty_cells(self):
+        for row in self.rows:
+            if len(row.bin_boundaries) == 0: continue
+            if not hasattr(row, 'n_bins'): row.n_bins = len(row.bin_boundaries)-1
+            if row.n_bins != self.reference_row.n_bins:
+                left = row.bin_boundaries[0]
+                n_bins_prepend = self.reference_row.bin_boundaries.index(left)
+                right = row.bin_boundaries[-1]
+                n_bins_append = (self.reference_row.n_bins-1) - self.reference_row.bin_boundaries.index(right)
+                row.prepend_empty_cells(n_bins_prepend)
+                row.append_empty_cells(n_bins_append)
+
     def repr_terminal(self):
+        if self.print_only_symm_unc:
+            CellBin.print_method = 'symmunc'
+
+        self.add_empty_cells()
         table = [ self.header ]
         for row in self.rows:
             repr_row = [row.name]
             for cell in row.cells:
-                repr_row.append(cell.repr_terminal())
+                cell_repr = cell.repr_terminal()
+                repr_row.append(cell_repr)
                 doms = self.get_degree_of_multispan(cell)
                 for i_ms in xrange(doms-1):
                     repr_row.append(' ')

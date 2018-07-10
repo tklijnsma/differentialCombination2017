@@ -70,11 +70,16 @@ class POI(AbstractBin):
     """docstring for POI"""
     def __init__(self, *args):
         super(POI, self).__init__(args[0])
+
+# if self.scale_ggH_xH_with_smH:
+# logging.info('Replacing instances of ggH in {0} to smH'.format(self.prefix))
+# self.prefix = self.prefix.replace('ggH', 'xH')
         
 class YieldParameter(AbstractBin):
     """docstring for YieldParameter"""
 
     prefix = ''
+    scale_ggH_xH_with_smH = False
 
     def __init__(self, name, left=None, right=None):
         super(YieldParameter, self).__init__(name)
@@ -88,10 +93,14 @@ class YieldParameter(AbstractBin):
         self.scan_left = -1.0
         self.scan_right = 4.0
 
+        if self.scale_ggH_xH_with_smH:
+            logging.info('Replacing instances of ggH in {0} to smH'.format(self.name))
+            self.name = self.name.replace('ggH', 'smH')
+
 
 class ProcessInterpreter(object):
     """docstring for ProcessInterpreter"""
-    def __init__(self, process_strs=None, binning=None):
+    def __init__(self, process_strs=None, binning=None, scale_ggH_xH_with_smH=False):
         super(ProcessInterpreter, self).__init__()
         self.processes = []
         self.binning = binning
@@ -100,6 +109,8 @@ class ProcessInterpreter(object):
         self.first_bin_is_underflow = None
         self.number_formats = {}
         self.yield_parameters = []
+        self.scale_ggH_xH_with_smH = scale_ggH_xH_with_smH
+        self.xH_processes = []
 
         if not(process_strs is None):
             self.analyze_processes(process_strs)
@@ -112,9 +123,13 @@ class ProcessInterpreter(object):
         if len(self.processes) == 0:
             raise RuntimeError('len(self.processes) == 0')
         self.prefix = self.processes[0].prefix
+        if self.scale_ggH_xH_with_smH: self.prefix = self.prefix.replace('ggH', 'smH')
         for process in self.processes:
             if not process.prefix == self.prefix:
-                raise RuntimeError('Unexpected prefix {0}'.format(process.prefix))
+                if self.scale_ggH_xH_with_smH and process.prefix.replace('ggH', 'smH') == self.prefix:
+                    # This is actually fine
+                    continue
+                raise RuntimeError('Found differing prefix {0} w.r.t. prefix {1}'.format(process.prefix, self.prefix))
 
         self.sort_processes()
         logging.debug('Registered the following processes:')
@@ -148,6 +163,7 @@ class ProcessInterpreter(object):
         return self.number_formats[val]
 
     def sort_processes(self):
+        self.processes = list(set(self.processes))
         self.processes.sort(key=range_sorter)
 
     def set_is_interval(self):
@@ -168,6 +184,8 @@ class ProcessInterpreter(object):
         if self.processes[0].is_underflow: self.first_bin_is_underflow = True
 
     def make_yield_parameters(self, add_underflow=False, add_overflow=False):
+        YieldParameter.scale_ggH_xH_with_smH = self.scale_ggH_xH_with_smH
+
         logging.debug('Making yield yield_parameters')
         if self.binning is None:
             logging.debug('No binning specified; yield parameters will be the process name prefixed with \'r_\'')
@@ -289,6 +307,14 @@ class ProcessInterpreter(object):
                 .format(process=process.name, yield_parameter=y.name, left=y.scan_left, right=y.scan_right)
                 )
             maps.append(m)
+
+            if self.scale_ggH_xH_with_smH:
+                m = (
+                    '--PO \'map=.*/{process}:{yield_parameter}[1.0,{left},{right}]\''
+                    .format(process=process.name.replace('ggH', 'xH'), yield_parameter=y.name, left=y.scan_left, right=y.scan_right)
+                    )
+                maps.append(m)
+
         return maps
 
 

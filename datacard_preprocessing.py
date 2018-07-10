@@ -711,3 +711,87 @@ def rename_processes_hgg_differentials(
     # Write to file
     out_file = datacard_file.replace('.txt', '{0}.txt'.format(tag))
     write_to_file(out_file, out)
+
+
+
+
+
+
+
+# @flag_as_option
+# def print_nuisances(args):
+#     decay_channel = differentialutils.get_decay_channel_tag(args)
+#     card = LatestPaths.card.pth_smH[decay_channel]
+#     list_nuisances(card)
+
+# @flag_as_option
+# def print_nuisances_caterina(args):
+#     card = 'projections/caterina_Jun12/comb_2017_ggHbb.txt'
+#     list_nuisances(card)
+
+
+# def list_nuisances(card_file):
+#     print 'Nuis. in card {0}'.format(card_file)
+#     nuiss = get_nuisances(card_file)
+#     assign_nuisances_to_group(nuiss)
+#     col_width = max([ len(nuis.name) for nuis in nuiss ])
+#     for nuis in nuiss:
+#         print '{0:{width}} - {1:10} {2}'.format(
+#             nuis.name, nuis.type,
+#             '- ' + nuis.group if not(nuis.group is None) and not(nuis.is_group) else '',
+#             width=col_width,
+#             )
+
+
+# def get_nuisances(card_file):
+#     with open(card_file, 'r') as card_fp:
+#         lines = card_fp.readlines()
+
+#     fill_in_nuisances = False
+#     nuis_lines = []
+#     for i, line in enumerate(lines):
+#         line = line.strip()
+#         if len(line) == 0: continue
+#         if line.startswith('-----------------'): continue
+
+#         if fill_in_nuisances:
+#             nuis_lines.append(line)
+#             continue
+
+#         if line.startswith('rate '):
+#             fill_in_nuisances = True
+#             # Start filling the next lines
+
+#     return [ interpret_nuis(nuis_line) for nuis_line in nuis_lines ]
+
+# def interpret_nuis(line):
+#     components = line.split()
+
+#     name = components[0]
+#     nuistype = components[1]
+
+#     r = differentials.core.AttrDict(
+#         name = name,
+#         type = nuistype,
+#         is_group = False,
+#         elements = [],
+#         group = None,
+#         )
+#     if nuistype == 'group':
+#         r.is_group = True
+#         r.elements = components[2:]
+#     return r
+
+# def assign_nuisances_to_group(nuisances):
+#     groups = [ n for n in nuisances if n.is_group ]
+#     nuisances = [ n for n in nuisances if not n.is_group ]
+#     for group in groups:
+#         for nuis in nuisances:
+#             if nuis.name in group.elements:
+#                 nuis.group = group.name
+
+
+
+
+
+

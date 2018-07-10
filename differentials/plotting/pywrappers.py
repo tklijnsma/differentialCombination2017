@@ -1,4 +1,4 @@
-import itertools, copy
+import itertools, copy, sys
 
 import ROOT
 import plotting_utils as utils
@@ -9,11 +9,13 @@ import differentials
 import differentials.logger
 
 import numpy
+
+import scipy.ndimage
+
 from array import array
 
 class Legend(object):
     """Wrapper for TLegend class that allows flexible drawing of a legend on a multi panel plot"""
-
 
     def __init__(
             self,
@@ -462,12 +464,13 @@ class Histogram(BasicDrawable):
 
         if len(bin_boundaries) != len(bin_values)+1:
             raise ValueError(
-                'Inconsistent lengths; len(bin_boundaries)={0} != len(bin_values)+1={1}'
+                'Histogram {4}: Inconsistent lengths; len(bin_boundaries)={0} != len(bin_values)+1={1}'
                 '\nbin_boundaries: {2}'
                 '\nbin_values: {3}'
                 .format(
                     len(bin_boundaries), len(bin_values)+1,
-                    bin_boundaries, bin_values
+                    bin_boundaries, bin_values,
+                    self.title
                     )
                 )
 
@@ -784,6 +787,9 @@ class Histogram(BasicDrawable):
         return [ (Tg, _) ]
 
     def repr_horizontal_bars_for_merged_bins(self, leg=None):
+        if self.mergemap is None:
+            logging.info('No mergemap for {0}'.format(self.title))
+            return []
         r = []
         for bound, value in zip(self.bin_boundaries[:-1], self.bin_values):
             containing_bounds = self.mergemap[bound]
@@ -927,6 +933,17 @@ class Graph(BasicDrawable):
         self.line_width = 2
         self.line_style = 1
 
+        self._filled_bestfit = False
+
+    def fill_bestfit(self, x):
+        self.x_bestfit = x
+        self._filled_bestfit = True
+
+    def multiply_x_by_constant(self, c):
+        self.xs = [ c*x for x in self.xs ]
+        if self._filled_bestfit:
+            self.x_bestfit *= c
+
     def smooth_y(self, window_size=3):
         ys = numpy.array(self.ys)
         window = numpy.ones(window_size) / window_size
@@ -1020,6 +1037,26 @@ class Graph(BasicDrawable):
     def Draw(self, draw_style):
         for obj, draw_str in getattr(self, draw_style)(self.legend):
             obj.Draw(draw_str)
+
+    def create_uncertainties(self, inplace=True):
+        logging.debug('Determining uncertainties for Graph')
+        uncertaintycalculator = differentials.uncertaintycalculator.UncertaintyCalculator()
+        uncertaintycalculator.cutoff = 1.0 # Graph will usually be filled with 2*deltaNLL
+        unc = uncertaintycalculator.create_uncertainties(xs = self.xs, deltaNLLs = self.ys)
+        if unc.is_hopeless:
+            logging.error(
+                'Hopeless interpolation case: Unable to determine uncertainties for '
+                'x = {0}, y = {1}, scandirs = {2}'
+                .format(
+                    self.x_variable if hasattr(self, 'x_variable') else '?',
+                    self.y_variable if hasattr(self, 'y_variable') else '?',
+                    self.scandirs if hasattr(self, 'scandirs') else '?'
+                    )
+                )
+        if inplace:
+            self.unc = unc
+        else:
+            return unc
 
 
 class Point(BasicDrawable):
@@ -1264,6 +1301,90 @@ class Histogram2D(BasicDrawable):
                     min_y = self.y_bin_centers[i_y]
         self.fill_bestfit(min_x, min_y)
 
+    def smooth_2d(self):
+        smoothed = scipy.ndimage.gaussian_filter(
+            self.H2_array, sigma = 2,
+            )
+
+        # kernel = numpy.array([
+        #     [ 1., 1., 1. ],
+        #     [ 1., 9., 1. ],
+        #     [ 1., 1., 1. ],
+        #     ])
+        # kernel = kernel / numpy.sum(kernel)
+
+        # print kernel
+        # sys.exit()
+
+        # smoothed = scipy.signal.convolve2d(
+        #     self.H2_array, kernel, boundary='symm'
+        #     )
+
+        for i_x in xrange(self.n_bins_x):
+            for i_y in xrange(self.n_bins_y):
+                self.H2.SetBinContent(i_x+1, i_y+1, smoothed[i_x][i_y])
+
+
+
+    def set_value_for_path(self, value, x_min, x_max, y_min, y_max):
+        x_min, ix_min = get_closest_match(x_min, self.x_bin_centers)
+        x_max, ix_max = get_closest_match(x_max, self.x_bin_centers)
+        y_min, iy_min = get_closest_match(y_min, self.y_bin_centers)
+        y_max, iy_max = get_closest_match(y_max, self.y_bin_centers)
+        # Insert patch
+        for ix in xrange(ix_min, ix_max+1):
+            for iy in xrange(iy_min, iy_max+1):
+                self.H2.SetBinContent(ix+1, iy+1, value)
+
+    def smooth_patch(self, x_min, x_max, y_min, y_max):
+        # Get relevant patch
+        x_min, ix_min = get_closest_match(x_min, self.x_bin_centers)
+        x_max, ix_max = get_closest_match(x_max, self.x_bin_centers)
+        y_min, iy_min = get_closest_match(y_min, self.y_bin_centers)
+        y_max, iy_max = get_closest_match(y_max, self.y_bin_centers)
+
+        # Get smoothed scan for whole matrix
+        smoothed = scipy.ndimage.gaussian_filter(
+            self.H2_array, sigma = 2,
+            )
+
+        # Insert patch
+        for ix in xrange(ix_min, ix_max+1):
+            for iy in xrange(iy_min, iy_max+1):
+                self.H2.SetBinContent(ix+1, iy+1, smoothed[ix][iy])
+
+
+    def polyfit_patch(self, x_min, x_max, y_min, y_max):
+        x_min, ix_min = get_closest_match(x_min, self.x_bin_centers)
+        x_max, ix_max = get_closest_match(x_max, self.x_bin_centers)
+        y_min, iy_min = get_closest_match(y_min, self.y_bin_centers)
+        y_max, iy_max = get_closest_match(y_max, self.y_bin_centers)
+
+        # N = (ix_max+1-ix_min) * (iy_max+1-iy_min)
+
+        T2D = ROOT.TGraph2D()
+        ROOT.SetOwnership(T2D, False)
+        i_point = 0
+        for ix in xrange(ix_min, ix_max+1):
+            for iy in xrange(iy_min, iy_max+1):
+                T2D.SetPoint(i_point, self.x_bin_centers[ix], self.y_bin_centers[iy], self.H2_array[ix][iy])
+                i_point += 1
+
+        polyfit_factory = differentials.spline2d.Spline2DFactory()
+        polyfit_factory.x_min = x_min
+        polyfit_factory.x_max = x_max
+        polyfit_factory.y_min = y_min
+        polyfit_factory.y_max = y_max
+        polyfit_factory.ord_polynomial = 7
+        polyfit = polyfit_factory.make_polyfit(T2D)
+        polyfit.multiply_by_two = False
+
+        for ix in xrange(ix_min, ix_max+1):
+            for iy in xrange(iy_min, iy_max+1):
+                x = self.x_bin_centers[ix]
+                y = self.y_bin_centers[iy]
+                self.H2.SetBinContent(ix+1, iy+1, polyfit.eval(x, y))
+
 
     def fill_bestfit(self, x, y):
         self._filled_bestfit = True
@@ -1474,5 +1595,21 @@ class Histogram2D(BasicDrawable):
         plot.y_SM = y_sm
         plot.draw()
         plot.wrapup()
+
+
+def get_closest_match(x_val, x_list):
+    x_match = 10e9
+    mindx = 10e9
+    minix = -10e9
+    found_atleast_one = False
+    for ix, x in enumerate(x_list):
+        dx = abs(x-x_val)
+        if dx < mindx:
+            found_atleast_one = True
+            mindx = dx
+            x_match = x
+            minix = ix
+    return x_match, minix
+
 
 

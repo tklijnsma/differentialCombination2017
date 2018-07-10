@@ -67,6 +67,11 @@ class T2WS(object):
     def add_map(self, mapstr):
         self.extra_options.append('--PO \'map={0}\''.format(mapstr))
 
+    def add_maps(self, *args):
+        for l in args:
+            self.add_map(l)
+        
+
     def get_processes_from_card(self):
         with open(self.card, 'r') as card_fp:
             lines = [ i.strip() for i in card_fp.readlines() ]
@@ -87,9 +92,9 @@ class T2WS(object):
         logging.debug('Determined list of processes from {0}: {1}'.format(self.card, processes))
         return processes
 
-    def make_maps_from_processes(self, binning=None, add_overflow=False, add_underflow=False):
+    def make_maps_from_processes(self, binning=None, add_overflow=False, add_underflow=False, scale_ggH_xH_with_smH=False):
         processes = self.get_processes_from_card()
-        self.processinterpreter = differentials.processinterpreter.ProcessInterpreter(processes, binning)
+        self.processinterpreter = differentials.processinterpreter.ProcessInterpreter(processes, binning, scale_ggH_xH_with_smH)
         self.processinterpreter.make_yield_parameters(add_underflow=add_underflow, add_overflow=add_overflow)
         self.processinterpreter.link_processes_to_yield_parameters()
         self.extra_options.extend(self.processinterpreter.make_maps())

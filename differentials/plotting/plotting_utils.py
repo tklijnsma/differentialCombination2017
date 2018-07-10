@@ -34,6 +34,28 @@ def get_plot_base(
         base.GetYaxis().SetTitleSize(0.06)
     return base
 
+
+def format_plot_base(
+    base,
+    label_size = 0.05,
+    y_title_size = 0.065,
+    x_title_size = 0.065,
+    y_title_offset = 1.1,
+    x_title_offset = 1.1,
+    ):
+
+    x = base.GetXaxis()
+    x.SetTitleSize(x_title_size)
+    x.SetTitleOffset(x_title_offset)
+    x.SetLabelSize(label_size)
+
+    y = base.GetYaxis()
+    y.SetTitleSize(y_title_size)
+    y.SetTitleOffset(y_title_offset)
+    y.SetLabelSize(label_size)
+
+
+
 def set_color_palette(option=None):
     if option == 'rainbow':
         ROOT.gStyle.SetPalette(55)

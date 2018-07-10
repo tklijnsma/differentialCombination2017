@@ -788,7 +788,8 @@ class PDFDrawer(object):
     def set_category(self, some_string):
         i_cat = int(re.search(r'SigmaMpTTag_(\d)', some_string).group(1))
         # cat_str = 'SigmaMpTTag_{0}_recoPt_600p0to10000p0_13TeV'.format(i_cat)
-        cat_str = 'recoPt_600p0_10000p0_SigmaMpTTag_0_13TeV'
+        # cat_str = 'recoPt_600p0_10000p0_SigmaMpTTag_0_13TeV'
+        cat_str = 'recoPt_0p0_15p0_SigmaMpTTag_0_13TeV'
 
         # self.hgg_cat.setIndex(i_cat)
         self.hgg_cat.setLabel(cat_str)

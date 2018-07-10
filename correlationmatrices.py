@@ -45,6 +45,9 @@ def plot_corrmats_vittorio(args):
         plot.binlabels = rtransformer.get_sorted_binlabels()
         plot.x_title = rtransformer.get_x_title()
 
+        if rtransformer.obsname in ['PtNjets2p5NNLOPS_newBins_v2', 'PtNNLOPS_newBins' ]:
+            plot.marker_size = 1.4
+
         plot.draw()
 
         if rtransformer.obsname == 'PtNjets2p5NNLOPS_newBins_v2':
@@ -63,4 +66,8 @@ def plot_corrmats_vittorio(args):
         l.SetTextAlign(13)
         l.Draw()
 
+        differentials.plotting.canvas.c.change_plotdir_temporarily('corrmatsvitt_{0}'.format(differentials.core.datestr()))
         plot.wrapup()
+
+
+

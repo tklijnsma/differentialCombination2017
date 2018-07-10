@@ -138,6 +138,7 @@ standard_titles = {
     # 
     # 'SM_Vittorio'       : 'ggH aMC@NLO, NNLOPS + HX',
     'SM_Vittorio'       : 'aMC@NLO, NNLOPS',
+    'dnll' : '-2#Delta ln L'
     }
 def get_standard_title(name):
     return standard_titles.get(name, name)

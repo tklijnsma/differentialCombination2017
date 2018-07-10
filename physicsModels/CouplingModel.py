@@ -254,7 +254,17 @@ class CouplingModel( PhysicsModel ):
         if self.splitggH: signals = [ s for s in signals if 'ggH' in s ]
         signals.sort( key = lambda n: float(
             n.split('_')[2].replace('p','.').replace('m','-').replace('GT','').replace('GE','').replace('LT','').replace('LE','') ) )
-        productionMode, observableName = signals[0].split('_')[:2]
+
+        if len(signals) == 0:
+            raise RuntimeError(
+                'len(signals) == 0. Signals in self.DC.signals: {0}'
+                .format(self.DC.signals)
+                )
+        try:
+            productionMode, observableName = signals[0].split('_')[:2]
+        except IndexError:
+            print 'ERROR determining production mode and observable name from signal {0}'.format(signals[0])
+            raise
 
         if len(self.manualExpBinBoundaries) == 0:
             raise self.CouplingModelError(

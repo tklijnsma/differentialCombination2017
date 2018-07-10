@@ -151,6 +151,18 @@ class CombineConfig(object):
                 self.POIs.pop(i_poi)
                 break
 
+    def set_verbosity(self, level=1):
+        self.del_verbosity()
+        self.extraOptions.append('-v {0}'.format(level))
+        logging.info('Setting combine verbosity to \'-v {0}\''.format(level))
+
+    def del_verbosity(self):
+        for i_option, option in enumerate(self.extraOptions):
+            if option.startswith('-v '):
+                self.extraOptions.pop(i_option)
+                break
+
+
 
 #____________________________________________________________________
 class BaseCombineScan(object):
@@ -343,7 +355,7 @@ class BaseCombineScan(object):
             jobman_fp.write(contents)
 
 
-            #____________________________________________________________________
+#____________________________________________________________________
 class CombinePostfit(BaseCombineScan):
 
     def __init__(self, *args, **kwargs):
@@ -483,8 +495,9 @@ class CombineScan(BaseCombineScan):
         cmd.extend([
             '--algo=grid',
             '--points={0}'.format(self.nPoints),
-            '--split-points {0}'.format(self.nPointsPerJob)
             ])
+        if self.onBatch:
+            cmd.append('--split-points {0}'.format(self.nPointsPerJob))
         return cmd
 
 #____________________________________________________________________

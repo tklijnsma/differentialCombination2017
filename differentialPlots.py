@@ -23,7 +23,7 @@ import Commands
 import PhysicsCommands
 import TheoryCommands
 import LatestPaths
-import LatestPathsGetters
+# import LatestPathsGetters
 import LatestBinning
 from Container import Container
 import PlotCommands
@@ -90,6 +90,8 @@ def get_sm_histograms(observable, normalize_by_second_to_last_bin_width, x_max=N
 ROOT.gStyle.SetEndErrorSize(3)
 ROOT.gStyle.SetHatchesLineWidth(2)
 style = differentials.plotting.pywrappers.StyleSheet()
+style.line_width = 2
+style.error_bar_line_width = 1
 
 @flag_as_option
 def plot_all_differentials(args):
@@ -107,6 +109,8 @@ def pth_smH_plot(args):
     obs_name = 'pth_smH'
     obstuple = LatestBinning.obstuple_pth_smH
     scandict = LatestPaths.scan.pth_smH.asimov if args.asimov else LatestPaths.scan.pth_smH.observed
+
+    APPLY_FIXED_BINNING = False
 
     # Load scans
     hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
@@ -135,7 +139,7 @@ def pth_smH_plot(args):
     x_max = max([ 2*s.binning()[-2]-s.binning()[-3] for s in spectra ])
     for s in spectra:
         s.read()
-        s.give_x_max(x_max)
+        if not args.table: s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
 
     # Get syst only shape
@@ -149,7 +153,11 @@ def pth_smH_plot(args):
     sm_xs, sm_ratio = get_sm_histograms(obstuple.combWithHbb, normalize_by_second_to_last_bin_width=True, x_max=x_max)
 
     if args.table:
-        table = differentials.plotting.tables.SpectraTable('pth_smH', [s for s in spectra if not s is hbb] + [combWithHbb_statonly])
+        table = differentials.plotting.tables.SpectraTable('pth_smH',
+            spectra
+            # [s for s in spectra if not s is hbb] + [combWithHbb_statonly]
+            )
+        table.print_only_symm_unc = True
         table.add_symm_improvement_row(hgg, combWithHbb)
         # table.add_symm_improvement_row(hgg, combination)
         # table.add_symm_improvement_row(combination, combWithHbb)
@@ -162,7 +170,6 @@ def pth_smH_plot(args):
     plot.draw_multiscans = True
     plot.obsname = obs_name
     plot.obsunit = 'GeV'
-    plot.overflow_label_base_offset = 0.65
 
     # Add the SM and syst-only histograms
     if systshapemaker.success:
@@ -172,49 +179,69 @@ def pth_smH_plot(args):
     plot.add_bottom(sm_ratio, 'repr_basic_with_full_fill')
 
     # Some ranges
-    plot.top_y_min = 10e-6
+    plot.top_y_min = 0.9*10e-6
     plot.top_y_max = 10.
     plot.bottom_y_min = -1.0
-    plot.bottom_y_max = 4.0
+    plot.bottom_y_max = 5.0
 
-    # Apply fixed binning
-    reference_binning = combWithHbb.binning()
-    plot.make_fixed_widths(reference_binning)
-    plot.top_x_max = len(reference_binning)-1
-    plot.bottom_x_max = len(reference_binning)-1
-    hgg.style().bin_center_offset = -0.17
-    hzz.style().bin_center_offset = 0.17
-    hbb.style().bin_center_offset = 0.17
-    hzz.style().plot_priority = 8
-    plot.add_lines_at_bin_boundaries(range(1,len(reference_binning)-1))
+    if APPLY_FIXED_BINNING:
+        # Apply fixed binning
+        reference_binning = combWithHbb.binning()
+        plot.make_fixed_widths(reference_binning)
+        plot.top_x_max = len(reference_binning)-1
+        plot.bottom_x_max = len(reference_binning)-1
+        hgg.style().bin_center_offset = -0.17
+        hzz.style().bin_center_offset = 0.17
+        hbb.style().bin_center_offset = 0.17
+        hzz.style().plot_priority = 8
+        plot.overflow_label_base_offset = 0.65
+    else:
+        hgg.style().bin_center_offset = -0.17
+        hzz.style().bin_center_offset = 0.17
+        hbb.style().bin_center_offset = 0.17
+        plot.set_reference_bounds(combWithHbb.binning())
+        plot.add_lines_at_bin_boundaries()
+        plot.overflow_label_base_offset = 0.29
 
-    lw = 0.38
-    lh = 0.41
-    plot.leg.set(
-        lambda c: c.GetLeftMargin() + 0.02,
-        lambda c: c.GetBottomMargin() + 0.09,
-        lambda c: c.GetLeftMargin() + 0.02 + lw,
-        lambda c: c.GetBottomMargin() + 0.09 + lh,
-        )
+    lw = 0.42
+    lh = 0.54 * 0.9
+
+    if APPLY_FIXED_BINNING:
+        plot.leg.set(
+            lambda c: c.GetLeftMargin() + 0.02,
+            lambda c: c.GetBottomMargin() + 0.09,
+            lambda c: c.GetLeftMargin() + 0.02 + lw,
+            lambda c: c.GetBottomMargin() + 0.09 + lh,
+            )
+    else:
+        lh = 0.54 * 0.6
+        xshift = 0.24
+        yshift = 0.46
+        plot.leg.set(
+            lambda c: c.GetLeftMargin() + xshift,
+            lambda c: c.GetBottomMargin() + 0.09 + yshift,
+            lambda c: c.GetLeftMargin() + xshift + 0.02 + lw,
+            lambda c: c.GetBottomMargin() + 0.09 + lh + yshift,
+            )
+
     plot.leg.SetNColumns(1)
     plot.draw()
-
-    # Title slightly smaller and fix offset a bit
-    plot.base_bottom.GetYaxis().SetTitleSize(0.04 * plot.height_ratio)
-    plot.base_bottom.GetYaxis().SetTitleOffset(1.2 * 1./plot.height_ratio)
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: c.GetLeftMargin() + 0.04,
         lambda c: c.GetBottomMargin() + 0.05,
         '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
         )
+    if not APPLY_FIXED_BINNING:
+        l.x = lambda c: c.GetLeftMargin() + 0.04 + xshift
+        l.y = lambda c: c.GetBottomMargin() + 0.05 + yshift
     l.SetNDC()
     l.SetTextAlign(11)
     l.SetTextFont(42) 
     l.SetTextSize(0.038)
     l.Draw()
 
-    plot.replace_bin_labels([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ])
+    if APPLY_FIXED_BINNING: plot.replace_bin_labels([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ])
     plot.wrapup()
 
 #____________________________________________________________________
@@ -255,6 +282,8 @@ def pth_ggH_plot(args):
     plot.draw_multiscans = True
     plot.obsname = obs_name
     plot.obsunit = 'GeV'
+    plot.obstitle = differentials.core.get_standard_title('pth_smH')
+    plot.y_title_top = '#Delta#sigma^{{ggH}}/#Delta{0} (pb/{1})'.format(plot.obstitle, plot.obsunit)
 
     # Add the SM and syst-only histograms
     if systshapemaker.success:
@@ -264,7 +293,7 @@ def pth_ggH_plot(args):
     plot.add_bottom(sm_ratio, 'repr_basic_with_full_fill')
 
     # Some ranges
-    plot.top_y_min = 10e-6
+    plot.top_y_min = 0.9*10e-6
     plot.top_y_max = 10.
     plot.bottom_y_min = -1.0
     plot.bottom_y_max = 4.0
@@ -276,8 +305,10 @@ def pth_ggH_plot(args):
     plot.bottom_x_max = len(reference_binning)-1
     plot.add_lines_at_bin_boundaries(range(1,len(reference_binning)-1))
 
-    lw = 0.38
-    lh = 0.41 * 0.5
+    # lw = 0.38
+    # lh = 0.41 * 0.5
+    lw = 0.42
+    lh = 0.54 * 0.5
     plot.leg.set(
         lambda c: c.GetLeftMargin() + 0.02,
         lambda c: c.GetBottomMargin() + 0.09,
@@ -286,10 +317,6 @@ def pth_ggH_plot(args):
         )
     plot.leg.SetNColumns(1)
     plot.draw()
-
-    # Title slightly smaller and fix offset a bit
-    plot.base_bottom.GetYaxis().SetTitleSize(0.04 * plot.height_ratio)
-    plot.base_bottom.GetYaxis().SetTitleOffset(1.2 * 1./plot.height_ratio)
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: c.GetLeftMargin() + 0.04,
@@ -343,6 +370,7 @@ def njets_plot(args):
     # Align the right boundary of all the spectra, but not at 10000
     x_max = max([ 2*s.binning()[-2]-s.binning()[-3] for s in spectra ])
     for s in spectra:
+        s.no_overflow_label = True
         s.read()
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
@@ -374,8 +402,9 @@ def njets_plot(args):
 
     # Some ranges
     plot.top_y_min = 2*10e-2
-    plot.top_y_max = 500.
-    plot.bottom_y_min = -0.6
+    # plot.top_y_max = 500.
+    plot.top_y_max = 1500.
+    plot.bottom_y_min = -0.9
     plot.bottom_y_max = 4.0
 
     # Apply fixed binning
@@ -390,8 +419,10 @@ def njets_plot(args):
 
     leg_xshift = -0.115
     leg_yshift = -0.00
-    legw = 0.38
-    legh = 0.41 * 5./6.
+    # legw = 0.38
+    # legh = 0.41 * 5./6.
+    legw = 0.42
+    legh = 0.54 * 4./6.
     plot.leg.set(
         lambda c: 1-c.GetRightMargin() + leg_xshift - legw,
         lambda c: 1-c.GetTopMargin() + leg_yshift - legh,
@@ -400,10 +431,6 @@ def njets_plot(args):
         )
     plot.leg.SetNColumns(1)
     plot.draw()
-
-    # Title slightly smaller and fix offset a bit
-    plot.base_bottom.GetYaxis().SetTitleSize(0.04 * plot.height_ratio)
-    plot.base_bottom.GetYaxis().SetTitleOffset(1.2 * 1./plot.height_ratio)
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: 1-c.GetRightMargin() + leg_xshift + 0.02 - legw,        
@@ -416,7 +443,9 @@ def njets_plot(args):
     l.SetTextSize(0.035)
     l.Draw()
 
-    plot.replace_bin_labels([ '0', '1', '2', '3', '4', '#infty' ])
+    plot.replace_bin_labels([ '0', '1', '2', '3', '#geq4' ], offset=0.1)
+    plot.base_bottom.GetXaxis().SetNdivisions(500)
+    plot.base_top.GetXaxis().SetNdivisions(500)
     plot.wrapup()
 
 
@@ -471,7 +500,7 @@ def ptjet_plot(args):
     plot.draw_multiscans = True
     plot.obsname = obs_name
     plot.obsunit = 'GeV'
-    plot.overflow_label_base_offset = 0.35
+    plot.overflow_label_base_offset = 0.33
 
     # Add the SM and syst-only histograms
     if systshapemaker.success:
@@ -481,8 +510,8 @@ def ptjet_plot(args):
     plot.add_bottom(sm_ratio, 'repr_basic_with_full_fill')
 
     # Some ranges
-    plot.top_y_min = 10e-3
-    plot.top_y_max = 10.
+    plot.top_y_min = 0.8*10e-3
+    plot.top_y_max = 50.
     plot.bottom_y_min = -0.8
     plot.bottom_y_max = 3.8
 
@@ -501,8 +530,10 @@ def ptjet_plot(args):
 
     leg_xshift = -0.115
     leg_yshift = -0.00
-    legw = 0.38
-    legh = 0.41 * 5./6.
+    # legw = 0.38
+    # legh = 0.41 * 5./6.
+    legw = 0.42
+    legh = 0.54 * 4./6.
     plot.leg.set(
         lambda c: 1-c.GetRightMargin() + leg_xshift - legw,
         lambda c: 1-c.GetTopMargin() + leg_yshift - legh,
@@ -511,10 +542,6 @@ def ptjet_plot(args):
         )
     plot.leg.SetNColumns(1)
     plot.draw()
-
-    # Title slightly smaller and fix offset a bit
-    plot.base_bottom.GetYaxis().SetTitleSize(0.04 * plot.height_ratio)
-    plot.base_bottom.GetYaxis().SetTitleOffset(1.2 * 1./plot.height_ratio)
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: 1-c.GetRightMargin() + leg_xshift + 0.02 - legw,        
@@ -605,8 +632,10 @@ def rapidity_plot(args):
 
     leg_xshift = 0.02
     leg_yshift = -0.00
-    legw = 0.38
-    legh = 0.41 * 5./6.
+    # legw = 0.38
+    # legh = 0.41 * 5./6.
+    legw = 0.42
+    legh = 0.54 * 4./6.
     plot.leg.set(
         lambda c: c.GetLeftMargin() + leg_xshift,
         lambda c: 1-c.GetTopMargin() + leg_yshift - legh,
@@ -616,9 +645,7 @@ def rapidity_plot(args):
     plot.leg.SetNColumns(1)
     plot.draw()
 
-    # Title slightly smaller and fix offset a bit
-    plot.base_bottom.GetYaxis().SetTitleSize(0.04 * plot.height_ratio)
-    plot.base_bottom.GetYaxis().SetTitleOffset(1.2 * 1./plot.height_ratio)
+    plot.base_bottom.GetYaxis().SetNdivisions(505)
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: c.GetLeftMargin() + leg_xshift + 0.02,

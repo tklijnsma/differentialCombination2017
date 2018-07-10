@@ -25,6 +25,7 @@ class Canvas(object):
         self.canvas = ROOT.TCanvas('ctc', 'ctc', self.default_width, self.default_height)
         self.plotdir = 'plots_{0}'.format(datestr)
         self._is_resized_temporarily = False
+        self._has_plotdir_temporarily = False
 
     def __getattr__(self, name):
         """
@@ -39,6 +40,11 @@ class Canvas(object):
         if height is None:
             height = c.GetWindowHeight()
         self.canvas.SetCanvasSize(width, height)
+
+    def change_plotdir_temporarily(self, newdir):
+        self._tmp_plotdir = self.plotdir
+        self.plotdir = newdir
+        self._has_plotdir_temporarily = True
 
     def resize_temporarily(self, width=None, height=None):
         self._tmp_width = c.GetWindowWidth()
@@ -107,6 +113,11 @@ class Canvas(object):
 
         if self._is_resized_temporarily:
             self.resize(self._tmp_width, self._tmp_height)
+
+        if self._has_plotdir_temporarily:
+            self.plotdir = self._tmp_plotdir
+            self._has_plotdir_temporarily = False
+
 
 # Create one instance that can be called from anywhere
 c = Canvas()

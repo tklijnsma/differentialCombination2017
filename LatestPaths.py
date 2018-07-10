@@ -25,7 +25,7 @@ card.pth_ggH.combination = 'suppliedInput/combination_pth_ggH_Mar01_xHNuisPar.tx
 card.pth_ggH.combWithHbb = 'suppliedInput/combWithHbb_pth_ggH_Mar02_xHNuisPar.txt'
 
 card.pth_smH = AttrDict()
-card.pth_smH.hgg = card.pth_ggH.hgg # scale ggH/xH by smH!
+card.pth_smH.hgg = card.pth_ggH_noXHunc.hgg # scale ggH/xH by smH!
 card.pth_smH.hzz = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/smH/hzz4l_comb_13TeV_xs_processesRenumbered.txt'
 card.pth_smH.hbb = 'suppliedInput/fromJavier/bernstein_r7428/comb_2017_ggHbb.txt' # scale ggH/xH by smH!
 card.pth_smH.combination = 'suppliedInput/combination_pth_smH_Mar14.txt' # scale ggH/xH by smH!

@@ -10,7 +10,6 @@ Thomas Klijnsma
 from OptionHandler import flag_as_option
 
 import LatestPaths
-import LatestPathsGetters
 import LatestBinning
 
 import differentials
@@ -34,6 +33,39 @@ datestr = strftime('%b%d')
 ########################################
 # Main
 ########################################
+
+@flag_as_option
+def debug_print_hbb_pdfs(args):
+
+    w = differentials.core.get_ws('projections/workspaces_Jun28/ws_pth_smH_hbb.root')
+
+    pars = {
+        'qcdeff' : 0.0130548,
+        'r0p1' : 1.60581,
+        'r1p0' : 1.0848,
+        'r1p1' : 1.23162,
+        'r2p0' : 1.45694,
+        'r2p1' : 0.915351,
+        'r3p0' : 0.98153,
+        'r3p1' : 0.0387635,
+        }
+
+    def set_w(w):
+        print '\n' + '-'*80 + '\nSetting some values\n\n'
+        for key, value in pars.iteritems():
+            w.var(key).setVal(value)
+            print 'Setting {0} to {1}'.format(key, value)
+
+    def print_w(w):
+        print '\n' + '-'*80 + '\nPrinting some values\n\n'
+        w.pdf('shapeBkg_qcd_cat2_pass_cat2').Print()
+
+    print_w(w)
+    set_w(w)
+    print_w(w)
+
+
+
 
 @flag_as_option
 def testing_spline2d(args):

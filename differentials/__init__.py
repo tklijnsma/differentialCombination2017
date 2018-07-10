@@ -8,6 +8,7 @@ import uncertaintycalculator
 import processinterpreter
 import systshapemaker
 import onedimscanner
+import onedimscanfilter
 
 # Sub-packages
 import plotting

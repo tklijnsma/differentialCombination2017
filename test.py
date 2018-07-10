@@ -75,7 +75,7 @@ def main():
         'scans_other',
         'differentialCombinations',
         'differentialPlots',
-        'lumiStudyPlots',
+        # 'lumiStudyPlots',
         'onetimeplotsCommands',
         # 
         'yukawa_t2ws',
@@ -91,12 +91,24 @@ def main():
         'correlationmatrices',
         # 
         'fermilab',
+        'projections',
+        'projections_preprocessing',
+        'projections_t2ws',
+        'projections_scans',
+        'projections_scans_kbkc',
+        'projections_scans_ktcgkb',
+        'projections_plots',
+        'projections_plots_kbkc',
+        'projections_plots_ktcgkb',
         ])
 
     args = parser.parse_args()
 
     if args.bkg:
         pass
+
+    # Remove the 'Preliminary'
+    # differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = ''
 
     differentials.logger.set_basic_format()
     if args.test:

@@ -11,7 +11,6 @@ from OptionHandler import flag_as_option
 
 import copy, math, sys, ROOT
 import LatestPaths
-import LatestPathsGetters
 import LatestBinning
 
 import differentials
@@ -52,20 +51,29 @@ approval.ktcg.asimov.fixedBRs.combWithHbb = 'out/Scan_May18_Top_combWithHbb_scal
 approval.ktcg.observed.fixedBRs.combWithHbb = 'out/Scan_Jun03_Top_combWithHbb_scalingttH'
 
 approval.ktcg.asimov.couplingdependentBRs.combWithHbb = 'out/Scan_May22_Top_combWithHbb_scalingttH_couplingdependentBRs_asimov'
+approval.ktcg.asimov.couplingdependentBRs.hgg         = 'out/Scan_Jul05_Top_hgg_scalingttH_couplingdependentBRs_asimov'
 approval.ktcg.observed.couplingdependentBRs.combWithHbb = 'out/Scan_May31_Top_combWithHbb_scalingttH_couplingdependentBRs'
 approval.ktcg.observed.couplingdependentBRs.hgg = 'out/Scan_Jun09_Top_hgg_scalingttH_couplingdependentBRs'
 approval.ktcg.observed.couplingdependentBRs.hzz = 'out/Scan_Jun09_Top_hzz_scalingttH_couplingdependentBRs'
 
 approval.ktcg.asimov.floatingBRs.combWithHbb    = 'out/Scan_Jun11_Top_combWithHbb_scalingttH_floatingBRs_constrainedbbZZ_asimov'
 approval.ktcg.asimov.floatingBRs.hgg            = 'out/Scan_Jun11_Top_hgg_scalingttH_floatingBRs_constrainedbbZZ_asimov'
-approval.ktcg.observed.floatingBRs.combWithHbb  = 'out/Scan_May31_Top_combWithHbb_scalingttH_floatingBRs_constrainedbbZZ_0'
-approval.ktcg.observed.floatingBRs.hgg          = 'out/Scan_Jun09_Top_hgg_scalingttH_floatingBRs_constrainedbbZZ'
-approval.ktcg.observed.floatingBRs.hzz          = 'out/Scan_Jun09_Top_hzz_scalingttH_floatingBRs_constrainedbbZZ'
+# approval.ktcg.observed.floatingBRs.combWithHbb  = 'out/Scan_May31_Top_combWithHbb_scalingttH_floatingBRs_constrainedbbZZ_0'
+# approval.ktcg.observed.floatingBRs.hgg          = 'out/Scan_Jun09_Top_hgg_scalingttH_floatingBRs_constrainedbbZZ'
+# approval.ktcg.observed.floatingBRs.hzz          = 'out/Scan_Jun09_Top_hzz_scalingttH_floatingBRs_constrainedbbZZ'
+# Finer binning:
+approval.ktcg.observed.floatingBRs.combWithHbb  = 'out/Scan_Jun14_Top_combWithHbb_scalingttH_floatingBRs_constrainedbbZZ'
+approval.ktcg.observed.floatingBRs.hgg          = 'out/Scan_Jun14_Top_hgg_scalingttH_floatingBRs_constrainedbbZZ'
+approval.ktcg.observed.floatingBRs.hzz          = 'out/Scan_Jun14_Top_hzz_scalingttH_floatingBRs_constrainedbbZZ'
 
-approval.ktkb.observed.floatingBRs.combWithHbb  = 'out/Scan_May31_TopCtCb_combWithHbb_scalingbbHttH_floatingBRs_constrainedbbZZ'
-# approval.ktkb.observed.floatingBRs.combWithHbb = 'out/Scan_Jun10_TopCtCb_combWithHbb_scalingbbHttH_floatingBRs_constrainedbbZZ'
-approval.ktkb.observed.floatingBRs.hgg          = 'out/Scan_Jun09_TopCtCb_hgg_scalingbbHttH_floatingBRs_constrainedbbZZ'
-approval.ktkb.observed.floatingBRs.hzz          = 'out/Scan_Jun09_TopCtCb_hzz_scalingbbHttH_floatingBRs_constrainedbbZZ'
+# approval.ktkb.observed.floatingBRs.combWithHbb  = 'out/Scan_May31_TopCtCb_combWithHbb_scalingbbHttH_floatingBRs_constrainedbbZZ'
+# # approval.ktkb.observed.floatingBRs.combWithHbb = 'out/Scan_Jun10_TopCtCb_combWithHbb_scalingbbHttH_floatingBRs_constrainedbbZZ'
+# approval.ktkb.observed.floatingBRs.hgg          = 'out/Scan_Jun09_TopCtCb_hgg_scalingbbHttH_floatingBRs_constrainedbbZZ'
+# approval.ktkb.observed.floatingBRs.hzz          = 'out/Scan_Jun09_TopCtCb_hzz_scalingbbHttH_floatingBRs_constrainedbbZZ'
+
+approval.ktkb.observed.floatingBRs.combWithHbb  = 'out/Scan_Jun13_TopCtCb_combWithHbb_scalingbbHttH_floatingBRs_constrainedbbZZ'
+approval.ktkb.observed.floatingBRs.hgg          = 'out/Scan_Jun13_TopCtCb_hgg_scalingbbHttH_floatingBRs_constrainedbbZZ'
+approval.ktkb.observed.floatingBRs.hzz          = 'out/Scan_Jun13_TopCtCb_hzz_scalingbbHttH_floatingBRs_constrainedbbZZ'
 
 approval.ktkb.observed.couplingdependentBRs.combWithHbb = 'out/Scan_May29_TopCtCb_combWithHbb_scalingbbHttH_couplingdependentBRs_0'
 # approval.ktkb.observed.couplingdependentBRs.hgg = 'out/Scan_Jun09_TopCtCb_hgg_scalingbbHttH_couplingdependentBRs'
@@ -73,7 +81,7 @@ approval.ktkb.observed.couplingdependentBRs.hgg = 'out/Scan_Jun10_TopCtCb_hgg_sc
 approval.ktkb.observed.couplingdependentBRs.hzz = 'out/Scan_Jun09_TopCtCb_hzz_scalingbbHttH_couplingdependentBRs'
 
 
-def latest_ktkg_couplingdependentBRs(args, decay_channel=None, asimov=None, splined=False):
+def latest_ktcg_couplingdependentBRs(args, decay_channel=None, asimov=None, splined=False):
     if not(asimov is None): args = differentialutils.force_asimov(args, asimov)
     if not(decay_channel is None): args = differentialutils.set_one_decay_channel(args, decay_channel)
     decay_channel = differentialutils.get_decay_channel_tag(args)
@@ -88,10 +96,10 @@ def latest_ktkg_couplingdependentBRs(args, decay_channel=None, asimov=None, spli
     scan.read()
 
     if splined:
-        return spline_ktkg_couplingdependentBRs(args, scan)
+        return spline_ktcg_couplingdependentBRs(args, scan)
     return scan
 
-def spline_ktkg_couplingdependentBRs(args, scan):
+def spline_ktcg_couplingdependentBRs(args, scan):
     x_min = ktcg_couplingdependentBRs_x_min
     x_max = ktcg_couplingdependentBRs_x_max
     y_min = ktcg_couplingdependentBRs_y_min
@@ -128,14 +136,19 @@ def spline_ktkg_couplingdependentBRs(args, scan):
 @flag_as_option
 def multicont_Top_scalingttH_couplingdependentBRs(args):
     scans = []
-    scans.append(latest_ktkg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True))
+    scans.append(latest_ktcg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True))
     if not(args.asimov):
-        hgg = latest_ktkg_couplingdependentBRs(args, decay_channel='hgg', splined=True)
+        hgg = latest_ktcg_couplingdependentBRs(args, decay_channel='hgg', splined=True)
         hgg.color = differentials.core.safe_colors.red
         scans.append(hgg)
-        hzz = latest_ktkg_couplingdependentBRs(args, decay_channel='hzz')
+        hzz = latest_ktcg_couplingdependentBRs(args, decay_channel='hzz')
         hzz.color = differentials.core.safe_colors.blue
         scans.append(hzz)
+    else:
+        hgg = latest_ktcg_couplingdependentBRs(args, decay_channel='hgg', splined=False)
+        hgg.color = differentials.core.safe_colors.red
+        scans.append(hgg)
+
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_ktcg_couplingdependentBRs' + ('_asimov' if args.asimov else ''),
         scans,
@@ -154,15 +167,15 @@ def multicont_Top_scalingttH_couplingdependentBRs(args):
 
 @flag_as_option
 def quicktest_splining_ktcg_couplingdependentBRs(args):
-    unsplined = latest_ktkg_couplingdependentBRs(args, decay_channel='combWithHbb')
-    splined = latest_ktkg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True)
+    unsplined = latest_ktcg_couplingdependentBRs(args, decay_channel='combWithHbb')
+    splined = latest_ktcg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True)
     splined.quickplot('quicktest_splining_ktcg_couplingdependentBRs_splined' + ('_asimov' if args.asimov else ''))
     unsplined.to_hist().quickplot('quicktest_splining_ktcg_couplingdependentBRs_unsplined' + ('_asimov' if args.asimov else ''))
 
 @flag_as_option
 def onedimscans_ktcg_couplingdependentBRs(args):
-    obs2D = latest_ktkg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True)
-    exp2D = latest_ktkg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True, asimov=True)
+    obs2D = latest_ktcg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True)
+    exp2D = latest_ktcg_couplingdependentBRs(args, decay_channel='combWithHbb', splined=True, asimov=True)
     onedimscans_ktcg('ct', obs2D, exp2D, x_min=0.0, x_max=2.0, tag='ktcg_couplingdependentBRs')
     onedimscans_ktcg('cg', obs2D, exp2D, x_min=-0.05, x_max=0.07, tag='ktcg_couplingdependentBRs')
 
@@ -210,7 +223,7 @@ def onedimscans_ktcg(kappa, obs2D, exp2D, x_min, x_max, apply_smoothing=False, t
 
 
 #____________________________________________________________________
-def latest_ktkg_floatingBRs(args, decay_channel=None, asimov=None, splined=False):
+def latest_ktcg_floatingBRs(args, decay_channel=None, asimov=None, splined=False, fitted=False, smoothed=False):
     if not(asimov is None): args = differentialutils.force_asimov(args, asimov)
     if not(decay_channel is None): args = differentialutils.set_one_decay_channel(args, decay_channel)
     decay_channel = differentialutils.get_decay_channel_tag(args)
@@ -224,18 +237,72 @@ def latest_ktkg_floatingBRs(args, decay_channel=None, asimov=None, splined=False
     scan.color = 1
     scan.read()
 
-    if splined:
-        return spline_ktkg_floatingBRs(args, scan)
-    return scan
+    if smoothed:
+        return smooth_ktcg_floatingBRs(args, scan)
 
-def spline_ktkg_floatingBRs(args, scan):
-    x_min = ktcg_floatingBRs_x_min
-    x_max = ktcg_floatingBRs_x_max
-    y_min = ktcg_floatingBRs_y_min
-    y_max = ktcg_floatingBRs_y_max
+    if splined and fitted:
+        raise RuntimeError('Don\'t spline and fit at the same time')
+    elif splined:
+        return spline_ktcg_floatingBRs(args, scan)
+    elif fitted:
+        return polyfit_ktcg_floatingBRs(args, scan)
+    else:
+        return scan
+
+def smooth_ktcg_floatingBRs(args, scan):
+    hist = scan.to_hist()
+    hist.color = 1
+    hist.name  = scan.name + '_smoothed'
+    hist.title = scan.title
+
+    if args.hzz:
+        hist.set_value_for_path(
+            value = 0.,
+            x_min = 2.8, x_max = 3.8,
+            y_min = -0.09, y_max = -0.02
+            )
+        hist.set_value_for_path(
+            value = 0.,
+            x_min = -3.8, x_max = -2.8,
+            y_min = 0.02, y_max = 0.09,
+            )
+    if args.hgg:
+        hist.polyfit_patch(
+            x_min = -2.1, x_max = -1.2,
+            y_min = -0.06, y_max = -0.02,
+            )
+        hist.polyfit_patch(
+            x_min = 1.2, x_max = 2.5,
+            y_min = 0.01, y_max = 0.06,
+            )
+    if args.combWithHbb:
+        hist.polyfit_patch(
+            x_min = -3.5, x_max = -1.5,
+            y_min = -0.18, y_max = -0.04,
+            # y_min = -0.24, y_max = 0.02,
+            )
+        hist.polyfit_patch(
+            x_min = 2.5, x_max = 3.5,
+            y_min = 0.05, y_max = 0.15,
+            # y_min = -0.24, y_max = 0.02,
+            )
+    return hist
+
+def spline_ktcg_floatingBRs(args, scan):
     deltaNLL_cutoff = 15.
     eps = 2.2
-    if args.hgg:
+    # cutstring_addition = ''
+    cutstring_addition = ' && ct>-4.0 && ct<4.0 && cg>-0.2 && cg<0.2'
+
+    if args.combWithHbb:
+        x_min = -3.5
+        x_max = 3.5
+        y_min = -0.18
+        y_max = 0.18
+        deltaNLL_cutoff = 30.
+        eps = 1.8
+
+    elif args.hgg:
         x_min = -2.9
         x_max = 2.9
         y_min = -0.15
@@ -243,15 +310,29 @@ def spline_ktkg_floatingBRs(args, scan):
         deltaNLL_cutoff = 50.
         eps = 1.2
 
+    elif args.hzz:
+        x_min = -2.4
+        x_max = 2.4
+        y_min = -0.15
+        y_max = 0.15
+        cutstring_addition = ' && ct>-2.8 && ct<2.8 && cg>-0.2 && cg<0.2'
+
     spline = scan.to_spline(
         x_min = x_min,
         x_max = x_max,
         y_min = y_min,
         y_max = y_max,
         deltaNLL_cutoff = deltaNLL_cutoff,
-        eps = eps
+        eps = eps,
+        cutstring_addition = cutstring_addition,
         )
     spline.disallow_negativity = False
+
+    if args.hzz:
+        spline.disallow_negativity = True
+    if args.combWithHbb:
+        spline.negativity_is_zero = True
+
     # spline.add_noise_selector(
     #     lambda ct, cg: (cg  <  (1./12.)-0.02 - (1./12.)*ct)
     #     )
@@ -264,38 +345,89 @@ def spline_ktkg_floatingBRs(args, scan):
     hist.title = scan.title
     return hist
 
+def polyfit_ktcg_floatingBRs(args, scan):
+    x_min = -3.5
+    x_max = 3.5
+    y_min = -0.18
+    y_max = 0.18
+
+    # x_min = -1.0
+    # x_max = 1.0
+    # y_min = -0.05
+    # y_max = 0.05
+
+    # x_min = -6.0
+    # x_max = 6.0
+    # y_min = -0.44
+    # y_max = 0.44
+
+    polyfit = scan.to_polyfit(
+        x_min = x_min,
+        x_max = x_max,
+        y_min = y_min,
+        y_max = y_max,
+        cutstring_addition = ' && ct>{0} && ct<{1} && cg>{2} && cg<{3}'.format(
+            1.1*x_min, 1.1*x_max, 1.1*y_min, 1.1*y_max
+            ),
+        )
+    hist = polyfit.to_hist(nx=180, ny=180)
+    hist.color = 1
+    hist.name  = scan.name + '_polyfitted'
+    hist.title = scan.title
+    return hist
+
+
 @flag_as_option
 def multicont_Top_scalingttH_floatingBRs_constrainedbbZZ(args):
     scans = []
 
     if args.asimov:
-        scans.append(latest_ktkg_floatingBRs(args, decay_channel='combWithHbb', splined=False))
-        hgg = latest_ktkg_floatingBRs(args, decay_channel='hgg', splined=False)
+        scans.append(latest_ktcg_floatingBRs(args, decay_channel='combWithHbb', splined=False))
+        hgg = latest_ktcg_floatingBRs(args, decay_channel='hgg', splined=False)
         hgg.color = differentials.core.safe_colors.red
         scans.append(hgg)
     else:
-        scans.append(latest_ktkg_floatingBRs(args, decay_channel='combWithHbb', splined=True))
-        hgg = latest_ktkg_floatingBRs(args, decay_channel='hgg', splined=True)
+        combWithHbb = latest_ktcg_floatingBRs(args, decay_channel='combWithHbb')
+
+        combWithHbb_splined = spline_ktcg_floatingBRs(
+            differentialutils.set_one_decay_channel(args, 'combWithHbb'),
+            combWithHbb
+            )
+        combWithHbb_patched = smooth_ktcg_floatingBRs(
+            differentialutils.set_one_decay_channel(args, 'combWithHbb'),
+            combWithHbb
+            )
+        scans.append(combWithHbb_patched)
+
+        hgg = latest_ktcg_floatingBRs(args, decay_channel='hgg', splined=False, smoothed=True)
         hgg.color = differentials.core.safe_colors.red
         scans.append(hgg)
-        hzz = latest_ktkg_floatingBRs(args, decay_channel='hzz')
+        hzz = latest_ktcg_floatingBRs(args, decay_channel='hzz', splined=False, smoothed=True)
         hzz.color = differentials.core.safe_colors.blue
         scans.append(hzz)
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_ktcg_floatingBRs' + ('_asimov' if args.asimov else ''),
         scans,
         x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cg'],
-        x_min = ktcg_floatingBRs_x_min, x_max = ktcg_floatingBRs_x_max, y_min = ktcg_floatingBRs_y_min, y_max = ktcg_floatingBRs_y_max
+        # x_min = ktcg_floatingBRs_x_min, x_max = ktcg_floatingBRs_x_max, y_min = ktcg_floatingBRs_y_min, y_max = ktcg_floatingBRs_y_max
+        x_min = 0.95 * -3.5,
+        x_max = 0.95 * 3.5,
+        y_min = 0.95 * -0.18,
+        y_max = 0.95 * 0.18,
         )
+    plot.set_base(combWithHbb_splined)
     plot.y_SM = 0.0
     plot.draw()
 
 @flag_as_option
 def quicktest_splining_ktcg_floatingBRs(args):
-    unsplined = latest_ktkg_floatingBRs(args, decay_channel='combWithHbb')
-    splined = latest_ktkg_floatingBRs(args, decay_channel='combWithHbb', splined=True)
-    splined.quickplot('quicktest_splining_ktcg_floatingBRs_splined' + ('_asimov' if args.asimov else ''))
-    unsplined.to_hist().quickplot('quicktest_splining_ktcg_floatingBRs_unsplined' + ('_asimov' if args.asimov else ''))
+    decay_channel='combWithHbb'
+    # decay_channel='hgg'
+    args = differentialutils.set_one_decay_channel(args, decay_channel)
+    unsplined = latest_ktcg_floatingBRs(args, decay_channel=decay_channel)
+    splined = latest_ktcg_floatingBRs(args, decay_channel=decay_channel, splined=False, fitted=False, smoothed=True)
+    splined.quickplot('quicktest_splining_ktcg_{0}_floatingBRs_splined'.format(decay_channel))
+    unsplined.to_hist().quickplot('quicktest_splining_ktcg_{0}_floatingBRs_unsplined'.format(decay_channel))
 
 
 
@@ -466,7 +598,7 @@ def multicont_ktkb_scalingbbHttH_couplingdependentBRs(args):
 
 #____________________________________________________________________
 
-def latest_ktkb_floatingBRs(args, decay_channel=None, asimov=None, splined=False):
+def latest_ktkb_floatingBRs(args, decay_channel=None, asimov=None, splined=False, fitted=False, smoothed=False):
     if not(asimov is None): args = differentialutils.force_asimov(args, asimov)
     if not(decay_channel is None): args = differentialutils.set_one_decay_channel(args, decay_channel)
     decay_channel = differentialutils.get_decay_channel_tag(args)
@@ -477,9 +609,59 @@ def latest_ktkb_floatingBRs(args, decay_channel=None, asimov=None, splined=False
     scan.color = 1
     scan.read()
 
+    if smoothed:
+        return smooth_ktkb_floatingBRs(args, scan)
     if splined:
         return spline_ktkb_floatingBRs(args, scan)
     return scan
+
+def smooth_ktkb_floatingBRs(args, scan):
+    hist = scan.to_hist()
+    hist.color = 1
+    hist.name  = scan.name + '_smoothed'
+    hist.title = scan.title
+
+    if args.hzz:
+        hist.polyfit_patch(
+            x_min = 0.0, x_max = 2.4,
+            y_min = -16.0, y_max = -8.0
+            )
+        hist.polyfit_patch(
+            x_min = -2.4, x_max = 0.0,
+            y_min = 8.0, y_max = 16.0
+            )
+        # hist.set_value_for_path(
+        #     value = 0.,
+        #     x_min = -3.8, x_max = -2.8,
+        #     y_min = 0.02, y_max = 0.09,
+        #     )
+    if args.hgg:
+        hist.polyfit_patch(
+            x_min = -2.1, x_max = -1.2,
+            y_min = -0.06, y_max = -0.02,
+            )
+        hist.polyfit_patch(
+            x_min = 1.2, x_max = 2.5,
+            y_min = 0.01, y_max = 0.06,
+            )
+    if args.combWithHbb:
+        hist.polyfit_patch(
+            x_min = 2.2, x_max = 3.5,
+            y_min = -15.0, y_max = -8.0,
+            )
+        hist.polyfit_patch(
+            x_min = 2.4, x_max = 3.5,
+            y_min = -6.0, y_max = -1.5,
+            )
+        hist.polyfit_patch(
+            x_min = -3.5, x_max = -2.2,
+            y_min = 1.5, y_max = 5.5,
+            )
+        hist.polyfit_patch(
+            x_min = -3.5, x_max = -2.2,
+            y_min = 8.0, y_max = 13.0,
+            )
+    return hist
 
 def spline_ktkb_floatingBRs(args, scan):
     x_min = -3.0
@@ -508,13 +690,19 @@ def spline_ktkb_floatingBRs(args, scan):
         eps = eps,
         )
 
+    if args.combWithHbb:
+        spline.add_noise_selector(lambda kt, kb: (kt>-0.2 and kt<0.2) and (kb>-1.5 and kb<1.5))
+
     if args.hzz:
         spline.add_signal_selector(lambda kt, kb: kt > 0.8 and kb > -2.)
         spline.add_signal_selector(lambda kt, kb: kt < -0.8 and kb < 2.)
 
+    # if args.combWithHbb:
+    #     spline.disallow_negativity = False
+    # else:
+    #     spline.negativity_is_zero = True
+
     if args.combWithHbb:
-        spline.disallow_negativity = False
-    else:
         spline.negativity_is_zero = True
 
     hist = spline.to_hist(nx=180, ny=180)
@@ -529,27 +717,49 @@ def multicont_ktkb_scalingbbHttH_floatingBRs_constrainedbbZZ(args):
     scans = []
 
     scans = []
-    scans.append(latest_ktkb_floatingBRs(args, decay_channel='combWithHbb', splined=True))
-    if not(args.asimov):
-        hgg = latest_ktkb_floatingBRs(args, decay_channel='hgg', splined=True)
+    if args.asimov:
+        scans.append(latest_ktkb_floatingBRs(args, decay_channel='combWithHbb'))
+    else:
+        combWithHbb = latest_ktkb_floatingBRs(args, decay_channel='combWithHbb')
+        combWithHbb_splined = spline_ktkb_floatingBRs(
+            differentialutils.set_one_decay_channel(args, 'combWithHbb'),
+            combWithHbb
+            )
+        combWithHbb_smoothed = smooth_ktkb_floatingBRs(
+            differentialutils.set_one_decay_channel(args, 'combWithHbb'),
+            combWithHbb
+            )
+        scans.append(combWithHbb_smoothed)
+
+        hgg = latest_ktkb_floatingBRs(args, decay_channel='hgg')
         hgg.color = differentials.core.safe_colors.red
         scans.append(hgg)
-        hzz = latest_ktkb_floatingBRs(args, decay_channel='hzz', splined=True)
+        hzz = latest_ktkb_floatingBRs(args, decay_channel='hzz', smoothed=True)
         hzz.color = differentials.core.safe_colors.blue
         scans.append(hzz)
+
     plot = differentials.plotting.plots.MultiContourPlot(
         'multicont_ktkb_floatingBRs' + ('_asimov' if args.asimov else ''),
         scans, x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cb'],
+        x_min = 0.95 * -3.0,
+        x_max = 0.95 * 3.0,
+        y_min = 0.95 * -15.0,
+        y_max = 0.95 * 15.0,
         )
+    plot.set_base(combWithHbb_splined)
     plot.draw()
-
 
 @flag_as_option
 def quicktest_splining_ktkb_floatingBRs(args):
-    unsplined = latest_ktkb_floatingBRs(args, decay_channel='combWithHbb')
-    splined = latest_ktkb_floatingBRs(args, decay_channel='combWithHbb', splined=True)
-    splined.quickplot('quicktest_splining_ktkb_floatingBRs_splined' + ('_asimov' if args.asimov else ''))
-    unsplined.to_hist().quickplot('quicktest_splining_ktcb_floatingBRs_unsplined' + ('_asimov' if args.asimov else ''))
+    # decay_channel='combWithHbb'
+    # decay_channel='hgg'
+    decay_channel='hzz'
+    args = differentialutils.set_one_decay_channel(args, decay_channel)
+    unsplined = latest_ktkb_floatingBRs(args, decay_channel=decay_channel)
+    splined = latest_ktkb_floatingBRs(args, decay_channel=decay_channel, splined=False, fitted=False, smoothed=True)
+    splined.quickplot('quicktest_splining_ktkb_{0}_floatingBRs_splined'.format(decay_channel))
+    unsplined.to_hist().quickplot('quicktest_splining_ktkb_{0}_floatingBRs_unsplined'.format(decay_channel))
+
 
 
 # @flag_as_option

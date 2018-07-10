@@ -10,7 +10,6 @@ Thomas Klijnsma
 from OptionHandler import flag_as_option
 
 import LatestPaths
-import LatestPathsGetters
 import LatestBinning
 
 import differentials
@@ -176,6 +175,43 @@ def spline_floatingBRs(args, scan):
     hist.title = scan.title
     return hist
 
+def latest_scenario3(args, splined=False):
+    if args.asimov:
+        scandir = 'out/Scan_Yukawa_May11_combination_G0A_asimov'
+    else:
+        scandir = LatestPaths.scan.yukawa.reweighted.observed.combination
+
+    scan = differentials.scans.Scan2D(
+        'scenario3', x_coupling, y_coupling,
+        scandir = scandir
+        )
+    scan.title = differentials.core.standard_titles['hgg'] + ' + ' + differentials.core.standard_titles['hzz']
+    scan.color = 1
+    scan.read()
+
+    if not splined: return scan
+
+    x_min = -18.
+    x_max = 18.
+    y_min = -5.
+    y_max = 6.5
+    eps = 2.2
+    deltaNLL_cutoff = 30.
+    spline = scan.to_spline(
+        x_min = x_min,
+        x_max = x_max,
+        y_min = y_min,
+        y_max = y_max,
+        # eps = eps,
+        # deltaNLL_cutoff = deltaNLL_cutoff
+        )
+    spline.disallow_negativity = False
+    hist = spline.to_hist(nx=180, ny=180, x_min=1.1*x_min, x_max=1.1*x_max, y_min=1.2*y_min, y_max=1.3*y_max)
+    hist.color = scan.color
+    hist.name  = scan.name + '_splined'
+    hist.title = scan.title
+
+    return hist
 
 #____________________________________________________________________
 @flag_as_option
@@ -183,8 +219,8 @@ def multicont_Yukawa_NONscalingbbH_floatingBRs(args):
     scans = []
     scans.append(latest_floatingBRs(args, decay_channel='combination', splined=True))
     if not args.asimov:
-        hzz = latest_floatingBRs(args, decay_channel='hzz', splined=True)
-        # hzz = latest_floatingBRs(args, decay_channel='hzz', splined=False)
+        # hzz = latest_floatingBRs(args, decay_channel='hzz', splined=True)
+        hzz = latest_floatingBRs(args, decay_channel='hzz', splined=False)
         hzz.color = differentials.core.safe_colors.blue
         scans.append(hzz)
         hgg = latest_floatingBRs(args, decay_channel='hgg', splined=True)
@@ -201,13 +237,14 @@ def multicont_Yukawa_NONscalingbbH_floatingBRs(args):
 
 @flag_as_option
 def multicont_Yukawa_NONscalingbbH_couplingdependentBRs(args):
+    do_spline = True
     scans = []
-    scans.append(latest_couplingdependentBRs(args, decay_channel='combination', splined=True))
+    scans.append(latest_couplingdependentBRs(args, decay_channel='combination', splined=do_spline))
     if not args.asimov:
-        hzz = latest_couplingdependentBRs(args, decay_channel='hzz', splined=True)
+        hzz = latest_couplingdependentBRs(args, decay_channel='hzz', splined=do_spline)
         hzz.color = differentials.core.safe_colors.blue
         scans.append(hzz)
-        hgg = latest_couplingdependentBRs(args, decay_channel='hgg', splined=True)
+        hgg = latest_couplingdependentBRs(args, decay_channel='hgg', splined=do_spline)
         hgg.color = differentials.core.safe_colors.red
         scans.append(hgg)
 
@@ -221,25 +258,25 @@ def multicont_Yukawa_NONscalingbbH_couplingdependentBRs(args):
 
 @flag_as_option
 def multicont_Yukawa_NONscalingbbH(args):
-    if args.asimov:
-        scandir = 'out/Scan_Yukawa_May11_combination_G0A_asimov'
-    else:
-        scandir = LatestPaths.scan.yukawa.reweighted.observed.combination
-
-    NONscalingbbH = differentials.scans.Scan2D(
-        'NONscalingbbH', x_coupling, y_coupling,
-        scandir = scandir
-        )
-    NONscalingbbH.title = 'Combination (incl. bbH / BRs fixed)'
-    NONscalingbbH.color = 1
-    NONscalingbbH.read()
+    args = differentialutils.force_asimov(args)
+    hist = latest_scenario3(args, splined=True)
 
     plot = differentials.plotting.plots.MultiContourPlot(
-        'multicont_Yukawa_NONscalingbbH' + ('_asimov' if args.asimov else ''),
-        [ NONscalingbbH ],
-        x_min=yukawa_x_min, x_max=yukawa_x_max, y_min=yukawa_y_min, y_max=yukawa_y_max
+        'multicont_Yukawa_scenario3' + ('_asimov' if args.asimov else ''),
+        [ hist ],
+        x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
+        # x_min=1.1*x_min, x_max=1.1*x_max, y_min=1.1*y_min, y_max=1.1*y_max
+        )
+    plot.legend.set(
+        x1 = lambda c: c.GetLeftMargin() + 0.02,
+        x2 = lambda c: c.GetLeftMargin() + 0.30,
+        y1 = lambda c: 1. - c.GetTopMargin() - 0.11,
+        y2 = lambda c: 1. - c.GetTopMargin() - 0.01,
         )
     plot.draw()
+
+
+
 
 #____________________________________________________________________
 @flag_as_option
@@ -247,30 +284,39 @@ def onedimscans_Yukawa_scalingbbH_couplingdependentBRs(args):
     args = differentialutils.set_one_decay_channel(args, 'combination')
     obs2D = latest_couplingdependentBRs(args, splined=True)
     exp2D = latest_couplingdependentBRs(args, splined=True, asimov=True)
-    onedimscans_Yukawa('kappab', obs2D, exp2D, x_min=-4.0, x_max=4.0, apply_smoothing=True, tag='couplingdependentBRs')
-    onedimscans_Yukawa('kappac', obs2D, exp2D, x_min=-15., x_max=15., apply_smoothing=True, tag='couplingdependentBRs')
+    onedimscans_Yukawa('kappab', exp2D, obs2D, x_min=-4.0, x_max=4.0, apply_smoothing=True, tag='couplingdependentBRs')
+    onedimscans_Yukawa('kappac', exp2D, obs2D, x_min=-15., x_max=15., apply_smoothing=True, tag='couplingdependentBRs')
 
 @flag_as_option
 def onedimscans_Yukawa_scalingbbH_floatingBRs(args):
     args = differentialutils.set_one_decay_channel(args, 'combination')
     obs2D = latest_floatingBRs(args, splined=True)
     exp2D = latest_floatingBRs(args, splined=True, asimov=True)
-    onedimscans_Yukawa('kappab', obs2D, exp2D, x_min=-40.0, x_max=30.0, tag='floatingBRs')
-    onedimscans_Yukawa('kappac', obs2D, exp2D, x_min=-75., x_max=75., tag='floatingBRs')
+    onedimscans_Yukawa('kappab', exp2D, obs2D, x_min=-30.0, x_max=30.0, tag='floatingBRs')
+    onedimscans_Yukawa('kappac', exp2D, obs2D, x_min=-75., x_max=75., tag='floatingBRs')
 
-def onedimscans_Yukawa(kappa, obs2D, exp2D, x_min, x_max, apply_smoothing=False, tag=None):
-    onedimscanner_obs = differentials.onedimscanner.OneDimScanner(
-        obs2D,
-        'kappac', 'kappab'
-        )
-    obs1D = onedimscanner_obs.get_1d(kappa)
-    obs1D.draw_style = 'repr_smooth_line'
-    obs1D.title = '{0} observed; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
-        differentials.core.standard_titles[kappa],
-        obs1D.unc.left_bound, obs1D.unc.right_bound
-        )
-    obs1D.color = 1
-    if apply_smoothing: obs1D.smooth_y(10)
+@flag_as_option
+def onedimscans_Yukawa_scalingbbH_scenario3(args):
+    args = differentialutils.set_one_decay_channel(args, 'combination', asimov=True)
+    # obs2D = latest_floatingBRs(args, splined=True)
+    exp2D = latest_scenario3(args, splined=True)
+    onedimscans_Yukawa('kappab', exp2D, x_min=-10.0, x_max=10.0, tag='scenario3')
+    onedimscans_Yukawa('kappac', exp2D, x_min=-20., x_max=20., tag='scenario3')
+
+def onedimscans_Yukawa(kappa, exp2D, obs2D=None, x_min=-10., x_max=10., apply_smoothing=False, tag=None):
+    if not obs2D is None:
+        onedimscanner_obs = differentials.onedimscanner.OneDimScanner(
+            obs2D,
+            'kappac', 'kappab'
+            )
+        obs1D = onedimscanner_obs.get_1d(kappa)
+        obs1D.draw_style = 'repr_smooth_line'
+        obs1D.title = '{0} observed; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+            differentials.core.standard_titles[kappa],
+            obs1D.unc.left_bound, obs1D.unc.right_bound
+            )
+        obs1D.color = 1
+        if apply_smoothing: obs1D.smooth_y(10)
 
     onedimscanner_exp = differentials.onedimscanner.OneDimScanner(
         exp2D,
@@ -291,7 +337,7 @@ def onedimscans_Yukawa(kappa, obs2D, exp2D, x_min, x_max, apply_smoothing=False,
 
     differentials.plotting.canvas.c.resize_temporarily(850, 800)
     plot = differentials.plotting.plots.MultiScanPlot(plotname)
-    plot.manual_graphs.append(obs1D)
+    if not obs2D is None: plot.manual_graphs.append(obs1D)
     plot.manual_graphs.append(exp1D)
     plot.x_title = differentials.core.standard_titles[kappa]
     plot.x_min = x_min
@@ -304,8 +350,9 @@ def onedimscans_Yukawa(kappa, obs2D, exp2D, x_min, x_max, apply_smoothing=False,
     texstr_var = lambda cmdname, value: '\\newcommand{{\\{0}}}{{{1:.1f}}}'.format(cmdname, value)
     print texstr_var('{0}LeftAsimov'.format(kappa), exp1D.unc.left_bound)
     print texstr_var('{0}RightAsimov'.format(kappa), exp1D.unc.right_bound)
-    print texstr_var('{0}LeftObserved'.format(kappa), obs1D.unc.left_bound)
-    print texstr_var('{0}RightObserved'.format(kappa), obs1D.unc.right_bound)
+    if not obs2D is None:
+        print texstr_var('{0}LeftObserved'.format(kappa), obs1D.unc.left_bound)
+        print texstr_var('{0}RightObserved'.format(kappa), obs1D.unc.right_bound)
 
 
 

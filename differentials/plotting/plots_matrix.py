@@ -28,6 +28,8 @@ class CorrelationMatrixPlot(plots.PlotBase):
         self.add_zaxis_label = True
         self.zaxis_label_text = 'Correlation'
 
+        self.marker_size = 1.4
+
     def get_bin_labels(self):
         if len(self.binlabels) == 0:
             ['bin{0}'.format(i) for i in xrange(self.n_bins)]
@@ -40,10 +42,10 @@ class CorrelationMatrixPlot(plots.PlotBase):
 
         c.Clear()
         c.set_margins(
-            LeftMargin  = 0.19,
+            LeftMargin  = 0.21,
             TopMargin   = 0.08,
             RightMargin = 0.14,
-            BottomMargin = 0.17,
+            BottomMargin = 0.19,
             )
         utils.set_color_palette('correlation_matrix')
 
@@ -69,10 +71,16 @@ class CorrelationMatrixPlot(plots.PlotBase):
                 H.GetYaxis().SetBinLabel(i+1, binning_labels[i])
 
         H.GetXaxis().SetTitle(self.x_title)
+
         H.GetXaxis().SetTitleSize(0.05)
-        H.GetXaxis().SetTitleOffset(1.6)
-        H.GetXaxis().SetLabelSize(0.045)
-        H.GetYaxis().SetLabelSize(0.045)
+        H.GetXaxis().SetTitleOffset(1.8)
+        # H.GetXaxis().SetLabelSize(0.045)
+        # H.GetYaxis().SetLabelSize(0.045)
+
+        # H.GetXaxis().SetTitleSize(0.06)
+        # H.GetXaxis().SetTitleOffset(1.6)
+        H.GetXaxis().SetLabelSize(0.05)
+        H.GetYaxis().SetLabelSize(0.05)
 
         if self.n_bins < self.manybin_cutoff:
             H.Draw('COLZ TEXT')
@@ -81,6 +89,8 @@ class CorrelationMatrixPlot(plots.PlotBase):
 
         ROOT.gStyle.SetHistMinimumZero() # To draw the "0", otherwise ROOT leaves it empty
         ROOT.gStyle.SetPaintTextFormat('1.2g')
+
+        H.SetMarkerSize(self.marker_size)
 
         pywrappers.CMS_Latex_type('Supplementary').Draw()
         pywrappers.CMS_Latex_lumi().Draw()
@@ -139,5 +149,5 @@ class CorrelationMatrixFromCombinePlot(CorrelationMatrixPlot):
 
         self.H.GetYaxis().SetTitle(self.H.GetXaxis().GetTitle())
         self.H.GetYaxis().SetTitleSize(self.H.GetXaxis().GetTitleSize())
-        self.H.GetYaxis().SetTitleOffset(1.9)
+        self.H.GetYaxis().SetTitleOffset(2.15)
 
