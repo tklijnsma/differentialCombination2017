@@ -9,6 +9,7 @@ import processinterpreter
 import systshapemaker
 import onedimscanner
 import onedimscanfilter
+import observable
 
 # Sub-packages
 import plotting

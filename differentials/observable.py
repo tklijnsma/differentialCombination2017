@@ -1,4 +1,4 @@
-import Commands
+from differentials import core
 from copy import deepcopy
 from array import array
 import ROOT
@@ -130,7 +130,7 @@ class Observable(object):
         if what is None:
             what = 'crosssection_over_binwidth'
         if not what in [ 'crosssection', 'crosssection_over_binwidth', 'shape' ]:
-            Commands.ThrowError( 'Choose from {0}'.format([ 'crosssection', 'crosssection_over_binwidth', 'shape' ]) )
+            raise ValueError( 'Choose from {0}'.format([ 'crosssection', 'crosssection_over_binwidth', 'shape' ]) )
 
         if what == 'crosssection':
             ys = self.crosssection()
@@ -142,7 +142,7 @@ class Observable(object):
         elif what == 'shape':
             ys = self.shape
 
-        uniqueName = 'ObsHist_{0}'.format( Commands.__uniqueid__().next() )
+        uniqueName = 'ObsHist_{0}'.format( core.__uniqueid__().next() )
         H = ROOT.TH1F(
             uniqueName, uniqueName,
             len(ys), array( 'f', self.binning )

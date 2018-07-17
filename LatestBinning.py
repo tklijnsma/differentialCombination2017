@@ -1,6 +1,6 @@
 import sys
 sys.path.append('src')
-from Observable import Observable
+from differentials.observable import Observable
 from collections import namedtuple
 from copy import deepcopy
 from math import sqrt
