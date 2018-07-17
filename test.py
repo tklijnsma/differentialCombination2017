@@ -66,7 +66,7 @@ def main():
         # 
         'debug',
         'inclusive_scans',
-        'onetimeplotsCommands',
+        # 'onetimeplotsCommands', # Not optimized for new code base
         # 
         'scalecorrelationmatrices',
         'crosschecks',
