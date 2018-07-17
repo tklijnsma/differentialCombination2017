@@ -91,7 +91,6 @@ def main():
         'correlationmatrices',
         # 
         'fermilab',
-        'projections',
         'projections_preprocessing',
         'projections_t2ws',
         'projections_scans',
