@@ -65,7 +65,7 @@ def main():
         'top_t2ws',
         # 
         'debug',
-        'scans_other',
+        'inclusive_scans',
         'onetimeplotsCommands',
         # 
         'scalecorrelationmatrices',
