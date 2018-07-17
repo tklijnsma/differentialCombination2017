@@ -9,18 +9,6 @@ Thomas Klijnsma
 
 import argparse
 
-import yukawaCommands
-import topCommands
-import extrastudyCommands
-import crosscheckCommands
-
-import sys
-sys.path.append('src')
-import Commands
-import TheoryCommands
-
-import differentials
-
 # New style option handling
 from OptionHandler import OptionHandler
 
@@ -57,34 +45,28 @@ def main():
     parser.add_argument( '--statonly', action='store_true' )
     parser.add_argument( '--statsyst', action='store_true' )
     parser.add_argument( '--lumiScale', action='store_true' )
-
-    #____________________________________________________________________
-    # Old style imports
-    yukawaCommands.AppendParserOptions(parser)
-    topCommands.AppendParserOptions(parser)
-    extrastudyCommands.AppendParserOptions(parser)
-    crosscheckCommands.AppendParserOptions(parser)
+    parser.add_argument( '--no-preliminary-tag', action='store_true' )
 
     #____________________________________________________________________
     # New style imports
     optionHandler = OptionHandler()
     optionHandler.set_parser(parser)
     optionHandler.process_modules([
-        'scans_yukawa',
-        'scans_top',
-        'scans_other',
-        'differentialCombinations',
-        'differentialPlots',
-        # 'lumiStudyPlots',
-        'onetimeplotsCommands',
+        'datacard_preprocessing',
         # 
+        'differentials_scans',
+        'differentials_plots',
+        # 
+        'yukawa_scans',
         'yukawa_t2ws',
         'yukawa_plots',
+        'top_scans',
         'top_plots',
         'top_t2ws',
         # 
-        'datacard_preprocessing',
         'debug',
+        'scans_other',
+        'onetimeplotsCommands',
         # 
         'scalecorrelationmatrices',
         'crosschecks',
@@ -103,12 +85,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.bkg:
-        pass
-
-    # Remove the 'Preliminary'
-    # differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = ''
-
+    import differentials
     differentials.logger.set_basic_format()
     if args.test:
         Commands.TestMode()
@@ -118,14 +95,16 @@ def main():
     if args.trace:
         differentials.logger.set_level_trace()
 
+    import logging
+    if args.no_preliminary_tag:
+        logging.info('Remove the default \'Preliminary\' tag from plots')
+        differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = ''
+
     if args.saveroot:
-        TheoryCommands.SaveAsRoot()
         differentials.core.save_root()
     if args.savepng:
-        TheoryCommands.SaveAsPng()
         differentials.core.save_png()
     if args.savepng_convert:
-        TheoryCommands.SaveAsPngThroughConvert()
         differentials.core.save_png_through_convert()
     if args.savegray:
         differentials.core.save_gray()
@@ -137,23 +116,6 @@ def main():
 
     optionHandler.args = args
     optionHandler.execute_functions()
-
-
-    ########################################
-    # Old style options
-    ########################################
-
-    if args.yukawaCommands:
-        yukawaCommands.main(args)
-
-    if args.topCommands:
-        topCommands.main(args)
-
-    if args.extrastudyCommands:
-        extrastudyCommands.main(args)
-
-    if args.crosscheckCommands:
-        crosscheckCommands.main(args)
 
 
 ########################################
