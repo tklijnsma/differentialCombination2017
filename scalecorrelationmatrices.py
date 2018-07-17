@@ -10,10 +10,6 @@ Thomas Klijnsma
 
 from OptionHandler import flag_as_option, flag_as_parser_options
 
-# import LatestPaths
-# import LatestPathsGetters
-# import LatestBinning
-
 import differentials
 import LatestPaths
 
@@ -23,13 +19,6 @@ import re
 import random
 random.seed(1002)
 
-import sys
-sys.path.append('src')
-# import TheoryFileInterface
-# import TheoryCommands
-
-# from time import strftime
-# datestr = strftime('%b%d')
 
 ########################################
 # Main

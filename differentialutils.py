@@ -1,13 +1,6 @@
 import LatestPaths
-import differentialTools
-
-# import sys
-# sys.path.append('src')
-# import CombineToolWrapper
 import differentials.combine.combine as combine
-
 import os, copy, traceback
-
 from os.path import *
 
 #____________________________________________________________________

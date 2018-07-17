@@ -915,7 +915,7 @@ class NormalizationCrossCheck(object):
                 '\n    bin_boundaries: {0}'.format(self.bin_boundaries)
                 )
         elif len(values) > self.n_bins:
-            Commands.Warning(
+            logging.warning(
                 'The passed spectrum \'{0}\' has {1} bins, but the number of passed bins is {2}'.format(
                     name, len(values), self.n_bins) +
                 '\n    Will keep only the first {0} bins'.format(self.n_bins)

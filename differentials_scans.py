@@ -18,14 +18,10 @@ from OptionHandler import flag_as_option
 import differentials
 import differentialutils
 import LatestPaths
-# import LatestPathsGetters
 import LatestBinning
 
 from differentials.core import AttrDict
 import differentials.combine.combine as combine
-
-# sys.path.append('src')
-# import CombineToolWrapper
 
 from time import strftime
 datestr = strftime( '%b%d' )
@@ -400,10 +396,6 @@ def ptjet_t2ws(args):
 ########################################
 # Correlation matrices
 ########################################
-
-sys.path.append('src')
-import Commands
-import PlotCommands
 
 @flag_as_option
 def all_corrMats(args):

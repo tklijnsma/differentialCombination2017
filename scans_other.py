@@ -3,10 +3,6 @@ from OptionHandler import flag_as_option, flag_as_parser_options
 import LatestPaths, LatestBinning
 import sys
 
-# sys.path.append('src')
-# import Commands
-# import CombineToolWrapper
-
 import differentials
 import differentialutils
 

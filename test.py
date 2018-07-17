@@ -88,7 +88,6 @@ def main():
     import differentials
     differentials.logger.set_basic_format()
     if args.test:
-        Commands.TestMode()
         differentials.core.testmode()
     if args.debug:
         differentials.logger.set_level_debug()

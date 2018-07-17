@@ -6,9 +6,6 @@ from copy import deepcopy
 import os
 from os.path import *
 
-# import sys
-# sys.path.append('src')
-# import CombineToolWrapper
 import differentials.combine.combine as combine
 
 import differentials

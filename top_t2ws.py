@@ -21,10 +21,6 @@ import re
 import random
 random.seed(1002)
 
-import sys
-sys.path.append('src')
-import TheoryFileInterface
-
 from differentials.theory.theory_utils import FileFinder
 
 from time import strftime

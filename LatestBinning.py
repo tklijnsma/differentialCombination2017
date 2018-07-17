@@ -1,5 +1,4 @@
 import sys
-sys.path.append('src')
 from differentials.observable import Observable
 from collections import namedtuple
 from copy import deepcopy

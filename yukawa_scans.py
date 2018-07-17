@@ -3,9 +3,6 @@ from OptionHandler import flag_as_option, flag_as_parser_options
 import os, logging, copy
 from os.path import *
 
-# import sys
-# sys.path.append('src')
-# import CombineToolWrapper
 import differentials.combine.combine as combine
 
 import LatestPaths

@@ -22,11 +22,6 @@ import random
 import glob
 random.seed(1002)
 
-import sys
-sys.path.append('src')
-import TheoryFileInterface
-import CombineToolWrapper
-
 from time import strftime
 datestr = strftime('%b%d')
 

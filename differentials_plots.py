@@ -18,20 +18,10 @@ import traceback
 
 from OptionHandler import flag_as_option
 
-sys.path.append('src')
-import Commands
-import PhysicsCommands
-import TheoryCommands
 import LatestPaths
-# import LatestPathsGetters
 import LatestBinning
-from Container import Container
-import PlotCommands
-import DifferentialTable
-from differentialTools import *
 
 import differentials
-# import differentials.plotting
 
 from time import strftime
 datestr = strftime('%b%d')
@@ -105,7 +95,6 @@ def plot_all_differentials(args):
 @flag_as_option
 def pth_smH_plot(args):
     spectra = []
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     obs_name = 'pth_smH'
     obstuple = LatestBinning.obstuple_pth_smH
     scandict = LatestPaths.scan.pth_smH.asimov if args.asimov else LatestPaths.scan.pth_smH.observed
@@ -679,17 +668,14 @@ def rapidity_plot(args):
 #____________________________________________________________________
 @flag_as_option
 def all_tables(args):
-    Commands.DisableWarnings()
     pth_smH_tables(args)
     pth_ggH_tables(args)
     ptjet_tables(args)
     njets_tables(args)
     rapidity_tables(args)
-    Commands.DisableWarnings(False)
 
 @flag_as_option
 def pth_smH_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='pth_smH', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'pth_smH', pth_smH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -702,7 +688,6 @@ def pth_smH_tables(args):
 
 @flag_as_option
 def pth_ggH_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='pth_ggH', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'pth_ggH', pth_ggH_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -715,7 +700,6 @@ def pth_ggH_tables(args):
 
 @flag_as_option
 def ptjet_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='ptjet', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'ptjet', ptjet_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -728,7 +712,6 @@ def ptjet_tables(args):
 
 @flag_as_option
 def njets_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='njets', last_bin_is_overflow=True)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'njets', njets_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
@@ -741,7 +724,6 @@ def njets_tables(args):
 
 @flag_as_option
 def rapidity_tables(args):
-    TheoryCommands.SetPlotDir( 'plots_{0}'.format(datestr) )
     differentialTable = DifferentialTable.DifferentialTable(name='rapidity', last_bin_is_overflow=False)
     for decay_channel in ['hgg', 'hzz', 'combination']:
         statsyst = read_container(args, 'rapidity', rapidity_obs(decay_channel).crosssection_over_binwidth(), decay_channel, statonly=False )
