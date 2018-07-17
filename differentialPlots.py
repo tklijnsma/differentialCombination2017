@@ -375,6 +375,17 @@ def njets_plot(args):
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
 
+    if args.table:
+        table = differentials.plotting.tables.SpectraTable('njets',
+            spectra
+            )
+        table.print_only_symm_unc = True
+        table.add_symm_improvement_row(hgg, combination)
+        # table.add_symm_improvement_row(hgg, combination)
+        # table.add_symm_improvement_row(combination, combWithHbb)
+        logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+        return
+
     # Get syst only shape
     combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
     combination_statonly.set_sm(obstuple.combination.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))

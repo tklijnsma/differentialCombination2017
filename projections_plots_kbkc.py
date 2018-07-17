@@ -21,9 +21,12 @@ style = differentials.plotting.pywrappers.StyleSheet()
 style.line_width = 2
 style.error_bar_line_width = 1
 
+
 #____________________________________________________________________
 couplingdependentBRs = differentials.core.AttrDict()
-couplingdependentBRs.hzz = 'out/Scan_projection_kbkc_Jul10_hzz_couplingdependentBRs_asimov_0'
+couplingdependentBRs.hzz         = 'out/Scan_projection_kbkc_Jul10_hzz_couplingdependentBRs_asimov_0'
+couplingdependentBRs.hgg         = 'out/Scan_projection_kbkc_Jul10_hgg_couplingdependentBRs_asimov'
+couplingdependentBRs.combination = 'out/Scan_projection_kbkc_Jul10_combination_couplingdependentBRs_asimov'
 
 def latest_couplingdependentBRs(args, decay_channel=None):
     args = differentialutils.force_asimov(args)
@@ -49,6 +52,14 @@ def projection_kbkc_plot_couplingdependentBRs(args):
     hzz.color = differentials.core.safe_colors.blue
     scans.append(hzz)
 
+    # combination = latest_couplingdependentBRs(args, decay_channel='combination')
+    # combination.color = 1
+    # scans.append(combination)
+
+    # hgg = latest_couplingdependentBRs(args, decay_channel='hgg')
+    # hgg.color = differentials.core.safe_colors.red
+    # scans.append(hgg)
+
     plot = differentials.plotting.plots.MultiContourPlot(
         'projection_kbkc_plot_couplingdependentBRs' + ('_asimov' if args.asimov else ''),
         scans,
@@ -60,7 +71,9 @@ def projection_kbkc_plot_couplingdependentBRs(args):
 
 #____________________________________________________________________
 floatingBRs = differentials.core.AttrDict()
-floatingBRs.hzz = 'out/Scan_projection_kbkc_Jul10_hzz_floatingBRs_asimov_0'
+floatingBRs.hzz         = 'out/Scan_projection_kbkc_Jul10_hzz_floatingBRs_asimov_0'
+floatingBRs.hgg         = 'out/Scan_projection_kbkc_Jul10_hgg_floatingBRs_asimov'
+floatingBRs.combination = 'out/Scan_projection_kbkc_Jul10_combination_floatingBRs_asimov'
 
 def latest_floatingBRs(args, decay_channel=None, asimov=None, splined=False):
     args = differentialutils.force_asimov(args)

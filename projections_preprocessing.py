@@ -70,7 +70,6 @@ def create_ktcgkb_projection_datacard(args):
     datacard.add_lumiscale_rateparam()
     datacard.out('projection_ktcgkb_{0}'.format(decay_channel))
 
-
 @flag_as_option
 def create_hgg_projection_datacard(args):
     card = LatestPaths.card.pth_smH.hgg
