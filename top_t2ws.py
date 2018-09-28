@@ -169,6 +169,41 @@ def t2ws_Top_scalingttH_couplingdependentBRs(args):
 
 #____________________________________________________________________
 @flag_as_option
+def t2ws_ktcg_kbinterference(args):
+    t2ws = base_t2ws(args, add_scaling_ttH=True)
+    t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
+    t2ws.tags.append('kbinterference')
+
+    # Remove previous options
+    remove = lambda option: (
+                option.startswith('--PO SM=')
+                or option.startswith('--PO theory=')
+                or option.startswith('--PO linearTerms=')
+                )
+    t2ws.extra_options = [ option for option in t2ws.extra_options if not(remove(option)) ]
+
+    # Add the linear terms
+    t2ws.extra_options.append('--PO linearTerms=True')
+
+    # Add theory
+    coupling_variations = FileFinder(
+        cb=1.0, muR=1.0, muF=1.0, Q=1.0, directory=LatestPaths.theory.top.filedir
+        ).get()
+    sm = [ v for v in coupling_variations if v.ct==1.0 and v.cg==0.0 ][0]
+    coupling_variations.pop(coupling_variations.index(sm))
+
+    t2ws.extra_options.append('--PO SM=[ct=1,cg=0,file={0}]'.format(sm.theory_file))
+    for variation in coupling_variations:
+        if variation.ct == 1.0 or variation.cg == 0.0: continue
+        t2ws.extra_options.append(
+            '--PO theory=[ct={0},cg={1},file={2}]'
+            .format(variation.ct, variation.cg, variation.theory_file)
+            )
+
+    t2ws.run()
+
+#____________________________________________________________________
+@flag_as_option
 def t2ws_TopCtCb_scalingbbHttH(args):
     # args = differentialutils.set_one_decay_channel(args, 'combWithHbb', asimov=True)
     t2ws = base_t2ws(args, do_kappat_kappag=False)

@@ -233,7 +233,10 @@ def multicont_Yukawa_NONscalingbbH_floatingBRs(args):
         x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
         x_min=floatingBRs_x_min, x_max=floatingBRs_x_max, y_min=floatingBRs_y_min, y_max=floatingBRs_y_max
         )
-    plot.draw()
+    plot.draw(wait=True)
+    plot.add_BR_floating_text()
+    plot.wrapup()
+
 
 @flag_as_option
 def multicont_Yukawa_NONscalingbbH_couplingdependentBRs(args):
@@ -254,7 +257,9 @@ def multicont_Yukawa_NONscalingbbH_couplingdependentBRs(args):
         x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
         x_min=couplingdependentBRs_x_min, x_max=couplingdependentBRs_x_max, y_min=couplingdependentBRs_y_min, y_max=couplingdependentBRs_y_max
         )
-    plot.draw()
+    plot.draw(wait=True)
+    plot.add_BR_parametrized_text()
+    plot.wrapup()
 
 @flag_as_option
 def multicont_Yukawa_NONscalingbbH(args):

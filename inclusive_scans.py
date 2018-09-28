@@ -107,7 +107,7 @@ def totalXS_plot(args):
     combination_statonly.color = 11
     combination_statonly.draw_style = 'repr_smooth_line'
     combination_statonly.line_style = 2
-    combination_statonly.title = 'Stat. uncertainty'
+    combination_statonly.title = 'Stat uncertainty'
     combination_statonly.no_bestfit_line = True
 
     for scan in [
@@ -119,7 +119,7 @@ def totalXS_plot(args):
         combination_statonly,
         ]:
         scan.read(keep_chain=True)
-        scan.multiply_x_by_constant(LatestBinning.YR4_totalXS)
+        # scan.multiply_x_by_constant(LatestBinning.YR4_totalXS)
         scan.create_uncertainties()
 
     plot = differentials.plotting.plots.MultiScanPlot('scans_totalXS')
@@ -141,7 +141,7 @@ def totalXS_plot(args):
         spline = scan.to_spline(x_min = 0.5, x_max = 1.7)
         graph = spline.to_graph(nx=1500)
         graph.multiply_x_by_constant(LatestBinning.YR4_totalXS)
-        graph.color = scan.color
+        graph.style().color = scan.color
         graph.title = scan.title
         # graph.line_width = 5
         # graph.line_style = 2
@@ -175,7 +175,7 @@ def totalXS_plot(args):
     ROOT.SetOwnership(sm_legend_dummy, False)
     sm_legend_dummy.Draw('SAMEP5')
     sm_legend_dummy.SetName('sm_legend_dummy')
-    plot.leg.AddEntry(sm_legend_dummy.GetName(), '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002', 'lf')
+    plot.leg.AddEntry(sm_legend_dummy.GetName(), '#sigma_{SM} from CYRM-2017-002', 'lf')
 
     smbox = differentials.plotting.pywrappers.Box(
         LatestBinning.YR4_totalXS - LatestBinning.smH_unc_inclusive,
@@ -190,7 +190,7 @@ def totalXS_plot(args):
         'sm', 'SM',
         [LatestBinning.YR4_totalXS, LatestBinning.YR4_totalXS], [0.0, plot.y_cutoff]
         )
-    smline.color = differentials.core.safe_colors.green
+    smline.style().color = differentials.core.safe_colors.green
     # smline._legend = plot.leg
     smline.line_width = 1
     smline.Draw('repr_basic_line')
@@ -204,7 +204,7 @@ def totalXS_plot(args):
     l = differentials.plotting.pywrappers.Latex(
         differentials.plotting.canvas.c.GetLeftMargin() + 0.045,
         1-differentials.plotting.canvas.c.GetTopMargin() - 0.26,
-        '#sigma_{{tot}} = {0:.1f}  #pm{1:.1f} (stat.) #pm{2:.1f} (syst.)  pb'.format(
+        '#sigma_{{tot}} = {0:.1f}  #pm{1:.1f} (stat) #pm{2:.1f} (syst)  pb'.format(
             # xBestfit, 0.5*(abs(left_stat)+abs(right_stat)), 0.5*(abs(left_syst)+abs(right_syst))
             xs, xs_err_statonly, xs_err_systonly
             )
@@ -219,7 +219,7 @@ def totalXS_plot(args):
     # l2 = differentials.plotting.pywrappers.Latex(
     #     lambda c: c.GetLeftMargin() + 0.04,
     #     lambda c: c.GetBottomMargin() + 0.045,
-    #     '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
+    #     '#sigma_{SM} from CYRM-2017-002'
     #     )
     # l2.SetNDC()
     # l2.SetTextAlign(11)
@@ -317,17 +317,18 @@ def ratioBR_plot(args):
 
     plot.x_min = 0.3 * LatestBinning.SM_ratio_of_BRs
     plot.x_max = 1.7 * LatestBinning.SM_ratio_of_BRs
-    plot.y_max = 6.0
-    plot.x_title = '#frac{{BR({0})}}{{BR({1})}}'.format(
+    plot.y_max = 5.5
+    plot.x_title = '#frac{{{2}({0})}}{{{2}({1})}}'.format(
         differentials.core.standard_titles['hgg'],
-        differentials.core.standard_titles['hzz']
+        differentials.core.standard_titles['hzz'],
+        differentials.core.standard_titles['BR']
         )
 
     ratioOfBRs_statonly = differentials.scans.Scan('ratio_BR_hgg_hzz', scandir=LatestPaths.scan.ratioOfBRs_statonly)
     ratioOfBRs_statonly.read(keep_chain=True)
     ratioOfBRs_statonly.color = 11
     ratioOfBRs_statonly.draw_style = 'repr_smooth_line'
-    ratioOfBRs_statonly.title = 'Stat. uncertainty'
+    ratioOfBRs_statonly.title = 'Stat uncertainty'
     ratioOfBRs_statonly.create_uncertainties()
     # plot.add_scan(ratioOfBRs_statonly)
 
@@ -346,7 +347,7 @@ def ratioBR_plot(args):
         spline = scan.to_spline(x_min = 0.06, x_max = 0.145)
         graph = spline.to_graph(nx=1500)
         # graph.multiply_x_by_constant(LatestBinning.YR4_totalXS)
-        graph.color = scan.color
+        graph.style().color = scan.color
         graph.title = scan.title
         # graph.line_width = 5
         # graph.line_style = 2
@@ -364,22 +365,50 @@ def ratioBR_plot(args):
         x1 = lambda c: c.GetLeftMargin() + 0.0,
         x2 = lambda c: c.GetLeftMargin() + 0.81,
         y1 = lambda c: 1-c.GetTopMargin() - 0.22,
-        y2 = lambda c: 1-c.GetTopMargin() - 0.01,
+        y2 = lambda c: 1-c.GetTopMargin() - 0.02,
         )
 
+    #____________________________________________________________________
+    # SM line
+
+    smUncBox = differentials.plotting.pywrappers.Box(
+        LatestBinning.SM_ratio_of_BRs - abs(LatestBinning.SM_ratio_of_BRs_unc_down),
+        0.,
+        LatestBinning.SM_ratio_of_BRs + abs(LatestBinning.SM_ratio_of_BRs_unc_up),
+        plot.y_cutoff
+        )
+    smUncBox.color = differentials.core.safe_colors.green
+    smUncBox.Draw()
+
     smline = differentials.plotting.pywrappers.Graph(
-        'sm',
-        '#frac{{BR({0})}}{{BR({1})}} from DOI: 10.23731/CYRM-2017-002'.format(
-            differentials.core.standard_titles['hgg'],
-            differentials.core.standard_titles['hzz']
-            ),
+        'sm', 'title',
         [LatestBinning.SM_ratio_of_BRs, LatestBinning.SM_ratio_of_BRs], [0.0, plot.y_cutoff]
         )
-    smline.color = differentials.core.safe_colors.green
-    smline.legend = plot.leg
+    smline.style().color = differentials.core.safe_colors.green
     smline.line_width = 2
     smline.Draw('repr_basic_line')
 
+    # Dummy to get the legend entry right
+    sm_legend_title = '#frac{{{BR}({0})}}{{{BR}({1})}} from CYRM-2017-002'.format(
+        differentials.core.standard_titles['hgg'],
+        differentials.core.standard_titles['hzz'],
+        BR = differentials.core.standard_titles['BR']
+        )
+    sm_legend_dummy = ROOT.TGraphErrors(
+        1,
+        array('f', [-999.]),
+        array('f', [-999.]),
+        array('f', [1.0]),
+        array('f', [1.0])
+        )
+    sm_legend_dummy.SetFillColorAlpha(differentials.core.safe_colors.green, 0.2)
+    sm_legend_dummy.SetLineColor(differentials.core.safe_colors.green)
+    sm_legend_dummy.SetLineWidth(2)
+    ROOT.SetOwnership(sm_legend_dummy, False)
+    sm_legend_dummy.Draw('SAMEP5')
+    sm_legend_dummy.SetName('sm_legend_dummy')
+    plot.leg.AddEntry(sm_legend_dummy.GetName(), sm_legend_title, 'lf')
+    #____________________________________________________________________
 
     xs = ratioOfBRs.unc.x_min
     xs_err_full = ratioOfBRs.unc.symm_error
@@ -389,7 +418,7 @@ def ratioBR_plot(args):
     l = differentials.plotting.pywrappers.Latex(
         differentials.plotting.canvas.c.GetLeftMargin() + 0.045,
         1-differentials.plotting.canvas.c.GetTopMargin() - 0.24,
-        '{0} = {1:.3f}  #pm{2:.3f} (stat.) #pm{3:.3f} (syst.)'.format(
+        '{0} = {1:.3f}  #pm{2:.3f} (stat) #pm{3:.3f} (syst)'.format(
             plot.x_title,
             xs, xs_err_statonly, xs_err_systonly
             )

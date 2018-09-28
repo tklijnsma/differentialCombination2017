@@ -53,6 +53,12 @@ p3000_statonly.hzz = 'out/ScanProjection_Jul04_pth_smH_hzz_3000ifb_statonly_asim
 p3000_statonly.hbb = 'out/ScanProjection_Jul04_pth_smH_hbb_3000ifb_statonly_asimov'
 p3000_statonly.combWithHbb = 'out/ScanProjection_Jul04_pth_smH_combWithHbb_3000ifb_statonly_asimov'
 
+p3000_s2 = differentials.core.AttrDict()
+p3000_s2.hgg = 'out/ScanProjection_Jul17_pth_smH_hgg_3000ifb_scenario2_asimov'
+p3000_s2.hzz = 'out/ScanProjection_Jul17_pth_smH_hzz_3000ifb_scenario2_asimov'
+p3000_s2.hbb = 'out/ScanProjection_Jul17_pth_smH_hbb_3000ifb_scenario2_asimov'
+p3000_s2.combWithHbb = 'out/ScanProjection_Jul17_pth_smH_combWithHbb_3000ifb_scenario2_asimov'
+
 #____________________________________________________________________
 @flag_as_option
 def projection_pth_smH_plot(args):
@@ -68,14 +74,21 @@ def projection_pth_smH_plot(args):
 
     PLOT_SYSTEMATIC_ONLY = False
 
-    # DO_STAT_ONLY = True
-    DO_STAT_ONLY = False
+    DO_STAT_ONLY = True
+    # DO_STAT_ONLY = False
+
+    # DO_S2 = True
+    DO_S2 = False
+
+    # DO_LUMI_36 = True
+    DO_LUMI_36 = False
+
 
     if DO_STAT_ONLY:
         scandict = p3000_statonly
 
-    # DO_LUMI_36 = True
-    DO_LUMI_36 = False
+    if DO_S2:
+        scandict = p3000_s2
 
     if DO_LUMI_36:
         scandict = p36
@@ -129,11 +142,27 @@ def projection_pth_smH_plot(args):
     sm_xs, sm_ratio = get_sm_histograms(obstuple.combWithHbb, normalize_by_second_to_last_bin_width=True, x_max=x_max)
 
     if args.table:
-        table = differentials.plotting.tables.SpectraTable('pth_smH', [s for s in spectra])
-        table.print_only_symm_unc = True
-        table.add_symm_improvement_row(hgg, combWithHbb)
-        logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+
+        table = differentials.plotting.newtables.BaseTable()
+        table.end_line_with_tab_sep = True
+
+        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combWithHbb.binning())
+        rowproducer.do_xs = True
+        rowproducer.normalize = True
+        table.append(rowproducer.produce_binning_row('pT (GeV)'))
+        table.append(rowproducer.produce(hgg))
+        table.append(rowproducer.produce(hzz))
+        table.append(rowproducer.produce(hbb))
+        table.append(rowproducer.produce(combWithHbb))
+
+        print table.produce_table_string()
         return
+
+        # table = differentials.plotting.tables.SpectraTable('pth_smH', [s for s in spectra])
+        # table.print_only_symm_unc = True
+        # table.add_symm_improvement_row(hgg, combWithHbb)
+        # logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+        # return
 
     # Start compiling plot
     plotname = (
@@ -142,6 +171,7 @@ def projection_pth_smH_plot(args):
         + ( '_nonfixedbinwidth' if not APPLY_FIXED_BINNING else '' )
         + ( '_statonly' if DO_STAT_ONLY else '' )
         + ( '_lumi36' if DO_LUMI_36 else '' )
+        + ( '_scenario2' if DO_S2 else '' )
         )
     plot = differentials.plotting.plots.SpectraPlot(plotname, spectra)
     plot.draw_multiscans = True

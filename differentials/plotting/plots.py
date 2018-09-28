@@ -253,7 +253,7 @@ class MultiScanPlot(PlotBase):
             graph.legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
-            left_point, right_point = self.get_unc_points(graph, color=graph.color)
+            left_point, right_point = self.get_unc_points(graph, color=graph.style().color)
 
             if getattr(graph, 'draw_bestfit', False):
                 x_bestfit = graph.unc.x_min
@@ -262,9 +262,10 @@ class MultiScanPlot(PlotBase):
                     array('f', [0.0, self.y_cutoff]),
                     )
                 ROOT.SetOwnership(line_bestfit, False)
-                line_bestfit.SetLineColor(graph.color)
+                line_bestfit.SetLineColor(graph.style().color)
                 if 'dashed' in getattr(graph, 'draw_style', 'repr_basic_line'):
                     line_bestfit.SetLineStyle(2)
+                line_bestfit.SetLineWidth(2)
                 line_bestfit.Draw('SAMEL')
 
 
@@ -373,10 +374,10 @@ class MultiContourPlot(PlotBase):
         #     lambda c: 1. - c.GetTopMargin() - 0.01,
         #     )
         self.cdl.set(
-            lambda c: c.GetLeftMargin() + 0.02,
-            lambda c: c.GetBottomMargin() + 0.02,
-            lambda c: c.GetLeftMargin() + 0.48,
-            lambda c: c.GetBottomMargin() + 0.07,
+            lambda c: c.GetLeftMargin() + 0.03,
+            lambda c: c.GetBottomMargin() + 0.03,
+            lambda c: c.GetLeftMargin() + 0.49,
+            lambda c: c.GetBottomMargin() + 0.08,
             )
         self.cdl.SetBorderSize(1)
         self.cdl.SetFillStyle(1001)
@@ -413,7 +414,35 @@ class MultiContourPlot(PlotBase):
         self.y_max = y_max + 0.4*(y_max-y_min)
 
 
-    def draw(self):
+    def add_BR_parametrized_text(self, x=None, y=None):
+        text = '{0}({1},{2})'.format(
+            core.standard_titles['BR'], core.standard_titles['kappac'], core.standard_titles['kappab']
+            )
+        self.add_BR_text(x, y, text)
+
+    def add_BR_floating_text(self, x=None, y=None):
+        text = '{0} unconstr.'.format(
+            core.standard_titles['BR'], core.standard_titles['kappac'], core.standard_titles['kappab']
+            )
+        self.add_BR_text(x, y, text)
+
+    def add_BR_text(self, x, y, text):
+        if x is None: x = lambda c: 1. - c.GetRightMargin() - 0.01
+        if y is None: y = lambda c: c.GetBottomMargin() + 0.03 + 0.015
+        self.br_text = pywrappers.Latex(
+            x(c), y(c), text
+            )
+        self.br_text.SetTextSize(0.045)
+        if x(c) > 0.5:
+            self.br_text.SetTextAlign(31)
+        else:
+            self.br_text.SetTextAlign(11)
+        self.br_text.SetNDC()
+        self.br_text.Draw()
+
+
+
+    def draw(self, wait=False):
         super(MultiContourPlot, self).draw()
         c.resize_temporarily(870, 800)
         c.SetRightMargin(0.13)
@@ -441,7 +470,7 @@ class MultiContourPlot(PlotBase):
             else:
                 histogram2D = scan.to_hist()
             histogram2D.legend = self.legend
-            if self.only_1sigma_contours:
+            if self.only_1sigma_contours or getattr(scan, 'only_1sigma_contours', False):
                 histogram2D.Draw('repr_1sigma_contours_with_bestfit')
             elif self.only_1sigma_contours_for_secondary and scan != self.scans[0]:
                 histogram2D.Draw('repr_1sigma_contours_with_bestfit')
@@ -486,7 +515,7 @@ class MultiContourPlot(PlotBase):
         if not(self.draw_bestfit_point): self.cdl.disable_bestfit = True
         self.cdl.Draw()
 
-        self.wrapup()
+        if not(wait): self.wrapup()
 
     def wrapup(self):
         c.Update()

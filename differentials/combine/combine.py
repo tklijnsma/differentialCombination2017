@@ -603,7 +603,7 @@ class CombinePointwiseScan(BaseCombineScan):
 
 
     def list_accepted_points(self, fastscanFile):
-
+        self.print_info('Selecting points from output of fastscan; deltaNLLCutOff = {0}'.format(self.deltaNLLCutOff))
         if not isfile(fastscanFile):
             if core.is_testmode():
                 self.print_info('[TESTMODE] No file \'{0}\'; Returning some bogus accepted points'.format(fastscanFile))

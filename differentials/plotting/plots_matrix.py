@@ -27,6 +27,7 @@ class CorrelationMatrixPlot(plots.PlotBase):
 
         self.add_zaxis_label = True
         self.zaxis_label_text = 'Correlation'
+        self.disable_cms_text = False
 
         self.marker_size = 1.4
 
@@ -92,8 +93,9 @@ class CorrelationMatrixPlot(plots.PlotBase):
 
         H.SetMarkerSize(self.marker_size)
 
-        pywrappers.CMS_Latex_type('Supplementary').Draw()
-        pywrappers.CMS_Latex_lumi().Draw()
+        if not(self.disable_cms_text):
+            pywrappers.CMS_Latex_type().Draw()
+            pywrappers.CMS_Latex_lumi().Draw()
 
         if self.add_zaxis_label:
             l = differentials.plotting.pywrappers.Latex(
@@ -120,6 +122,7 @@ class CorrelationMatrixFromCombinePlot(CorrelationMatrixPlot):
     def get_pois_from_ws(self):
         self.pois = [ p for p in core.read_set(self.ws, 'POI') if not p=='MH' ]
         self.pois.sort()
+        self.n_pois = len(self.pois)
 
     def get_correlation_matrix_from_ws(self):
         self.n_pois = len(self.pois)

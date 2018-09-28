@@ -63,19 +63,45 @@ class Datacard(object):
                 '- ' + nuis.group if not(nuis.group is None) and not(nuis.is_group) else '',
                 width=col_width,
                 )
-        
-    def get_nuisances(self):
+
+    def get_nuisance_lines(self, return_indices=False):
         fill_in_nuisances = False
         nuis_lines = []
-        for line in self.lines:
+        for i_line, line in enumerate(self.lines):
             if fill_in_nuisances:
-                nuis_lines.append(line)
+                if return_indices:
+                    nuis_lines.append(i_line)
+                else:
+                    nuis_lines.append(line)
                 continue
             if line.startswith('rate '):
                 # Start filling the next lines
                 fill_in_nuisances = True
+        return nuis_lines
+        
+    def get_nuisances(self):
+        nuis_lines = self.get_nuisance_lines()
         nuisances = [ self.interpret_nuis(line) for line in nuis_lines ]
         self.nuisance_groups, self.nuisances = self.assign_nuisances_to_group(nuisances)
+        self.get_nuisance_dict()
+        self.get_group_dict()
+
+    def get_nuisance_dict(self):
+        self.nuisance_dict = {}
+        for name in self.get_nuisance_names():
+            for nuis in self.nuisances:
+                if nuis.name == name:
+                    self.nuisance_dict[name] = nuis
+                    break
+            else:
+                print 'Could not find nuis for name \'{0}\''.format(name)
+
+    def get_group_dict(self):
+        self.nuis_group_dict = { g['name'] : g for g in self.nuisance_groups }
+
+    def get_nuisance_names(self):
+        if len(self.nuisances) == 0: self.get_nuisances()
+        return [ nuis.name for nuis in self.nuisances ]
 
     def interpret_nuis(self, line):
         components = line.split()
@@ -110,6 +136,29 @@ class Datacard(object):
             NuisanceGroup(group_name, containing_nuisances)
             )
 
+    def delete_current_nuisance_groups(self):
+        to_delete = []
+        nuis_lines = self.get_nuisance_lines(return_indices=True)
+        for i_line in nuis_lines:
+            line = self.lines[i_line]
+            components = line.split()
+            if len(components) >= 2 and components[1] == 'group':
+                to_delete.append(i_line)
+
+        if len(to_delete) == 0:
+            logging.info('Found no groups to delete')
+            return
+
+        logging.info('Deleting the following lines because they are groups:')
+        for i_line in to_delete:
+            line = self.lines[i_line]
+            if len(line) > 40: line = line[:40] + ' ...'
+            logging.info(line)
+
+        # High to low so pop() doesn't mess up future pops
+        to_delete.sort(reverse=True)
+        for i_line in to_delete:
+            self.lines.pop(i_line)
 
     def parse(self):
         lines = self.lines[:]
@@ -120,8 +169,6 @@ class Datacard(object):
                 )
             lines.append(line)
         return '\n'.join(lines)
-
-
 
     def out_to_temp(self):
         card_dir = os.path.dirname(self.card_file)

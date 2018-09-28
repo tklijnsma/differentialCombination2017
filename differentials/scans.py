@@ -50,7 +50,9 @@ class DifferentialSpectrum(object):
             self.auto_determine_POIs = False
             self.POIs = POIs
 
-        self.title = self.standard_titles.get(name, name)
+        self.title = core.standard_titles.get(name, name)
+        self.latex_title = core.standard_titles_latex.get(name, name)
+
         self.smxs = []
         self.smxs_set = False
         self.color = None
@@ -577,13 +579,19 @@ class Scan(ScanPrimitive):
     def multiply_x_by_constant(self, constant):
         # Very ugly way of doing things... should not have used a namedtuple in the first place.
         for i in xrange(len(self.entries)):
-            self.entries[i] = self.entries[i]._replace(x = self.entries[i].x * constant)
+            # self.entries[i] = self.entries[i]._replace(x = self.entries[i].x * constant)
+            self.entries[i].x = constant * self.entries[i].x
+            # self.entries[i][self.x_variable] *= constant
 
     def to_graph(self):
         name = utils.get_unique_rootname()
         graph = plotting.pywrappers.Graph(name, self.title, self.x(), self.two_times_deltaNLL())
-        if hasattr(self, 'color'): graph.color = self.color
-        if hasattr(self, 'draw_style'): graph.draw_style = self.draw_style
+        if hasattr(self, 'color'):
+            # graph.color = self.color
+            graph.style().color = self.color
+        if hasattr(self, 'draw_style'):
+            graph.draw_style = self.draw_style
+
         return graph
 
     def get_spline_factory(self, x_min, x_max, cutstring_addition=''):

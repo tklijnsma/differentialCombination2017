@@ -126,7 +126,7 @@ class CellBin(Cell):
             ret = f(self.symm_err())
             return ret
         else:
-            f = lambda n: '{0:+.1f}'.format(n)
+            f = lambda n: '{0:+.2f}'.format(n)
             ret = (
                 '{center}  {up}/{down}'
                 .format(

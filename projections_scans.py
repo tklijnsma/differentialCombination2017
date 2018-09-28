@@ -19,25 +19,28 @@ lumiscale3000 = 83.56546
 
 
 #____________________________________________________________________
-workspaces = differentials.core.AttrDict()
-workspaces.hgg = 'projections/workspaces_Jun28/ws_pth_smH_hgg.root'
-workspaces.hzz = 'projections/workspaces_Jun28/ws_pth_smH_hzz.root'
-workspaces.hbb = 'projections/workspaces_Jun28/ws_pth_smH_hbb.root'
-workspaces.combWithHbb = 'projections/workspaces_Jun28/ws_pth_smH_combWithHbb.root'
+scenario1 = differentials.core.AttrDict()
+scenario1.hgg = 'projections/workspaces_Jun28/ws_pth_smH_hgg.root'
+scenario1.hzz = 'projections/workspaces_Jun28/ws_pth_smH_hzz.root'
+scenario1.hbb = 'projections/workspaces_Jun28/ws_pth_smH_hbb.root'
+scenario1.combWithHbb = 'projections/workspaces_Jun28/ws_pth_smH_combWithHbb.root'
+scenario1.hbb_postfit_300ifb = 'out/postfits_Jul03/higgsCombine_POSTFIT_ASIMOV_ws_pth_smH_hbb.MultiDimFit.mH125.root'
 
-workspaces.hbb_postfit_300ifb = 'out/postfits_Jul03/higgsCombine_POSTFIT_ASIMOV_ws_pth_smH_hbb.MultiDimFit.mH125.root'
+scenario2 = differentials.core.AttrDict()
+scenario2.hgg = 'projections/workspaces_Jul17/ws_pth_smH_hgg_s2.root'
+scenario2.hzz = 'projections/workspaces_Jul17/ws_pth_smH_hzz_s2.root'
+scenario2.hbb = 'projections/workspaces_Jul17/ws_pth_smH_hbb_s2.root'
+scenario2.combWithHbb = 'projections/workspaces_Jul17/ws_pth_smH_combWithHbb_s2.root'
 
 
 @flag_as_option
 def projection_pth_smH_scan(args):
     args = differentialutils.force_asimov(args)
     decay_channel = differentialutils.get_decay_channel_tag(args)
-    ws = workspaces[decay_channel]
+    wsdict = scenario2 if args.scenario2 else scenario1
+    ws = wsdict[decay_channel]
 
-    lumiscale = lumiscale3000
-    lumiscale = 1
-
-    config = differential_config(args, ws, 'pth_smH', lumiscale=lumiscale)
+    config = differential_config(args, ws, 'pth_smH', lumiscale=lumiscale3000)
 
     def tight_ranges(config):
         """Very manual tight r_ ranges based on Hgg scan results"""
@@ -50,10 +53,10 @@ def projection_pth_smH_scan(args):
     verbosity = 1
     if args.hbb:
         set_hbb_parameter_ranges(args, config)
-        config.saveNuisances.extend([
-            'CMS_PU', 'CMS_res_j', 'CMS_scale_j', 'bbeff', 'eleveto', 'hqq125GenpT2failcat1mcstat', 'hqq125GenpT2passcat1mcstat', 'hqq125GenpT3failcat1mcstat', 'hqq125GenpT3failcat2mcstat', 'hqq125GenpT3passcat1mcstat', 'hqq125GenpT3passcat2mcstat', 'hqq125GenpT4failcat1mcstat', 'hqq125GenpT4failcat2mcstat', 'hqq125GenpT4passcat1mcstat', 'hqq125GenpT4passcat2mcstat', 'hqq125failmuonCRmcstat', 'hqq125pt', 'hqq125ptShape', 'lumi_13TeV_2016', 'muid', 'muiso', 'mutrigger', 'muveto', 'qcdfailmuonCRmcstat', 'qcdpassmuonCRmcstat', 'scale', 'scalept', 'smear', 'stqqfailmuonCRmcstat', 'stqqpassmuonCRmcstat', 'tqqfailcat1mcstat', 'tqqfailcat2mcstat', 'tqqfailmuonCRmcstat', 'tqqpasscat1mcstat', 'tqqpasscat2mcstat', 'tqqpassmuonCRmcstat', 'trigger', 'veff', 'vvqqfailmuonCRmcstat', 'wlnufailmuonCRmcstat', 'wlnupassmuonCRmcstat', 'wqqfailcat1mcstat', 'wqqfailcat2mcstat', 'wqqpasscat1mcstat', 'wqqpasscat2mcstat', 'wznormEW', 'xhqq125GenpT1failcat1mcstat', 'xhqq125GenpT1failcat2mcstat', 'xhqq125GenpT1passcat1mcstat', 'xhqq125GenpT1passcat2mcstat', 'xhqq125GenpT2failcat1mcstat', 'xhqq125GenpT2failcat2mcstat', 'xhqq125GenpT2passcat1mcstat', 'xhqq125GenpT2passcat2mcstat', 'xhqq125GenpT3failcat1mcstat', 'xhqq125GenpT3failcat2mcstat', 'xhqq125GenpT3passcat1mcstat', 'xhqq125GenpT3passcat2mcstat', 'xhqq125GenpT4failcat1mcstat', 'xhqq125GenpT4failcat2mcstat', 'xhqq125GenpT4passcat1mcstat', 'xhqq125GenpT4passcat2mcstat', 'xhqq125failmuonCRmcstat', 'xhqq125passmuonCRmcstat', 'zllfailmuonCRmcstat', 'znormEW', 'znormQ', 'zqqfailcat1mcstat', 'zqqfailcat2mcstat', 'zqqfailmuonCRmcstat', 'zqqpasscat1mcstat', 'zqqpasscat2mcstat', 'tqqfailcat1norm', 'tqqfailcat2norm', 'tqqfailmuonCRnorm', 'tqqpasscat1norm', 'tqqpasscat2norm', 'tqqpassmuonCRnorm', 'tqqnormSF', 'tqqeffSF', 'lumiscale'
-            ])
-        verbosity = 3
+        # config.saveNuisances.extend([
+        #     'CMS_PU', 'CMS_res_j', 'CMS_scale_j', 'bbeff', 'eleveto', 'hqq125GenpT2failcat1mcstat', 'hqq125GenpT2passcat1mcstat', 'hqq125GenpT3failcat1mcstat', 'hqq125GenpT3failcat2mcstat', 'hqq125GenpT3passcat1mcstat', 'hqq125GenpT3passcat2mcstat', 'hqq125GenpT4failcat1mcstat', 'hqq125GenpT4failcat2mcstat', 'hqq125GenpT4passcat1mcstat', 'hqq125GenpT4passcat2mcstat', 'hqq125failmuonCRmcstat', 'hqq125pt', 'hqq125ptShape', 'lumi_13TeV_2016', 'muid', 'muiso', 'mutrigger', 'muveto', 'qcdfailmuonCRmcstat', 'qcdpassmuonCRmcstat', 'scale', 'scalept', 'smear', 'stqqfailmuonCRmcstat', 'stqqpassmuonCRmcstat', 'tqqfailcat1mcstat', 'tqqfailcat2mcstat', 'tqqfailmuonCRmcstat', 'tqqpasscat1mcstat', 'tqqpasscat2mcstat', 'tqqpassmuonCRmcstat', 'trigger', 'veff', 'vvqqfailmuonCRmcstat', 'wlnufailmuonCRmcstat', 'wlnupassmuonCRmcstat', 'wqqfailcat1mcstat', 'wqqfailcat2mcstat', 'wqqpasscat1mcstat', 'wqqpasscat2mcstat', 'wznormEW', 'xhqq125GenpT1failcat1mcstat', 'xhqq125GenpT1failcat2mcstat', 'xhqq125GenpT1passcat1mcstat', 'xhqq125GenpT1passcat2mcstat', 'xhqq125GenpT2failcat1mcstat', 'xhqq125GenpT2failcat2mcstat', 'xhqq125GenpT2passcat1mcstat', 'xhqq125GenpT2passcat2mcstat', 'xhqq125GenpT3failcat1mcstat', 'xhqq125GenpT3failcat2mcstat', 'xhqq125GenpT3passcat1mcstat', 'xhqq125GenpT3passcat2mcstat', 'xhqq125GenpT4failcat1mcstat', 'xhqq125GenpT4failcat2mcstat', 'xhqq125GenpT4passcat1mcstat', 'xhqq125GenpT4passcat2mcstat', 'xhqq125failmuonCRmcstat', 'xhqq125passmuonCRmcstat', 'zllfailmuonCRmcstat', 'znormEW', 'znormQ', 'zqqfailcat1mcstat', 'zqqfailcat2mcstat', 'zqqfailmuonCRmcstat', 'zqqpasscat1mcstat', 'zqqpasscat2mcstat', 'tqqfailcat1norm', 'tqqfailcat2norm', 'tqqfailmuonCRnorm', 'tqqpasscat1norm', 'tqqpasscat2norm', 'tqqpassmuonCRnorm', 'tqqnormSF', 'tqqeffSF', 'lumiscale'
+        #     ])
+        # verbosity = 3
     if args.hgg:
         tight_ranges(config)
     if args.combWithHbb:
@@ -90,12 +93,12 @@ def projection_pth_smH_scan_one_bin_locally(args):
 def projection_postfit_hbb_300ifb(args):
     decay_channel = 'hbb'
     args = differentialutils.set_one_decay_channel(args, decay_channel, asimov=True)
-    ws = workspaces[decay_channel]
+    ws = scenario1[decay_channel]
     config = differential_config(args, ws, 'pth_smH', lumiscale=lumiscale300)
     only_postfit(args, config)
 
 def get_ranges_from_hbb_postfit_300ifb(args):
-    w = differentials.core.get_ws(workspaces.hbb_postfit_300ifb)
+    w = differentials.core.get_ws(scenario1.hbb_postfit_300ifb)
     w.loadSnapshot('MultiDimFit')
     keys = [
         'qcdeff',
@@ -149,6 +152,11 @@ def differential_config(args, ws, obs_name, lumiscale=1.):
     base_config.freezeNuisances.append('lumiscale')
     base_config.hardPhysicsModelParameters.append('lumiscale={0}'.format(lumiscale))
 
+    if args.hbb or args.combWithHbb:
+        # Freeze mcstat nuisances
+        logging.info('Freezing mcstat systematics')
+        base_config.extraOptions.append('--freezeNuisanceGroups mcstat')
+
     if lumiscale == 1.:
         base_config.subDirectory += '_36ifb'
     elif lumiscale == lumiscale300:
@@ -158,6 +166,8 @@ def differential_config(args, ws, obs_name, lumiscale=1.):
 
     if args.statonly:
         base_config.subDirectory += '_statonly'
+    if args.scenario2:
+        base_config.subDirectory += '_scenario2'
 
     POIs = differentials.core.list_POIs(ws)
     if args.hbb: POIs.pop(0)

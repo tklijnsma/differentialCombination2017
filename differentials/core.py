@@ -36,6 +36,10 @@ class AttrDict(dict):
             terminal_nodes = new_terminal_nodes
         return base
 
+def fast_duplicate_removal(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 def deprecated(fn):
     def decorated(*args):
@@ -109,6 +113,7 @@ def save_gray():
 
 # Colors picked to be projector safe and reasonably distinguishable in grayscale
 safe_colors = AttrDict(
+    black = 1,
     red = 628,
     blue = 601,
     green = 419,
@@ -138,8 +143,27 @@ standard_titles = {
     # 
     # 'SM_Vittorio'       : 'ggH aMC@NLO, NNLOPS + HX',
     'SM_Vittorio'       : 'aMC@NLO, NNLOPS',
-    'dnll' : '-2#Delta ln L'
+    'dnll' : '-2#Delta ln L',
+    # 
+    'BR' : '#bf{#it{#Beta}}',
+    # 'BR' : '#mathcal{B}',
     }
+
+
+standard_titles_latex = {
+    'hgg'         : '$\\hboson \\rightarrow \\photon\\photon$',
+    'hzz'         : '$\\hboson \\rightarrow \\zboson\\zboson$',
+    'combination' : 'Combination',
+    'hbb'         : '$\\hboson \\rightarrow \\bquark\\bquark$',
+    'combWithHbb' : 'Combination',
+    # 
+    'pth_smH'  : '$\\pth$',
+    'pth_ggH'  : '$\\pth$',
+    'njets'    : '$\\njets$',
+    'ptjet'    : '$\\ptjet$',
+    'rapidity' : '$\\absy$',
+    }
+
 def get_standard_title(name):
     return standard_titles.get(name, name)
 

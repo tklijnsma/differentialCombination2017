@@ -39,6 +39,9 @@ SM_BR_hgg = 2.270E-03
 SM_BR_hzz = 0.02641
 SM_ratio_of_BRs = SM_BR_hgg / SM_BR_hzz
 
+SM_ratio_of_BRs_unc_up = +0.00223
+SM_ratio_of_BRs_unc_down = -0.00220
+
 Observable.YR4_totalXS = YR4_totalXS
 
 

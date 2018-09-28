@@ -160,9 +160,11 @@ class ContourDummyLegend(Legend):
     ROOT.SetOwnership( dummy2sigma, False )
 
     dummySM = ROOT.TGraph( 1, array( 'f' , [-999.] ), array( 'f' , [-999.] )  )
-    dummySM.SetMarkerSize(2)
-    dummySM.SetMarkerStyle(21)
-    dummySM.SetMarkerColor(16)
+    dummySM.SetMarkerSize(2.5)
+    # dummySM.SetMarkerStyle(21)
+    # dummySM.SetMarkerColor(16)
+    dummySM.SetMarkerStyle(29)
+    dummySM.SetMarkerColor(1)
     dummySM.SetName('dummySM')
     ROOT.SetOwnership( dummySM, False )
 
@@ -1004,10 +1006,17 @@ class Graph(BasicDrawable):
         Tg.SetLineWidth(self.line_width)
         Tg.SetLineStyle(self.line_style)
 
+        self.apply_style(Tg)
+
         if not(leg is None):
             self.add_to_legend(leg, Tg.GetName(), self.title, 'L' )
 
         return [(Tg, 'SAMEL')]
+
+
+    def repr_markers(self, leg=None):
+        Tg, _ = self.repr_basic_line(leg)[0]
+        return [(Tg, 'SAMEP')]
 
     def repr_dashed_line(self, leg=None):
         ret = self.repr_basic_line(leg)
@@ -1115,8 +1124,11 @@ class Point(BasicDrawable):
         return [(Tg_copy, 'PSAME')]
 
     def repr_SM_point(self, leg=None):
-        self.Tg.SetMarkerStyle(21)
-        self.Tg.SetMarkerColor(16)
+        # self.Tg.SetMarkerStyle(21)
+        # self.Tg.SetMarkerColor(16)
+        self.Tg.SetMarkerSize(2.5)
+        self.Tg.SetMarkerStyle(29)
+        self.Tg.SetMarkerColor(1)
         Tg_copy = self.Tg.Clone()
         ROOT.SetOwnership(Tg_copy, False)
         return [(Tg_copy, 'PSAME')]
@@ -1326,7 +1338,7 @@ class Histogram2D(BasicDrawable):
 
 
 
-    def set_value_for_path(self, value, x_min, x_max, y_min, y_max):
+    def set_value_for_patch(self, value, x_min, x_max, y_min, y_max):
         x_min, ix_min = get_closest_match(x_min, self.x_bin_centers)
         x_max, ix_max = get_closest_match(x_max, self.x_bin_centers)
         y_min, iy_min = get_closest_match(y_min, self.y_bin_centers)
@@ -1335,6 +1347,27 @@ class Histogram2D(BasicDrawable):
         for ix in xrange(ix_min, ix_max+1):
             for iy in xrange(iy_min, iy_max+1):
                 self.H2.SetBinContent(ix+1, iy+1, value)
+
+    def add_offset(self, value):
+        for ix in xrange(self.n_bins_x):
+            for iy in xrange(self.n_bins_y):
+                self.H2.SetBinContent(
+                    ix+1, iy+1,
+                     self.H2.GetBinContent(ix+1, iy+1) + value
+                    )
+
+    def add_offset_to_zero(self):
+        z_min = 10e9
+        ix_min = -1
+        iy_min = -1
+        for ix in xrange(self.n_bins_x):
+            for iy in xrange(self.n_bins_y):
+                z = self.H2.GetBinContent(ix+1, iy+1)
+                if z < z_min:
+                    z_min = z
+                    ix_min = ix
+                    iy_min = iy
+        self.add_offset(-z_min)
 
     def smooth_patch(self, x_min, x_max, y_min, y_max):
         # Get relevant patch
@@ -1392,6 +1425,7 @@ class Histogram2D(BasicDrawable):
 
     def repr_2D(self, leg=None):
         utils.set_color_palette()
+        self.H2.SetMinimum(0.0)
         self.H2.SetMaximum(7.0)
         return [(self.H2, 'COLZ')]
 

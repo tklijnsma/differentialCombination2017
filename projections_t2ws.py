@@ -8,7 +8,7 @@ Thomas Klijnsma
 
 import logging
 import os, sys, re, copy
-from OptionHandler import flag_as_option
+from OptionHandler import flag_as_option, flag_as_parser_options
 import differentials
 import differentialutils
 import LatestBinning
@@ -18,13 +18,48 @@ import random
 random.seed(1002)
 from differentials.theory.theory_utils import FileFinder
 
+import projections_paths as paths
 
 #____________________________________________________________________
+@flag_as_parser_options
+def add_projection_t2ws_options(parser):
+    parser.add_argument('--scenario2', action='store_true', help='boolean')
+
+#____________________________________________________________________
+s2_scalingfunctions = [
+    "--X-nuisance-group-function 'pBTag' '1.0'",
+    "--X-nuisance-group-function 'pBTagStat' 'expr::scaleBTagStat(\"1/sqrt(@0)\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pEleID' 'expr::scaleEleID(\"max(0.5,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pMuonID' 'expr::scaleMuonID(\"max(0.5,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pPhotonID' 'expr::scalePhotonID(\"max(0.5,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pTauID' '1.0'",
+    "--X-nuisance-group-function 'pScaleJ' 'expr::scaleScaleJ(\"max(0.5,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pScaleJAbs' 'expr::scaleScaleJAbs(\"max(0.3,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pScaleJFlav' 'expr::scaleScaleJFlav(\"max(0.5,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pScaleJPileup' '1.0'",
+    "--X-nuisance-group-function 'pScaleJRel' 'expr::scaleScaleJRel(\"max(0.2,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pScaleJTime' 'expr::scaleScaleJTime(\"1/sqrt(@0)\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pScaleJMethod' 'expr::scaleScaleJMethod(\"1/sqrt(@0)\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pResJ' 'expr::scaleResJ(\"max(0.5,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pScaleMet' 'expr::scaleScaleMet(\"max(0.5,1/sqrt(@0))\",lumiscale[1])'",
+    "--X-nuisance-group-function 'pLumi' '0.4'",
+    "--X-nuisance-group-function 'pOther' 'expr::scaleOther(\"1/sqrt(@0)\",lumiscale[1])'",
+    "--X-nuisance-group-function 'sigTheory' '0.5'",
+    "--X-nuisance-group-function 'bkgTheory' '0.5'",
+    ]
+
+#____________________________________________________________________
+cards_nongrouped = differentials.core.AttrDict()
+cards_nongrouped.hgg = paths.pt_cards_nongrouped.hgg
+cards_nongrouped.hzz = paths.pt_cards_nongrouped.hzz
+cards_nongrouped.hbb = paths.pt_cards_nongrouped.hbb
+cards_nongrouped.combWithHbb = paths.pt_cards_nongrouped.combWithHbb
+
 cards = differentials.core.AttrDict()
-cards.hgg = 'suppliedInput/fromVittorio/pT_newBins_Feb28/projection_hgg_Jun28.txt'
-cards.hzz = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/smH/projection_hzz_Jun28.txt'
-cards.hbb = 'suppliedInput/fromJavier/bernstein_r7428/projection_hbb_Jun28.txt'
-cards.combWithHbb = 'suppliedInput/projection_combWithHbb_Jun28.txt'
+cards.hgg         = paths.pt_cards.hgg
+cards.hzz         = paths.pt_cards.hzz
+cards.hbb         = paths.pt_cards.hbb
+cards.combWithHbb = paths.pt_cards.combWithHbb
 
 @flag_as_option
 def projection_pth_smH_t2ws(args):
@@ -34,6 +69,13 @@ def projection_pth_smH_t2ws(args):
         cards[decay_channel],
         name = 'ws_pth_smH_' + decay_channel
         )
+
+    if args.scenario2:
+        t2ws.name += '_s2'
+        t2ws.extra_options.extend(s2_scalingfunctions)
+    else:
+        t2ws.name += '_s1'
+
     if args.hzz:
         t2ws.add_maps(
             '.*/smH_PTH_0_15:r_smH_PTH_0_15[1.0,-1.0,4.0]',
@@ -111,22 +153,31 @@ class T2WSKBKC(differentials.combine.t2ws.T2WS):
         self.extra_options.append('--PO correlationMatrix={0}'.format(correlation_matrix))
         self.extra_options.append('--PO theoryUncertainties={0}'.format(theory_uncertainties))
 
+    def apply_s2_scaling(self):
+        self.tags.append('scenario2')
+        self.extra_options.extend(s2_scalingfunctions)
 
 cards.yukawa = differentials.core.AttrDict()
 cards.yukawa.hgg         = 'suppliedInput/projection_yukawa_hgg_Jul09.txt'
 cards.yukawa.hzz         = 'suppliedInput/projection_yukawa_hzz_Jul09.txt'
 cards.yukawa.combination = 'suppliedInput/projection_yukawa_combination_Jul09.txt'
 
+cards.yukawa.s2grouping = differentials.core.AttrDict()
+cards.yukawa.s2grouping.hgg = 'suppliedInput/projection_yukawa_hgg_s2groups_Jul17.txt'
+cards.yukawa.s2grouping.hzz = 'suppliedInput/projection_yukawa_hzz_s2groups_Jul17.txt'
+cards.yukawa.s2grouping.combination = 'suppliedInput/projection_yukawa_combination_s2groups_Jul17.txt'
+
 @flag_as_option
 def projection_kbkc_t2ws_couplingdependentBRs(args):
     decay_channel = differentialutils.get_decay_channel_tag(args)
     t2ws = T2WSKBKC()
-    t2ws.card = cards.yukawa[decay_channel]
+    t2ws.card = cards.yukawa.s2grouping[decay_channel]
     if args.hgg: t2ws.extra_options.append('--PO isOnlyHgg=True' )
     if args.hzz: t2ws.extra_options.append('--PO isOnlyHZZ=True' )
     t2ws.add_theory()
     t2ws.apply_reweighting()
     t2ws.add_theory_uncertainties()
+    if args.scenario2: t2ws.apply_s2_scaling()
     t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
     t2ws.tags.append('couplingdependentBRs')
     t2ws.run()
@@ -135,18 +186,16 @@ def projection_kbkc_t2ws_couplingdependentBRs(args):
 def projection_kbkc_t2ws_floatingBRs(args):
     decay_channel = differentialutils.get_decay_channel_tag(args)
     t2ws = T2WSKBKC()
-    t2ws.card = cards.yukawa[decay_channel]
+    t2ws.card = cards.yukawa.s2grouping[decay_channel]
     if args.hgg: t2ws.extra_options.append('--PO isOnlyHgg=True' )
     if args.hzz: t2ws.extra_options.append('--PO isOnlyHZZ=True' )
     t2ws.add_theory()
     t2ws.apply_reweighting()
     t2ws.add_theory_uncertainties()
+    if args.scenario2: t2ws.apply_s2_scaling()
     t2ws.extra_options.append('--PO freely_floating_BRs=True')
     t2ws.tags.append('floatingBRs')
     t2ws.run()
-
-
-
 
 #____________________________________________________________________
 class T2WSKTCGKB(differentials.combine.t2ws.T2WS):
@@ -232,33 +281,41 @@ class T2WSKTCGKB(differentials.combine.t2ws.T2WS):
         self.extra_options.append('--PO constrain_ratio_bb_ZZ=True')
         self.tags.append('constrainedbbZZ')
 
+    def apply_s2_scaling(self):
+        self.tags.append('scenario2')
+        self.extra_options.extend(s2_scalingfunctions)
 
 cards.ktcgkb = differentials.core.AttrDict()
 cards.ktcgkb.hgg         = 'suppliedInput/fromVittorio/pT_newBins_Feb28/projection_ktcgkb_hgg_Jul10.txt'
 cards.ktcgkb.hzz         = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/projection_ktcgkb_hzz_Jul10.txt'
 cards.ktcgkb.combWithHbb = 'suppliedInput/projection_ktcgkb_combWithHbb_Jul10.txt'
 
+cards.ktcgkb.s2grouping = differentials.core.AttrDict()
+cards.ktcgkb.s2grouping.hgg         = 'suppliedInput/fromVittorio/pT_newBins_Feb28/projection_ktcgkb_hgg_s2groups_Jul18.txt'
+cards.ktcgkb.s2grouping.hzz         = 'suppliedInput/fromDavid/PTH_Jan24_newBinning/ggH/projection_ktcgkb_hzz_s2groups_Jul18.txt'
+cards.ktcgkb.s2grouping.combWithHbb = 'suppliedInput/projection_ktcgkb_combWithHbb_s2groups_Jul18.txt'
+
 @flag_as_option
 def projection_ktcg_t2ws_couplingdependentBRs(args):
     decay_channel = differentialutils.get_decay_channel_tag(args)
     t2ws = T2WSKTCGKB()
-    t2ws.card = cards.ktcgkb[decay_channel]
+    t2ws.card = cards.ktcgkb.s2grouping[decay_channel]
     if args.hgg: t2ws.extra_options.append('--PO isOnlyHgg=True' )
     if args.hzz: t2ws.extra_options.append('--PO isOnlyHZZ=True' )
     t2ws.add_theory_ktcg()
     t2ws.apply_reweighting()
     t2ws.add_theory_uncertainties()
     t2ws.add_scaling_ttH()
+    if args.scenario2: t2ws.apply_s2_scaling()
     t2ws.extra_options.append('--PO BRs_kappa_dependent=True')
     t2ws.tags.append('couplingdependentBRs')
     t2ws.run()
-
 
 @flag_as_option
 def projection_ktcg_t2ws_floatingBRs(args):
     decay_channel = differentialutils.get_decay_channel_tag(args)
     t2ws = T2WSKTCGKB()
-    t2ws.card = cards.ktcgkb[decay_channel]
+    t2ws.card = cards.ktcgkb.s2grouping[decay_channel]
     if args.hgg: t2ws.extra_options.append('--PO isOnlyHgg=True' )
     if args.hzz: t2ws.extra_options.append('--PO isOnlyHZZ=True' )
     t2ws.add_theory_ktcg()
@@ -267,6 +324,7 @@ def projection_ktcg_t2ws_floatingBRs(args):
     t2ws.add_scaling_ttH()
     if args.combWithHbb:
         t2ws.constrain_bbZZ_ratio()
+    if args.scenario2: t2ws.apply_s2_scaling()
     t2ws.extra_options.append('--PO freely_floating_BRs=True')
     t2ws.tags.append('floatingBRs')
     t2ws.run()

@@ -83,14 +83,6 @@ style = differentials.plotting.pywrappers.StyleSheet()
 style.line_width = 2
 style.error_bar_line_width = 1
 
-@flag_as_option
-def plot_all_differentials(args):
-    pth_smH_plot(args)
-    pth_ggH_plot(args)
-    njets_plot(args)
-    ptjet_plot(args)
-    rapidity_plot(args)
-
 #____________________________________________________________________
 @flag_as_option
 def pth_smH_plot(args):
@@ -99,7 +91,7 @@ def pth_smH_plot(args):
     obstuple = LatestBinning.obstuple_pth_smH
     scandict = LatestPaths.scan.pth_smH.asimov if args.asimov else LatestPaths.scan.pth_smH.observed
 
-    APPLY_FIXED_BINNING = False
+    APPLY_FIXED_BINNING = True
 
     # Load scans
     hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
@@ -142,15 +134,17 @@ def pth_smH_plot(args):
     sm_xs, sm_ratio = get_sm_histograms(obstuple.combWithHbb, normalize_by_second_to_last_bin_width=True, x_max=x_max)
 
     if args.table:
-        table = differentials.plotting.tables.SpectraTable('pth_smH',
-            spectra
-            # [s for s in spectra if not s is hbb] + [combWithHbb_statonly]
-            )
-        table.print_only_symm_unc = True
-        table.add_symm_improvement_row(hgg, combWithHbb)
-        # table.add_symm_improvement_row(hgg, combination)
-        # table.add_symm_improvement_row(combination, combWithHbb)
-        logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combWithHbb.binning())
+        rowproducer.do_xs = True
+        table = differentials.plotting.newtables.BaseTable()
+        table.latex_mode(True)
+        table.append(rowproducer.produce_binning_row('$\\pth$ (GeV)'))
+        table.append(rowproducer.produce(hgg))
+        table.append(rowproducer.produce(hzz))
+        table.append(rowproducer.produce(hbb))
+        table.append(rowproducer.produce(combWithHbb))
+        print table.produce_table_string()
+        table.produce_to_file('tables_{0}/pth_smH.tex'.format(differentials.core.datestr()))
         return
 
     # Start compiling plot
@@ -196,11 +190,13 @@ def pth_smH_plot(args):
     lh = 0.54 * 0.9
 
     if APPLY_FIXED_BINNING:
+        xshift = 0.02
+        yshift  = 0.09 + 0.01
         plot.leg.set(
-            lambda c: c.GetLeftMargin() + 0.02,
-            lambda c: c.GetBottomMargin() + 0.09,
-            lambda c: c.GetLeftMargin() + 0.02 + lw,
-            lambda c: c.GetBottomMargin() + 0.09 + lh,
+            lambda c: c.GetLeftMargin() + xshift,
+            lambda c: c.GetBottomMargin() + yshift,
+            lambda c: c.GetLeftMargin() + xshift + lw,
+            lambda c: c.GetBottomMargin() + yshift + lh,
             )
     else:
         lh = 0.54 * 0.6
@@ -217,9 +213,9 @@ def pth_smH_plot(args):
     plot.draw()
 
     l = differentials.plotting.pywrappers.Latex(
-        lambda c: c.GetLeftMargin() + 0.04,
-        lambda c: c.GetBottomMargin() + 0.05,
-        '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
+        lambda c: c.GetLeftMargin() + 0.02 + xshift,
+        lambda c: c.GetBottomMargin() - 0.04 + yshift - 0.009,
+        '#sigma_{SM} from CYRM-2017-002'
         )
     if not APPLY_FIXED_BINNING:
         l.x = lambda c: c.GetLeftMargin() + 0.04 + xshift
@@ -227,7 +223,7 @@ def pth_smH_plot(args):
     l.SetNDC()
     l.SetTextAlign(11)
     l.SetTextFont(42) 
-    l.SetTextSize(0.038)
+    l.SetTextSize(0.038 + 0.005)
     l.Draw()
 
     if APPLY_FIXED_BINNING: plot.replace_bin_labels([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ])
@@ -255,6 +251,24 @@ def pth_ggH_plot(args):
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
 
+    if args.table:
+        # table = differentials.plotting.tables.SpectraTable('pth_ggH', [combWithHbb])
+        # # table.print_only_symm_unc = True
+        # logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+        # return
+        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combWithHbb.binning(), last_bin_is_overflow=True)
+        rowproducer.do_xs = True
+        table = differentials.plotting.newtables.BaseTable()
+        table.latex_mode(True)
+        table.append(rowproducer.produce_binning_row('$\\pth$ (GeV)'))
+        # table.append(rowproducer.produce(hgg))
+        # table.append(rowproducer.produce(hzz))
+        # table.append(rowproducer.produce(hbb))
+        table.append(rowproducer.produce(combWithHbb))
+        print table.produce_table_string()
+        table.produce_to_file('tables_{0}/pth_ggH.tex'.format(differentials.core.datestr()))
+        return
+
     # Get syst only shape
     combWithHbb_statonly = differentials.scans.DifferentialSpectrum('combWithHbb_statonly', scandict.combWithHbb_statonly)
     combWithHbb_statonly.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
@@ -273,6 +287,7 @@ def pth_ggH_plot(args):
     plot.obsunit = 'GeV'
     plot.obstitle = differentials.core.get_standard_title('pth_smH')
     plot.y_title_top = '#Delta#sigma^{{ggH}}/#Delta{0} (pb/{1})'.format(plot.obstitle, plot.obsunit)
+    plot.overflow_label_base_offset = 0.55
 
     # Add the SM and syst-only histograms
     if systshapemaker.success:
@@ -298,24 +313,25 @@ def pth_ggH_plot(args):
     # lh = 0.41 * 0.5
     lw = 0.42
     lh = 0.54 * 0.5
+    leg_yshift = 0.008
     plot.leg.set(
         lambda c: c.GetLeftMargin() + 0.02,
-        lambda c: c.GetBottomMargin() + 0.09,
+        lambda c: c.GetBottomMargin() + 0.09 + leg_yshift,
         lambda c: c.GetLeftMargin() + 0.02 + lw,
-        lambda c: c.GetBottomMargin() + 0.09 + lh,
+        lambda c: c.GetBottomMargin() + 0.09 + lh + leg_yshift,
         )
     plot.leg.SetNColumns(1)
     plot.draw()
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: c.GetLeftMargin() + 0.04,
-        lambda c: c.GetBottomMargin() + 0.045,
-        '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
+        lambda c: c.GetBottomMargin() + 0.045 - 0.006 + leg_yshift,
+        '#sigma_{SM} from CYRM-2017-002'
         )
     l.SetNDC()
     l.SetTextAlign(11)
     l.SetTextFont(42) 
-    l.SetTextSize(0.038)
+    l.SetTextSize(0.038 + 0.005)
     l.Draw()
 
     l2 = differentials.plotting.pywrappers.Latex(
@@ -365,15 +381,29 @@ def njets_plot(args):
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
 
     if args.table:
-        table = differentials.plotting.tables.SpectraTable('njets',
-            spectra
-            )
-        table.print_only_symm_unc = True
-        table.add_symm_improvement_row(hgg, combination)
+        # table = differentials.plotting.tables.SpectraTable('njets',
+        #     spectra
+        #     )
+        # table.print_only_symm_unc = True
         # table.add_symm_improvement_row(hgg, combination)
-        # table.add_symm_improvement_row(combination, combWithHbb)
-        logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+        # # table.add_symm_improvement_row(hgg, combination)
+        # # table.add_symm_improvement_row(combination, combWithHbb)
+        # logging.info('Table:\n{0}'.format( table.repr_terminal() ))
+        # return
+        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combination.binning(), last_bin_is_overflow=True)
+        rowproducer.do_xs = True
+        table = differentials.plotting.newtables.BaseTable()
+        table.latex_mode(True)
+        table.append(rowproducer.produce_row_given_labels([
+            '$\\njets$', '0', '1', '2', '3', '$\\ge$ 4'
+            ]))
+        table.append(rowproducer.produce(hgg))
+        table.append(rowproducer.produce(hzz))
+        table.append(rowproducer.produce(combination))
+        print table.produce_table_string()
+        table.produce_to_file('tables_{0}/njets.tex'.format(differentials.core.datestr()))
         return
+
 
     # Get syst only shape
     combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
@@ -417,7 +447,8 @@ def njets_plot(args):
     hzz.style().plot_priority = 8
     plot.add_lines_at_bin_boundaries(range(1,len(reference_binning)-1))
 
-    leg_xshift = -0.115
+    # leg_xshift = -0.115
+    leg_xshift = 0.02
     leg_yshift = -0.00
     # legw = 0.38
     # legh = 0.41 * 5./6.
@@ -434,13 +465,13 @@ def njets_plot(args):
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: 1-c.GetRightMargin() + leg_xshift + 0.02 - legw,        
-        lambda c: 1-c.GetTopMargin()   + leg_yshift - legh - 0.041,
-        '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
+        lambda c: 1-c.GetTopMargin()   + leg_yshift - legh - 0.041 - 0.009,
+        '#sigma_{SM} from CYRM-2017-002'
         )
     l.SetNDC()
     l.SetTextAlign(11)
     l.SetTextFont(42) 
-    l.SetTextSize(0.035)
+    l.SetTextSize(0.035 + 0.005)
     l.Draw()
 
     plot.replace_bin_labels([ '0', '1', '2', '3', '#geq4' ], offset=0.1)
@@ -480,6 +511,19 @@ def ptjet_plot(args):
         s.drop_first_bin()
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
+
+    if args.table:
+        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combination.binning(), last_bin_is_overflow=True)
+        rowproducer.do_xs = True
+        table = differentials.plotting.newtables.BaseTable()
+        table.latex_mode(True)
+        table.append(rowproducer.produce_binning_row('$\\ptjet$ (GeV)'))
+        table.append(rowproducer.produce(hgg))
+        table.append(rowproducer.produce(hzz))
+        table.append(rowproducer.produce(combination))
+        print table.produce_table_string()
+        table.produce_to_file('tables_{0}/ptjet.tex'.format(differentials.core.datestr()))
+        return
 
     # Get syst only shape
     combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
@@ -528,7 +572,8 @@ def ptjet_plot(args):
     hzz.style().plot_priority = 8
     plot.add_lines_at_bin_boundaries(range(1,len(reference_binning)-1))
 
-    leg_xshift = -0.115
+    # leg_xshift = -0.115
+    leg_xshift = 0.02
     leg_yshift = -0.00
     # legw = 0.38
     # legh = 0.41 * 5./6.
@@ -545,13 +590,13 @@ def ptjet_plot(args):
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: 1-c.GetRightMargin() + leg_xshift + 0.02 - legw,        
-        lambda c: 1-c.GetTopMargin()   + leg_yshift - legh - 0.041,
-        '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
+        lambda c: 1-c.GetTopMargin()   + leg_yshift - legh - 0.041 - 0.009,
+        '#sigma_{SM} from CYRM-2017-002'
         )
     l.SetNDC()
     l.SetTextAlign(11)
     l.SetTextFont(42) 
-    l.SetTextSize(0.035)
+    l.SetTextSize(0.035 + 0.005)
     l.Draw()
 
     plot.replace_bin_labels([ '30', '55', '95', '120', '200', '#infty' ])
@@ -588,6 +633,19 @@ def rapidity_plot(args):
         s.read()
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
+
+    if args.table:
+        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combination.binning(), last_bin_is_overflow=False)
+        rowproducer.do_xs = True
+        table = differentials.plotting.newtables.BaseTable()
+        table.latex_mode(True)
+        table.append(rowproducer.produce_binning_row('$\\absy$'))
+        table.append(rowproducer.produce(hgg))
+        table.append(rowproducer.produce(hzz))
+        table.append(rowproducer.produce(combination))
+        print table.produce_table_string()
+        table.produce_to_file('tables_{0}/absy.tex'.format(differentials.core.datestr()))
+        return
 
     # Get syst only shape
     combination_statonly = differentials.scans.DifferentialSpectrum('combination_statonly', scandict.combination_statonly)
@@ -649,13 +707,13 @@ def rapidity_plot(args):
 
     l = differentials.plotting.pywrappers.Latex(
         lambda c: c.GetLeftMargin() + leg_xshift + 0.02,
-        lambda c: 1-c.GetTopMargin() + leg_yshift - legh - 0.041,
-        '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
+        lambda c: 1-c.GetTopMargin() + leg_yshift - legh - 0.041 - 0.009,
+        '#sigma_{SM} from CYRM-2017-002'
         )
     l.SetNDC()
     l.SetTextAlign(11)
     l.SetTextFont(42) 
-    l.SetTextSize(0.035)
+    l.SetTextSize(0.035 + 0.005)
     l.Draw()
 
     plot.replace_bin_labels([ '0.0', '0.15', '0.3', '0.6', '0.9', '1.2', '2.5' ])

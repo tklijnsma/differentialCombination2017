@@ -31,10 +31,12 @@ top_x_max = 5.0
 top_y_min = -0.40
 top_y_max = 0.40
 
-ktcg_couplingdependentBRs_x_min = -0.1
+# ktcg_couplingdependentBRs_x_min = -0.1
+ktcg_couplingdependentBRs_x_min = -0.095
 ktcg_couplingdependentBRs_x_max = 2.0
 ktcg_couplingdependentBRs_y_min = -0.05
-ktcg_couplingdependentBRs_y_max = 0.085
+# ktcg_couplingdependentBRs_y_max = 0.085
+ktcg_couplingdependentBRs_y_max = 0.090
 
 ktcg_floatingBRs_x_min = -2.4
 ktcg_floatingBRs_x_max = 2.4
@@ -163,7 +165,12 @@ def multicont_Top_scalingttH_couplingdependentBRs(args):
         lambda c: c.GetLeftMargin() + 0.24 + x_shift,
         lambda c: 1. - c.GetTopMargin() - 0.01,
         )
-    plot.draw()
+    plot.draw(wait=True)
+    plot.add_BR_parametrized_text(
+        x = lambda c: c.GetLeftMargin() + 0.03,
+        y = lambda c: c.GetBottomMargin() + 0.11,
+        )
+    plot.wrapup()
 
 @flag_as_option
 def quicktest_splining_ktcg_couplingdependentBRs(args):
@@ -256,12 +263,12 @@ def smooth_ktcg_floatingBRs(args, scan):
     hist.title = scan.title
 
     if args.hzz:
-        hist.set_value_for_path(
+        hist.set_value_for_patch(
             value = 0.,
             x_min = 2.8, x_max = 3.8,
             y_min = -0.09, y_max = -0.02
             )
-        hist.set_value_for_path(
+        hist.set_value_for_patch(
             value = 0.,
             x_min = -3.8, x_max = -2.8,
             y_min = 0.02, y_max = 0.09,
@@ -417,7 +424,13 @@ def multicont_Top_scalingttH_floatingBRs_constrainedbbZZ(args):
         )
     plot.set_base(combWithHbb_splined)
     plot.y_SM = 0.0
-    plot.draw()
+    plot.draw(wait=True)
+    plot.add_BR_floating_text(
+        x = lambda c: c.GetLeftMargin() + 0.03,
+        y = lambda c: c.GetBottomMargin() + 0.11,
+        )
+    plot.wrapup()
+
 
 @flag_as_option
 def quicktest_splining_ktcg_floatingBRs(args):
@@ -593,7 +606,14 @@ def multicont_ktkb_scalingbbHttH_couplingdependentBRs(args):
         scans,
         x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cb'],
         )
-    plot.draw()
+    plot.draw(wait=True)
+    # plot.add_BR_floating_text()
+    plot.add_BR_parametrized_text(
+        x = lambda c: c.GetLeftMargin() + 0.03,
+        y = lambda c: 0.66
+        )
+    plot.wrapup()
+
 
 
 #____________________________________________________________________
@@ -747,7 +767,12 @@ def multicont_ktkb_scalingbbHttH_floatingBRs_constrainedbbZZ(args):
         y_max = 0.95 * 15.0,
         )
     plot.set_base(combWithHbb_splined)
-    plot.draw()
+    plot.draw(wait=True)
+    plot.add_BR_floating_text(
+        x = lambda c: c.GetLeftMargin() + 0.03,
+        y = lambda c: 0.66
+        )
+    plot.wrapup()
 
 @flag_as_option
 def quicktest_splining_ktkb_floatingBRs(args):

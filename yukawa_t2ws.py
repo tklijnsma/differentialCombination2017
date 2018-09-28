@@ -149,8 +149,6 @@ def add_theory_uncertainties(t2ws, uncorrelated=False):
     t2ws.extra_options.append('--PO theoryUncertainties={0}'.format(theory_uncertainties))
 
 
-
-
 #____________________________________________________________________
 @flag_as_option
 def t2ws_Yukawa_NOTscalingbbH(args):

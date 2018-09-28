@@ -81,6 +81,8 @@ def main():
         'projections_plots',
         'projections_plots_kbkc',
         'projections_plots_ktcgkb',
+        # 
+        'parametrization_plots',
         ])
 
     args = parser.parse_args()
@@ -95,6 +97,7 @@ def main():
         differentials.logger.set_level_trace()
 
     import logging
+    args.no_preliminary_tag = True
     if args.no_preliminary_tag:
         logging.info('Remove the default \'Preliminary\' tag from plots')
         differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = ''

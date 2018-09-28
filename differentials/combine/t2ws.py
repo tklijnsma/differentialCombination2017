@@ -40,6 +40,7 @@ class T2WS(object):
         self.output_ws = None
         self.tags = []
         self.extra_options = []
+        self.map_options = []
 
     def add_variable(self, name, val, x_min=None, x_max=None, is_POI=False):
         """Use only for variables (not expressions)"""
@@ -65,12 +66,15 @@ class T2WS(object):
             self.extra_options.append('--PO \'expr={0}\''.format(expr))
 
     def add_map(self, mapstr):
-        self.extra_options.append('--PO \'map={0}\''.format(mapstr))
+        mapstr = '--PO \'map={0}\''.format(mapstr)
+        self.map_options.append(mapstr)
 
     def add_maps(self, *args):
         for l in args:
             self.add_map(l)
-        
+
+    def remove_map_duplicates(self):
+        self.map_options = core.fast_duplicate_removal(self.map_options)
 
     def get_processes_from_card(self):
         with open(self.card, 'r') as card_fp:
@@ -97,7 +101,7 @@ class T2WS(object):
         self.processinterpreter = differentials.processinterpreter.ProcessInterpreter(processes, binning, scale_ggH_xH_with_smH)
         self.processinterpreter.make_yield_parameters(add_underflow=add_underflow, add_overflow=add_overflow)
         self.processinterpreter.link_processes_to_yield_parameters()
-        self.extra_options.extend(self.processinterpreter.make_maps())
+        self.map_options.extend(self.processinterpreter.make_maps())
 
     def get_outdir(self):
         outdir = abspath(join(utils.get_global_outdir(), self.outdir))
@@ -143,9 +147,12 @@ class T2WS(object):
         cmd.append(self.card)
         cmd.append('-o {0}'.format(self.get_output_ws()))
         cmd.append('-P {0}'.format(self.get_model_string()))
-        cmd.append('--PO verbose=2')
+        # cmd.append('--PO verbose=2')
         cmd.append('--PO \'higgsMassRange=123,127\'')
         for line in self.extra_options:
+            cmd.append(line)
+        self.remove_map_duplicates()
+        for line in self.map_options:
             cmd.append(line)
         return cmd
 

@@ -29,6 +29,114 @@ datestr = strftime('%b%d')
 # Main
 ########################################
 
+
+
+@flag_as_option
+def test_newtables(args):
+
+    class TestCell(differentials.plotting.newtables.BaseCell):
+        def __init__(self, value):
+            super(TestCell, self).__init__()
+            self.value = value
+        def __repr__(self):
+            return '{0}'.format(self.value)
+        def represent(self):
+            return [ '{0}'.format(self.value) ]
+
+    table = differentials.plotting.newtables.BaseTable()
+
+
+    c1 = TestCell('aaa')
+    c2 = TestCell('bbb')
+    c3 = TestCell('cc')
+    c4 = TestCell('dddddddddddd')
+
+    c3.span = 2
+    c4.span = 2
+
+    c5 = TestCell('tt')
+    def new_represent():
+        return [ 'tt', 'tt' ]
+    c5.represent = new_represent
+
+
+    row1 = differentials.plotting.newtables.BaseRow()
+    row1.extend([c1, c2, c3])
+
+    row2 = differentials.plotting.newtables.BaseRow()
+    row2.extend([c3, c1, c2])
+
+    row3 = differentials.plotting.newtables.BaseRow()
+    row3.extend([c4, c1, c2])
+
+    row4 = differentials.plotting.newtables.BaseRow()
+    row4.extend([c5, c3, c2])
+
+    table.extend([row1, row2])
+
+    print table
+    print table.get_max_col_widths()
+    print table.produce_table_string()
+
+    table.append(row3)
+    print
+    print table
+    print table.get_max_col_widths()
+    print table.produce_table_string()
+
+    table.append(row4)
+    print
+    print table
+    print table.get_max_col_widths()
+    print table.produce_table_string()
+
+
+@flag_as_option
+def debug_draw_fastscans_Aug07(args):
+    scandirs = [
+        'out/Scan_projection_kbkc_Jul18_combination_couplingdependentBRs_scenario2_asimov',
+        'out/Scan_projection_kbkc_Jul18_hgg_couplingdependentBRs_scenario2_asimov'
+        ]
+    for scandir in scandirs:
+        fastscan_file = glob.glob(scandir + '/postfit_and_fastscan/*FASTSCAN*.root')[0]
+        name = os.path.basename(fastscan_file).replace('.root','')
+
+        # fastscan = differentials.scans.Scan2D(name, 'ct', 'cg')
+        fastscan = differentials.scans.Scan2D(name, 'kappac', 'kappab')
+
+        fastscan.root_files = [fastscan_file]
+        fastscan.read()
+        fastscan.plot(name, draw_style='repr_2D_rainbow_high_contours')
+
+
+@flag_as_option
+def debug_combinecmd_floatingbrs(args):
+    cmd = [
+        'combine ',
+        '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v5_updatedcombine/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/Scan_projection_kbkc_Jul18_hzz_floatingBRs_scenario2_asimov/postfit_and_fastscan/higgsCombine_POSTFIT_ASIMOV_projection_yukawa_hzz_s2groups_Jul17_couplingModel_reweighted_scenario2_couplingdependentBRs.MultiDimFit.mH125.root',
+        '-t -1',
+        '--cminDefaultMinimizerType Minuit2',
+        '--cminDefaultMinimizerAlgo migrad',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--floatOtherPOIs=1',
+        '-P kappab',
+        '-P kappac',
+        '--setPhysicsModelParameters kappab=1.0,kappac=1.0,lumiscale=83.56546',
+        '--algo=grid',
+        '--snapshotName MultiDimFit',
+        '--skipInitialFit',
+        '-M MultiDimFit',
+        '-m 125.0',
+        '--setPhysicsModelParameterRanges kappab=-5.0,8.0:kappac=-16.0,18.0',
+        '--points 900',
+        '--firstPoint 0',
+        '--lastPoint 99',
+        '-n debugscan1',
+        ]
+    differentials.core.execute(cmd)
+
+
 @flag_as_option
 def debug_print_hbb_pdfs(args):
 

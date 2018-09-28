@@ -4,6 +4,68 @@ from core import AttrDict
 import ROOT
 import logging
 import numpy
+import itertools
+
+
+class Parabola(object):
+    c3 = 1.
+    def __init__(self, coefficients):
+        super(Parabola, self).__init__()
+        self.coefficients = coefficients
+        if len(coefficients) == 6:
+            self.A, self.B, self.C, self.D, self.E, self.F = coefficients
+        else:
+            self.A, self.B, self.C = coefficients
+            self.D, self.E, self.F = (0., 0., 0.)
+
+    def __call__(self, c1, c2):
+        return self.A*c1**2 + self.B*c2**2 + self.C*c1*c2 + self.D*c1*Parabola.c3 + self.E*c2*Parabola.c3 + self.F*Parabola.c3*Parabola.c3
+
+
+class ParabolaNDim(object):
+    """docstring for ParabolaNDim"""
+    def __init__(self, coefficients, coupling_combinations):
+        super(ParabolaNDim, self).__init__()
+        self.coefficients = coefficients
+        self.coupling_combinations = coupling_combinations
+
+    def __call__(self, **coupling_vals):
+        r = 0.0
+        for coeff, comb in zip(self.coefficients, self.coupling_combinations):
+            r += coeff * prod([coupling_vals[cname] for cname in comb])
+        return r
+
+
+class Variation(object):
+    """docstring for Variation"""
+    print_n_xs = 3
+
+    def __init__(self, crosssections, **coupling_vals):
+        super(Variation, self).__init__()
+        self.coupling_vals = coupling_vals
+        self.xs = crosssections
+
+    def __getitem__(self, name):
+        return self.coupling_vals[name]
+
+    def __repr__(self):
+        names = self.coupling_vals.keys()
+        names.sort()
+        coupling_str = ' '.join(
+            ['{0}={1:+.4f}'.format(name, self.coupling_vals[name]) for name in names]
+            )
+        xs_str = ', '.join(['{0:+.3f}'.format(xs) for xs in self.xs[:self.print_n_xs]])
+        if len(self.xs) > self.print_n_xs:
+            xs_str += ', ...'
+        return '{0} (xs = {1})'.format(coupling_str, xs_str)
+
+
+def prod(list):
+    r = 1
+    for x in list:
+        r *= x
+    return r
+
 
 class WSParametrization(object):
     """docstring for WSParametrization"""
@@ -197,24 +259,166 @@ class WSParametrization(object):
 
 
 
-class Parametrization(object):
-    """docstring for Parametrization"""
-    def __init__(self):
-        super(Parametrization, self).__init__()
+class ParametrizationMultiDim(object):
+    """docstring for ParametrizationMultiDim"""
+    def __init__(self, n_couplings):
+        super(ParametrizationMultiDim, self).__init__()
+        self.n_couplings = n_couplings
+
         self.do_linear_terms = True
         self.variations = []
         self.parametrizations = []
-
         self.parametrize_by_matrix_inversion = False
-
-        self.c1_name = 'c1'
-        self.c2_name = 'c2'
-
-        self.c1_SM = 1.0
-        self.c2_SM = 1.0
-
+        
         self.rebinner = None
         self.SM_set = False
+        self.binning_set = False
+
+    def evaluate(self, **coupling_vals):
+        return [ p(**coupling_vals) if abs(p(**coupling_vals))>1e-12 else 0.0 for p in self.parametrizations ]
+
+    def set_binning(self, binning):
+        self.binning = binning
+        self.bin_widths = [r-l for l, r in zip(self.binning[:-1], self.binning[1:])]
+        self.binning_set = True
+
+    def set_SM(self, **sm_coupling_vals):
+        if not(self.SM_set):
+            self.xs_theory_SM = self.evaluate(**sm_coupling_vals)
+            if not(self.rebinner is None):
+                self.xs_exp_SM = self.rebinner.rebin_values(self.xs_theory_SM)
+            self.SM_set = True
+
+    def incl_xs(self, **coupling_vals):
+        xs_per_GeV = self.evaluate(**coupling_vals)
+        return sum([width*xs for xs, width in zip(xs_per_GeV, self.bin_widths)])
+
+    def make_rebinner(self, theory_binning, exp_binning):
+        self.rebinner = differentials.integral.Rebinner(
+            bin_boundaries_old = theory_binning,
+            bin_boundaries_new = exp_binning
+            )
+        self.bin_widths = [ r-l for l, r in zip(exp_binning[:-1], exp_binning[1:]) ]
+
+    def set_coupling_names(self, *names):
+        if len(names) != self.n_couplings:
+            raise ValueError(
+                'Pass a list of names with length n_couplings={0}'.format(self.n_couplings)
+                )
+        self.coupling_names = names
+
+    def from_theory_dicts(self, theories):
+        for theory in theories:
+            self.add_variation(
+                theory.crosssection,
+                **{ cname : theory[cname] for cname in self.coupling_names }
+                )
+        self.parametrize()
+
+    def add_variation(self, crosssections, **coupling_vals):
+        variation = Variation(crosssections, **coupling_vals)
+        logging.debug('Entering variation for {0}'.format(variation))
+        self.variations.append(variation)
+
+    def get_coupling_combinations(self):
+        # Get list of squared terms and unique combinations (works as expected also for 1 couplings cases)
+        self.coupling_combinations = (
+            # Squared terms
+            [[ coupling, coupling ] for coupling in self.coupling_names]
+            +
+            # Interference terms
+            [list(comb) for comb in itertools.combinations(self.coupling_names, 2)]
+            )
+        if self.do_linear_terms:
+            # Include also singular coupling terms and a constant
+            self.coupling_combinations.extend([ [coupling] for coupling in self.coupling_names ])
+            self.coupling_combinations.append([])
+        self.n_coefficients = len(self.coupling_combinations)
+
+    def get_coupling_matrix(self):
+        mat = []
+        for variation in self.variations:
+            mat.append(self.get_row(variation))
+        return mat
+
+    def get_row(self, variation):
+        row = []
+        for coupling_combination in self.coupling_combinations:
+            row.append(
+                prod([ variation[c] for c in coupling_combination ])
+                )
+        return row
+
+    def get_inv_coupling_matrix(self):
+        return numpy.linalg.inv(
+            numpy.array(self.get_coupling_matrix())
+            )
+
+    def get_paramatrization_by_matrix_inversion(self, inv_coupling_matrix, xs):
+        xs_column = numpy.array([ [x] for x in xs ])
+        coefficients_column = inv_coupling_matrix.dot(xs_column)
+        coefficients = [ coefficients_column[i][0] for i in xrange(len(xs)) ]
+        return self.get_parabola_for_given_coefficients(coefficients)
+
+    def get_parabola_for_given_coefficients(self, coefficients):
+        return ParabolaNDim(coefficients, self.coupling_combinations)
+
+    def cut_variations(self):
+        if not self.parametrize_by_matrix_inversion:
+            raise RuntimeError(
+                'parametrize_by_matrix_inversion is set to False;'
+                ' cutting variations makes no sense.'
+                )
+        n = len(self.variations)
+        if n < self.n_coefficients:
+            raise RuntimeError(
+                'Need {0} variations, but only {1} were given'.format(self.n_coefficients, n)
+                )
+        elif n > self.n_coefficients:
+            self.variations = self.variations[:self.n_coefficients]
+            logging.warning('Taking only first {0} variations:'.format(self.n_coefficients))
+            for variation in self.variations:
+                logging.warning(variation)
+
+
+    def parametrize(self):
+        if not(self.parametrize_by_matrix_inversion):
+            raise NotImplementedError(
+                'self.parametrize_by_matrix_inversion=False, this is not implemented yet'
+                )
+
+        self.parametrizations = []
+        self.n_bins = len(self.variations[0].xs)
+        if self.parametrize_by_matrix_inversion:
+            self.do_parametrize_by_matrix_inversion()
+
+    def do_parametrize_by_matrix_inversion(self):
+        self.get_coupling_combinations()
+        self.cut_variations()
+        inv_coup_mat = self.get_inv_coupling_matrix()
+        for i_bin in xrange(self.n_bins):
+            xs = [ v.xs[i_bin] for v in self.variations ]
+            self.parametrizations.append(
+                self.get_paramatrization_by_matrix_inversion(inv_coup_mat, xs)
+                )
+
+    def do_parametrize_by_fitting(self):
+        raise NotImplementedError('TODO')
+        for i_bin in xrange(self.n_bins):
+            xs = [ v.xs[i_bin] for v in self.variations ]
+            self.parametrizations.append(self.get_fitted_parametrization(c1s, c2s, xs))
+
+
+
+
+class Parametrization2Dim(ParametrizationMultiDim):
+    """docstring for Parametrization2Dim"""
+    def __init__(self):
+        super(Parametrization2Dim, self).__init__(2)
+        self.c1_name = 'c1'
+        self.c2_name = 'c2'
+        self.c1_SM = 1.0
+        self.c2_SM = 1.0
 
 
     def evaluate(self, c1, c2):
@@ -239,13 +443,6 @@ class Parametrization(object):
         xs_exp = self.get_xs_exp(c1, c2)
         mu_exp = [ xs / xs_SM for xs, xs_SM in zip(xs_exp, self.xs_exp_SM) ]
         return mu_exp
-
-    def make_rebinner(self, theory_binning, exp_binning):
-        self.rebinner = differentials.integral.Rebinner(
-            bin_boundaries_old = theory_binning,
-            bin_boundaries_new = exp_binning
-            )
-        self.bin_widths = [ r-l for l, r in zip(exp_binning[:-1], exp_binning[1:]) ]
 
     def set_SM(self):
         self.xs_theory_SM = self.evaluate(self.c1_SM, self.c2_SM)
@@ -304,12 +501,6 @@ class Parametrization(object):
             self.parametrizations.append(parametrization)
 
 
-    def get_paramatrization_by_matrix_inversion(self, inv_coupling_matrix, xs):
-        xs_column = numpy.array([ [x] for x in xs ])
-        coefficients_column = inv_coupling_matrix.dot(xs_column)
-        coefficients = [ coefficients_column[i][0] for i in xrange(len(xs)) ]
-        return self.get_parabola_for_given_coefficients(coefficients)
-
     def get_inv_coupling_matrix(self, c1s, c2s):
         coupling_matrix = []
         
@@ -328,17 +519,17 @@ class Parametrization(object):
         inv_coupling_matrix = numpy.linalg.inv(coupling_matrix)
         return inv_coupling_matrix
 
-    def get_parabola_for_given_coefficients(self, coefficients):
-        if self.do_linear_terms:
-            A, B, C, D, E, F = coefficients
-            def parabola(c1, c2):
-                return A*c1**2 + B*c2**2 + C*c1*c2 + D*c1 + E*c2 + F
-        else:
-            A, B, C = coefficients
-            def parabola(c1, c2):
-                return A*c1**2 + B*c2**2 + C*c1*c2
-        return parabola
-
+    # def get_parabola_for_given_coefficients(self, coefficients):
+    #     # if self.do_linear_terms:
+    #     #     A, B, C, D, E, F = coefficients
+    #     #     def parabola(c1, c2):
+    #     #         return A*c1**2 + B*c2**2 + C*c1*c2 + D*c1 + E*c2 + F
+    #     # else:
+    #     #     A, B, C = coefficients
+    #     #     def parabola(c1, c2):
+    #     #         return A*c1**2 + B*c2**2 + C*c1*c2
+    #     # setattr(parabola, 'coefficients', coefficients)
+    #     return Parabola(coefficients)
 
     def get_parabola(self):
         """
