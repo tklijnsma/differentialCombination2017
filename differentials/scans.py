@@ -486,12 +486,15 @@ class ScanPrimitive(object):
                 )
         return self.entries[i_bestfit]
 
-    def filter(self, fn):
+    def filter(self, fn, inplace=True):
         bestfit = self.bestfit()
         new_entries = []
         for entry in self.entries:
             if entry is bestfit or fn(entry): new_entries.append(entry)
-        self.entries = new_entries
+        if inplace:
+            self.entries = new_entries
+        else:
+            return new_entries
 
 
 class Scan(ScanPrimitive):
@@ -562,8 +565,9 @@ class Scan(ScanPrimitive):
         self.entries = new_entries
 
 
-    def create_uncertainties(self, inplace=True):
+    def create_uncertainties(self, inplace=True, do_95percent_CL=False):
         logging.debug('Determining uncertainties for scan (x={0}, y={1})'.format(self.x_variable, self.y_variable))
+        if do_95percent_CL: self.uncertaintycalculator = 3.841 / 2. # account dNLL missing the factor 0.5
         unc = self.uncertainty_calculator.create_uncertainties(xs = self.x(), deltaNLLs = self.deltaNLL())
         if unc.is_hopeless:
             logging.error(
@@ -626,7 +630,12 @@ class Scan2D(ScanPrimitive):
         self.x_variable = x_variable
         self.y_variable = y_variable
         self.z_variable = z_variable
-        if not(scandir is None): self.scandirs.append(scandir)
+
+        if not(scandir is None):
+            if isinstance(scandir, basestring):
+                self.scandirs.append(scandir)
+            else:
+                self.scandirs.extend(scandir)
 
         self.name = name
         self.title = self.standard_titles.get(self.name, self.name)
@@ -652,6 +661,18 @@ class Scan2D(ScanPrimitive):
             '\nglobpat    = {4}'
             .format(self.x_variable, self.y_variable, self.z_variable, ', '.join(self.scandirs), self.globpat)
             )
+
+    def x(self, exclude_bestfit=False):
+        if exclude_bestfit:
+            bestfit = self.bestfit()
+            return [ entry.x for entry in self.entries if not(entry.x == bestfit.x and entry.y == bestfit.y) ]
+        return [ entry.x for entry in self.entries ]
+
+    def y(self, exclude_bestfit=False):
+        if exclude_bestfit:
+            bestfit = self.bestfit()
+            return [ entry.y for entry in self.entries if not(entry.x == bestfit.x and entry.y == bestfit.y) ]
+        return [ entry.y for entry in self.entries ]
 
     def read(self):
         root_files = self.collect_root_files()
@@ -700,6 +721,25 @@ class Scan2D(ScanPrimitive):
         factory = self.get_spline_factory(x_min, x_max, y_min, y_max, cutstring_addition)
         polyfit = factory.make_polyfit()
         return polyfit
+
+
+    def polyfit_patch(self, x_min, x_max, y_min, y_max):
+        # x_min = differentials.core.get_closest_match(x_min, self.x(exclude_bestfit=True))
+        # x_max = differentials.core.get_closest_match(x_max, self.x(exclude_bestfit=True))
+        # y_min = differentials.core.get_closest_match(y_min, self.y(exclude_bestfit=True))
+        # y_max = differentials.core.get_closest_match(y_max, self.y(exclude_bestfit=True))
+
+        entries = self.filter(
+            lambda e: e.x >= x_min and e.x <= x_max and e.y >= y_min and e.y <= y_max,
+            inplace = False
+            )
+        H2 = plotting.pywrappers.Histogram2D('auto', 'title')
+        H2.fill_from_entries(entries)
+        H2.polyfit_patch(x_min, x_max, y_min, y_max)
+
+        # Put back the polyfitted H2 in the entries
+        # ---> POINTLESS, the spline code reads anyway directly from the chain.
+        # No real way to do this I think
 
 
     def to_hist(self):

@@ -7,7 +7,7 @@ import uncertaintycalculator
 class OneDimScanner(object):
     """docstring for OneDimScanner"""
 
-    def __init__(self, histogram2D=None, x_variable=None, y_variable=None):
+    def __init__(self, histogram2D=None, x_variable=None, y_variable=None, do_95percent_CL=False):
         super(OneDimScanner, self).__init__()
         if isinstance(histogram2D, scans.Scan2D):
             self.histogram2D = histogram2D.to_hist()
@@ -18,6 +18,7 @@ class OneDimScanner(object):
             self.x_variable = x_variable
             self.y_variable = y_variable
 
+        self.do_95percent_CL = do_95percent_CL
         self.uncertaintycalculator = uncertaintycalculator.UncertaintyCalculator()
 
 
@@ -82,6 +83,7 @@ class OneDimScanner(object):
 
         logging.debug('Creating uncertainties for graph')
         self.uncertaintycalculator.cutoff = 1.0 # uncertaintycalculator by default expects deltaNLL, hist has 2deltaNLL
+        if self.do_95percent_CL: self.uncertaintycalculator.cutoff = 3.841
         graph.unc = self.uncertaintycalculator.create_uncertainties(graph.xs, graph.ys)
         return graph
 

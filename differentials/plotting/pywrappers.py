@@ -968,6 +968,30 @@ class Graph(BasicDrawable):
         self.bounds_down = [ c+e for c, e in zip(self.bin_values, self.errs_down) ]
         self.has_uncertainties = True
 
+    def flat_cut(self, y_top):
+        # Get the two cuts at y_top, using the uncertainty calculator
+        uncertaintycalculator = differentials.uncertaintycalculator.UncertaintyCalculator()
+        uncertaintycalculator.cutoff = y_top
+        unc = uncertaintycalculator.create_uncertainties(self.xs, self.ys)
+        self.insert(unc.left_bound, y_top)
+        self.insert(unc.right_bound, y_top)
+        self.filter(y_max=y_top + 0.000001)
+
+    def insert(self, x_new, y_new):
+        if x_new < self.xs[0]:
+            self.xs.insert(0, x_new)
+            self.ys.insert(0, y_new)
+            return
+        elif x_new > self.xs[-1]:
+            self.xs.append(x_new)
+            self.ys.append(y_new)
+            return
+        for i, x in enumerate(self.xs):
+            if x >= x_new:
+                self.xs.insert(i, x_new)
+                self.ys.insert(i, y_new)
+                return
+
     def filter(self, x_min=-10e9, x_max=10e9, y_min=-10e9, y_max=10e9, inplace=True):
         passed_x = []
         passed_y = []
@@ -1047,10 +1071,12 @@ class Graph(BasicDrawable):
         for obj, draw_str in getattr(self, draw_style)(self.legend):
             obj.Draw(draw_str)
 
-    def create_uncertainties(self, inplace=True):
+    def create_uncertainties(self, inplace=True, do_95percent_CL=False):
         logging.debug('Determining uncertainties for Graph')
         uncertaintycalculator = differentials.uncertaintycalculator.UncertaintyCalculator()
         uncertaintycalculator.cutoff = 1.0 # Graph will usually be filled with 2*deltaNLL
+        if do_95percent_CL:
+            uncertaintycalculator.cutoff = 3.841
         unc = uncertaintycalculator.create_uncertainties(xs = self.xs, deltaNLLs = self.ys)
         if unc.is_hopeless:
             logging.error(
@@ -1337,12 +1363,45 @@ class Histogram2D(BasicDrawable):
                 self.H2.SetBinContent(i_x+1, i_y+1, smoothed[i_x][i_y])
 
 
+    def add_padding(self, value, x_min=-1000., x_max=1000., y_min=-1000., y_max=1000.):
+        self.x_bin_boundaries = [x_min] + self.x_bin_boundaries + [x_max]
+        self.y_bin_boundaries = [y_min] + self.y_bin_boundaries + [y_max]
+        self.n_bins_x = len(self.x_bin_boundaries)-1
+        self.n_bins_y = len(self.y_bin_boundaries)-1
+        self.x_bin_centers = [ 0.5*(r+l) for l, r in zip(self.x_bin_boundaries[:-1], self.x_bin_boundaries[1:]) ]
+        self.y_bin_centers = [ 0.5*(r+l) for l, r in zip(self.y_bin_boundaries[:-1], self.y_bin_boundaries[1:]) ]
+
+        # Open up new hist with the padding bins
+        H = ROOT.TH2D(
+            utils.get_unique_rootname(), '',
+            self.n_bins_x, array('d', self.x_bin_boundaries),
+            self.n_bins_y, array('d', self.y_bin_boundaries),
+            )
+        ROOT.SetOwnership(H, False)
+
+        # Fill in the new hist using old hist and the padding value
+        for i_x in xrange(self.n_bins_x):
+            for i_y in xrange(self.n_bins_y):
+                if i_x == 0 or i_x == self.n_bins_x-1 or i_y == 0 or i_y == self.n_bins_y-1:
+                    fill_val = value
+                else:
+                    fill_val = self.H2.GetBinContent(i_x, i_y)
+                H.SetBinContent(i_x+1, i_y+1, fill_val)
+        self.H2 = H
+
+        # Also correct the H2_array
+        self.H2_array = (
+            [ value for i in xrange(self.n_bins_y) ]
+            + [ [value] + r + [value] for r in self.H2_array ]
+            + [ value for i in xrange(self.n_bins_y) ]
+            )
+
 
     def set_value_for_patch(self, value, x_min, x_max, y_min, y_max):
-        x_min, ix_min = get_closest_match(x_min, self.x_bin_centers)
-        x_max, ix_max = get_closest_match(x_max, self.x_bin_centers)
-        y_min, iy_min = get_closest_match(y_min, self.y_bin_centers)
-        y_max, iy_max = get_closest_match(y_max, self.y_bin_centers)
+        x_min, ix_min = differentials.core.get_closest_match(x_min, self.x_bin_centers)
+        x_max, ix_max = differentials.core.get_closest_match(x_max, self.x_bin_centers)
+        y_min, iy_min = differentials.core.get_closest_match(y_min, self.y_bin_centers)
+        y_max, iy_max = differentials.core.get_closest_match(y_max, self.y_bin_centers)
         # Insert patch
         for ix in xrange(ix_min, ix_max+1):
             for iy in xrange(iy_min, iy_max+1):
@@ -1371,10 +1430,10 @@ class Histogram2D(BasicDrawable):
 
     def smooth_patch(self, x_min, x_max, y_min, y_max):
         # Get relevant patch
-        x_min, ix_min = get_closest_match(x_min, self.x_bin_centers)
-        x_max, ix_max = get_closest_match(x_max, self.x_bin_centers)
-        y_min, iy_min = get_closest_match(y_min, self.y_bin_centers)
-        y_max, iy_max = get_closest_match(y_max, self.y_bin_centers)
+        x_min, ix_min = differentials.core.get_closest_match(x_min, self.x_bin_centers)
+        x_max, ix_max = differentials.core.get_closest_match(x_max, self.x_bin_centers)
+        y_min, iy_min = differentials.core.get_closest_match(y_min, self.y_bin_centers)
+        y_max, iy_max = differentials.core.get_closest_match(y_max, self.y_bin_centers)
 
         # Get smoothed scan for whole matrix
         smoothed = scipy.ndimage.gaussian_filter(
@@ -1387,11 +1446,13 @@ class Histogram2D(BasicDrawable):
                 self.H2.SetBinContent(ix+1, iy+1, smoothed[ix][iy])
 
 
-    def polyfit_patch(self, x_min, x_max, y_min, y_max):
-        x_min, ix_min = get_closest_match(x_min, self.x_bin_centers)
-        x_max, ix_max = get_closest_match(x_max, self.x_bin_centers)
-        y_min, iy_min = get_closest_match(y_min, self.y_bin_centers)
-        y_max, iy_max = get_closest_match(y_max, self.y_bin_centers)
+    def polyfit_patch(self, x_min, x_max, y_min, y_max, order=7):
+        if x_min > x_max: x_max, x_min = ( x_min, x_max )
+        if y_min > y_max: y_max, y_min = ( y_min, y_max )
+        x_min, ix_min = differentials.core.get_closest_match(x_min, self.x_bin_centers)
+        x_max, ix_max = differentials.core.get_closest_match(x_max, self.x_bin_centers)
+        y_min, iy_min = differentials.core.get_closest_match(y_min, self.y_bin_centers)
+        y_max, iy_max = differentials.core.get_closest_match(y_max, self.y_bin_centers)
 
         # N = (ix_max+1-ix_min) * (iy_max+1-iy_min)
 
@@ -1408,7 +1469,7 @@ class Histogram2D(BasicDrawable):
         polyfit_factory.x_max = x_max
         polyfit_factory.y_min = y_min
         polyfit_factory.y_max = y_max
-        polyfit_factory.ord_polynomial = 7
+        polyfit_factory.ord_polynomial = order
         polyfit = polyfit_factory.make_polyfit(T2D)
         polyfit.multiply_by_two = False
 
@@ -1438,7 +1499,7 @@ class Histogram2D(BasicDrawable):
         ret = []
 
         color_cycle = itertools.cycle([1, 2, 4])
-        for level in [ 20., 50., 70., 100, 200. ]:
+        for level in [ 20., 50., 70., 100, 200., 500., 1000. ]:
             Tgs = utils.get_contours_from_H2(self.H2, level)
             labels = []
             color = color_cycle.next()
@@ -1613,6 +1674,9 @@ class Histogram2D(BasicDrawable):
         if y_max is None:
             y_max = self.y_bin_boundaries[-1]
 
+        c.resize_temporarily(870, 800)
+        c.SetRightMargin(0.13)
+
         plot = differentials.plotting.plots.Single2DHistPlot(
             plotname,
             self,
@@ -1629,21 +1693,6 @@ class Histogram2D(BasicDrawable):
         plot.y_SM = y_sm
         plot.draw()
         plot.wrapup()
-
-
-def get_closest_match(x_val, x_list):
-    x_match = 10e9
-    mindx = 10e9
-    minix = -10e9
-    found_atleast_one = False
-    for ix, x in enumerate(x_list):
-        dx = abs(x-x_val)
-        if dx < mindx:
-            found_atleast_one = True
-            mindx = dx
-            x_match = x
-            minix = ix
-    return x_match, minix
 
 
 

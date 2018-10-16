@@ -15,6 +15,7 @@ import systshapemaker
 import onedimscanner
 import onedimscanfilter
 import observable
+import scan_accounting
 
 # Sub-packages
 import plotting

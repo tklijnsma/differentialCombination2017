@@ -198,6 +198,7 @@ class MultiScanPlot(PlotBase):
         differentials.plotting.canvas.reset_global_color_cyle()
 
         self.y_cutoff = 3.15
+        self.do_95percent_CL = False
 
         self.scans = []
         self.manual_graphs = []
@@ -216,7 +217,10 @@ class MultiScanPlot(PlotBase):
             )
         self.base.Draw('P')
 
-        sigma1_line = ROOT.TLine(self.x_min, 1.0, self.x_max, 1.0)
+        if self.do_95percent_CL:
+            sigma1_line = ROOT.TLine(self.x_min, 3.841, self.x_max, 3.841)
+        else:
+            sigma1_line = ROOT.TLine(self.x_min, 1.0, self.x_max, 1.0)
         ROOT.SetOwnership(sigma1_line, False)
         sigma1_line.SetLineColor(14)
         sigma1_line.SetLineStyle(2)
@@ -249,7 +253,7 @@ class MultiScanPlot(PlotBase):
 
 
         for graph in self.manual_graphs:
-            graph.filter(y_max=3.15)
+            graph.flat_cut(y_top=self.y_cutoff)
             graph.legend = self.leg
             graph.Draw(getattr(graph, 'draw_style', 'repr_basic_line'))
 
@@ -278,10 +282,14 @@ class MultiScanPlot(PlotBase):
     def get_unc_points(self, scan, color=1):
         """Should work in Graph as well"""
 
-        if not hasattr(scan, 'unc'):
-            scan.create_uncertainties()
+        point_height = 1.0
+        if self.do_95percent_CL:
+            point_height = 3.841
 
-        left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [1.0]))
+        if not hasattr(scan, 'unc'):
+            scan.create_uncertainties(do_95percent_CL=self.do_95percent_CL)
+
+        left_point = ROOT.TGraph(1, array('f', [scan.unc.left_bound]), array('f', [point_height]))
         ROOT.SetOwnership(left_point, False)
         left_point.SetMarkerColor(color)
         left_point.SetMarkerSize(1.1)
@@ -290,7 +298,7 @@ class MultiScanPlot(PlotBase):
             left_point.SetMarkerStyle(5)
         left_point.Draw('PSAME')
 
-        right_point = ROOT.TGraph(1, array('f', [scan.unc.right_bound]), array('f', [1.0]))
+        right_point = ROOT.TGraph(1, array('f', [scan.unc.right_bound]), array('f', [point_height]))
         ROOT.SetOwnership(right_point, False)
         right_point.SetMarkerColor(color)
         right_point.SetMarkerSize(1.1)

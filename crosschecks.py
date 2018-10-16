@@ -16,6 +16,246 @@ from differentials.plotting.canvas import c
 
 
 
+class XHCrossSectionComputer(object):
+    """docstring for XHCrossSectionComputer"""
+
+    VBF = [
+        0.0302808 ,
+        0.08105017,
+        0.12008017,
+        0.28295281,
+        0.23772335,
+        0.17833799,
+        0.05676226,
+        0.01239741,
+        0.00041504
+        ]
+    ttH = [
+        0.01870376,
+        0.08153892,
+        0.06226964,
+        0.18633147,
+        0.22279926,
+        0.26817637,
+        0.15245306,
+        0.01341177,
+        -0.00568425
+        ]
+
+    ggH = LatestBinning.shape_pth_ggH
+
+
+    VBF_fid = LatestBinning.normalize([
+        4.01797329,
+        11.38545513,
+        16.26351532,
+        38.34970613,
+        33.52387842,
+        27.15370537,
+        8.07272155,
+        1.63987341,
+        0.13854119
+        ])
+    ttH_fid = LatestBinning.normalize([
+        0.21016141,
+        1.13122164,
+        0.67626803,
+        2.9775316 ,
+        2.84087811,
+        4.56748822,
+        3.11240395,
+        0.21556108,
+        -0.12546014
+        ])
+
+    xH = LatestBinning.shape_pth_xH
+
+    inclxs_ggF = LatestBinning.YR4_ggF_n3lo
+    inclxs_ttH = LatestBinning.YR4_ttH
+    inclxs_VBF = LatestBinning.YR4_VBF
+    inclxs_VH  = LatestBinning.YR4_WH + LatestBinning.YR4_ZH
+    inclxs_xH  = inclxs_ttH + inclxs_VBF + inclxs_VH
+
+    fidxs_ggF = LatestBinning.SM_BR_hgg * 0.60 * LatestBinning.YR4_ggF_n3lo
+    fidxs_ttH = LatestBinning.SM_BR_hgg * 0.52 * LatestBinning.YR4_ttH
+    fidxs_VBF = LatestBinning.SM_BR_hgg * 0.60 * LatestBinning.YR4_VBF
+    fidxs_VH  = LatestBinning.SM_BR_hgg * 0.52 * (LatestBinning.YR4_WH + LatestBinning.YR4_ZH)
+    fidxs_xH  = fidxs_ttH + fidxs_VBF + fidxs_VH
+
+    def __init__(self):
+        super(XHCrossSectionComputer, self).__init__()
+
+    # Diff cross section, full phase space
+    def dsigma_full_ggH(self, kappat=1.0):
+        return [ acc * self.inclxs_ggF for acc in self.ggH ]
+
+    def dsigma_full_ttH(self, kappat=1.0):
+        return [ kappat**2 * acc * self.inclxs_ttH for acc in self.ttH ]
+
+    def dsigma_full_VBF(self):
+        return [ acc * self.inclxs_VBF for acc in self.VBF ]
+
+    def dsigma_full_VH(self):
+        return [ acc * self.inclxs_VH for acc in self.VH ]
+
+    def dsigma_full_xH(self):
+        return [ acc * self.inclxs_xH for acc in self.xH ]
+
+    # Diff cross section, fiducial phase space
+    def dsigma_fid_ttH(self, kappat=1.0):
+        return [ kappat**2 * acc * self.fidxs_ttH for acc in self.ttH_fid ]
+
+    def dsigma_fid_VBF(self):
+        return [ acc * self.fidxs_VBF for acc in self.VBF_fid ]
+
+    # Unbinned cross sections, in fid and full phase space
+    def sigma_fid_VBF_ttH(self, kappat=1.0):
+        return kappat**2 * self.fidxs_ttH + self.fidxs_VBF
+
+    def sigma_full_VBF_ttH(self, kappat=1.0):
+        return kappat**2 * self.inclxs_ttH + self.inclxs_VBF
+
+    # Fiducial acceptances per bin
+    def fid_acc_ttH(self, kappat=1.0):
+        return [ fid / full if full != 0. else 0. for fid, full in zip(self.dsigma_fid_ttH(kappat), self.dsigma_full_ttH(kappat)) ]
+
+    def fid_acc_VBF(self):
+        return [ fid / full for fid, full in zip(self.dsigma_fid_VBF(), self.dsigma_full_VBF()) ]
+
+
+    # Get fid acceptance xH based on ttH and VBF
+    def fid_acc_xH(self, kappat=1.0):
+        sigma_xH_full = self.sigma_full_VBF_ttH(kappat) # Neglecting VH for now
+
+        A_ttH = self.fid_acc_ttH(kappat)
+        dsigma_full_ttH = self.dsigma_full_ttH(kappat)
+
+        A_VBF = self.fid_acc_VBF()
+        dsigma_full_VBF = self.dsigma_full_VBF()
+
+        A_average = []
+        for i in xrange(len(A_ttH)):
+            A_average.append(
+                (dsigma_full_ttH[i] * A_ttH[i]  +  dsigma_full_VBF[i] * A_VBF[i])
+                /
+                (dsigma_full_ttH[i] + dsigma_full_VBF[i])
+                )
+
+        return A_average
+
+
+
+    # OLD:
+
+    def get_average_acceptance_ttH_VBF(self):
+        return [ (i+j)/(self.inclxs_xH-self.inclxs_VH) for i, j in zip(self.dsigma_full_ttH(), self.dsigma_full_VBF()) ]
+
+
+    def dsigma_full_ttH_kappatdep(self, kappat=1.0):
+        return [ kappat**2 * acc * self.inclxs_ttH for acc in self.ttH ]
+
+    def inclxs_ttH_kappatdep(self, kappat=1.0):
+        return kappat**2 * self.inclxs_ttH
+
+    def get_average_acceptance_ttH_VBF_kappatdep(self, kappat=1.0):
+        inclxs_xH_minus_VH = self.inclxs_VBF + self.inclxs_ttH_kappatdep(kappat)
+        return [
+            (i+j) / inclxs_xH_minus_VH
+            for i, j in zip(self.dsigma_full_ttH_kappatdep(kappat), self.dsigma_full_VBF())
+            ]
+
+
+@flag_as_option
+def check_pasquale(args):
+    computer = XHCrossSectionComputer()
+    flist = lambda l: ', '.join([ '{0:7.4f}'.format(i) for i in l ])
+
+    print computer.dsigma_full_ggH()
+    print computer.dsigma_full_ttH()
+
+    print flist([ i/j for i, j in zip(computer.dsigma_full_ggH(), computer.dsigma_full_ttH()) ])
+
+    print flist([ i/j for i, j in zip(computer.dsigma_full_ggH(), computer.dsigma_full_ttH(kappat=3)) ])
+
+
+
+def printlist(l):
+    print ', '.join([ '{0:7.4f}'.format(i) for i in l ])
+
+
+@flag_as_option
+def check_kappat_acceptance_effect(args):
+    computer = XHCrossSectionComputer()
+    flist = lambda l: ', '.join([ '{0:7.4f}'.format(i) for i in l ])
+
+    print 'SM fid acceptances:'
+    print 'VBF:' + flist(computer.fid_acc_VBF())
+    print 'ttH:' + flist(computer.fid_acc_ttH())
+    print 
+
+    fvariation = lambda kappat: 'kappat = {0:<6} | A_average = {1}'.format(kappat, flist(computer.fid_acc_xH(kappat=kappat)))
+    print fvariation(0.0)
+    print fvariation(0.25)
+    print fvariation(0.5)
+    print fvariation(0.75)
+    print fvariation(1.0)
+    print fvariation(2.0)
+    print fvariation(3.0)
+    print fvariation(1000.0)
+
+
+@flag_as_option
+def check_kappat_acceptance_effect_old(args):
+
+    computer = XHCrossSectionComputer()
+
+    # printlist(computer.xH)
+    # printlist(computer.get_average_acceptance_ttH_VBF())
+
+    print 'acceptance_xH, kappa_t = 0.0 (VBF only, no ttH)'
+    printlist(computer.get_average_acceptance_ttH_VBF_kappatdep(0.0))
+
+    print 'acceptance_xH, kappa_t = 0.5'
+    printlist(computer.get_average_acceptance_ttH_VBF_kappatdep(0.5))
+
+    print 'acceptance_xH, kappa_t = 1.0 (SM)'
+    printlist(computer.get_average_acceptance_ttH_VBF_kappatdep(1.0))
+
+    print 'acceptance_xH, kappa_t = 1.5'
+    printlist(computer.get_average_acceptance_ttH_VBF_kappatdep(1.5))
+
+    print 'acceptance_xH, kappa_t = 3.0 (max probed range in our fits)'
+    printlist(computer.get_average_acceptance_ttH_VBF_kappatdep(3.0))
+
+    print 'acceptance_xH, kappa_t = 1000.0 (ttH only, no VBF)'
+    printlist(computer.get_average_acceptance_ttH_VBF_kappatdep(1000.0))
+
+
+@flag_as_option
+def check_numbers_vittorio(args):
+    VBF = [
+        4.01797329,
+        11.38545513,
+        16.26351532,
+        38.34970613,
+        33.52387842,
+        27.15370537,
+        8.07272155,
+        1.63987341,
+        0.13854119
+        ]
+    ttH = [
+        0.21016141,
+        1.13122164,
+        0.67626803,
+        2.9775316 ,
+        2.84087811,
+        4.56748822,
+        3.11240395,
+        0.21556108,
+        -0.12546014
+        ]
+
 
 
 

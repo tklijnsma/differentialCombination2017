@@ -76,7 +76,6 @@ class CombineConfig(object):
         else:
             self.asimov = False
 
-
     def make_unique_directory(self):
         for tag in self.tags:
             self.subDirectory += '_' + tag
@@ -121,6 +120,10 @@ class CombineConfig(object):
                 self.PhysicsModelParameters.pop(i)
                 break
 
+
+    def freeze_parameters(self, names):
+        for name in names:
+            self.freeze_parameter(name)
 
     def freeze_parameter(self, name):
         self.del_parameter_from_floating_or_freezing(name)

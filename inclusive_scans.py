@@ -201,6 +201,11 @@ def totalXS_plot(args):
     xs_err_statonly = combination_statonly.unc.symm_error
     xs_err_systonly = sqrt(xs_err_full**2 -xs_err_statonly**2)
 
+    xs *= LatestBinning.YR4_totalXS
+    xs_err_full *= LatestBinning.YR4_totalXS
+    xs_err_statonly *= LatestBinning.YR4_totalXS
+    xs_err_systonly *= LatestBinning.YR4_totalXS
+
     l = differentials.plotting.pywrappers.Latex(
         differentials.plotting.canvas.c.GetLeftMargin() + 0.045,
         1-differentials.plotting.canvas.c.GetTopMargin() - 0.26,

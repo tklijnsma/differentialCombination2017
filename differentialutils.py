@@ -1,12 +1,37 @@
 import LatestPaths
+import differentials
 import differentials.combine.combine as combine
-import os, copy, traceback
+import os, copy, traceback, shutil, logging
 from os.path import *
 
 #____________________________________________________________________
 # Some scanning macros
 
-def run_postfit_fastscan_scan(config):
+
+
+def run_fastscan_scan_reused_postfit(config, postfit):
+    config.make_unique_directory()
+    postfit_and_fastscan_dir = join(config.subDirectory, 'postfit_and_fastscan')
+    copied_postfit = join(postfit_and_fastscan_dir, basename(postfit))
+    if differentials.core.is_testmode():
+        logging.info('Would now create {0}'.format(postfit_and_fastscan_dir))
+        logging.info('Would now copy {0} to {1}'.format(postfit, copied_postfit))
+    else:
+        logging.info('Creating {0}'.format(postfit_and_fastscan_dir))
+        os.makedirs(postfit_and_fastscan_dir)
+        logging.info('Copying {0} to {1}'.format(postfit, copied_postfit))
+        shutil.copyfile(postfit, copied_postfit)
+
+    fastscan = combine.CombineFastScan(config)
+    fastscan.run(copied_postfit)
+    fastscan_file = fastscan.get_output()
+
+    pointwisescan = combine.CombinePointwiseScan(config)
+    pointwisescan.run(copied_postfit, fastscan_file)
+
+
+
+def run_postfit_fastscan_scan(config, point_minimizer_settings=None):
     # Make sure no previous run directory is overwritten
     config.make_unique_directory()
 
@@ -17,6 +42,10 @@ def run_postfit_fastscan_scan(config):
     fastscan = combine.CombineFastScan(config)
     fastscan.run(postfit_file)
     fastscan_file = fastscan.get_output()
+
+    if not(point_minimizer_settings is None):
+        # Change the minimizer settings only for the scan, but not for the best fit
+        config.minimizer_settings = point_minimizer_settings
 
     pointwisescan = combine.CombinePointwiseScan(config)
     pointwisescan.run(postfit_file, fastscan_file)

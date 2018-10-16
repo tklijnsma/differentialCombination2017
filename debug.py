@@ -29,6 +29,68 @@ datestr = strftime('%b%d')
 # Main
 ########################################
 
+@flag_as_option
+def debug_combinecmd_hzz_new_min_settings(args):
+    cmd = [
+        'combine',
+        '/mnt/t3nfs01/data01/shome/tklijnsm/differentialCombination2017/v5_updatedcombine/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/test/differentialCombination2017/out/workspaces_Jul10/projection_ktcgkb_hzz_Jul10_couplingModel_reweighted_floatingBRs.root',
+        '-n _POSTFIT_ASIMOV_projection_ktcgkb_hzz_Jul10_couplingModel_reweighted_floatingBRs',
+        '-M MultiDimFit',
+        '-m 125.0',
+        '-t -1',
+        # '--cminDefaultMinimizerStrategy 0',
+        '--minimizerStrategy 0',
+        # '--cminDefaultMinimizerTolerance 0.1',
+        '--minimizerTolerance 0.1',
+        '--cminFallbackAlgo "Minuit2,migrad,0:0.11"',
+        '--cminFallbackAlgo "Minuit2,migrad,0:0.12"',
+        '--cminApproxPreFitTolerance=100',
+        '--X-rtd MINIMIZER_MaxCalls=9999999',
+        '--saveNLL',
+        '--saveInactivePOI 1',
+        '--floatOtherPOIs=1',
+        '-P ct -P cg',
+        '--setPhysicsModelParameterRanges ct=-6.0,6.0:cg=-0.45,0.45',
+        '--setPhysicsModelParameters ct=1.0,cg=0.0,lumiscale=83.56546',
+        '--saveWorkspace',
+        ]
+    differentials.core.execute(cmd)
+
+
+@flag_as_option
+def debug_draw_fastscans_Oct02(args):
+    scandirs = [
+        'out/Scan_projection_kbkc_Aug09_combination_couplingdependentBRs_asimov'
+        ]
+    for scandir in scandirs:
+        fastscan_file = glob.glob(scandir + '/postfit_and_fastscan/*FASTSCAN*.root')[0]
+        name = os.path.basename(fastscan_file).replace('.root','')
+
+        # fastscan = differentials.scans.Scan2D(name, 'ct', 'cg')
+        fastscan = differentials.scans.Scan2D(name, 'kappac', 'kappab')
+
+        fastscan.root_files = [fastscan_file]
+        fastscan.read()
+        fastscan.plot(name, draw_style='repr_2D_rainbow_high_contours')
+
+
+
+@flag_as_option
+def test_scanaccountant(args):
+    scandir = 'out/Scan_projection_kbkc_Aug09_combination_couplingdependentBRs_asimov'
+    accountant = differentials.scan_accounting.ScanAccountant(scandir)
+
+    print 'begin'
+
+    accountant.overview()
+
+    # accountant.get_cpu_lines()
+    # accountant.get_time_from_cpu_line(accountant.cpu_lines[0])
+
+    # accountant.build_ofile_cpuline_dict()
+
+    print 'end'
+
 
 
 @flag_as_option

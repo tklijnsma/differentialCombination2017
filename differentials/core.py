@@ -305,7 +305,6 @@ def read_set(root_file, setname, return_names=True):
     else:
         return objs
 
-
 def set_exists(root_file, setname):
     if isinstance(root_file, ROOT.RooWorkspace):
         w = root_file
@@ -347,7 +346,6 @@ def read_data(f, sep=' ', columns=False, make_float=False):
         return cols
 
     return lines
-
 
 def fileno(file_or_fd):
     fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
@@ -561,4 +559,41 @@ def binning_from_POIs(POIs_original):
         binning.append(right)
     logging.debug('Determined the following binning: {0}'.format(binning))
     return binning
+
+
+def get_closest_match(x_val, x_list):
+    x_match = 10e9
+    mindx = 10e9
+    minix = -10e9
+    found_atleast_one = False
+    for ix, x in enumerate(x_list):
+        dx = abs(x-x_val)
+        if dx < mindx:
+            found_atleast_one = True
+            mindx = dx
+            x_match = x
+            minix = ix
+    return x_match, minix
+
+
+def print_progress_bar(iteration, total, prefix = 'Progress', suffix = 'Complete', decimals = 1, length = 55, fill = '#'):
+    """
+    from: https://stackoverflow.com/a/34325723/9209944
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print '\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix),
+    # Print New Line on Complete
+    if iteration == total: 
+        print
 

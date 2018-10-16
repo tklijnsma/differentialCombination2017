@@ -97,7 +97,8 @@ def main():
         differentials.logger.set_level_trace()
 
     import logging
-    args.no_preliminary_tag = True
+    # args.no_preliminary_tag = True
+    # args.no_preliminary_tag = False
     if args.no_preliminary_tag:
         logging.info('Remove the default \'Preliminary\' tag from plots')
         differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = ''

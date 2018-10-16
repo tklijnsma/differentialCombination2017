@@ -21,53 +21,136 @@ style = differentials.plotting.pywrappers.StyleSheet()
 style.line_width = 2
 style.error_bar_line_width = 1
 
+from projections_plots_kbkc import PlotPatcher
+
 #____________________________________________________________________
 
 
 couplingdependentBRs = differentials.core.AttrDict()
-couplingdependentBRs.hzz = 'out/Scan_projection_ktcg_Jul10_hzz_couplingdependentBRs_asimov_0'
-# couplingdependentBRs.hgg = 
-# couplingdependentBRs.combWithHbb = 
-couplingdependentBRs.hgg = 'out/Scan_projection_ktcg_Aug09_hgg_couplingdependentBRs_asimov'
+couplingdependentBRs.hzz = 'out/Scan_projection_ktcg_Oct04_hzz_couplingdependentBRs_asimov'
+couplingdependentBRs.hgg = [
+    'out/Scan_projection_ktcg_Oct05_hgg_couplingdependentBRs_asimov',
+    'out/Scan_projection_ktcg_Oct05_hgg_couplingdependentBRs_asimov_rescan_Oct08'
+    ]
+couplingdependentBRs.combWithHbb = [
+    # 'out/Scan_projection_ktcg_Oct04_combWithHbb_couplingdependentBRs_asimov',
+    # Need to rerun... but probably with more clever settings
+    # 'out/Scan_projection_ktcg_Oct12_combWithHbb_couplingdependentBRs_asimov'
+    # 'out/Scan_projection_ktcg_Oct13_combWithHbb_couplingdependentBRs_asimov'
+    # 'out/Scan_projection_ktcg_Oct13_combWithHbb_couplingdependentBRs_asimov_0'
+    'out/Scan_projection_ktcg_Oct14_combWithHbb_couplingdependentBRs_asimov'
+    ]
 
 couplingdependentBRs.scenario2 = differentials.core.AttrDict()
-couplingdependentBRs.scenario2.hzz = 'out/Scan_projection_ktcg_Jul18_hzz_couplingdependentBRs_scenario2_asimov_0'
-# couplingdependentBRs.scenario2.hgg = 'out/Scan_projection_ktcg_Jul18_hgg_couplingdependentBRs_scenario2_asimov'
-# couplingdependentBRs.scenario2.combWithHbb = 'out/Scan_projection_ktcg_Jul18_combWithHbb_couplingdependentBRs_scenario2_asimov'
+couplingdependentBRs.scenario2.hzz = 'out/Scan_projection_ktcg_Oct04_hzz_scenario2_couplingdependentBRs_asimov_0'
 couplingdependentBRs.scenario2.hgg = 'out/Scan_projection_ktcg_Aug09_hgg_couplingdependentBRs_scenario2_asimov'
+couplingdependentBRs.scenario2.combWithHbb = [
+    'out/Scan_projection_ktcg_Oct04_combWithHbb_scenario2_couplingdependentBRs_asimov',
+    'out/Scan_projection_ktcg_Oct04_combWithHbb_scenario2_couplingdependentBRs_asimov_rescan_Oct06',
+    # Rescan not enough
+    # Need to rerun... but probably with more clever settings
+    ]
+
+# Waiting to be finished:
+# out/Scan_projection_ktcg_Oct04_combWithHbb_couplingdependentBRs_asimov
+# out/Scan_projection_ktcg_Oct05_hgg_couplingdependentBRs_asimov
+# out/Scan_projection_ktcg_Oct04_combWithHbb_scenario2_couplingdependentBRs_asimov_rescan_Oct06
+
+# couplingdependentBRs.combWithHbb probably will need a rescan (scen 2 needed it)
+# out/Scan_projection_ktcg_Oct04_combWithHbb_couplingdependentBRs_asimov
+
+# Regarding combination:
+# From bkglogs/bkg_2018-10-04-145429.log (scenario 1), bestfit:
+# Done in 214.55 min (cpu), 214.80 min (real)
+# From bkglogs/bkg_2018-10-04-145434.log (scenario 2), bestfit:
+# Done in 171.39 min (cpu), 171.57 min (real)
+# So, pretty slow... 2 pnts/job on all.q is not a bad choice
+# Too high failure, need 1 pnt/job
 
 
-def latest_couplingdependentBRs(args, decay_channel=None):
-    args = differentialutils.force_asimov(args)
-    if decay_channel is None: decay_channel = differentialutils.get_decay_channel_tag(args)
-    scandict = couplingdependentBRs.scenario2 if args.scenario2 else couplingdependentBRs
-    scandir = scandict[decay_channel]
-    scan = differentials.scans.Scan2D(
-        'ktcg_{0}'.format(decay_channel), 'ct', 'cg', scandir = scandir
-        )
-    scan.title = differentials.core.standard_titles.get(decay_channel, decay_channel)
-    scan.color = 1
-    scan.deltaNLL_threshold = -10.
-    scan.read()
-    return scan
+class PlotPatcherKTCG(PlotPatcher):
+    x_sm=1.0
+    y_sm=0.0
+    x_var = 'ct'
+    y_var = 'cg'
+
+    def patch_hzz(self):
+        self.shift_scan()
+        return self.scan.to_hist()
+
+    def patch_hgg(self):
+        self.shift_scan()
+        return self.scan.to_hist()
+
+    def patch_combination(self):
+        self.shift_scan()
+        return self.scan.to_hist()
+
+
+class PlotPatcherKTCG_couplingdependentBRs(PlotPatcherKTCG):
+    """docstring for PlotPatcherKTCG_couplingdependentBRs"""
+    def __init__(self, args, decay_channel):
+        super(PlotPatcherKTCG_couplingdependentBRs, self).__init__(args, decay_channel)
+
+    def get_scandict(self):
+        return couplingdependentBRs.scenario2 if self.is_scenario2 else couplingdependentBRs
+
+    def patch_combination(self):
+        self.shift_scan()
+        H = self.scan.to_hist()
+        H.add_padding(
+            700.,
+            x_min = 0.72,
+            x_max = 1.44,
+            y_min = -0.035,
+            y_max = 0.035
+            )
+        return H
+
+
+class PlotPatcherKTCG_couplingdependentBRs_scenario2(PlotPatcherKTCG_couplingdependentBRs):
+    """docstring for PlotPatcherKTCG_couplingdependentBRs_scenario2"""
+
+    def patch_combination(self):
+        self.shift_scan()
+        H = self.scan.to_hist()
+        H.add_padding(
+            700.,
+            x_min = 0.7,
+            x_max = 1.4,
+            y_min = -0.02,
+            y_max = 0.025
+            )
+        return H
+
+
+@flag_as_option
+def projection_ktcg_plot_comparison(args):
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+    Patcher = PlotPatcherKTCG_couplingdependentBRs_scenario2 if args.scenario2 else PlotPatcherKTCG_couplingdependentBRs
+    Patcher(args, decay_channel).quick_patched_vs_unpatched()
+
 
 @flag_as_option
 def projection_ktcg_plot_couplingdependentBRs(args):
-    differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000.
+    Patcher = PlotPatcherKTCG_couplingdependentBRs_scenario2 if args.scenario2 else PlotPatcherKTCG_couplingdependentBRs
     scans = []
 
-    hzz = latest_couplingdependentBRs(args, decay_channel='hzz')
-    hzz.color = differentials.core.safe_colors.blue
-    scans.append(hzz)
+    combWithHbb = Patcher(args, 'combWithHbb').patch()
+    scans.append(combWithHbb)
 
-    hgg = latest_couplingdependentBRs(args, decay_channel='hgg')
-    hgg.color = differentials.core.safe_colors.red
+    hgg = Patcher(args, 'hgg').patch()
     scans.append(hgg)
 
-    # if args.scenario2:
-    # combWithHbb = latest_couplingdependentBRs(args, decay_channel='combWithHbb')
-    # combWithHbb.color = 1
-    # scans.append(combWithHbb)
+    hzz = Patcher(args, 'hzz').patch()
+    scans.append(hzz)
+
+    x_min, x_max, y_min, y_max = (None, None, None, None)
+    if args.scenario2:
+        x_min = 0.7
+        x_max = 1.4
+        y_min = -0.02
+        y_max = 0.015
 
     plot = differentials.plotting.plots.MultiContourPlot(
         ('projection_ktcg_plot_couplingdependentBRs'
@@ -76,44 +159,71 @@ def projection_ktcg_plot_couplingdependentBRs(args):
             ),
         scans,
         x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cg'],
-        # x_min=couplingdependentBRs_x_min, x_max=couplingdependentBRs_x_max, y_min=couplingdependentBRs_y_min, y_max=couplingdependentBRs_y_max
+        x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
     plot.draw()
 
 
 #____________________________________________________________________
 floatingBRs = differentials.core.AttrDict()
-floatingBRs.hzz = 'out/Scan_projection_ktcg_Jul10_hzz_floatingBRs_asimov'
+# floatingBRs.hzz = 'out/Scan_projection_ktcg_Jul10_hzz_floatingBRs_asimov'
 
 floatingBRs.scenario2 = differentials.core.AttrDict()
-floatingBRs.scenario2.hzz = 'out/Scan_projection_ktcg_Jul18_hzz_floatingBRs_scenario2_asimov_0'
-floatingBRs.scenario2.hgg = 'out/Scan_projection_ktcg_Jul18_hgg_floatingBRs_scenario2_asimov'
-floatingBRs.scenario2.combWithHbb = 'out/Scan_projection_ktcg_Jul18_combWithHbb_floatingBRs_scenario2_asimov'
+
+floatingBRs.hzz = 'out/Scan_projection_ktcg_Oct05_hzz_floatingBRs_asimov_0'
+floatingBRs.hgg = 'out/Scan_projection_ktcg_Oct04_hgg_floatingBRs_asimov'
+floatingBRs.combWithHbb = ''
+
+# Slightly improved stability w.r.t. to the old min settings
+# floatingBRs.hzz = 'out/Scan_projection_ktcg_Oct04_hzz_floatingBRs_asimov'
+
+floatingBRs.scenario2.hzz = 'out/Scan_projection_ktcg_Oct04_hzz_scenario2_floatingBRs_asimov'
+floatingBRs.scenario2.hgg = 'out/Scan_projection_ktcg_Oct04_hgg_scenario2_floatingBRs_asimov'
+floatingBRs.scenario2.combWithHbb = ''
+
+# Waiting to be finished:
+# out/Scan_projection_ktcg_Oct06_combWithHbb_floatingBRs_asimov
+# out/Scan_projection_ktcg_Oct06_combWithHbb_scenario2_floatingBRs_asimov
+
+# Running:
+# out/Scan_projection_ktcg_Oct06_combWithHbb_floatingBRs_asimov
+# out/Scan_projection_ktcg_Oct06_combWithHbb_scenario2_floatingBRs_asimov
+
+class PlotPatcherKTCG_floatingBRs(PlotPatcherKTCG):
+    """docstring for PlotPatcherKTCG_floatingBRs"""
+    def __init__(self, args, decay_channel):
+        super(PlotPatcherKTCG_floatingBRs, self).__init__(args, decay_channel)
+
+    def get_scandict(self):
+        return floatingBRs.scenario2 if self.args.scenario2 else floatingBRs
 
 
-def latest_floatingBRs(args, decay_channel=None, asimov=None, splined=False):
-    args = differentialutils.force_asimov(args)
-    if decay_channel is None: decay_channel = differentialutils.get_decay_channel_tag(args)
-    scandict = floatingBRs.scenario2 if args.scenario2 else floatingBRs
-    scandir = scandict[decay_channel]
+class PlotPatcherKTCG_floatingBRs_scenario2(PlotPatcherKTCG_floatingBRs):
+    """docstring for PlotPatcherKTCG_floatingBRs_scenario2"""
+    pass        
 
-    scan = differentials.scans.Scan2D(
-        'ktcg_{0}'.format(decay_channel), 'ct', 'cg', scandir = scandir
-        )
-    scan.title = differentials.core.standard_titles.get(decay_channel, decay_channel)
-    scan.color = 1
-    scan.deltaNLL_threshold = -10.
-    scan.read()
-    return scan
+
 
 @flag_as_option
 def projection_ktcg_plot_floatingBRs(args):
-    differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000.
+    Patcher = PlotPatcherKTCG_floatingBRs_scenario2 if args.scenario2 else PlotPatcherKTCG_floatingBRs
     scans = []
 
-    hzz = latest_floatingBRs(args, decay_channel='hzz')
-    hzz.color = differentials.core.safe_colors.blue
+    # combWithHbb = Patcher(args, 'combWithHbb').patch()
+    # scans.append(combWithHbb)
+
+    hzz = Patcher(args, 'hzz').patch()
     scans.append(hzz)
+
+    hgg = Patcher(args, 'hgg').patch()
+    scans.append(hgg)
+
+    x_min, x_max, y_min, y_max = (None, None, None, None)
+    if args.scenario2:
+        x_min = 0.7
+        x_max = 1.4
+        y_min = -0.02
+        y_max = 0.015
 
     plot = differentials.plotting.plots.MultiContourPlot(
         ('projection_ktcg_plot_floatingBRs'
@@ -122,9 +232,8 @@ def projection_ktcg_plot_floatingBRs(args):
             ),
         scans,
         x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cg'],
+        x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
     plot.draw()
-
-
 
 

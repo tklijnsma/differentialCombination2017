@@ -124,6 +124,7 @@ def spline_couplingdependentBRs(scan):
         )
     spline.disallow_negativity = False
     hist = spline.to_hist(nx=300, ny=300)
+    # hist = spline.to_hist(nx=600, ny=600)
     hist.color = scan.color
     hist.name  = scan.name + '_splined'
     hist.title = scan.title
@@ -308,30 +309,44 @@ def onedimscans_Yukawa_scalingbbH_scenario3(args):
     onedimscans_Yukawa('kappab', exp2D, x_min=-10.0, x_max=10.0, tag='scenario3')
     onedimscans_Yukawa('kappac', exp2D, x_min=-20., x_max=20., tag='scenario3')
 
+def f2digits(number):
+    if abs(number) >= 10.:
+        n_decimals = 0
+    elif abs(number) >= 1.:
+        n_decimals = 1
+    else:
+        n_decimals = 2
+    return '{0:.{n_decimals}f}'.format(number, n_decimals=n_decimals)
+
 def onedimscans_Yukawa(kappa, exp2D, obs2D=None, x_min=-10., x_max=10., apply_smoothing=False, tag=None):
+    do_95percent_CL = True
     if not obs2D is None:
         onedimscanner_obs = differentials.onedimscanner.OneDimScanner(
             obs2D,
-            'kappac', 'kappab'
+            'kappac', 'kappab',
+            do_95percent_CL = do_95percent_CL
             )
         obs1D = onedimscanner_obs.get_1d(kappa)
         obs1D.draw_style = 'repr_smooth_line'
-        obs1D.title = '{0} observed; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+        obs1D.title = '{0} observed; ({1} - {2})  ({3}% CL)'.format(
             differentials.core.standard_titles[kappa],
-            obs1D.unc.left_bound, obs1D.unc.right_bound
+            f2digits(obs1D.unc.left_bound), f2digits(obs1D.unc.right_bound),
+            '95' if do_95percent_CL else '68'
             )
         obs1D.color = 1
         if apply_smoothing: obs1D.smooth_y(10)
 
     onedimscanner_exp = differentials.onedimscanner.OneDimScanner(
         exp2D,
-        'kappac', 'kappab'
+        'kappac', 'kappab',
+        do_95percent_CL = do_95percent_CL
         )
     exp1D = onedimscanner_exp.get_1d(kappa)
     exp1D.draw_style = 'repr_dashed_line'
-    exp1D.title = '{0} expected; ({1:.2f} - {2:.2f}) @ 68% CL'.format(
+    exp1D.title = '{0} expected; ({1} - {2})  ({3}% CL)'.format(
         differentials.core.standard_titles[kappa],
-        exp1D.unc.left_bound, exp1D.unc.right_bound
+        f2digits(exp1D.unc.left_bound), f2digits(exp1D.unc.right_bound),
+        '95' if do_95percent_CL else '68'
         )
     exp1D.color = 1
     if apply_smoothing: exp1D.smooth_y(10)
@@ -342,6 +357,11 @@ def onedimscans_Yukawa(kappa, exp2D, obs2D=None, x_min=-10., x_max=10., apply_sm
 
     differentials.plotting.canvas.c.resize_temporarily(850, 800)
     plot = differentials.plotting.plots.MultiScanPlot(plotname)
+    plot.do_95percent_CL = do_95percent_CL
+
+    plot.y_max    = 7.0
+    plot.y_cutoff = 5.0
+
     if not obs2D is None: plot.manual_graphs.append(obs1D)
     plot.manual_graphs.append(exp1D)
     plot.x_title = differentials.core.standard_titles[kappa]
@@ -352,12 +372,12 @@ def onedimscans_Yukawa(kappa, exp2D, obs2D=None, x_min=-10., x_max=10., apply_sm
     plot.draw()
     plot.wrapup()
 
-    texstr_var = lambda cmdname, value: '\\newcommand{{\\{0}}}{{{1:.1f}}}'.format(cmdname, value)
-    print texstr_var('{0}LeftAsimov'.format(kappa), exp1D.unc.left_bound)
-    print texstr_var('{0}RightAsimov'.format(kappa), exp1D.unc.right_bound)
+    texstr_var = lambda cmdname, value: '\\newcommand{{\\{0}}}{{{1}}}'.format(cmdname, value)
+    print texstr_var('{0}LeftAsimov'.format(kappa), f2digits(exp1D.unc.left_bound))
+    print texstr_var('{0}RightAsimov'.format(kappa), f2digits(exp1D.unc.right_bound))
     if not obs2D is None:
-        print texstr_var('{0}LeftObserved'.format(kappa), obs1D.unc.left_bound)
-        print texstr_var('{0}RightObserved'.format(kappa), obs1D.unc.right_bound)
+        print texstr_var('{0}LeftObserved'.format(kappa), f2digits(obs1D.unc.left_bound))
+        print texstr_var('{0}RightObserved'.format(kappa), f2digits(obs1D.unc.right_bound))
 
 
 
