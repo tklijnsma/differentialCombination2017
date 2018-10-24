@@ -35,22 +35,34 @@ style.error_bar_line_width = 1
 couplingdependentBRs = differentials.core.AttrDict()
 couplingdependentBRs.scenario2 = differentials.core.AttrDict()
 
-couplingdependentBRs.hzz = 'out/Scan_projection_kbkc_Oct02_hzz_couplingdependentBRs_asimov'
+# couplingdependentBRs.hzz = 'out/Scan_projection_kbkc_Oct02_hzz_couplingdependentBRs_asimov'
+# couplingdependentBRs.hgg = [
+#     'out/Scan_projection_kbkc_Oct02_hgg_couplingdependentBRs_asimov',
+#     'out/Scan_projection_kbkc_Oct02_hgg_couplingdependentBRs_asimov_rescan_Oct03'
+#     ]
+# couplingdependentBRs.combination = [
+#     'out/Scan_projection_kbkc_Oct02_combination_couplingdependentBRs_asimov',
+#     'out/Scan_projection_kbkc_Oct02_combination_couplingdependentBRs_asimov_rescan_Oct04',
+#     ]
+# Frozen lumiScale:
+couplingdependentBRs.hzz = 'out/Scan_projection_kbkc_Oct18_hzz_couplingdependentBRs_asimov'
 couplingdependentBRs.hgg = [
-    'out/Scan_projection_kbkc_Oct02_hgg_couplingdependentBRs_asimov',
-    'out/Scan_projection_kbkc_Oct02_hgg_couplingdependentBRs_asimov_rescan_Oct03'
+    'out/Scan_projection_kbkc_Oct18_hgg_couplingdependentBRs_asimov',
+    'out/Scan_projection_kbkc_Oct18_hgg_couplingdependentBRs_asimov_rescan_Oct19'
     ]
-couplingdependentBRs.combination = [
-    'out/Scan_projection_kbkc_Oct02_combination_couplingdependentBRs_asimov',
-    'out/Scan_projection_kbkc_Oct02_combination_couplingdependentBRs_asimov_rescan_Oct04',
-    ]
+couplingdependentBRs.combination = 'out/Scan_projection_kbkc_Oct18_combination_couplingdependentBRs_asimov'
 
-couplingdependentBRs.scenario2.hzz = 'out/Scan_projection_kbkc_Oct02_hzz_scenario2_couplingdependentBRs_asimov'
-couplingdependentBRs.scenario2.hgg = 'out/Scan_projection_kbkc_Oct04_hgg_scenario2_couplingdependentBRs_asimov'
-couplingdependentBRs.scenario2.combination = [
-    'out/Scan_projection_kbkc_Oct02_combination_scenario2_couplingdependentBRs_asimov',
-    'out/Scan_projection_kbkc_Oct02_combination_scenario2_couplingdependentBRs_asimov_rescan_Oct03'
-    ]
+# couplingdependentBRs.scenario2.hzz = 'out/Scan_projection_kbkc_Oct02_hzz_scenario2_couplingdependentBRs_asimov'
+# couplingdependentBRs.scenario2.hgg = 'out/Scan_projection_kbkc_Oct04_hgg_scenario2_couplingdependentBRs_asimov'
+# couplingdependentBRs.scenario2.combination = [
+#     'out/Scan_projection_kbkc_Oct02_combination_scenario2_couplingdependentBRs_asimov',
+#     'out/Scan_projection_kbkc_Oct02_combination_scenario2_couplingdependentBRs_asimov_rescan_Oct03'
+#     ]
+
+# Frozen lumiScale:
+couplingdependentBRs.scenario2.hzz = 'out/Scan_projection_kbkc_Oct18_hzz_scenario2_couplingdependentBRs_asimov'
+couplingdependentBRs.scenario2.hgg = 'out/Scan_projection_kbkc_Oct18_hgg_scenario2_couplingdependentBRs_asimov'
+couplingdependentBRs.scenario2.combination = 'out/Scan_projection_kbkc_Oct18_combination_scenario2_couplingdependentBRs_asimov'
 
 
 class PlotPatcher(object):
@@ -67,16 +79,18 @@ class PlotPatcher(object):
     y_sm=1.0
     x_var = 'kappac'
     y_var = 'kappab'
+    deltaNLL_threshold = -10.
 
     def __init__(self, args, decay_channel):
         super(PlotPatcher, self).__init__()
         args = differentialutils.force_asimov(args)
-        differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000.
+        differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000
         self.args = args
         self.is_scenario2 = args.scenario2
         self.decay_channel = decay_channel
         self.quick_draw_list = []
 
+        self.preprocess()
         self.scan = self.get_scan()
         self.scan.name = self.decay_channel
         self.scan.color = self.colors[decay_channel]
@@ -85,6 +99,21 @@ class PlotPatcher(object):
         self.unpatched.name = self.decay_channel
         self.add_to_quick_draw_list('rawscan', self.unpatched)
 
+    def preprocess(self):
+        if self.is_combination():
+            self.preprocess_combination()
+        else:
+            getattr(self, 'preprocess_' + self.decay_channel)()
+
+    def preprocess_hzz(self):
+        pass
+
+    def preprocess_hgg(self):
+        pass
+
+    def preprocess_combination(self):
+        pass
+
     def get_scan(self):
         scandir = self.get_scandict()[self.decay_channel]
         scan = differentials.scans.Scan2D(
@@ -92,7 +121,7 @@ class PlotPatcher(object):
             )
         scan.read_one_scandir = False
         scan.title = differentials.core.standard_titles.get(self.decay_channel, self.decay_channel)
-        scan.deltaNLL_threshold = -10.
+        scan.deltaNLL_threshold = self.deltaNLL_threshold
         scan.read()
         return scan
 
@@ -139,6 +168,7 @@ class PlotPatcher(object):
         for i_entry in xrange(len(self.scan.entries)):
             if self.scan.entries[i_entry] == self.scan.bestfit(): continue
             self.scan.entries[i_entry].deltaNLL -= new_min_delta_nll + 0.00001
+        self.deltaNLL_minshift = new_min_delta_nll
 
     def quick_patched_vs_unpatched(self):
         self.add_to_quick_draw_list('zpatched', self.patch())
@@ -160,35 +190,30 @@ class PlotPatcherKBKC_couplingdependentBRs(PlotPatcher):
         self.shift_scan()
         return self.scan.to_hist()
 
+    def patch_hgg(self):
+        return self.patch_combination()
+
     def patch_combination(self):
         self.shift_scan()
-        self.add_to_quick_draw_list('aftershifting', self.scan.to_hist())
-
-        self.scan.filter(
-            lambda e: (
-                ( (e.y**2) / (1.1**2)  +  (e.x**2) / (4.5**2) < 1.2**2 )
-                and
-                ( (e.y**2) / (1.1**2)  +  (e.x**2) / (4.5**2) > 0.8**2 )
-                )
+        # return self.scan.to_hist()
+        self.scan.filter(lambda e: e.deltaNLL < 10. and e.deltaNLL >= 0., inplace = True)
+        polyfit = self.scan.to_polyfit(
+            x_min = -5.5,
+            x_max = 5.75,
+            y_min = -1.2,
+            y_max = 1.2,
+            order = 4
             )
-        self.add_to_quick_draw_list('ovalfilter', self.scan.to_hist())
-
-        # spline = self.scan.to_spline(
-        #     x_min = -5.0, x_max = 5.4, y_min = -1.20, y_max = 1.20,
-        #     deltaNLL_cutoff = 10.,
-        #     eps = 0.9
-        #     )
-        # return spline.to_hist(nx=180, ny=180)
-        return self.scan.to_hist()
-
-    def patch_hgg(self):
-        self.shift_scan()
-        H = self.scan.to_hist()
-        H.polyfit_patch(x_min=-4.5, x_max=-2.25, y_min=-1.2, y_max=-0.4, order=6)
-        H.polyfit_patch(x_min=-6.1, x_max=-3.8, y_min=-0.45, y_max=0.15, order=6)
-        H.polyfit_patch(x_min=-3.4, x_max=0.0, y_min=-1.3, y_max=-0.75, order=6)
-        H.set_value_for_patch(0., -2.8, 2.6, -0.65, 0.65)
-        return H
+        polyfit.negativity_is_zero = True
+        hist = polyfit.to_hist(nx=300, ny=300)
+        hist.add_padding(
+            700.,
+            x_min = -6.1,
+            x_max = 6.1,
+            y_min = -1.4,
+            y_max = 1.4,
+            )
+        return hist
 
 
 class PlotPatcherKBKC_couplingdependentBRs_scenario2(PlotPatcherKBKC_couplingdependentBRs):
@@ -199,26 +224,6 @@ class PlotPatcherKBKC_couplingdependentBRs_scenario2(PlotPatcherKBKC_couplingdep
     def patch_hgg(self):
         self.shift_scan()
         return self.scan.to_hist()
-
-    def patch_combination(self):
-        self.shift_scan()
-        self.add_to_quick_draw_list('shifted', self.scan.to_hist())
-
-        # spline = self.scan.to_spline(
-        #     x_min = -5.0, x_max = 5.4, y_min = -1.15, y_max = 1.15,
-        #     # deltaNLL_cutoff = 30.,
-        #     eps = 0.7
-        #     )
-        # return spline.to_hist(nx=180, ny=180)
-
-        return self.scan.to_hist()
-
-
-@flag_as_option
-def projection_kbkc_plot_comparison(args):
-    decay_channel = differentialutils.get_decay_channel_tag(args)
-    Patcher = PlotPatcherKBKC_couplingdependentBRs_scenario2 if args.scenario2 else PlotPatcherKBKC_couplingdependentBRs
-    Patcher(args, decay_channel).quick_patched_vs_unpatched()
 
 
 @flag_as_option
@@ -235,6 +240,15 @@ def projection_kbkc_plot_couplingdependentBRs(args):
     hgg = Patcher(args, 'hgg').patch()
     scans.append(hgg)
 
+    x_min, x_max, y_min, y_max = (None, None, None, None)
+    try:
+        x_min = combination.x_bin_boundaries[0]
+        x_max = combination.x_bin_boundaries[-1]
+        y_min = combination.y_bin_boundaries[0]
+        y_max = combination.y_bin_boundaries[-1]
+    except:
+        pass
+
     plot = differentials.plotting.plots.MultiContourPlot(
         ('projection_kbkc_plot_couplingdependentBRs'
             + ('_asimov' if args.asimov else '')
@@ -242,9 +256,18 @@ def projection_kbkc_plot_couplingdependentBRs(args):
             ),
         scans,
         x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
-        # x_min=couplingdependentBRs_x_min, x_max=couplingdependentBRs_x_max, y_min=couplingdependentBRs_y_min, y_max=couplingdependentBRs_y_max
+        x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
-    plot.draw()
+    plot.draw(wait=True)
+    plot.add_BR_parametrized_text()
+    plot.add_text_on_the_fly(
+        text_size = 0.040,
+        x = lambda c: 1. - c.GetRightMargin() - 0.01,
+        # y = lambda c: c.GetBottomMargin() + 0.03 + 0.06,
+        y = lambda c: 1. - c.GetTopMargin() - 0.05,
+        text = 'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
+        )
+    plot.wrapup()
 
 
 
@@ -253,14 +276,22 @@ def projection_kbkc_plot_couplingdependentBRs(args):
 floatingBRs = differentials.core.AttrDict()
 floatingBRs.scenario2 = differentials.core.AttrDict()
 
-floatingBRs.hzz = 'out/Scan_projection_kbkc_Oct03_hzz_floatingBRs_asimov'
-floatingBRs.hgg = 'out/Scan_projection_kbkc_Oct03_hgg_floatingBRs_asimov'
-floatingBRs.combination = 'out/Scan_projection_kbkc_Oct03_combination_floatingBRs_asimov'
+# floatingBRs.hzz = 'out/Scan_projection_kbkc_Oct03_hzz_floatingBRs_asimov'
+# floatingBRs.hgg = 'out/Scan_projection_kbkc_Oct03_hgg_floatingBRs_asimov'
+# floatingBRs.combination = 'out/Scan_projection_kbkc_Oct03_combination_floatingBRs_asimov'
 
-floatingBRs.scenario2.hzz = 'out/Scan_projection_kbkc_Oct03_hzz_scenario2_floatingBRs_scenario2_asimov'
-floatingBRs.scenario2.hgg = 'out/Scan_projection_kbkc_Oct03_hgg_scenario2_floatingBRs_scenario2_asimov'
-floatingBRs.scenario2.combination = 'out/Scan_projection_kbkc_Oct03_combination_scenario2_floatingBRs_scenario2_asimov'
+# floatingBRs.scenario2.hzz = 'out/Scan_projection_kbkc_Oct03_hzz_scenario2_floatingBRs_scenario2_asimov'
+# floatingBRs.scenario2.hgg = 'out/Scan_projection_kbkc_Oct03_hgg_scenario2_floatingBRs_scenario2_asimov'
+# floatingBRs.scenario2.combination = 'out/Scan_projection_kbkc_Oct03_combination_scenario2_floatingBRs_scenario2_asimov'
 
+# frozen lumiScale:
+floatingBRs.hzz = 'out/Scan_projection_kbkc_Oct19_hzz_floatingBRs_asimov'
+floatingBRs.hgg = 'out/Scan_projection_kbkc_Oct19_hgg_floatingBRs_asimov'
+floatingBRs.combination = 'out/Scan_projection_kbkc_Oct19_combination_floatingBRs_asimov'
+
+floatingBRs.scenario2.hzz = 'out/Scan_projection_kbkc_Oct19_hzz_scenario2_floatingBRs_scenario2_asimov'
+floatingBRs.scenario2.hgg = 'out/Scan_projection_kbkc_Oct19_hgg_scenario2_floatingBRs_scenario2_asimov'
+floatingBRs.scenario2.combination = 'out/Scan_projection_kbkc_Oct19_combination_scenario2_floatingBRs_scenario2_asimov'
 
 class PlotPatcherKBKC_floatingBRs(PlotPatcher):
     """docstring for PlotPatcherKBKC_floatingBRs"""
@@ -276,11 +307,39 @@ class PlotPatcherKBKC_floatingBRs(PlotPatcher):
 
     def patch_hzz(self):
         self.shift_scan()
-        return self.scan.to_hist()
+        # return self.scan.to_hist()
+        self.scan.filter(lambda e: e.deltaNLL < 30., inplace = True)
+        polyfit = self.scan.to_polyfit(
+            x_min = -10.,
+            x_max = 12.,
+            y_min = -2.4,
+            y_max = 4.7,
+            order = 4
+            )
+        polyfit.negativity_is_zero = True
+        hist = polyfit.to_hist(nx=180, ny=180)
+        return hist
 
     def patch_combination(self):
         self.shift_scan()
-        return self.scan.to_hist()
+        # return self.scan.to_hist()
+        polyfit = self.scan.to_polyfit(
+            x_min = -10.,
+            x_max = 12.,
+            y_min = -2.4,
+            y_max = 4.4,
+            order = 4
+            )
+        polyfit.negativity_is_zero = True
+        hist = polyfit.to_hist(nx=180, ny=180)
+        hist.add_padding(
+            700.,
+            x_min = -12.,
+            x_max = 14.,
+            y_min = -3.,
+            y_max = 5.5,
+            )
+        return hist
 
 
 
@@ -317,12 +376,20 @@ def projection_kbkc_plot_floatingBRs(args):
         x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
         # x_min=couplingdependentBRs_x_min, x_max=couplingdependentBRs_x_max, y_min=couplingdependentBRs_y_min, y_max=couplingdependentBRs_y_max
         )
-    plot.draw()
+    plot.draw(wait=True)
+    plot.add_BR_floating_text()
+    plot.add_text_on_the_fly(
+        text_size = 0.040,
+        x = lambda c: 1. - c.GetRightMargin() - 0.01,
+        y = lambda c: 1. - c.GetTopMargin() - 0.05,
+        text = 'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
+        )
+    plot.wrapup()
 
 
 # @flag_as_option
 # def projection_kbkc_plot_floatingBRs(args):
-#     differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000.
+#     differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000
 #     scans = []
 
 #     combination = latest_floatingBRs(args, decay_channel='combination')

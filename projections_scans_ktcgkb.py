@@ -42,6 +42,8 @@ class CombineConfigKTCGKB(CombineConfigKBKC):
 
     def __init__(self, args):
         super(CombineConfigKTCGKB, self).__init__(args)
+        self.minimizer_settings_andrew()
+        self.freeze_mcstat_uncertainties()
 
     def minimizer_settings_andrew(self):
         logging.warning('Applying minimizer_settings suggested by Andrew')
@@ -117,18 +119,13 @@ class CombineConfigKTCG_couplingdependentBRs(CombineConfigKTCGKB):
         self.set_parameter_range('cg', -0.035, 0.03)
 
     def set_ranges_combination(self):
-        self.set_parameter_range('ct', 0.7, 1.35)
-        self.set_parameter_range('cg', -0.035, 0.03)
-
-        # self.nPointsPerJob = 2
-        # self.queue = 'all.q'
-        # self.nPoints = 50*50
-
+        # self.set_parameter_range('ct', 0.7, 1.35)
+        # self.set_parameter_range('cg', -0.035, 0.03)
+        self.set_parameter_range('ct', 0.80, 1.20)
+        self.set_parameter_range('cg', -0.016, 0.016)
         self.nPointsPerJob = 8
         self.queue = 'all.q'
-        self.nPoints = 70*70
-        # self.minimizer_settings_andrew()
-
+        self.nPoints = 40*40
 
 class CombineConfigKTCG_couplingdependentBRs_scenario2(CombineConfigKTCG_couplingdependentBRs):
     """docstring for CombineConfigKTCG_couplingdependentBRs_scenario2"""
@@ -144,59 +141,59 @@ class CombineConfigKTCG_couplingdependentBRs_scenario2(CombineConfigKTCG_couplin
 
     def set_ranges_hgg(self):
         self.queue = 'all.q'
-        self.nPoints = 60*60
-        self.nPointsPerJob = 10
+        self.nPoints = 50*50
+        self.nPointsPerJob = 30
         self.set_parameter_range('ct', 0.7, 1.4)
         self.set_parameter_range('cg', -0.02, 0.015)
-        print 'THIS SCAN IS FINE, don\'t redo it'
-        sys.exit()
+        # print 'THIS SCAN IS FINE, don\'t redo it'
+        # sys.exit()
 
     def set_ranges_combination(self):
-        # self.queue = 'all.q'
-        # self.nPoints = 40*40
-        # self.nPointsPerJob = 2
-
-        self.nPointsPerJob = 8
+        self.nPointsPerJob = 23
         self.queue = 'all.q'
         self.nPoints = 70*70
-
-        self.set_parameter_range('ct', 0.8, 1.18)
-        self.set_parameter_range('cg', -0.012, 0.012)
-        # self.minimizer_settings_andrew()
+        self.set_parameter_range('ct', 0.77, 1.24)
+        self.set_parameter_range('cg', -0.014, 0.014)
 
 
 @flag_as_option
 def projection_ktcg_scan_couplingdependentBRs(args):
     Config = CombineConfigKTCG_couplingdependentBRs_scenario2 if args.scenario2 else CombineConfigKTCG_couplingdependentBRs
     config = Config(args)
-    if args.combWithHbb:
-        config.minimizer_settings_reasonable()
-        config.freeze_mcstat_uncertainties()
+    # if args.combWithHbb:
+    #     # config.minimizer_settings_reasonable()
+    #     # config.freeze_mcstat_uncertainties()
 
-        # if args.scenario2:
-        #     reusable_postfit = 'out/Scan_projection_ktcg_Oct04_combWithHbb_scenario2_couplingdependentBRs_asimov/postfit_and_fastscan/higgsCombine_POSTFIT_ASIMOV_projection_ktcgkb_combWithHbb_s2groups_Jul18_couplingModel_reweighted_scenario2_couplingdependentBRs.MultiDimFit.mH125.root'
-        # else:
-        #     reusable_postfit = 'out/Scan_projection_ktcg_Oct04_combWithHbb_couplingdependentBRs_asimov/postfit_and_fastscan/higgsCombine_POSTFIT_ASIMOV_projection_ktcgkb_combWithHbb_Jul10_couplingModel_reweighted_couplingdependentBRs.MultiDimFit.mH125.root'
-        # differentialutils.run_fastscan_scan_reused_postfit(
-        #     config,
-        #     reusable_postfit
-        #     )
+    #     # if args.scenario2:
+    #     #     reusable_postfit = 'out/Scan_projection_ktcg_Oct04_combWithHbb_scenario2_couplingdependentBRs_asimov/postfit_and_fastscan/higgsCombine_POSTFIT_ASIMOV_projection_ktcgkb_combWithHbb_s2groups_Jul18_couplingModel_reweighted_scenario2_couplingdependentBRs.MultiDimFit.mH125.root'
+    #     # else:
+    #     #     reusable_postfit = 'out/Scan_projection_ktcg_Oct04_combWithHbb_couplingdependentBRs_asimov/postfit_and_fastscan/higgsCombine_POSTFIT_ASIMOV_projection_ktcgkb_combWithHbb_Jul10_couplingModel_reweighted_couplingdependentBRs.MultiDimFit.mH125.root'
+    #     # differentialutils.run_fastscan_scan_reused_postfit(
+    #     #     config,
+    #     #     reusable_postfit
+    #     #     )
 
-        differentialutils.run_postfit_fastscan_scan(config)
+    #     # differentialutils.run_postfit_fastscan_scan(config)
 
-    else:
-        differentialutils.run_postfit_fastscan_scan(config)
+    #     config.minimizer_settings_andrew()
+    #     differentialutils.scan_directly(config)
+
+    # else:
+    #     differentialutils.run_postfit_fastscan_scan(config)
+    differentialutils.run_postfit_fastscan_scan(config)
 
 
 #____________________________________________________________________
 
 workspaces.floatingBRs.hgg                  = 'out/workspaces_Jul10/projection_ktcgkb_hgg_Jul10_couplingModel_reweighted_floatingBRs.root'
 workspaces.floatingBRs.hzz                  = 'out/workspaces_Jul10/projection_ktcgkb_hzz_Jul10_couplingModel_reweighted_floatingBRs.root'
-workspaces.floatingBRs.combWithHbb          = 'out/workspaces_Jul10/projection_ktcgkb_combWithHbb_Jul10_couplingModel_reweighted_constrainedbbZZ_floatingBRs.root'
+# workspaces.floatingBRs.combWithHbb          = 'out/workspaces_Jul10/projection_ktcgkb_combWithHbb_Jul10_couplingModel_reweighted_constrainedbbZZ_floatingBRs.root'
+workspaces.floatingBRs.combWithHbb          = 'out/workspaces_Oct20/projection_ktcgkb_combWithHbb_s2groups_Jul18_couplingModel_reweighted_floatingBRs.root'
 
 workspaces.floatingBRs.scenario2.hgg         = 'out/workspaces_Jul18/projection_ktcgkb_hgg_s2groups_Jul18_couplingModel_reweighted_scenario2_floatingBRs.root'
 workspaces.floatingBRs.scenario2.hzz         = 'out/workspaces_Jul18/projection_ktcgkb_hzz_s2groups_Jul18_couplingModel_reweighted_scenario2_floatingBRs.root'
-workspaces.floatingBRs.scenario2.combWithHbb = 'out/workspaces_Jul18/projection_ktcgkb_combWithHbb_s2groups_Jul18_couplingModel_reweighted_constrainedbbZZ_scenario2_floatingBRs.root'
+# workspaces.floatingBRs.scenario2.combWithHbb = 'out/workspaces_Jul18/projection_ktcgkb_combWithHbb_s2groups_Jul18_couplingModel_reweighted_constrainedbbZZ_scenario2_floatingBRs.root'
+workspaces.floatingBRs.scenario2.combWithHbb = 'out/workspaces_Oct20/projection_ktcgkb_combWithHbb_s2groups_Jul18_couplingModel_reweighted_scenario2_floatingBRs.root'
 
 
 class CombineConfigKTCG_floatingBRs(CombineConfigKTCGKB):
@@ -230,10 +227,12 @@ class CombineConfigKTCG_floatingBRs(CombineConfigKTCGKB):
         self.nPointsPerJob = 8
 
     def set_ranges_combination(self):
-        self.set_ranges_hgg_and_combination()
-        self.nPoints = 70*70
+        self.set_parameter_range('ct', 0.50, 2.2)
+        self.set_parameter_range('cg', -0.085, 0.04)
+        self.minimizer_settings_andrew()
+        self.nPoints = 40*40
         self.queue = 'all.q'
-        self.nPointsPerJob = 1
+        self.nPointsPerJob = 6
 
 class CombineConfigKTCG_floatingBRs_scenario2(CombineConfigKTCG_floatingBRs):
     """docstring for CombineConfigKTCG_floatingBRs_scenario2"""
@@ -243,6 +242,13 @@ class CombineConfigKTCG_floatingBRs_scenario2(CombineConfigKTCG_floatingBRs):
     def set_ranges_hzz(self):
         super(CombineConfigKTCG_floatingBRs_scenario2, self).set_ranges_hzz()
         self.nPointsPerJob = 200
+
+    def set_ranges_combination(self):
+        # self.set_ranges_hgg_and_combination()
+        # self.nPoints = 40*40
+        # self.queue = 'all.q'
+        super(CombineConfigKTCG_floatingBRs_scenario2, self).set_ranges_combination()
+        self.nPointsPerJob = 9
 
 
 @flag_as_option

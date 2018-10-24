@@ -59,11 +59,63 @@ p3000_s2.hzz = 'out/ScanProjection_Jul17_pth_smH_hzz_3000ifb_scenario2_asimov'
 p3000_s2.hbb = 'out/ScanProjection_Jul17_pth_smH_hbb_3000ifb_scenario2_asimov'
 p3000_s2.combWithHbb = 'out/ScanProjection_Jul17_pth_smH_combWithHbb_3000ifb_scenario2_asimov'
 
+
+#____________________________________________________________________
+@flag_as_option
+def projection_pth_smH_plot_GT200(args):
+    differentials.scans.Scan.deltaNLL_threshold = -10.
+    differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000
+
+    scan_scen1 = differentials.scans.Scan(
+        x_variable = 'r_smH_PTH_GT200',
+        scandir = 'out/ScanProjection_Oct24_pth_smH_hgg_3000ifb_GT200only_asimov',
+        read_immediately = True
+        )
+    scan_scen1.create_uncertainties()
+    scan_scen1.title = 'S1'
+    scan_scen1.color = 2
+    scan_scen1.fix_bestfit_to_one()
+
+    scan_scen2 = differentials.scans.Scan(
+        x_variable = 'r_smH_PTH_GT200',
+        scandir = 'out/ScanProjection_Oct24_pth_smH_hgg_3000ifb_scenario2_GT200only_asimov',
+        read_immediately = True
+        )
+    scan_scen2.create_uncertainties()
+    scan_scen2.title = 'S2'
+    scan_scen2.color = 4
+    scan_scen2.fix_bestfit_to_one()
+
+    plot = differentials.plotting.plots.MultiScanPlot('projection_hgg_GT200')
+    plot.add_scan(scan_scen1)
+    plot.add_scan(scan_scen2)
+
+    plot.x_title = '#mu(p_{T} > 200 GeV)'
+    plot.x_min = 0.9
+    plot.x_max = 1.1
+
+    plot.draw()
+    plot.wrapup()
+
+    smxs = LatestBinning.obs_pth_smH_hzzBinning.crosssection()[-1]
+    def printscen(unc):
+        print 'mu(pT>200)    = {0:+.4f}  {1:+.4f} / {2:+.4f}'.format(
+            unc.x_min, unc.left_error, unc.right_error
+            )
+        print 'sigma(pT>200) = {0:+.4f}  {1:+.4f} / {2:+.4f} pb'.format(
+            smxs * unc.x_min, smxs * unc.left_error, smxs * unc.right_error
+            )
+
+    print 'Scenario 1:'
+    printscen(scan_scen1.unc)
+    print 'Scenario 2:'
+    printscen(scan_scen2.unc)
+
 #____________________________________________________________________
 @flag_as_option
 def projection_pth_smH_plot(args):
     differentials.scans.Scan.deltaNLL_threshold = -10.
-    differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000.
+    differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000
     spectra = []
     obs_name = 'pth_smH'
     obstuple = LatestBinning.obstuple_pth_smH
@@ -74,11 +126,11 @@ def projection_pth_smH_plot(args):
 
     PLOT_SYSTEMATIC_ONLY = False
 
-    DO_STAT_ONLY = True
-    # DO_STAT_ONLY = False
+    # DO_STAT_ONLY = True
+    DO_STAT_ONLY = False
 
-    # DO_S2 = True
-    DO_S2 = False
+    DO_S2 = True if args.scenario2 else False
+    # DO_S2 = False
 
     # DO_LUMI_36 = True
     DO_LUMI_36 = False
@@ -129,6 +181,7 @@ def projection_pth_smH_plot(args):
         s.read()
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
+        s.fix_bestfit_to_one()
 
     if combWithHbb_given and PLOT_SYSTEMATIC_ONLY:
         # Get syst only shape
@@ -188,8 +241,8 @@ def projection_pth_smH_plot(args):
     # Some ranges
     plot.top_y_min = 0.9*10e-6
     plot.top_y_max = 10.
-    # plot.bottom_y_min = 0.2
-    # plot.bottom_y_max = 1.7
+    plot.bottom_y_min = 0.5
+    plot.bottom_y_max = 1.5
 
     plot.scans_x_min = 0.5
     plot.scans_x_max = 1.5
@@ -244,7 +297,7 @@ def projection_pth_smH_plot(args):
     l = differentials.plotting.pywrappers.Latex(
         lambda c: c.GetLeftMargin() + 0.04,
         lambda c: c.GetBottomMargin() + 0.05,
-        '#sigma_{SM} from DOI: 10.23731/CYRM-2017-002'
+        '#sigma_{SM} from CYRM-2017-002'
         )
     if not APPLY_FIXED_BINNING:
         l.x = lambda c: c.GetLeftMargin() + 0.04 + xshift
@@ -256,6 +309,17 @@ def projection_pth_smH_plot(args):
     l.Draw()
 
     plot.base_bottom.GetYaxis().SetNdivisions(505)
+
+    scenlabel = differentials.plotting.pywrappers.Latex(
+        lambda c: c.GetLeftMargin() + 0.018,
+        lambda c: 1. - c.GetTopMargin() - 0.014,
+        'w/ YR18 syst. uncert. (S2)' if DO_S2 else 'w/ Run 2 syst. uncert. (S1)'
+        )
+    scenlabel.SetNDC()
+    scenlabel.SetTextAlign(13)
+    scenlabel.SetTextFont(42) 
+    scenlabel.SetTextSize(0.050)
+    scenlabel.Draw()
 
     if APPLY_FIXED_BINNING: plot.replace_bin_labels([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ])
     plot.wrapup()

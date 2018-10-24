@@ -125,6 +125,7 @@ def scan_top_scalingttH_couplingdependentBRs(args):
 
     differentialutils.run_postfit_fastscan_scan(config)
 
+
 @flag_as_option
 def scan_top_scalingttH_floatingBRs_constrainedbbZZ(args):
     config = basic_config(args)

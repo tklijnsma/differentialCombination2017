@@ -103,6 +103,13 @@ def main():
         logging.info('Remove the default \'Preliminary\' tag from plots')
         differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = ''
 
+    projections_plotting = True
+    # projections_plotting = False
+
+    if projections_plotting:
+        differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = 'Projection'
+        differentials.plotting.plots.MultiContourPlot.z_axis_title = 'q'
+
     if args.saveroot:
         differentials.core.save_root()
     if args.savepng:

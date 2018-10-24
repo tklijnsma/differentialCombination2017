@@ -272,7 +272,10 @@ class CMS_Latex_lumi(Latex):
         if not(text_size is None):
             self.text_size = text_size
 
-        text = '{0:.1f} fb^{{-1}} (13 TeV)'.format(lumi)
+        if isinstance(lumi, int):
+            text = '{0} fb^{{-1}} (13 TeV)'.format(lumi)
+        else:
+            text = '{0:.1f} fb^{{-1}} (13 TeV)'.format(lumi)
         x = lambda c: 1.-c.GetRightMargin()
         y = self._y
         super(CMS_Latex_lumi, self).__init__(x, y, text)
@@ -1257,6 +1260,9 @@ class Histogram2D(BasicDrawable):
         self.x_bin_centers.sort()
         self.y_bin_centers.sort()
 
+        logging.trace('Found the following x_bin_centers:\n{0}'.format(self.x_bin_centers))
+        logging.trace('Found the following y_bin_centers:\n{0}'.format(self.y_bin_centers))
+
         self.n_bins_x = len(self.x_bin_centers)
         self.n_bins_y = len(self.y_bin_centers)
         self.x_bin_boundaries = self.infer_bin_boundaries(self.x_bin_centers)
@@ -1363,7 +1369,34 @@ class Histogram2D(BasicDrawable):
                 self.H2.SetBinContent(i_x+1, i_y+1, smoothed[i_x][i_y])
 
 
+
+
     def add_padding(self, value, x_min=-1000., x_max=1000., y_min=-1000., y_max=1000.):
+        if x_min > self.x_bin_boundaries[0]:
+            logging.error(
+                'Cannot pad histogram: x_min {0} > self.x_bin_boundaries[0] {1}'
+                .format(x_min, self.x_bin_boundaries[0])
+                )
+            return
+        if x_max < self.x_bin_boundaries[-1]:
+            logging.error(
+                'Cannot pad histogram: x_max {0} < self.x_bin_boundaries[-1] {1}'
+                .format(x_max, self.x_bin_boundaries[-1])
+                )
+            return
+        if y_min > self.y_bin_boundaries[0]:
+            logging.error(
+                'Cannot pad histogram: y_min {0} > self.y_bin_boundaries[0] {1}'
+                .format(y_min, self.y_bin_boundaries[0])
+                )
+            return
+        if y_max < self.y_bin_boundaries[-1]:
+            logging.error(
+                'Cannot pad histogram: y_max {0} < self.y_bin_boundaries[-1] {1}'
+                .format(y_max, self.y_bin_boundaries[-1])
+                )
+            return
+
         self.x_bin_boundaries = [x_min] + self.x_bin_boundaries + [x_max]
         self.y_bin_boundaries = [y_min] + self.y_bin_boundaries + [y_max]
         self.n_bins_x = len(self.x_bin_boundaries)-1
@@ -1395,6 +1428,96 @@ class Histogram2D(BasicDrawable):
             + [ [value] + r + [value] for r in self.H2_array ]
             + [ value for i in xrange(self.n_bins_y) ]
             )
+
+
+    def mirror(self, del_y_middle=False):
+        x_new_bounds = [ x for x in self.x_bin_boundaries if x > 0. ]
+        x_new_bounds = [ -b for b in x_new_bounds[::-1] ] + x_new_bounds
+        x_new_centers = [ 0.5*(r+l) for l, r in zip(x_new_bounds[:-1], x_new_bounds[1:]) ]
+        x_new_nbins  = len(x_new_bounds)-1
+
+        y_new_bounds = [ y for y in self.y_bin_boundaries if y > 0. ]
+        y_new_bounds = [ -b for b in y_new_bounds[::-1] ] + y_new_bounds
+
+        if del_y_middle:
+            N = len(y_new_bounds) / 2
+            y_new_bounds = y_new_bounds[:N] + [0.] + y_new_bounds[N+2:]
+        y_new_centers = [ 0.5*(r+l) for l, r in zip(y_new_bounds[:-1], y_new_bounds[1:]) ]
+        y_new_nbins  = len(y_new_bounds)-1
+
+        H = ROOT.TH2D(
+            utils.get_unique_rootname(), '',
+            x_new_nbins, array('d', x_new_bounds),
+            y_new_nbins, array('d', y_new_bounds),
+            )
+        ROOT.SetOwnership(H, False)
+
+        # Set default value
+        H_array = [ [ 888. for i_y in xrange(y_new_nbins) ] for i_x in xrange(x_new_nbins) ]
+        for i_x in xrange(x_new_nbins):
+            for i_y in xrange(y_new_nbins):
+                H.SetBinContent(i_x+1, i_y+1, 888.)
+
+        for i_x in xrange(self.n_bins_x):
+            for i_y in xrange(self.n_bins_y):
+                x_center = self.x_bin_centers[i_x]
+                y_center = self.y_bin_centers[i_y]
+                val = self.H2.GetBinContent(i_x+1, i_y+1)
+
+                # Fill positive quadrant
+                i_x_new = differentials.core.get_closest_match(x_center, x_new_centers)[1]
+                i_y_new = differentials.core.get_closest_match(y_center, y_new_centers)[1]
+                H.SetBinContent(i_x_new+1, i_y_new+1, val)
+                H_array[i_x_new][i_y_new] = val
+
+                # Fill negative quadrant
+                i_x_new = differentials.core.get_closest_match(-x_center, x_new_centers)[1]
+                i_y_new = differentials.core.get_closest_match(-y_center, y_new_centers)[1]
+                H.SetBinContent(i_x_new+1, i_y_new+1, val)
+                H_array[i_x_new][i_y_new] = val
+
+        # Overwrite
+        self.H2 = H
+        self.H2_array = H_array
+        self.x_bin_boundaries = x_new_bounds
+        self.x_bin_centers    = x_new_centers
+        self.n_bins_x         = x_new_nbins
+        self.y_bin_boundaries = y_new_bounds
+        self.y_bin_centers    = y_new_centers
+        self.n_bins_y         = y_new_nbins
+
+
+        # all_x_bin_boundaries = self.x_bin_boundaries
+        # all_n_bins_x = self.n_bins_x
+
+        # bounds = [ x for x in self.x_bin_boundaries if x > 0. ]
+        # self.x_bin_boundaries = bounds[::-1] + bounds
+
+        # self.n_bins_x = len(self.x_bin_boundaries)-1
+        # self.x_bin_centers = [ 0.5*(r+l) for l, r in zip(self.x_bin_boundaries[:-1], self.x_bin_boundaries[1:]) ]
+
+        # # self.H2_array = self.H2_array[-self.n_bins_x:]
+
+        # H = ROOT.TH2D(
+        #     utils.get_unique_rootname(), '',
+        #     self.n_bins_x, array('d', self.x_bin_boundaries),
+        #     self.n_bins_y, array('d', self.y_bin_boundaries),
+        #     )
+        # ROOT.SetOwnership(H, False)
+
+        # # Fill in the new hist using old hist and the padding value
+        # for i_x in xrange(self.n_bins_x):
+        #     for i_y in xrange(self.n_bins_y):
+        #         c = self.x_bin_boundaries[i_x]
+        #         if c < 0.:
+        #             pass
+
+        #         # HIER VERDER
+        #         # spiegelen afmaken
+
+        #         H.SetBinContent(i_x+1, i_y+1, fill_val)
+        # self.H2 = H
+
 
 
     def set_value_for_patch(self, value, x_min, x_max, y_min, y_max):

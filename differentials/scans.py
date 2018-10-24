@@ -1,5 +1,5 @@
 import os.path
-import glob, re, copy, math, sys
+import glob, re, copy, math, sys, tempfile
 
 import logging
 import core
@@ -19,6 +19,8 @@ import ROOT
 def glob_rootfiles(d):
     if not d.endswith('/'): d += '/'
     return glob.glob(d + '*.root')
+
+Unc = namedtuple('Unc', ['min_deltaNLL', 'i_min', 'x_min', 'left_bound', 'left_error', 'right_bound', 'right_error', 'symm_error', 'well_defined_left_bound', 'well_defined_right_bound', 'is_hopeless', 'cutoff_1sigma'])
 
 
 class DifferentialSpectrum(object):
@@ -203,6 +205,10 @@ class DifferentialSpectrum(object):
         #         histogram.set_last_bin_is_overflow()
         if self.first_bin_is_underflow():
             histogram.drop_first_bin()
+
+    def fix_bestfit_to_one(self):
+        for scan in self.scans:
+            scan.fix_bestfit_to_one()
 
     def to_hist(self):
         histogram = plotting.pywrappers.Histogram(
@@ -546,6 +552,13 @@ class Scan(ScanPrimitive):
             self.entries = self.read_chain(root_files, variables)
         self.filter_entries()
 
+    def fix_bestfit_to_one(self):
+        unc = self.unc._asdict()
+        dmu = 1.0 - unc['x_min']
+        unc['x_min'] += dmu
+        unc['left_error'] += dmu
+        unc['right_error'] -= dmu
+        self.unc = Unc(**unc)
 
     def filter_entries(self):
         super(Scan, self).filter_entries()
@@ -662,6 +675,14 @@ class Scan2D(ScanPrimitive):
             .format(self.x_variable, self.y_variable, self.z_variable, ', '.join(self.scandirs), self.globpat)
             )
 
+        self._filled_bestfit = False
+
+    def __del__(self):
+        # Not pretty
+        if hasattr(self, '_close_root_fps'):
+            for fp in self._close_root_fps:
+                fp.Close()
+
     def x(self, exclude_bestfit=False):
         if exclude_bestfit:
             bestfit = self.bestfit()
@@ -710,16 +731,84 @@ class Scan2D(ScanPrimitive):
         factory.fill_bestfit(bestfit.x, bestfit.y)
         return factory
 
-    def to_spline(self, x_min, x_max, y_min, y_max, eps=2.2, deltaNLL_cutoff=30., cutstring_addition=''):
+    def new_tree_rootfile(self):
+        if not os.path.isdir('tmp'): os.makedirs('tmp')
+        root_file = 'tmp/newtree_{0}.root'.format(self.name)
+        root_file = core.make_unique_filename(root_file)
+        return root_file
+
+    def new_tree_from_entries(self):
+        root_file = self.new_tree_rootfile()
+        root_fp = ROOT.TFile.Open(root_file, 'recreate')
+        ROOT.SetOwnership(root_fp, False)
+
+        tree = ROOT.TTree('limit', 'title')
+        ROOT.SetOwnership(tree, False)
+
+        x = array('f', [0.])
+        y = array('f', [0.])
+        deltaNLL = array('f', [0.])
+
+        tree.Branch('x', x, 'x/F')
+        tree.Branch('y', y, 'y/F')
+        tree.Branch('deltaNLL', deltaNLL, 'deltaNLL/F')
+
+        for entry in self.entries:
+            x[0] = entry.x
+            y[0] = entry.y
+            deltaNLL[0] = entry.deltaNLL
+            tree.Fill()
+
+        root_fp.Write()
+
+        if not hasattr(self, '_close_root_fps'):
+            self._close_root_fps = []
+        self._close_root_fps.append(root_fp)
+        return tree
+
+
+    def to_spline(self, x_min, x_max, y_min, y_max, eps=2.2, deltaNLL_cutoff=30., cutstring_addition='', remake_tree_from_entries=False):
         factory = self.get_spline_factory(x_min, x_max, y_min, y_max, cutstring_addition)
+        if remake_tree_from_entries:
+            factory.tree = self.new_tree_from_entries()
+            factory.x_var = 'x'
+            factory.y_var = 'y'
+
+        # print 'Making new tree from entries'
+        # tree = self.new_tree_from_entries()
+        # print tree
+        # print tree.GetEntries()
+        # root_array = tree.GetListOfBranches()
+        # for i_var in xrange(root_array.GetEntries()):
+        #     var_name = root_array[i_var].GetTitle()
+        #     print var_name
+        # print 'Printing entries of new tree'
+        # for e in tree:
+        #     print e.x, e.y, e.deltaNLL
+        # # sys.exit()
+
         factory.eps = eps
         factory.deltaNLL_cutoff = deltaNLL_cutoff
         spline = factory.make_spline()
         return spline
 
-    def to_polyfit(self, x_min, x_max, y_min, y_max, cutstring_addition=''):
-        factory = self.get_spline_factory(x_min, x_max, y_min, y_max, cutstring_addition)
-        polyfit = factory.make_polyfit()
+    # def to_polyfit(self, x_min, x_max, y_min, y_max, cutstring_addition=''):
+    #     factory = self.get_spline_factory(x_min, x_max, y_min, y_max, cutstring_addition)
+    #     polyfit = factory.make_polyfit()
+    #     return polyfit
+
+    def to_polyfit(self, x_min, x_max, y_min, y_max, order=4):
+        T2D = ROOT.TGraph2D()
+        ROOT.SetOwnership(T2D, False)
+        for i_entry, entry in enumerate(self.entries):
+            T2D.SetPoint(i_entry, entry.x, entry.y, entry.deltaNLL)
+
+        factory = self.get_spline_factory(x_min, x_max, y_min, y_max, cutstring_addition='')
+        factory.ord_polynomial = order
+        polyfit = factory.make_polyfit(T2D)
+        # polyfit.multiply_by_two = False
+        polyfit.negativity_is_zero = True
+        polyfit._scan = self
         return polyfit
 
 
@@ -742,6 +831,16 @@ class Scan2D(ScanPrimitive):
         # No real way to do this I think
 
 
+    def fill_bestfit(self, x, y):
+        self._filled_bestfit = True
+        self._bestfit = core.AttrDict(x=x, y=y)
+
+    def bestfit(self):
+        if self._filled_bestfit:
+            return self._bestfit
+        else:
+            return super(Scan2D, self).bestfit()
+
     def to_hist(self):
         histogram2D = plotting.pywrappers.Histogram2D(
             utils.get_unique_rootname(), getattr(self, 'title', ''), self.color
@@ -749,6 +848,7 @@ class Scan2D(ScanPrimitive):
         histogram2D.x_title = self.x_title
         histogram2D.y_title = self.y_title
         histogram2D.z_title = self.z_title
+        if self._filled_bestfit: histogram2D.fill_bestfit(self.bestfit().x, self.bestfit().y)
         histogram2D.fill_from_entries(self.entries)
         if hasattr(self, 'contour_filter_method'):
             histogram2D.contour_filter_method = self.contour_filter_method

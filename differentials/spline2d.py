@@ -139,7 +139,7 @@ class Spline2DFactory(object):
         #     '2*deltaNLL',
         #     'quantileExpected > -0.5 && deltaNLL > 0 && 2.0*deltaNLL<10.0'
         #     )
-        cutstring = 'deltaNLL > 0 && 2.0*deltaNLL<10.0' + self.cutstring_addition
+        cutstring = 'deltaNLL > 0. && 2.0*deltaNLL<{0}'.format(self.deltaNLL_cutoff) + self.cutstring_addition
         logging.info('Creating TGraph2D; cutstring is "{0}"'.format(cutstring))
         graph = TGraph2DFromTree(
             self.tree,
@@ -212,11 +212,13 @@ def TGraph2DFromTree(tree, xvar,  yvar, zvar, selection):
 #____________________________________________________________________
 class BaseWrapper(object):
     """docstring for BaseWrapper"""
+
+    multiply_by_two = True
+    disallow_negativity = True
+    negativity_is_zero = False
+
     def __init__(self):
         super(BaseWrapper, self).__init__()
-        self.multiply_by_two = True
-        self.disallow_negativity = True
-        self.negativity_is_zero = False
         self.noise_selectors = []
         self.signal_selectors = []
         self.filled_bestfit = False
@@ -301,6 +303,7 @@ class Base2DWrapper(BaseWrapper):
         self.x_max = x_max
         self.y_min = y_min
         self.y_max = y_max
+        self.offset = None
 
     def fill_bestfit(self, x, y):
         self.filled_bestfit = True
@@ -325,6 +328,9 @@ class Base2DWrapper(BaseWrapper):
 
         # Not implemented in Base!
         r = self.eval_interp(x, y)
+
+        if not(self.offset is None):
+            r += self.offset
 
         if self.multiply_by_two:
             r *= 2
@@ -362,6 +368,11 @@ class Base2DWrapper(BaseWrapper):
 
         if self.filled_bestfit:
             H.fill_bestfit(self.x_bestfit, self.y_bestfit)
+
+        if hasattr(self, '_scan'):
+            H.color = self._scan.color
+            H.name  = self._scan.name + '_splined'
+            H.title = self._scan.title
         return H
 
 

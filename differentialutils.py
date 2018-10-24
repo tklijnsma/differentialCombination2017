@@ -32,7 +32,6 @@ def run_fastscan_scan_reused_postfit(config, postfit):
 
 
 def run_postfit_fastscan_scan(config, point_minimizer_settings=None):
-    # Make sure no previous run directory is overwritten
     config.make_unique_directory()
 
     postfit = combine.CombinePostfit(config)
@@ -52,7 +51,6 @@ def run_postfit_fastscan_scan(config, point_minimizer_settings=None):
 
 
 def run_postfit_scan(config, postfit_file=None):
-    # Make sure no previous run directory is overwritten
     config.make_unique_directory()
 
     if postfit_file is None:
@@ -66,7 +64,6 @@ def run_postfit_scan(config, postfit_file=None):
     scan.run(postfit_file)
 
 def run_postfit_fastscan(config):
-    # Make sure no previous run directory is overwritten
     config.make_unique_directory()
 
     postfit = combine.CombinePostfit(config)
@@ -77,7 +74,6 @@ def run_postfit_fastscan(config):
     fastscan.run(postfit_file)
 
 def scan_directly(config):
-    # Make sure no previous run directory is overwritten
     config.make_unique_directory()
     scan = combine.CombineScan(config)
     scan.run()

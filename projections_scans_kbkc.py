@@ -58,6 +58,7 @@ class CombineConfigKBKC(differentials.combine.combine.CombineConfig):
         self.PhysicsModelParameters = [ 'kappab=1.0', 'kappac=1.0' ]
         self.subDirectory = 'out/Scan_projection_kbkc_{0}_{1}'.format(differentials.core.datestr(), self.decay_channel)
         self.hardPhysicsModelParameters.append('lumiscale={0}'.format(self.lumiscale))
+        self.freezeNuisances.append('lumiscale')
         if args.scenario2: self.tags.append('scenario2')
         self.set_ranges()
         self.datacard = self.get_workspacedict()[self.decay_channel]

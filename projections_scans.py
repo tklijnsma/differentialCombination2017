@@ -70,6 +70,47 @@ def projection_pth_smH_scan(args):
 
 
 @flag_as_option
+def projection_pth_smH_scan_GT200(args):
+    args = differentialutils.force_asimov(args)
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+
+    d = differentials.core.AttrDict()
+    d.s1 = differentials.core.AttrDict()
+    d.s2 = differentials.core.AttrDict()
+    d.s1.hgg = 'projections/workspaces_Oct24/ws_pth_smH_hgg_GT200_s1.root'
+    d.s2.hgg = 'projections/workspaces_Oct24/ws_pth_smH_hgg_GT200_s2.root'
+    ws = (d.s2 if args.scenario2 else d.s1)[decay_channel]
+
+    config = differential_config(args, ws, 'pth_smH', lumiscale=lumiscale3000)
+
+    def tight_ranges(config):
+        """Very manual tight r_ ranges based on Hgg scan results"""
+        for POI in config.POIs:
+            if 'GT600' in POI:
+                config.set_parameter_range(POI, 0.64, 1.4)
+            else:
+                config.set_parameter_range(POI, 0.875, 1.14)
+    
+    if args.hbb:
+        set_hbb_parameter_ranges(args, config)
+    if args.hgg:
+        tight_ranges(config)
+    if args.combWithHbb:
+        set_hbb_parameter_ranges(args, config)
+        tight_ranges(config)
+
+    # Overwrite to do only the scan for 1 POI
+    config.POIs = [ 'r_smH_PTH_GT200' ]
+    config.subDirectory += '_GT200only'
+
+    if args.hbb or args.hzz:
+        scan_directly(args, config, verbosity=1)
+    else:
+        postfit_and_scan(args, config)
+
+
+
+@flag_as_option
 def projection_pth_smH_scan_one_bin_locally(args):
     decay_channel = 'combWithHbb'
     args = differentialutils.set_one_decay_channel(args, decay_channel, asimov=True)

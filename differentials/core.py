@@ -452,6 +452,24 @@ def make_unique_directory(dirname, n_attempts = 100):
     logging.info('Uniquified directory: {0}'.format(dirname))
     return dirname
 
+def make_unique_filename(filename, n_attempts = 1000):
+    filename = abspath(filename)
+    if not isfile(filename):
+        return filename
+
+    filebase, extension = os.path.splitext(filename)
+    filename = '{0}_{{0}}{1}'.format(filebase, extension)
+    for iAttempt in xrange(n_attempts):
+        if not isfile( filename.format(iAttempt) ):
+            filename = filename.format(iAttempt)
+            break
+    else:
+        raise RuntimeError('Could not create a unique directory for {0}'.format(filename.format('X')))
+
+    logging.info('Uniquified filename: {0}'.format(filename))
+    return filename
+
+
 class raise_logging_level():
     """Context manager to temporarily raise the logging level"""
     raise_map = {

@@ -95,6 +95,46 @@ def projection_pth_smH_t2ws(args):
 
 
 #____________________________________________________________________
+@flag_as_option
+def projection_pth_smH_t2ws_GT200(args):
+    differentials.combine.combine_utils.set_global_outdir('projections')
+    decay_channel = differentialutils.get_decay_channel_tag(args)
+    t2ws = differentials.combine.t2ws.T2WS(
+        cards[decay_channel],
+        name = 'ws_pth_smH_' + decay_channel + '_GT200'
+        )
+
+    if args.scenario2:
+        t2ws.name += '_s2'
+        t2ws.extra_options.extend(s2_scalingfunctions)
+    else:
+        t2ws.name += '_s1'
+
+    if args.hzz:
+        t2ws.add_maps(
+            '.*/smH_PTH_0_15:r_smH_PTH_0_15[1.0,-1.0,4.0]',
+            '.*/smH_PTH_15_30:r_smH_PTH_15_30[1.0,-1.0,4.0]',
+            '.*/smH_PTH_30_45:r_smH_PTH_30_80[1.0,-1.0,4.0]',
+            '.*/smH_PTH_45_80:r_smH_PTH_30_80[1.0,-1.0,4.0]',
+            '.*/smH_PTH_80_120:r_smH_PTH_80_200[1.0,-1.0,4.0]',
+            '.*/smH_PTH_120_200:r_smH_PTH_80_200[1.0,-1.0,4.0]',
+            '.*/smH_PTH_200_350:r_smH_PTH_GT200[1.0,-1.0,4.0]',
+            '.*/smH_PTH_350_600:r_smH_PTH_GT200[1.0,-1.0,4.0]',
+            '.*/smH_PTH_GT600:r_smH_PTH_GT200[1.0,-1.0,4.0]',
+            )
+    else:
+        t2ws.make_maps_from_processes(scale_ggH_xH_with_smH=True)
+        for i, map_option in enumerate(t2ws.map_options):
+            poi = re.search(r':(r_.*?)\[', map_option).group(1)
+            left = differentials.processinterpreter.Process(poi).left
+            if left >= 200.:
+                new_poi = 'r_smH_PTH_GT200'
+                t2ws.map_options[i] = map_option.replace(poi, new_poi)
+
+    t2ws.run()
+
+
+#____________________________________________________________________
 class T2WSKBKC(differentials.combine.t2ws.T2WS):
     """docstring for T2WSKBKC"""
 
@@ -322,8 +362,8 @@ def projection_ktcg_t2ws_floatingBRs(args):
     t2ws.apply_reweighting()
     t2ws.add_theory_uncertainties()
     t2ws.add_scaling_ttH()
-    if args.combWithHbb:
-        t2ws.constrain_bbZZ_ratio()
+    # if args.combWithHbb:
+    #     t2ws.constrain_bbZZ_ratio()
     if args.scenario2: t2ws.apply_s2_scaling()
     t2ws.extra_options.append('--PO freely_floating_BRs=True')
     t2ws.tags.append('floatingBRs')

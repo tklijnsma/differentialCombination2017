@@ -44,7 +44,7 @@ def implement_constrain_ratio_bb_ZZ(self):
     symm = 0.5*(abs(down)+abs(up))
     symm_perc = symm / mean
 
-    self.modelBuilder.doVar('delta_ratio_bb_ZZ[0.0,-10.0,10.0]')
+    self.modelBuilder.doVar('delta_ratio_bb_ZZ[0.0,-100.0,100.0]')
     self.DC.systs.append(
         ( 'delta_ratio_bb_ZZ', False, 'param', ['0', '1'], [] )
         )

@@ -318,6 +318,9 @@ class MultiScanPlot(PlotBase):
 
 class MultiContourPlot(PlotBase):
     """docstring for MultiContourPlot"""
+
+    z_axis_title = '-2#Delta ln L'
+
     def __init__(self, plotname, scans, x_min=None, x_max=None, y_min=None, y_max=None, x_title=None, y_title=None):
         super(MultiContourPlot, self).__init__(plotname)
 
@@ -391,6 +394,9 @@ class MultiContourPlot(PlotBase):
         self.cdl.SetFillStyle(1001)
         # self.cdl.SetNColumns(1)
 
+        self.texts = []
+
+
     # def pre_draw(self):
     #     super(MultiContourPlot, self).pre_draw()
     #     self.base.Draw()
@@ -423,7 +429,7 @@ class MultiContourPlot(PlotBase):
 
 
     def add_BR_parametrized_text(self, x=None, y=None):
-        text = '{0}({1},{2})'.format(
+        text = '{0}({1}, {2})'.format(
             core.standard_titles['BR'], core.standard_titles['kappac'], core.standard_titles['kappab']
             )
         self.add_BR_text(x, y, text)
@@ -448,7 +454,39 @@ class MultiContourPlot(PlotBase):
         self.br_text.SetNDC()
         self.br_text.Draw()
 
+    def add_text_on_the_fly(self,
+            x, y, text,
+            text_size = 0.045,
+            text_align = 'auto',
+            ndc = True,
+            ):
+        if callable(x): x = x(c)
+        if callable(y): y = y(c)
 
+        latex = pywrappers.Latex(x, y, text)
+        self.texts.append(latex)
+
+        if ndc: latex.SetNDC()
+        latex.SetTextSize(text_size)
+        if text_align == 'auto':
+            if x > 0.5:
+                latex.SetTextAlign(31)
+            else:
+                latex.SetTextAlign(11)
+        else:
+            latex.SetTextAlign(text_align)
+
+        latex.Draw()
+        return latex
+
+    def set_ranges(self):
+        if self.set_ranges_by_contour:
+            self.extrema_from_contours(self.histograms)
+        else:
+            if self.x_min is None: self.x_min = min([H.x_min() for H in self.histograms])
+            if self.y_min is None: self.y_min = min([H.y_min() for H in self.histograms])
+            if self.x_max is None: self.x_max = max([H.x_max() for H in self.histograms])
+            if self.y_max is None: self.y_max = max([H.y_max() for H in self.histograms])
 
     def draw(self, wait=False):
         super(MultiContourPlot, self).draw()
@@ -467,7 +505,7 @@ class MultiContourPlot(PlotBase):
         else:
             self.base.Draw()
 
-        self.base.GetZaxis().SetTitle('-2#Delta ln L')
+        self.base.GetZaxis().SetTitle(self.z_axis_title)
         self.base.GetZaxis().SetTitleSize(0.04)
         self.base.GetZaxis().SetTitleOffset(0.9)
 
@@ -488,13 +526,7 @@ class MultiContourPlot(PlotBase):
 
         self.legend.Draw()
 
-        if self.set_ranges_by_contour:
-            self.extrema_from_contours(self.histograms)
-        else:
-            if self.x_min is None: self.x_min = min([H.x_min() for H in self.histograms])
-            if self.y_min is None: self.y_min = min([H.y_min() for H in self.histograms])
-            if self.x_max is None: self.x_max = max([H.x_max() for H in self.histograms])
-            if self.y_max is None: self.y_max = max([H.y_max() for H in self.histograms])
+        self.set_ranges()
         
         if self.use_first_scan_as_base or self.base_is_set_manually:
             self.base.GetXaxis().SetRangeUser(self.x_min, self.x_max)
@@ -564,7 +596,6 @@ class MultiContourPlot(PlotBase):
                         )
                 else:
                     logging.error('Object {0} could not be plotted individually'.format(scan))
-
 
 
 class BottomPanelPlot(PlotBase):
