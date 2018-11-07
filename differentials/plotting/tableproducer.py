@@ -43,7 +43,6 @@ class CellAsymmUncCrossSection(newtables.BaseCell):
         return center_str, up_str, down_str
 
 
-
     def format_10topowerof(self, number, force_sign=False):
         sci_str = '{0:.4e}'.format(number)
         match = re.search(r'([\d\+\-\.]+)e([\d\+\-\.]+)', sci_str)
@@ -83,6 +82,61 @@ class CellAsymmUncCrossSection(newtables.BaseCell):
             r = '\\multicolumn{' + str(self.span) + '}{c|}{' + r + '}'
         return [r]
 
+    def represent(self):
+        if self.latex_mode:
+            return self.represent_latex()
+        return self.represent_terminal()
+
+
+class CellAsymmRelativeUncs(newtables.BaseCell):
+    """docstring for CellAsymmRelativeUncs"""
+
+    latex_mode = False
+
+    def __init__(self, down, up):
+        super(CellAsymmRelativeUncs, self).__init__()
+        self.down = down
+        self.up = up
+
+    def represent_latex(self):
+        up_str = '{0:+.1f}'.format(self.up)
+        down_str = '{0:+.1f}'.format(self.down)
+        r = '${{}}^{{{0}}}_{{{1}}}$'.format(up_str, down_str)
+        if self.span > 1:
+            r = '\\multicolumn{' + str(self.span) + '}{c|}{' + r + '}'
+        return [r]
+
+    def represent_terminal(self):
+        up_str = '{0:+6.1f}'.format(self.up)
+        down_str = '{0:+6.1f}'.format(self.down)
+        return [ up_str, down_str ]
+        
+    def represent(self):
+        if self.latex_mode:
+            return self.represent_latex()
+        return self.represent_terminal()
+
+
+class CellSymmRelativeUncs(newtables.BaseCell):
+    """docstring for CellSymmRelativeUncs"""
+
+    latex_mode = False
+
+    def __init__(self, down, up):
+        super(CellSymmRelativeUncs, self).__init__()
+        self.down = down
+        self.up = up
+        self.symm = 0.5*(abs(up)+abs(down))
+
+    def represent_latex(self):
+        r = '${0:.1f}\\%$'.format(100.*self.symm)
+        if self.span > 1:
+            r = '\\multicolumn{' + str(self.span) + '}{c|}{' + r + '}'
+        return [r]
+
+    def represent_terminal(self):
+        return ['{0:.1f}%'.format(100.*self.symm)]
+        
     def represent(self):
         if self.latex_mode:
             return self.represent_latex()
@@ -178,5 +232,42 @@ class SpectrumRowProducer(object):
 
 
 
+class SpectrumRowProducerProjection(SpectrumRowProducer):
+    """docstring for SpectrumRowProducerProjection"""
+    def __init__(self, binning, last_bin_is_overflow=False):
+        super(SpectrumRowProducerProjection, self).__init__(binning, last_bin_is_overflow)
 
+
+    def produce(self, spectrum):
+        bin_boundaries = spectrum.binning()
+        n_bins = len(bin_boundaries)-1
+
+        row = newtables.BaseRow()
+        row.append(newtables.CellString(spectrum.latex_title))
+
+        i_left = self.binning.index(bin_boundaries[0])
+        i_right = self.binning.index(bin_boundaries[-1])
+
+        for i in xrange(i_left):
+            row.append(newtables.CellString('-'))
+
+
+        if self.normalize: incl_xs = self.get_incl_xs(spectrum)
+
+        for i_scan, scan in enumerate(spectrum.scans):
+            left     = bin_boundaries[i_scan]
+            right    = bin_boundaries[i_scan+1]
+
+            up     = scan.unc.right_error
+            down   = scan.unc.left_error
+
+            cell = CellSymmRelativeUncs(-abs(down), up)
+            cell.span = self.binning.index(right) - self.binning.index(left)
+
+            row.append(cell)
+
+        for i in xrange(i_right, n_bins):
+            row.append(newtables.CellString('-'))
+
+        return row
 

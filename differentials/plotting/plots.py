@@ -557,6 +557,12 @@ class MultiContourPlot(PlotBase):
 
         if not(wait): self.wrapup()
 
+    def see_through_legends(self):
+        self.legend.SetFillStyle(0)
+        self.legend.SetBorderSize(0)
+        self.cdl.SetFillStyle(0)
+        self.cdl.SetBorderSize(0)
+
     def wrapup(self):
         c.Update()
         c.RedrawAxis()

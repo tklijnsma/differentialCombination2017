@@ -208,10 +208,10 @@ class PlotPatcherKBKC_couplingdependentBRs(PlotPatcher):
         hist = polyfit.to_hist(nx=300, ny=300)
         hist.add_padding(
             700.,
-            x_min = -6.1,
-            x_max = 6.1,
-            y_min = -1.4,
-            y_max = 1.4,
+            x_min = -7.6,
+            x_max = 5.8,
+            y_min = -1.5,
+            y_max = 1.5,
             )
         return hist
 
@@ -267,6 +267,7 @@ def projection_kbkc_plot_couplingdependentBRs(args):
         y = lambda c: 1. - c.GetTopMargin() - 0.05,
         text = 'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
         )
+    plot.see_through_legends()
     plot.wrapup()
 
 
@@ -334,8 +335,8 @@ class PlotPatcherKBKC_floatingBRs(PlotPatcher):
         hist = polyfit.to_hist(nx=180, ny=180)
         hist.add_padding(
             700.,
-            x_min = -12.,
-            x_max = 14.,
+            x_min = -13.,
+            x_max = 13.,
             y_min = -3.,
             y_max = 5.5,
             )
@@ -384,6 +385,8 @@ def projection_kbkc_plot_floatingBRs(args):
         y = lambda c: 1. - c.GetTopMargin() - 0.05,
         text = 'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
         )
+
+    plot.see_through_legends()
     plot.wrapup()
 
 

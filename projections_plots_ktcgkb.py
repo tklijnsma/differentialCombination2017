@@ -262,7 +262,11 @@ def projection_ktcg_plot_couplingdependentBRs(args):
         x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
     plot.draw(wait=True)
-    plot.add_BR_parametrized_text()
+    plot.add_BR_parametrized_text(
+        # x = lambda c: 1. - c.GetRightMargin() - 0.01,
+        x = lambda c: c.GetLeftMargin() + 0.03,
+        y = lambda c: c.GetBottomMargin() + 0.03 + 0.015 + 0.07
+        )
     plot.add_text_on_the_fly(
         text_size = 0.040,
         x = lambda c: 1. - c.GetRightMargin() - 0.01,
@@ -271,6 +275,8 @@ def projection_ktcg_plot_couplingdependentBRs(args):
         )
 
     plot.base.GetYaxis().SetTitleOffset(1.1)
+    plot.legend.SetBorderSize(0)
+    plot.cdl.SetBorderSize(0)
 
     plot.wrapup()
 
@@ -584,8 +590,10 @@ class PlotPatcherKTCG_floatingBRs(PlotPatcherKTCG):
         dx = fitter.x_max - fitter.x_min
         dy = fitter.y_max - fitter.y_min
         fitter.fill_polyfit(
-            x_min = fitter.x_min - 0.2*dx,
-            x_max = fitter.x_max + 0.2*dx,
+            # x_min = fitter.x_min - 0.2*dx,
+            # x_max = fitter.x_max + 0.2*dx,
+            x_min = -2.21,
+            x_max = 2.21,
             y_min = fitter.y_min - 0.2*dy,
             y_max = fitter.y_max + 0.2*dy,
             n_bins = 300
@@ -593,12 +601,20 @@ class PlotPatcherKTCG_floatingBRs(PlotPatcherKTCG):
 
         H = fitter.to_hist()
         H.mirror()
+
+        H.set_value_for_patch(700.0,
+            x_min=-0.1, x_max=1.0, y_min=-0.07, y_max=-0.05
+            )        
+        H.set_value_for_patch(700.0,
+            x_min=-1.0, x_max=0.1, y_min=0.05, y_max=0.07
+            )        
+
         H.add_padding(
             700.,
-            x_min = -1.7,
-            x_max = 1.7,
-            y_min = -0.045,
-            y_max = 0.045,
+            x_min = -5.9,
+            x_max = 2.6,
+            y_min = -0.07,
+            y_max = 0.07,
             )
         return H
 
@@ -609,9 +625,17 @@ class PlotPatcherKTCG_floatingBRs_scenario2(PlotPatcherKTCG_floatingBRs):
     def preprocess_combination(self):
         self.deltaNLL_threshold = -5.
 
-    # def patch_combination(self):
-    #     self.shift_scan()
-    #     return self.scan.to_hist()
+    def patch_combination(self):
+        H = super(PlotPatcherKTCG_floatingBRs_scenario2, self).patch_combination()
+
+        H.set_value_for_patch(700.0,
+            x_min=1.4, x_max=2.3, y_min=0.05, y_max=0.07
+            )        
+        H.set_value_for_patch(700.0,
+            x_min=-2.3, x_max=-1.4, y_min=-0.07, y_max=-0.05
+            )
+
+        return H
 
     # def patch_hgg(self):
     #     self.shift_scan()
@@ -633,7 +657,8 @@ def projection_ktcg_plot_floatingBRs(args):
     scans.append(hgg)
 
     x_min, x_max, y_min, y_max = (None, None, None, None)
-    x_min, x_max, y_min, y_max = (-1.9, 1.9, -0.05, 0.05)
+    # x_min, x_max, y_min, y_max = (-1.9, 1.9, -0.05, 0.05)
+    x_min, x_max, y_min, y_max = (-5.9, 2.5, -0.050, 0.050)
 
     plot = differentials.plotting.plots.MultiContourPlot(
         ('projection_ktcg_plot_floatingBRs'
@@ -644,13 +669,27 @@ def projection_ktcg_plot_floatingBRs(args):
         x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cg'],
         x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
+
+    plot.cdl.set(x2 = lambda c: c.GetLeftMargin() + 0.30, y2=lambda c: c.GetBottomMargin() + 0.17)
+
     plot.draw(wait=True)
-    plot.add_BR_floating_text()
+    plot.add_BR_floating_text(
+        x = lambda c: c.GetLeftMargin() + 0.03,
+        y = lambda c: c.GetBottomMargin() + 0.24
+        )
     plot.add_text_on_the_fly(
         text_size = 0.040,
-        x = lambda c: 1. - c.GetRightMargin() - 0.01,
-        y = lambda c: 1. - c.GetTopMargin() - 0.05,
-        text = 'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
+        # x = lambda c: 1. - c.GetRightMargin() - 0.01,
+        # y = lambda c: 1. - c.GetTopMargin() - 0.05,
+        x = lambda c: c.GetLeftMargin() + 0.03,
+        y = lambda c: c.GetBottomMargin() + 0.44,
+        text = (
+            '#splitline{w/ YR18}{syst. uncert. (S2)}'
+            if args.scenario2 else
+            '#splitline{w/ Run 2}{syst. uncert. (S1)}'
+            )
         )
+    plot.see_through_legends()
+    plot.cdl.SetNColumns(2)
     plot.wrapup()
 

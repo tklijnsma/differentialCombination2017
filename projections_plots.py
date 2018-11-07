@@ -196,26 +196,55 @@ def projection_pth_smH_plot(args):
 
     if args.table:
 
-        table = differentials.plotting.newtables.BaseTable()
-        table.end_line_with_tab_sep = True
+        # table = differentials.plotting.newtables.BaseTable()
+        # table.end_line_with_tab_sep = True
 
-        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combWithHbb.binning())
-        rowproducer.do_xs = True
-        rowproducer.normalize = True
-        table.append(rowproducer.produce_binning_row('pT (GeV)'))
-        table.append(rowproducer.produce(hgg))
-        table.append(rowproducer.produce(hzz))
-        table.append(rowproducer.produce(hbb))
-        table.append(rowproducer.produce(combWithHbb))
+        # rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combWithHbb.binning())
+        # rowproducer.do_xs = True
 
-        print table.produce_table_string()
-        return
+        # For txt (normalized)
+        # rowproducer.normalize = True
+        # table.append(rowproducer.produce_binning_row('pT (GeV)'))
+        # table.append(rowproducer.produce(hgg))
+        # table.append(rowproducer.produce(hzz))
+        # table.append(rowproducer.produce(hbb))
+        # table.append(rowproducer.produce(combWithHbb))
+        # print table.produce_table_string()
+        # return
 
+        # For paper
+        # table.latex_mode(True)
+        # table.append(rowproducer.produce_binning_row('$\\pth$ (GeV)'))
+        # table.append(rowproducer.produce(hgg))
+        # table.append(rowproducer.produce(hzz))
+        # table.append(rowproducer.produce(hbb))
+        # table.append(rowproducer.produce(combWithHbb))
+        # print table.produce_table_string()
+        # return
+
+        # For keynote
         # table = differentials.plotting.tables.SpectraTable('pth_smH', [s for s in spectra])
         # table.print_only_symm_unc = True
         # table.add_symm_improvement_row(hgg, combWithHbb)
         # logging.info('Table:\n{0}'.format( table.repr_terminal() ))
         # return
+
+        # For projection latex
+        table = differentials.plotting.newtables.BaseTable()
+        rowproducer = differentials.plotting.tableproducer.SpectrumRowProducerProjection(combWithHbb.binning())
+        hgg.latex_title = '$\\hgg$'
+        hzz.latex_title = '$\\hzz$'
+        hbb.latex_title = '$\\hbb$'
+
+        table.latex_mode(True)
+        table.append(rowproducer.produce_binning_row('$\\pth$ (GeV)'))
+        table.append(rowproducer.produce(hgg))
+        table.append(rowproducer.produce(hzz))
+        table.append(rowproducer.produce(hbb))
+        table.append(rowproducer.produce(combWithHbb))
+        print table.produce_table_string()
+
+
 
     # Start compiling plot
     plotname = (

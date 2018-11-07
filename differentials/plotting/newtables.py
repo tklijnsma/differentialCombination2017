@@ -101,6 +101,8 @@ class BaseTable(collections.Sequence):
     def latex_mode(self, activate=True):
         self.latex_mode = activate
         differentials.plotting.tableproducer.CellAsymmUncCrossSection.latex_mode = activate
+        differentials.plotting.tableproducer.CellAsymmRelativeUncs.latex_mode = activate
+        differentials.plotting.tableproducer.CellSymmRelativeUncs.latex_mode = activate
         self.tab_sep = ' & '
         self.line_sep = ' \\\\ \n \\hline \n'
 

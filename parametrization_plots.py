@@ -252,11 +252,25 @@ def test_get_real_cg_sm_value(args):
 
     incl_xs = drawer.parametrization.incl_xs(ct=1.0, cg=0.0, cb=1.0)
 
+
     # Function to minimize
     def chi2(cg):
         return (incl_xs - drawer.parametrization.incl_xs(ct=0.0, cg=cg, cb=0.0))**2
 
-        # HIER VERDER, minimizer bouwen.
+    dx_derivative = 0.000001
+    def dchi2_dx(cg):
+        return (chi2(cg+dx_derivative) - chi2(cg-dx_derivative)) / (2.*dx_derivative)
+
+    x = 0.1
+    r = -0.00000001
+    for i in xrange(1000):
+        print 'Iter {0:4}: cg = {1:+7.4f}, chi2 = {2:+7.4f}'.format(
+            i, x, chi2(x)
+            )
+        x += r * dchi2_dx(x)
+
+
+    print 'Found: cg =', x
 
 
 
