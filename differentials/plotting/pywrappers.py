@@ -1690,6 +1690,9 @@ class Histogram2D(BasicDrawable):
     def repr_contours(self, leg=None):
         return self.repr_bestfitpoint() + self.repr_1sigma_contours(leg) + self.repr_2sigma_contours()
 
+    def repr_contours_no_bestfit(self, leg=None):
+        return self.repr_1sigma_contours(leg) + self.repr_2sigma_contours()
+
     def repr_1sigma_contours_with_bestfit(self, leg=None):
         return self.repr_bestfitpoint() + self.repr_1sigma_contours(leg)
 

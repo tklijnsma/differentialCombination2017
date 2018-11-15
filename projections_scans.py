@@ -16,6 +16,7 @@ import LatestPaths
 
 lumiscale300 = 8.356546
 lumiscale3000 = 83.56546
+lumiscale6000 = 2. * lumiscale3000
 
 
 #____________________________________________________________________
@@ -40,7 +41,9 @@ def projection_pth_smH_scan(args):
     wsdict = scenario2 if args.scenario2 else scenario1
     ws = wsdict[decay_channel]
 
-    config = differential_config(args, ws, 'pth_smH', lumiscale=lumiscale3000)
+    logging.warning('Running for 6000 fb-1 !!!!')
+    config = differential_config(args, ws, 'pth_smH', lumiscale=lumiscale6000)
+    config.nPoints = 70
 
     def tight_ranges(config):
         """Very manual tight r_ ranges based on Hgg scan results"""
@@ -204,6 +207,8 @@ def differential_config(args, ws, obs_name, lumiscale=1.):
         base_config.subDirectory += '_300ifb'
     elif lumiscale == lumiscale3000:
         base_config.subDirectory += '_3000ifb'
+    elif lumiscale == lumiscale6000:
+        base_config.subDirectory += '_6000ifb'
 
     if args.statonly:
         base_config.subDirectory += '_statonly'

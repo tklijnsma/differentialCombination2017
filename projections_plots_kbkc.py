@@ -258,6 +258,8 @@ def projection_kbkc_plot_couplingdependentBRs(args):
         x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
         x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
+    plot.cdl.disable_bestfit = True
+    plot.draw_bestfit_point = False
     plot.draw(wait=True)
     plot.add_BR_parametrized_text()
     plot.add_text_on_the_fly(
@@ -268,6 +270,7 @@ def projection_kbkc_plot_couplingdependentBRs(args):
         text = 'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
         )
     plot.see_through_legends()
+    plot.cdl.disable_bestfit = True
     plot.wrapup()
 
 
@@ -377,6 +380,8 @@ def projection_kbkc_plot_floatingBRs(args):
         x_title = differentials.core.standard_titles['kappac'], y_title = differentials.core.standard_titles['kappab'],
         # x_min=couplingdependentBRs_x_min, x_max=couplingdependentBRs_x_max, y_min=couplingdependentBRs_y_min, y_max=couplingdependentBRs_y_max
         )
+    plot.cdl.disable_bestfit = True
+    plot.draw_bestfit_point = False
     plot.draw(wait=True)
     plot.add_BR_floating_text()
     plot.add_text_on_the_fly(
@@ -385,7 +390,6 @@ def projection_kbkc_plot_floatingBRs(args):
         y = lambda c: 1. - c.GetTopMargin() - 0.05,
         text = 'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
         )
-
     plot.see_through_legends()
     plot.wrapup()
 

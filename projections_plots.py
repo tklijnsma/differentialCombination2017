@@ -37,6 +37,7 @@ p3000.hgg = 'out/ScanProjection_Jul03_pth_smH_hgg_3000ifb_asimov'
 p3000.hzz = 'out/ScanProjection_Jul03_pth_smH_hzz_3000ifb_asimov'
 p3000.hbb = 'out/ScanProjection_Jul03_pth_smH_hbb_3000ifb_asimov_1'
 p3000.combWithHbb = 'out/ScanProjection_Jul03_pth_smH_combWithHbb_3000ifb_asimov_0'
+p3000.combWithHbb_statonly = 'out/ScanProjection_Jul04_pth_smH_combWithHbb_3000ifb_statonly_asimov'
 
 p36 = differentials.core.AttrDict()
 p36.hgg = 'out/ScanProjection_Jul04_pth_smH_hgg_36ifb_asimov'
@@ -51,13 +52,20 @@ p3000_statonly = differentials.core.AttrDict()
 p3000_statonly.hgg = 'out/ScanProjection_Jul04_pth_smH_hgg_3000ifb_statonly_asimov'
 p3000_statonly.hzz = 'out/ScanProjection_Jul04_pth_smH_hzz_3000ifb_statonly_asimov'
 p3000_statonly.hbb = 'out/ScanProjection_Jul04_pth_smH_hbb_3000ifb_statonly_asimov'
-p3000_statonly.combWithHbb = 'out/ScanProjection_Jul04_pth_smH_combWithHbb_3000ifb_statonly_asimov'
+p3000_statonly.combWithHbb = p3000.combWithHbb_statonly
 
 p3000_s2 = differentials.core.AttrDict()
 p3000_s2.hgg = 'out/ScanProjection_Jul17_pth_smH_hgg_3000ifb_scenario2_asimov'
 p3000_s2.hzz = 'out/ScanProjection_Jul17_pth_smH_hzz_3000ifb_scenario2_asimov'
 p3000_s2.hbb = 'out/ScanProjection_Jul17_pth_smH_hbb_3000ifb_scenario2_asimov'
 p3000_s2.combWithHbb = 'out/ScanProjection_Jul17_pth_smH_combWithHbb_3000ifb_scenario2_asimov'
+
+p6000 = differentials.core.AttrDict()
+p6000.combWithHbb = 'out/ScanProjection_Nov07_pth_smH_combWithHbb_6000ifb_asimov'
+p6000.combWithHbb_statonly = 'out/ScanProjection_Nov08_pth_smH_combWithHbb_6000ifb_statonly_asimov'
+p6000_s2 = differentials.core.AttrDict()
+p6000_s2.combWithHbb = 'out/ScanProjection_Nov07_pth_smH_combWithHbb_6000ifb_scenario2_asimov'
+p6000_s2.combWithHbb_statonly = p6000.combWithHbb_statonly
 
 
 #____________________________________________________________________
@@ -124,48 +132,47 @@ def projection_pth_smH_plot(args):
     # APPLY_FIXED_BINNING = False
     APPLY_FIXED_BINNING = True
 
-    PLOT_SYSTEMATIC_ONLY = False
+    # PLOT_SYSTEMATIC_ONLY = False
+    PLOT_SYSTEMATIC_ONLY = True
 
     # DO_STAT_ONLY = True
     DO_STAT_ONLY = False
 
-    DO_S2 = True if args.scenario2 else False
-    # DO_S2 = False
-
     # DO_LUMI_36 = True
     DO_LUMI_36 = False
 
+    DO_LUMI_6000 = True
+    # DO_LUMI_6000 = False
 
     if DO_STAT_ONLY:
         scandict = p3000_statonly
 
-    if DO_S2:
-        scandict = p3000_s2
+    if args.scenario2: scandict = p3000_s2
 
     if DO_LUMI_36:
         scandict = p36
 
 
-    # Load scans
-    hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
-    hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    hgg.add_stylesheet(style.copy(color=differentials.core.safe_colors.red, marker_style=26))
-    spectra.append(hgg)
+    if DO_LUMI_6000:
+        differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 6000
+        scandict = p6000_s2 if args.scenario2 else p6000
+    else:
+        # Load scans
+        hgg = differentials.scans.DifferentialSpectrum('hgg', scandict.hgg)
+        hgg.set_sm(obstuple.hgg.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+        hgg.add_stylesheet(style.copy(color=differentials.core.safe_colors.red, marker_style=26))
+        spectra.append(hgg)
 
-    hzz = differentials.scans.DifferentialSpectrum('hzz', scandict.hzz)
-    hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    hzz.add_stylesheet(style.copy(color=differentials.core.safe_colors.blue, marker_style=32))
-    spectra.append(hzz)
+        hzz = differentials.scans.DifferentialSpectrum('hzz', scandict.hzz)
+        hzz.set_sm(obstuple.hzz.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+        hzz.add_stylesheet(style.copy(color=differentials.core.safe_colors.blue, marker_style=32))
+        spectra.append(hzz)
 
-    hbb = differentials.scans.DifferentialSpectrum('hbb', scandict.hbb)
-    # hbb.drop_first_bin()
-    hbb.set_sm(obstuple.hbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
-    hbb.add_stylesheet(style.copy(color=differentials.core.safe_colors.green, marker_style=27, marker_size=1.5))
-    spectra.append(hbb)
-
-    # hbb.read()
-    # filter_hbb(hbb)
-    # sys.exit()
+        hbb = differentials.scans.DifferentialSpectrum('hbb', scandict.hbb)
+        # hbb.drop_first_bin()
+        hbb.set_sm(obstuple.hbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=True))
+        hbb.add_stylesheet(style.copy(color=differentials.core.safe_colors.green, marker_style=27, marker_size=1.5))
+        spectra.append(hbb)
 
     # combWithHbb_given = False
     combWithHbb = differentials.scans.DifferentialSpectrum('combWithHbb', scandict.combWithHbb)
@@ -253,7 +260,8 @@ def projection_pth_smH_plot(args):
         + ( '_nonfixedbinwidth' if not APPLY_FIXED_BINNING else '' )
         + ( '_statonly' if DO_STAT_ONLY else '' )
         + ( '_lumi36' if DO_LUMI_36 else '' )
-        + ( '_scenario2' if DO_S2 else '' )
+        + ( '_lumi6000' if DO_LUMI_6000 else '' )
+        + ( '_scenario2' if args.scenario2 else '' )
         )
     plot = differentials.plotting.plots.SpectraPlot(plotname, spectra)
     plot.draw_multiscans = True
@@ -272,6 +280,10 @@ def projection_pth_smH_plot(args):
     plot.top_y_max = 10.
     plot.bottom_y_min = 0.5
     plot.bottom_y_max = 1.5
+    if DO_LUMI_6000:
+        plot.bottom_y_min = 0.7
+        plot.bottom_y_max = 1.3
+        plot.top_y_max = 4.
 
     plot.scans_x_min = 0.5
     plot.scans_x_max = 1.5
@@ -280,21 +292,23 @@ def projection_pth_smH_plot(args):
 
     if APPLY_FIXED_BINNING:
         # Apply fixed binning
-        reference_binning = hgg.binning()
+        reference_binning = combWithHbb.binning()
         plot.make_fixed_widths(reference_binning)
         plot.top_x_max = len(reference_binning)-1
         plot.bottom_x_max = len(reference_binning)-1
-        hgg.style().bin_center_offset = -0.17
-        hzz.style().bin_center_offset = 0.17
-        hbb.style().bin_center_offset = 0.17
-        hzz.style().plot_priority = 8
+        if not(DO_LUMI_6000):
+            hgg.style().bin_center_offset = -0.17
+            hzz.style().bin_center_offset = 0.17
+            hbb.style().bin_center_offset = 0.17
+            hzz.style().plot_priority = 8
         plot.overflow_label_base_offset = 0.65
         plot.add_lines_at_bin_boundaries(range(1, len(reference_binning)-1))
     else:
-        hgg.style().bin_center_offset = -0.17
-        hzz.style().bin_center_offset = 0.17
-        hbb.style().bin_center_offset = 0.17
-        plot.set_reference_bounds(hgg.binning())
+        if not(DO_LUMI_6000):
+            hgg.style().bin_center_offset = -0.17
+            hzz.style().bin_center_offset = 0.17
+            hbb.style().bin_center_offset = 0.17
+        plot.set_reference_bounds(combWithHbb.binning())
         plot.add_lines_at_bin_boundaries()
         plot.overflow_label_base_offset = 0.29
 
@@ -342,7 +356,7 @@ def projection_pth_smH_plot(args):
     scenlabel = differentials.plotting.pywrappers.Latex(
         lambda c: c.GetLeftMargin() + 0.018,
         lambda c: 1. - c.GetTopMargin() - 0.014,
-        'w/ YR18 syst. uncert. (S2)' if DO_S2 else 'w/ Run 2 syst. uncert. (S1)'
+        'w/ YR18 syst. uncert. (S2)' if args.scenario2 else 'w/ Run 2 syst. uncert. (S1)'
         )
     scenlabel.SetNDC()
     scenlabel.SetTextAlign(13)

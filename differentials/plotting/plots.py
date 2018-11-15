@@ -517,11 +517,11 @@ class MultiContourPlot(PlotBase):
                 histogram2D = scan.to_hist()
             histogram2D.legend = self.legend
             if self.only_1sigma_contours or getattr(scan, 'only_1sigma_contours', False):
-                histogram2D.Draw('repr_1sigma_contours_with_bestfit')
+                histogram2D.Draw('repr_1sigma_contours')
             elif self.only_1sigma_contours_for_secondary and scan != self.scans[0]:
-                histogram2D.Draw('repr_1sigma_contours_with_bestfit')
+                histogram2D.Draw('repr_1sigma_contours')
             else:
-                histogram2D.Draw('repr_contours')
+                histogram2D.Draw('repr_contours_no_bestfit')
             self.histograms.append(histogram2D)
 
         self.legend.Draw()

@@ -261,6 +261,9 @@ def projection_ktcg_plot_couplingdependentBRs(args):
         x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cg'],
         x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
+    plot.y_SM = 0.0
+    plot.cdl.disable_bestfit = True
+    plot.draw_bestfit_point = False
     plot.draw(wait=True)
     plot.add_BR_parametrized_text(
         # x = lambda c: 1. - c.GetRightMargin() - 0.01,
@@ -669,8 +672,10 @@ def projection_ktcg_plot_floatingBRs(args):
         x_title = differentials.core.standard_titles['ct'], y_title = differentials.core.standard_titles['cg'],
         x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max
         )
-
+    plot.cdl.disable_bestfit = True
+    plot.draw_bestfit_point = False
     plot.cdl.set(x2 = lambda c: c.GetLeftMargin() + 0.30, y2=lambda c: c.GetBottomMargin() + 0.17)
+    plot.y_SM = 0.0
 
     plot.draw(wait=True)
     plot.add_BR_floating_text(
