@@ -924,6 +924,7 @@ class BottomPanelPlot(PlotBase):
 
         base_top.GetYaxis().SetTitle(self.y_title_top)
         base_top.GetYaxis().SetTitleSize(0.08)
+        base_top.GetYaxis().SetTitleOffset(0.9)
 
         bottompad.cd()
         # base_bottom = self.bottom_objects[0][0]
@@ -937,12 +938,11 @@ class BottomPanelPlot(PlotBase):
         # base_bottom.GetXaxis().SetTitleSize(base_top.GetXaxis().GetTitleSize() * height_ratio)
         base_bottom.GetXaxis().SetTitleSize(0.075 * height_ratio)
         base_bottom.GetYaxis().SetTitleSize(base_top.GetYaxis().GetTitleSize() * height_ratio)
-        base_bottom.GetYaxis().SetTitleOffset(0.9*1./height_ratio)
 
         # FIX for the longer "ratio to prediction" text
         # Title slightly smaller and fix offset a bit
         base_bottom.GetYaxis().SetTitleSize(0.05 * height_ratio)
-        base_bottom.GetYaxis().SetTitleOffset(1.4 * 1./height_ratio)
+        base_bottom.GetYaxis().SetTitleOffset(1.2 * 1./height_ratio)
 
 
         if not self.disable_CMS_labels:
@@ -1008,7 +1008,7 @@ class SpectraPlot(BottomPanelPlot):
         self.plotname = plotname
         # self.plot = differentials.plotting.multipanel.BottomPanelPlot(plotname)
         # self.y_title_bottom = '#mu'
-        self.y_title_bottom = 'Ratio to prediction'
+        self.y_title_bottom = 'Data / prediction'
 
         self.obsname = 'obs_name'
         self.obsunit = None

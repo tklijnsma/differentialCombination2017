@@ -11,6 +11,7 @@ import logging
 from math import isnan, isinf, log10, sqrt
 from array import array
 from collections import namedtuple
+import sys
 
 
 class CorrelationMatrixPlot(plots.PlotBase):
@@ -111,6 +112,15 @@ class CorrelationMatrixPlot(plots.PlotBase):
             l.Draw()
 
         self.H = H
+
+
+    def dump_to_txt(self, txtfile):
+        with open(txtfile, 'w') as fp:
+            fp.write(self.corrmat.__repr__())
+
+        labelfile = txtfile.replace('.txt', '_labels.txt')
+        with open(labelfile, 'w') as fp:
+            fp.write(self.get_bin_labels().__repr__())
 
 
 class CorrelationMatrixFromCombinePlot(CorrelationMatrixPlot):

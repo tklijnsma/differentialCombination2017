@@ -5,6 +5,7 @@ import ROOT
 import logging
 import numpy
 import itertools
+import sys
 
 
 class Parabola(object):
@@ -33,6 +34,44 @@ class ParabolaNDim(object):
         r = 0.0
         for coeff, comb in zip(self.coefficients, self.coupling_combinations):
             r += coeff * prod([coupling_vals[cname] for cname in comb])
+        return r
+
+
+class Parabola2DimForFitting(object):
+    """
+    Fitting with scipy requires a function that can be called like (e.g. 2 dim):
+    f( (c1, c2), coef1, coef2, ...)
+    without any keywords.
+    This class implements such a parabola.
+    """
+
+    def __init__(self, c1_name, c2_name, coupling_combinations):
+        super(Parabola2DimForFitting, self).__init__()
+        self.coupling_combinations = coupling_combinations
+        self.n_coefficients = len(self.coupling_combinations)
+        self.c1_name = c1_name
+        self.c2_name = c2_name
+
+
+    def call_one_parabola(self, c1, c2, coefficient_vals):
+        r = 0.0
+        for coeff, coupling_comb in zip(coefficient_vals, self.coupling_combinations):
+            couplings_multiplied = 1.
+            for c in coupling_comb:
+                couplings_multiplied *= c1 if c == self.c1_name else c2
+            r += coeff * couplings_multiplied
+        return r
+
+    def __call__(self, couplings_tuple, *coefficient_vals):
+        logging.debug(
+            'Parabola2DimForFitting called;\n  couplings_tuple={0};\n  coefficient_vals={1}'
+            .format(couplings_tuple, coefficient_vals)
+            )
+        c1s, c2s = couplings_tuple
+        r = numpy.array([
+            self.call_one_parabola(c1, c2, coefficient_vals) for c1, c2 in zip(c1s, c2s)
+            ])
+        logging.debug('  r={0}'.format(r))
         return r
 
 
@@ -382,15 +421,12 @@ class ParametrizationMultiDim(object):
 
 
     def parametrize(self):
-        if not(self.parametrize_by_matrix_inversion):
-            raise NotImplementedError(
-                'self.parametrize_by_matrix_inversion=False, this is not implemented yet'
-                )
-
         self.parametrizations = []
         self.n_bins = len(self.variations[0].xs)
         if self.parametrize_by_matrix_inversion:
             self.do_parametrize_by_matrix_inversion()
+        else:
+            self.do_parametrize_by_fitting()
 
     def do_parametrize_by_matrix_inversion(self):
         self.get_coupling_combinations()
@@ -403,11 +439,45 @@ class ParametrizationMultiDim(object):
                 )
 
     def do_parametrize_by_fitting(self):
-        raise NotImplementedError('TODO')
+        if self.n_couplings != 2:
+            raise NotImplementedError('Only works for 2 dimensions now')
+        self.get_coupling_combinations()
+        c1s, c2s = self.get_coupling_tuples()
         for i_bin in xrange(self.n_bins):
             xs = [ v.xs[i_bin] for v in self.variations ]
-            self.parametrizations.append(self.get_fitted_parametrization(c1s, c2s, xs))
+            self.parametrizations.append(
+                self.get_paramatrization_by_fitting(c1s, c2s, xs)
+                )
 
+    def get_coupling_tuples(self):
+        c1s = []
+        c2s = []
+        for v in self.variations:
+            c1s.append(v[self.coupling_names[0]])
+            c2s.append(v[self.coupling_names[1]])
+        return tuple(c1s), tuple(c2s)
+
+    def get_paramatrization_by_fitting(self, c1s, c2s, xs):
+        # logging.info('Trying to import scipy.optimize.curve_fit')
+        from scipy.optimize import curve_fit
+
+        coupling_tuple = ( numpy.array(c1s), numpy.array(c2s) )
+        xs_tuple = numpy.array(xs)
+        p0 = numpy.array([ 1.0 for i in xrange(6 if self.do_linear_terms else 3) ])
+        # p0 = numpy.array([])
+
+        logging.debug('STARTING FIT:')
+        logging.debug('coupling_tuple = {0}'.format(coupling_tuple))
+        logging.debug('xs_tuple = {0}'.format(xs_tuple))
+        logging.debug('p0 = {0}'.format(p0))
+
+        fitted_coefficients, cov_mat = curve_fit(
+            Parabola2DimForFitting(self.c1_name, self.c2_name, self.coupling_combinations),
+            coupling_tuple,
+            xs_tuple,
+            p0
+            )
+        return self.get_parabola_for_given_coefficients(fitted_coefficients)
 
 
 
@@ -490,7 +560,7 @@ class Parametrization2Dim(ParametrizationMultiDim):
 
         if self.parametrize_by_matrix_inversion:
             inv_coupling_matrix = self.get_inv_coupling_matrix(c1s, c2s)
-
+        
         self.parametrizations = []
         for i_bin in xrange(self.n_bins):
             xs = [ v.xs[i_bin] for v in self.variations ]
@@ -500,6 +570,10 @@ class Parametrization2Dim(ParametrizationMultiDim):
                 parametrization = self.get_fitted_parametrization(c1s, c2s, xs)
             self.parametrizations.append(parametrization)
 
+    def do_parametrize_by_fitting(self):
+        for i_bin in xrange(self.n_bins):
+            xs = [ v.xs[i_bin] for v in self.variations ]
+            self.parametrizations.append(self.get_fitted_parametrization(c1s, c2s, xs))
 
     def get_inv_coupling_matrix(self, c1s, c2s):
         coupling_matrix = []
@@ -572,6 +646,8 @@ class Parametrization2Dim(ParametrizationMultiDim):
             xs_tuple,
             p0
             )
+
+        return self.get_parabola_for_given_coefficients(fitted_coefficients)
 
         fitted_parabola_base = self.get_parabola()
         def fitted_parabola(c1, c2):

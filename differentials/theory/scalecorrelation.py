@@ -104,20 +104,21 @@ class ScaleCorrelation(object):
             )
         return corrMatrix
 
-    def calculate_errors(self):
+    def calculate_errors(self, error_unit_is_pb=True):
         self.check_variation_consistency()
         errors = []
         for i in xrange(self.n_bins):
             values = self.get_values(i)
             e_min = abs( self.get_bin_center(i) - min(values) )
             e_max = abs( self.get_bin_center(i) - max(values) )
-            width = self.bin_boundaries[i+1]-self.bin_boundaries[i]
-            logging.info(
-                'Multiplying errors in pb/GeV by bin width {0} to get errors in pb ({1}-{2})'
-                .format(width, self.bin_boundaries[i], self.bin_boundaries[i+1])
-                )
-            e_min *= width
-            e_max *= width
+            if error_unit_is_pb:
+                width = self.bin_boundaries[i+1]-self.bin_boundaries[i]
+                logging.info(
+                    'Multiplying errors in pb/GeV by bin width {0} to get errors in pb ({1}-{2})'
+                    .format(width, self.bin_boundaries[i], self.bin_boundaries[i+1])
+                    )
+                e_min *= width
+                e_max *= width
             errors.append([e_max, e_min])
         logging.debug('Found the following errors:\n{0}'.format('\n'.join([ '{0:+.5f} / {1:+.5f}'.format(l,r) for r,l in errors ])))
         return errors

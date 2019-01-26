@@ -233,6 +233,9 @@ def totalXS_plot(args):
     # l2.Draw()
 
     differentials.plotting.canvas.c.resize_temporarily(800,800)
+
+    plot.base.GetYaxis().SetTitleOffset(0.75)
+    
     plot.wrapup()
 
     logging.info(
@@ -364,6 +367,7 @@ def ratioBR_plot(args):
 
     plot.base.GetXaxis().SetTitleSize(0.043)
     plot.base.GetXaxis().SetTitleOffset(1.4)
+    plot.base.GetYaxis().SetTitleOffset(0.75)
 
     plot.leg.SetNColumns(1)
     plot.leg.set(

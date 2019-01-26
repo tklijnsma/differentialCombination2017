@@ -121,6 +121,7 @@ class CellSymmRelativeUncs(newtables.BaseCell):
     """docstring for CellSymmRelativeUncs"""
 
     latex_mode = False
+    n_decimals = 2
 
     def __init__(self, down, up):
         super(CellSymmRelativeUncs, self).__init__()
@@ -129,13 +130,13 @@ class CellSymmRelativeUncs(newtables.BaseCell):
         self.symm = 0.5*(abs(up)+abs(down))
 
     def represent_latex(self):
-        r = '${0:.1f}\\%$'.format(100.*self.symm)
+        r = '${0:.{ndec}f}\\%$'.format(100.*self.symm, ndec=self.n_decimals)
         if self.span > 1:
             r = '\\multicolumn{' + str(self.span) + '}{c|}{' + r + '}'
         return [r]
 
     def represent_terminal(self):
-        return ['{0:.1f}%'.format(100.*self.symm)]
+        return ['{0:.{ndec}f}%'.format(100.*self.symm, ndec=self.n_decimals)]
         
     def represent(self):
         if self.latex_mode:
@@ -270,4 +271,19 @@ class SpectrumRowProducerProjection(SpectrumRowProducer):
             row.append(newtables.CellString('-'))
 
         return row
+
+
+    def produce_from_hist(self, H):
+        row = newtables.BaseRow()
+        row.append(newtables.CellString(H.title))
+
+        for i in xrange(H.n_bins):
+            cell = CellSymmRelativeUncs(-abs(H.errs_down[i]), H.errs_up[i])
+            row.append(cell)
+
+        return row
+
+
+
+
 

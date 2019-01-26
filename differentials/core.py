@@ -135,11 +135,14 @@ standard_titles = {
     'cg' : 'c_{g}',
     'cb' : '#kappa_{b}',
     # 
+    'pth'  : 'p_{T}^{H}',
     'pth_smH'  : 'p_{T}^{H}',
     'pth_ggH'  : 'p_{T}^{H (ggH)}',
     'njets'    : 'N_{jets}',
     'ptjet'    : 'p_{T}^{jet}',
     'rapidity' : '|y_{H}|',
+    # 
+    'diff_pth' : '#Delta#sigma/#Deltap_{T}^{H} (pb/GeV)',
     # 
     # 'SM_Vittorio'       : 'ggH aMC@NLO, NNLOPS + HX',
     'SM_Vittorio'       : 'aMC@NLO, NNLOPS',

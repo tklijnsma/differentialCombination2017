@@ -736,6 +736,9 @@ class Histogram(BasicDrawable):
         self.add_to_legend(leg,  Tg.GetName(), self.title, 'LF' )
         return [ (Tg, 'E2PSAME') ]
 
+    def repr_full_bar_with_connecting_line(self, leg=None):
+        return [ (self.repr_full_bar(leg)[0][0], 'LE2SAME') ]
+
     # Add legend representations
     def repr_vertical_bar(self, leg=None):
         Tg, _ = self.repr_vertical_bar_nolegend()[0]
@@ -1042,7 +1045,9 @@ class Graph(BasicDrawable):
 
 
     def repr_markers(self, leg=None):
-        Tg, _ = self.repr_basic_line(leg)[0]
+        Tg, _ = self.repr_basic_line()[0]
+        if not(leg is None):
+            self.add_to_legend(leg, Tg.GetName(), self.title, 'P' )
         return [(Tg, 'SAMEP')]
 
     def repr_dashed_line(self, leg=None):
@@ -1095,6 +1100,13 @@ class Graph(BasicDrawable):
             self.unc = unc
         else:
             return unc
+
+
+class GraphDummy(Graph):
+    """docstring for GraphDummy"""
+    def __init__(self, title):
+        super(GraphDummy, self).__init__('auto', title, [-999.], [-999.])
+        
 
 
 class Point(BasicDrawable):

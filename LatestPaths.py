@@ -202,8 +202,9 @@ scan.pth_ggH.asimov.combination = 'out/Scan_Mar02_pth_ggH_combination_asimov'
 scan.pth_ggH.asimov.combination_statonly = 'out/Scan_Mar20_pth_ggH_combination_statonly_asimov'
 scan.pth_ggH.asimov.combWithHbb_noxHunc = [ 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_asimov', 'out/Scan_Mar07_pth_ggH_combWithHbb_asimov' ]
 scan.pth_ggH.asimov.combWithHbb_statonly_noxHunc = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly_asimov'
-# scan.pth_ggH.asimov.combWithHbb = [ 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_asimov', 'out/Scan_Mar07_pth_ggH_combWithHbb_asimov' ]
-# scan.pth_ggH.asimov.combWithHbb_statonly = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly_asimov'
+# BELOW ARE ACTUALLY NOXHUNC
+scan.pth_ggH.asimov.combWithHbb = [ 'out/Scan_Mar02_pth_ggH_combWithHbb_asimov', 'out/Scan_Mar14_pth_ggH_combWithHbb_rescan_asimov', 'out/Scan_Mar07_pth_ggH_combWithHbb_asimov' ]
+scan.pth_ggH.asimov.combWithHbb_statonly = 'out/Scan_Mar20_pth_ggH_combWithHbb_statonly_asimov'
 
 scan.pth_smH = AttrDict()
 scan.pth_smH.observed = AttrDict()

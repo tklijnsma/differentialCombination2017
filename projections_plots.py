@@ -236,6 +236,16 @@ def projection_pth_smH_plot(args):
         # logging.info('Table:\n{0}'.format( table.repr_terminal() ))
         # return
 
+        if DO_LUMI_6000:
+            # For projection latex, in the 6000fb-1 case
+            table = differentials.plotting.newtables.BaseTable()
+            rowproducer = differentials.plotting.tableproducer.SpectrumRowProducerProjection(combWithHbb.binning())
+            table.latex_mode(True)
+            table.append(rowproducer.produce_binning_row('$\\pth$ (GeV)'))
+            table.append(rowproducer.produce(combWithHbb))
+            print table.produce_table_string()
+            return
+
         # For projection latex
         table = differentials.plotting.newtables.BaseTable()
         rowproducer = differentials.plotting.tableproducer.SpectrumRowProducerProjection(combWithHbb.binning())
@@ -250,7 +260,6 @@ def projection_pth_smH_plot(args):
         table.append(rowproducer.produce(hbb))
         table.append(rowproducer.produce(combWithHbb))
         print table.produce_table_string()
-
 
 
     # Start compiling plot

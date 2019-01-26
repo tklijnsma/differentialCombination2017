@@ -204,15 +204,15 @@ add_unc(obs_pth_ggH, 'suppliedInput/fromVittorio/sm_uncertainties/uncertaintyFul
 
 
 if __name__ == "__main__":
-    # print 'Unc from VBF:             ', sqrt(unc_squared_per_mode(uncs_VBF, YR4_VBF))
-    # print 'Unc from WH:              ', sqrt(unc_squared_per_mode(uncs_WH, YR4_WH))
-    # print 'Unc from ZH:              ', sqrt(unc_squared_per_mode(uncs_ZH, YR4_ZH))
-    # print 'Unc from ttH:             ', sqrt(unc_squared_per_mode(uncs_ttH, YR4_ttH))
-    # print 'Unc from bbH:             ', sqrt(unc_squared_per_mode(uncs_bbH, YR4_bbH))
-    # print 'Unc from tH_t_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_t_ch, YR4_tH_t_ch))
-    # print 'Unc from tH_s_ch:         ', sqrt(unc_squared_per_mode(uncs_tH_s_ch, YR4_tH_s_ch))
-    # print 'Unc from tH_W_associated: ', sqrt(unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associated))
-    # print
+    print 'Unc from VBF:             {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_VBF, YR4_VBF)),         YR4_VBF)
+    print 'Unc from WH:              {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_WH, YR4_WH)),           YR4_WH)
+    print 'Unc from ZH:              {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_ZH, YR4_ZH)),           YR4_ZH)
+    print 'Unc from ttH:             {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_ttH, YR4_ttH)),         YR4_ttH)
+    print 'Unc from bbH:             {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_bbH, YR4_bbH)),         YR4_bbH)
+    print 'Unc from tH_t_ch:         {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_tH_t_ch, YR4_tH_t_ch)), YR4_tH_t_ch)
+    print 'Unc from tH_s_ch:         {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_tH_s_ch, YR4_tH_s_ch)), YR4_tH_s_ch)
+    print 'Unc from tH_W_associated: {0:.2e} , xs = {1:.2e}'.format(sqrt(unc_squared_per_mode(uncs_tH_W_associated, YR4_tH_W_associated)), YR4_tH_W_associated)
+    print
     print 'YR4_xH:                   ', YR4_xH
     print 'xH_unc_inclusive:         ', xH_unc_inclusive
     print 'xH_unc_inclusive_fraction:', xH_unc_inclusive_fraction

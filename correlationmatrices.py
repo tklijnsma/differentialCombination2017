@@ -146,6 +146,11 @@ def plot_corrmats_vittorio(args):
 
         plot.draw()
 
+        if args.table:
+            txt = os.path.join('corrmatsvitt_{0}'.format(differentials.core.datestr()), name + '.txt')
+            plot.dump_to_txt(txt)
+            continue
+
         if rtransformer.obsname == 'PtNjets2p5NNLOPS_newBins_v2':
             plot.H.GetXaxis().SetLabelSize(0.03)
             plot.H.GetYaxis().SetLabelSize(0.03)

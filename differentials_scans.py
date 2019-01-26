@@ -93,7 +93,29 @@ def pth_smH_scan(args):
 @flag_as_option
 def pth_ggH_scan(args):
     ws = LatestPaths.ws.pth_ggH[differentialutils.get_decay_channel_tag(args)]
+
     config = differential_config(args, ws, 'pth_ggH')
+    if args.asimov:
+        config.nPoints = 28
+        config.set_parameter_range('r_ggH_PTH_0_15',    0.25, 1.75)
+        config.set_parameter_range('r_ggH_PTH_15_30',   0.25, 1.75)
+        config.set_parameter_range('r_ggH_PTH_30_45',   0.25, 1.75)
+        config.set_parameter_range('r_ggH_PTH_45_80',   0.25, 1.75)
+        config.set_parameter_range('r_ggH_PTH_80_120',  0.25, 1.75)
+        config.set_parameter_range('r_ggH_PTH_120_200', 0.25, 1.75)
+        config.set_parameter_range('r_ggH_PTH_200_350', 0.25, 1.75)
+        config.set_parameter_range('r_ggH_PTH_350_600', -0.5, 3.0)
+        config.set_parameter_range('r_ggH_PTH_GT600', -3.0, 5.5)
+
+        noxhunc = False
+        verifiedxhunc = True
+        if noxhunc:
+            config.datacard = 'out/workspaces_Nov16/ws_pth_ggH_combWithHbb_noxhunc.root'
+            config.tags.append('noxhunc')
+        elif verifiedxhunc:
+            config.datacard = 'out/workspaces_Nov16/ws_pth_ggH_combWithHbb.root'
+            config.tags.append('verifiedxhunc')
+
     postfit_and_scan(args, config)
 
 @flag_as_option
@@ -112,6 +134,13 @@ def ptjet_scan(args):
 def rapidity_scan(args):
     ws = LatestPaths.ws.rapidity[differentialutils.get_decay_channel_tag(args)]
     config = differential_config(args, ws, 'rapidity')
+    postfit_and_scan(args, config)
+
+
+@flag_as_option
+def pth_ggH_scan_noxhunc(args):
+    ws = LatestPaths.ws.pth_ggH[differentialutils.get_decay_channel_tag(args)]
+    config = differential_config(args, ws, 'pth_ggH')
     postfit_and_scan(args, config)
 
 
@@ -300,6 +329,13 @@ def pth_ggH_t2ws(args):
         t2ws.make_maps_from_processes()
     t2ws.run()
 
+@flag_as_option
+def pth_ggH_t2ws_noxhunc(args):
+    t2ws = basic_t2ws('pth_ggH', 'combWithHbb')
+    t2ws.card = 'suppliedInput/combWithHbb_pth_ggH_Mar02_NOxHNuisPar.txt'
+    t2ws.make_maps_from_processes()
+    t2ws.tags.append('noxhunc')
+    t2ws.run()
 
 @flag_as_option
 def pth_smH_t2ws(args):
