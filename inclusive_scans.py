@@ -141,12 +141,13 @@ def totalXS_plot(args):
         spline = scan.to_spline(x_min = 0.5, x_max = 1.7)
         graph = spline.to_graph(nx=1500)
         graph.multiply_x_by_constant(LatestBinning.YR4_totalXS)
+        graph.raise_to_zero()
         graph.style().color = scan.color
         graph.title = scan.title
         # graph.line_width = 5
         # graph.line_style = 2
-        if scan is combination:
-            graph.draw_bestfit = True
+        # if scan is combination:
+        #     graph.draw_bestfit = True
         plot.manual_graphs.append(graph)
 
     plot.draw()
@@ -161,6 +162,23 @@ def totalXS_plot(args):
         y1 = lambda c: 1-c.GetTopMargin() - 0.25,
         y2 = lambda c: 1-c.GetTopMargin() - 0.01,
         )
+
+    xs              = combination.unc.x_min
+    xs_err_full     = combination.unc.symm_error
+    xs_err_statonly = combination_statonly.unc.symm_error
+    xs_err_systonly = sqrt(xs_err_full**2 -xs_err_statonly**2)
+    xs              *= LatestBinning.YR4_totalXS
+    xs_err_full     *= LatestBinning.YR4_totalXS
+    xs_err_statonly *= LatestBinning.YR4_totalXS
+    xs_err_systonly *= LatestBinning.YR4_totalXS
+
+    bestfitline = differentials.plotting.pywrappers.Graph(
+        'sm', 'SM',
+        [xs, xs], [0.0, plot.y_cutoff]
+        )
+    bestfitline.style().color = 1
+    bestfitline.line_width = 1
+    bestfitline.Draw('repr_basic_line')
 
     sm_legend_dummy = ROOT.TGraphErrors(
         1,
@@ -194,17 +212,6 @@ def totalXS_plot(args):
     # smline._legend = plot.leg
     smline.line_width = 1
     smline.Draw('repr_basic_line')
-
-
-    xs = combination.unc.x_min
-    xs_err_full = combination.unc.symm_error
-    xs_err_statonly = combination_statonly.unc.symm_error
-    xs_err_systonly = sqrt(xs_err_full**2 -xs_err_statonly**2)
-
-    xs *= LatestBinning.YR4_totalXS
-    xs_err_full *= LatestBinning.YR4_totalXS
-    xs_err_statonly *= LatestBinning.YR4_totalXS
-    xs_err_systonly *= LatestBinning.YR4_totalXS
 
     l = differentials.plotting.pywrappers.Latex(
         differentials.plotting.canvas.c.GetLeftMargin() + 0.045,
