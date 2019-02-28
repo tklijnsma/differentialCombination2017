@@ -177,7 +177,7 @@ def pth_smH_plot(args):
         hzz.style().bin_center_offset = 0.17
         hbb.style().bin_center_offset = 0.17
         hzz.style().plot_priority = 8
-        plot.overflow_label_base_offset = 0.65
+        plot.overflow_label_base_offset = 0.60
     else:
         hgg.style().bin_center_offset = -0.17
         hzz.style().bin_center_offset = 0.17
@@ -225,6 +225,17 @@ def pth_smH_plot(args):
     l.SetTextFont(42) 
     l.SetTextSize(0.038 + 0.005)
     l.Draw()
+
+    l2 = differentials.plotting.pywrappers.Latex(
+        lambda c: 1. - c.GetRightMargin() - 0.01,
+        lambda c: plot.overflow_label_base_offset + 0.08*3,
+        'Overflow norm.'
+        )
+    l2.SetNDC()
+    l2.SetTextAlign(31)
+    l2.SetTextFont(42) 
+    l2.SetTextSize(0.04)
+    l2.Draw()
 
     if APPLY_FIXED_BINNING: plot.replace_bin_labels([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ])
     plot.wrapup()
@@ -334,15 +345,26 @@ def pth_ggH_plot(args):
     l.SetTextSize(0.038 + 0.005)
     l.Draw()
 
-    l2 = differentials.plotting.pywrappers.Latex(
+    lggh = differentials.plotting.pywrappers.Latex(
         lambda c: 1.0 - c.GetRightMargin() - 0.05,
         lambda c: 1.0 - c.GetTopMargin() - 0.05,
         'gg #rightarrow H'
         )
+    lggh.SetNDC()
+    lggh.SetTextSize(0.06)
+    lggh.SetTextAlign(33)
+    lggh.SetTextFont(42)
+    lggh.Draw()
+
+    l2 = differentials.plotting.pywrappers.Latex(
+        lambda c: 1. - c.GetRightMargin() - 0.01,
+        lambda c: plot.overflow_label_base_offset + 0.08,
+        'Overflow norm.'
+        )
     l2.SetNDC()
-    l2.SetTextSize(0.06)
-    l2.SetTextAlign(33)
-    l2.SetTextFont(42)
+    l2.SetTextAlign(31)
+    l2.SetTextFont(42) 
+    l2.SetTextSize(0.04)
     l2.Draw()
 
     plot.replace_bin_labels([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ])
@@ -579,18 +601,26 @@ def ptjet_plot(args):
     # legh = 0.41 * 5./6.
     legw = 0.42
     legh = 0.54 * 4./6.
-    plot.leg.set(
-        lambda c: 1-c.GetRightMargin() + leg_xshift - legw,
+    # plot.leg.set(
+    #     lambda c: 1-c.GetRightMargin() + leg_xshift - legw,
+    #     lambda c: 1-c.GetTopMargin() + leg_yshift - legh,
+    #     lambda c: 1-c.GetRightMargin() + leg_xshift,
+    #     lambda c: 1-c.GetTopMargin() + leg_yshift,
+    #     )
+    plot.leg.set( # Move to left to accommodate more text for overflow
+        lambda c: c.GetLeftMargin() + leg_xshift,
         lambda c: 1-c.GetTopMargin() + leg_yshift - legh,
-        lambda c: 1-c.GetRightMargin() + leg_xshift,
+        lambda c: c.GetLeftMargin() + leg_xshift + legw,
         lambda c: 1-c.GetTopMargin() + leg_yshift,
         )
     plot.leg.SetNColumns(1)
     plot.draw()
 
     l = differentials.plotting.pywrappers.Latex(
-        lambda c: 1-c.GetRightMargin() + leg_xshift + 0.02 - legw,        
-        lambda c: 1-c.GetTopMargin()   + leg_yshift - legh - 0.041 - 0.009,
+        # lambda c: 1-c.GetRightMargin() + leg_xshift + 0.02 - legw,        
+        # lambda c: 1-c.GetTopMargin()   + leg_yshift - legh - 0.041 - 0.009,
+        lambda c: c.GetLeftMargin() + leg_xshift + 0.02,
+        lambda c: 1-c.GetTopMargin() + leg_yshift - legh - 0.041 - 0.009,
         '#sigma_{SM} from CYRM-2017-002'
         )
     l.SetNDC()
@@ -598,6 +628,17 @@ def ptjet_plot(args):
     l.SetTextFont(42) 
     l.SetTextSize(0.035 + 0.005)
     l.Draw()
+
+    l2 = differentials.plotting.pywrappers.Latex(
+        lambda c: 1. - c.GetRightMargin() - 0.01,
+        lambda c: plot.overflow_label_base_offset + 0.08*2,
+        'Overflow norm.'
+        )
+    l2.SetNDC()
+    l2.SetTextAlign(31)
+    l2.SetTextFont(42) 
+    l2.SetTextSize(0.04)
+    l2.Draw()
 
     plot.replace_bin_labels([ '30', '55', '95', '120', '200', '#infty' ])
     plot.wrapup()

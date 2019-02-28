@@ -952,6 +952,10 @@ class Graph(BasicDrawable):
         if self._filled_bestfit:
             self.x_bestfit *= c
 
+    def raise_to_zero(self):
+        miny = min(self.ys)
+        self.ys = [ y - miny for y in self.ys ]
+
     def smooth_y(self, window_size=3):
         ys = numpy.array(self.ys)
         window = numpy.ones(window_size) / window_size
