@@ -72,6 +72,51 @@ def totalXS_scan(args):
 
 
 @flag_as_option
+def totalXS_nuispars(args):
+    postfit = join(
+        LatestPaths.scan.totalXS.combination,
+        'postfit_and_fastscan',
+        'higgsCombine_POSTFIT_combination_inclusive_Mar19_multiSignalModel.MultiDimFit.mH125.root'
+        )
+    ws = differentials.core.get_ws(postfit)
+    status = ws.loadSnapshot('MultiDimFit')
+    nuispars = [ 'CMS_eff_e', 'CMS_eff_m', 'CMS_hgg_JEC', 'CMS_hgg_JER', 'CMS_hgg_LooseMvaSF', 'CMS_hgg_PreselSF', 'CMS_hgg_SigmaEOverEShift', 'CMS_hgg_TriggerWeight', 'CMS_hgg_electronVetoSF', 'CMS_hgg_phoIdMva', 'CMS_hzz2e2mu_Zjets', 'CMS_hzz4e_Zjets', 'CMS_hzz4mu_Zjets', 'CMS_zjets_bkgdcompo', 'QCDscale_VV', 'QCDscale_ggVV', 'kfactor_ggzz', 'lumi_13TeV', 'norm_nonResH', 'pdf_gg', 'pdf_qqbar', 'CMS_hgg_nuisance_LowR9EB_13TeVscale', 'CMS_zz4l_n_sig_3_8', 'CMS_zz4l_mean_m_sig', 'CMS_hgg_nuisance_Gain1EB_13TeVscale', 'CMS_hgg_nuisance_LightColl_13TeVscale', 'CMS_hgg_nuisance_Gain6EB_13TeVscale', 'CMS_hgg_nuisance_HighR9EB_13TeVsmear', 'CMS_hgg_nuisance_LowR9EB_13TeVsmear', 'CMS_zz4l_n_sig_2_8', 'CMS_zz4l_mean_e_sig', 'CMS_zz4l_sigma_m_sig', 'CMS_hgg_nuisance_deltafracright', 'CMS_hgg_nuisance_Absolute_13TeVscale', 'CMS_hgg_nuisance_MaterialForward_scale', 'CMS_hgg_nuisance_NonLinearity_13TeVscale', 'CMS_hgg_nuisance_MaterialCentral_scale', 'CMS_hgg_nuisance_LowR9EE_13TeVsmear', 'CMS_zz4l_sigma_e_sig', 'CMS_hgg_nuisance_Geant4_13TeVscale', 'CMS_hgg_nuisance_HighR9EE_13TeVscale', 'CMS_zz4l_n_sig_1_8', 'CMS_hgg_nuisance_HighR9EE_13TeVsmear', 'CMS_hgg_nuisance_LowR9EE_13TeVscale', 'CMS_hgg_nuisance_HighR9EB_13TeVscale' ]
+
+    d = []
+    maxname = max(map(len, nuispars))
+    for nuispar in nuispars:
+        val = ws.var(nuispar).getVal()
+        print '{0:{width}}: {1}'.format(nuispar, val, width=maxname)
+        d.append((nuispar, val))
+    d.sort(key=lambda tup: -abs(tup[1]))
+
+    c = differentials.plotting.canvas.c
+    c.Clear()
+
+    ROOT.gStyle.SetBarWidth(0.5)
+
+    g = ROOT.TGraph(
+        len(d),
+        array('d', range(len(d))),
+        array('d', [t[1] for t in d] )
+        )
+    g.Draw('AB')
+    g.SetFillColor(40)
+
+    print 'Nr. of nuispars:'
+    print len(nuispars)
+
+    g.SetTitle('Nuisance parameters for #sigma_{tot} at best fit')
+    g.GetXaxis().SetTitle('Nuis. par. index')
+    g.GetYaxis().SetTitle('Value')
+
+    c.save('totalXS_nuispars')
+
+    print d[:5]
+
+
+
+@flag_as_option
 def totalXS_plot(args):
     scans = LatestPaths.scan.totalXS
     scans_statonly = LatestPaths.scan.totalXS.statonly
