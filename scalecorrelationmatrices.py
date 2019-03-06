@@ -31,6 +31,25 @@ def scalecorrelations_parser_options(parser):
 
 
 @flag_as_option
+def top_central_values(args):
+    top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600., 800. ]
+    sm = differentials.theory.theory_utils.FileFinder(
+        ct=1.0, cg=0.0, cb=1.0, muR=1.0, muF=1.0, Q=1.0,
+        directory=LatestPaths.theory.top.filedir
+        ).get()[0]
+    print sm.file
+    xs = differentials.integral.Rebinner(sm.binBoundaries, sm.crosssection, top_exp_binning).rebin()
+    print xs
+    print ' '.join(['{0:.2g}'.format(v) for v in xs])
+    print ' & '.join([
+        re.sub(
+            r'e\-\d(\d)',
+            r'\\times 10^{-\1}',
+            '{0:.{ndec}{mode}}'.format(v, ndec = 1 if v < 0.1 else 2, mode = 'e' if v < 0.1 else 'f')
+            )
+        for v in xs ]) + ' \\\\'
+
+@flag_as_option
 def top_scalecorrelations(args):
     variations = differentials.theory.theory_utils.FileFinder(
         ct=1.0, cg=0.0, cb=1.0,
@@ -76,6 +95,25 @@ def top_scalecorrelations(args):
             scalecorrelation_theory.write_correlation_matrix_to_file('tophighpt')
             scalecorrelation_theory.write_errors_to_file('tophighpt')
 
+
+@flag_as_option
+def yukawa_central_values(args):
+    yukawa_exp_binning = [0.0, 15., 30., 45., 80., 120.]
+    sm = differentials.theory.theory_utils.FileFinder(
+        kappab=1.0, kappac=1.0, muR=1.0, muF=1.0, Q=1.0,
+        directory='out/theories_Mar09_yukawa_summed/'
+        ).get()[0]
+    print sm.file
+    xs = differentials.integral.Rebinner(sm.binBoundaries, sm.crosssection, yukawa_exp_binning).rebin()
+    print xs
+    print ' '.join(['{0:.2g}'.format(v) for v in xs])
+    print ' & '.join([
+        re.sub(
+            r'e\-\d(\d)',
+            r'\\times 10^{-\1}',
+            '{0:.{ndec}{mode}}'.format(v, ndec = 1 if v < 0.1 else 2, mode = 'e' if v < 0.1 else 'f')
+            )
+        for v in xs ]) + ' \\\\'
 
 @flag_as_option
 def yukawa_scalecorrelations(args):
