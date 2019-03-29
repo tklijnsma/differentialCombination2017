@@ -46,6 +46,8 @@ def main():
     parser.add_argument( '--statsyst', action='store_true' )
     parser.add_argument( '--lumiScale', action='store_true' )
     parser.add_argument( '--no-preliminary-tag', action='store_true' )
+    parser.add_argument( '--no-tag', action='store_true' )
+    parser.add_argument( '--projection-tag', action='store_true' )
 
     #____________________________________________________________________
     # New style imports
@@ -104,6 +106,11 @@ def main():
     if args.no_preliminary_tag:
         logging.info('Remove the default \'Preliminary\' tag from plots')
         differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = ''
+    if args.no_tag:
+        logging.info('Removing the CMS tag entirely')
+        differentials.plotting.pywrappers.CMS_Latex_type.disable = True
+    if args.projection_tag:
+        differentials.plotting.pywrappers.CMS_Latex_type.CMS_type_str = 'Projection'
 
     # projections_plotting = True
     projections_plotting = False

@@ -83,6 +83,12 @@ approval.ktkb.observed.couplingdependentBRs.hgg = 'out/Scan_Jun10_TopCtCb_hgg_sc
 approval.ktkb.observed.couplingdependentBRs.hzz = 'out/Scan_Jun09_TopCtCb_hzz_scalingbbHttH_couplingdependentBRs'
 
 
+@flag_as_option
+def paperplots_ktcg(args):
+    multicont_Top_scalingttH_couplingdependentBRs(args)
+    multicont_Top_scalingttH_floatingBRs_constrainedbbZZ(args)
+
+
 def latest_ktcg_couplingdependentBRs(args, decay_channel=None, asimov=None, splined=False):
     if not(asimov is None): args = differentialutils.force_asimov(args, asimov)
     if not(decay_channel is None): args = differentialutils.set_one_decay_channel(args, decay_channel)
@@ -169,8 +175,144 @@ def multicont_Top_scalingttH_couplingdependentBRs(args):
     plot.add_BR_parametrized_text(
         x = lambda c: c.GetLeftMargin() + 0.03,
         y = lambda c: c.GetBottomMargin() + 0.11,
+        coupling_x = 'ct', coupling_y='cg'
         )
     plot.wrapup()
+    return plot
+
+
+@flag_as_option
+def spectra_multicont_ktcg(args):
+    from differentials_plots import pth_ggH_plot
+    spectra_plot = pth_ggH_plot(args)
+
+    spectra_plot.base_top.SetMaximum(500.)
+
+    spectra_plot.toppad.cd()
+    cw = 1.0 - spectra_plot.toppad.GetLeftMargin() - spectra_plot.toppad.GetRightMargin()
+    ch = 1.0 - spectra_plot.toppad.GetBottomMargin() - spectra_plot.toppad.GetTopMargin()
+    small_pad = ROOT.TPad(
+        differentials.plotting.plotting_utils.get_unique_rootname(), '',
+        spectra_plot.toppad.GetLeftMargin() + 0.52*cw, spectra_plot.toppad.GetBottomMargin() + 0.54*ch,
+        spectra_plot.toppad.GetLeftMargin() + 0.99*cw, spectra_plot.toppad.GetBottomMargin() + 0.99*ch,
+        )
+    ROOT.SetOwnership(small_pad, False)
+    small_pad.SetBottomMargin( 0.19 )
+    small_pad.SetTopMargin(    0.03 )
+    small_pad.SetLeftMargin(   0.19 )
+    small_pad.SetRightMargin(  0.14 )
+    small_pad.Draw()
+    small_pad.cd()
+
+    differentials.plotting.plotting_utils.set_color_palette('twocolor')
+
+    differentials.plotting.canvas.c.cd()
+    multicont_rootfile = 'plots_Mar06/multicont_ktcg_couplingdependentBRs.root'
+    with differentials.core.openroot(multicont_rootfile) as fp:
+        multicont_c = fp.Get('ctc')
+        multicont_c.ls()
+
+    element_list = multicont_c.GetListOfPrimitives()
+    element_dict = {}
+    for i in xrange(element_list.GetEntries()):
+        element = element_list.At(i)
+        ROOT.SetOwnership(element, False)
+        element_dict[element.GetName()] = element
+
+    base = [ v for k, v in element_dict.iteritems() if k.startswith('base') and not('copy' in k) ][0]
+    draw_str = base.GetName().split('_')[1]
+
+    small_pad.cd()
+    base.Draw(draw_str)
+    base.GetXaxis().SetTitleOffset(0.6)
+    base.GetXaxis().SetTitleSize(0.12)
+    base.GetYaxis().SetTitleOffset(0.7)
+    base.GetYaxis().SetTitleSize(0.12)
+
+    contour_1sigma = [ v for k, v in element_dict.iteritems() if k.startswith('contourset3') ][0]
+    contour_2sigma = [ v for k, v in element_dict.iteritems() if k.startswith('contourset4') ][0]
+    contour_1sigma.Draw('LSAME')
+    contour_2sigma.Draw('LSAME')
+
+    bestfit = [ v for k, v in element_dict.iteritems() if k.startswith('bestfit3') ][0]
+    bestfit.Draw('PSAME')
+    x_bestfit, y_bestfit = differentials.plotting.plotting_utils.get_x_y_from_TGraph(bestfit)
+    x_bestfit = x_bestfit[0]
+    y_bestfit = y_bestfit[0]
+
+    from parametrization_plots import ParametrizationDrawer
+    drawer = ParametrizationDrawer('ct', 'cg')
+    drawer.ktcg_variations()
+    drawer.ktcgkb_scale_variations()
+    drawer.make_parametrization()
+
+    points = differentials.plotting.plotting_utils.ExtremumGetter(
+        contour_2sigma
+        ).extrema_to_center_downwarddiagonal(x_bestfit, y_bestfit)
+    colors = range(2,5) + range(6,10) + range(40,50)
+
+    sm_param_xs = drawer.parametrization.evaluate(ct=1.0, cg=0.0)
+    sm_param_xs_rebin = differentials.integral.Rebinner(
+        drawer.sm.binBoundaries,
+        sm_param_xs,
+        [ 0., 15., 30., 45., 80., 120., 200., 350., 600., 800. ]
+        ).rebin()
+
+    sm_yr4 = LatestBinning.obs_pth_ggH.crosssection_over_binwidth()
+
+    # points.append((1.0, 0.0))
+
+    for i, (x, y) in enumerate(points):
+        color = colors[i]
+
+        small_pad.cd()
+        point = differentials.plotting.pywrappers.Point(x, y, color=color)
+        point.Draw('repr_diamond_with_border')
+
+        param_xs = drawer.parametrization.evaluate(ct=x, cg=y)
+        param_xs_rebin = differentials.integral.Rebinner(
+            drawer.sm.binBoundaries,
+            param_xs,
+            [ 0., 15., 30., 45., 80., 120., 200., 350., 600., 800. ]
+            ).rebin()
+
+        # Reweight to YR4
+        ratio = [ xs / xs_sm for xs, xs_sm in zip(param_xs_rebin, sm_param_xs_rebin) ]
+        crosssection = [ r * xs_yr for r, xs_yr in zip(ratio, sm_yr4) ]
+        crosssection[-1] /= 250.
+
+        spectra_plot.toppad.cd()
+        graph_xs = differentials.plotting.pywrappers.Graph(
+            differentials.plotting.plotting_utils.get_unique_rootname(),
+            'paramxs{0}'.format(i),
+            [ i+0.5 for i in range(len(param_xs_rebin))],
+            crosssection,
+            )
+        graph_xs.style().color = color
+        graph_xs.Draw('repr_smooth_line')
+
+        spectra_plot.bottompad.cd()
+        graph_ratio = differentials.plotting.pywrappers.Graph(
+            differentials.plotting.plotting_utils.get_unique_rootname(),
+            'paramxs{0}'.format(i),
+            [ i+0.5 for i in range(len(param_xs_rebin))],
+            ratio,
+            )
+        graph_ratio.style().color = color
+        graph_ratio.Draw('repr_smooth_line')
+
+
+    small_pad.cd()
+    small_pad.RedrawAxis()
+
+    spectra_plot.toppad.cd()
+    differentials.plotting.pywrappers.CMS_Latex_type.disable = False
+    differentials.plotting.pywrappers.CMS_Latex_type('Work in progress', text_size=0.067).Draw()
+
+    differentials.plotting.canvas.c.save(spectra_plot.plotname + '_withmulticont')
+
+
+
 
 @flag_as_option
 def quicktest_splining_ktcg_couplingdependentBRs(args):
@@ -428,6 +570,7 @@ def multicont_Top_scalingttH_floatingBRs_constrainedbbZZ(args):
     plot.add_BR_floating_text(
         x = lambda c: c.GetLeftMargin() + 0.03,
         y = lambda c: c.GetBottomMargin() + 0.11,
+        coupling_x = 'ct', coupling_y='cg'
         )
     plot.wrapup()
 
@@ -610,7 +753,8 @@ def multicont_ktkb_scalingbbHttH_couplingdependentBRs(args):
     # plot.add_BR_floating_text()
     plot.add_BR_parametrized_text(
         x = lambda c: c.GetLeftMargin() + 0.03,
-        y = lambda c: 0.66
+        y = lambda c: 0.66,
+        coupling_x = 'ct', coupling_y='cb'
         )
     plot.wrapup()
 

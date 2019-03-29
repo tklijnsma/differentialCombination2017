@@ -265,10 +265,11 @@ def projection_ktcg_plot_couplingdependentBRs(args):
     plot.cdl.disable_bestfit = True
     plot.draw_bestfit_point = False
     plot.draw(wait=True)
+
     plot.add_BR_parametrized_text(
-        # x = lambda c: 1. - c.GetRightMargin() - 0.01,
         x = lambda c: c.GetLeftMargin() + 0.03,
-        y = lambda c: c.GetBottomMargin() + 0.03 + 0.015 + 0.07
+        y = lambda c: c.GetBottomMargin() + 0.03 + 0.015 + 0.07,
+        coupling_x = 'ct', coupling_y='cg'
         )
     plot.add_text_on_the_fly(
         text_size = 0.040,

@@ -428,15 +428,15 @@ class MultiContourPlot(PlotBase):
         self.y_max = y_max + 0.4*(y_max-y_min)
 
 
-    def add_BR_parametrized_text(self, x=None, y=None):
+    def add_BR_parametrized_text(self, x=None, y=None, coupling_x='kappac', coupling_y='kappab'):
         text = '{0}({1}, {2})'.format(
-            core.standard_titles['BR'], core.standard_titles['kappac'], core.standard_titles['kappab']
+            core.standard_titles['BR'], core.standard_titles[coupling_x], core.standard_titles[coupling_y]
             )
         self.add_BR_text(x, y, text)
 
-    def add_BR_floating_text(self, x=None, y=None):
+    def add_BR_floating_text(self, x=None, y=None, coupling_x='kappac', coupling_y='kappab'):
         text = '{0} unconstr.'.format(
-            core.standard_titles['BR'], core.standard_titles['kappac'], core.standard_titles['kappab']
+            core.standard_titles['BR'], core.standard_titles[coupling_x], core.standard_titles[coupling_y]
             )
         self.add_BR_text(x, y, text)
 
@@ -499,6 +499,7 @@ class MultiContourPlot(PlotBase):
             else:
                 self.base_hist = self.scans[0].to_hist()
             self.base, draw_str = self.base_hist.repr_2D()[0]
+            self.base.SetName('base_' + draw_str)
             self.base.Draw(draw_str)
         elif self.base_is_set_manually:
             self.base.Draw(self.base_draw_str)
@@ -995,7 +996,7 @@ class BottomPanelPlot(PlotBase):
             self.toppad.cd()
             self.leg.Draw()
         super(BottomPanelPlot, self).save()
-        c.SetCanvasSize(self._tmp_width, self._tmp_height)
+        # c.SetCanvasSize(self._tmp_width, self._tmp_height)
 
 
 

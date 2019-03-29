@@ -369,6 +369,7 @@ def pth_ggH_plot(args):
 
     plot.replace_bin_labels([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ])
     plot.wrapup()
+    return plot
 
 #____________________________________________________________________
 @flag_as_option

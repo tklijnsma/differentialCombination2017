@@ -378,6 +378,121 @@ def projection_pth_smH_plot(args):
     differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 35.9
 
 
+#____________________________________________________________________
+@flag_as_option
+def projection_pth_smH_unc_plot(args):
+    differentials.scans.Scan.deltaNLL_threshold = -10.
+    differentials.plotting.pywrappers.CMS_Latex_lumi.CMS_lumi = 3000
+    spectra = []
+    obs_name = 'pth_smH'
+    obstuple = LatestBinning.obstuple_pth_smH
+
+    srun2 = LatestPaths.scan.pth_smH.observed
+    s1 = p3000
+    s2 = p3000_s2
+    sstat = p3000_statonly
+
+    def get_comb(scandict, name, color):
+        comb = differentials.scans.DifferentialSpectrum(name, scandict.combWithHbb)
+        comb.no_overflow_label = True
+        comb.set_sm(obstuple.combWithHbb.crosssection_over_binwidth(normalize_by_second_to_last_bin_width=False))
+        comb.add_stylesheet(style.copy(color=color, plot_priority=20))
+        comb.read()
+        comb.give_x_max(800.)
+        comb.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
+        comb.fix_bestfit_to_one()
+        return comb
+    
+    c = differentials.plotting.canvas.c
+    c.Clear()
+    c.SetCanvasSize( 800, 800 )
+    c.set_margins()
+
+    base = differentials.plotting.pywrappers.Base(
+        x_min = 0., x_max = 9.,
+        y_min = 0., y_max = 50.,
+        x_title = differentials.core.standard_titles['pth'] + ' (GeV)',
+        y_title = differentials.core.standard_titles['unc_pth']
+        )
+    base.Draw()
+
+    stylesheet = differentials.plotting.pywrappers.StyleSheet(line_width=1, color=17)
+    for bound in range(1,9):
+        line = ROOT.TLine(bound, 0., bound, 50.)
+        ROOT.SetOwnership(line, False)
+        stylesheet.apply(line)
+        line.Draw()
+
+    lw = 0.42
+    lh = 0.30
+    leg = differentials.plotting.pywrappers.Legend(
+        lambda c: c.GetLeftMargin() + 0.02,
+        lambda c: 1.-c.GetTopMargin() - 0.01 - lh,
+        lambda c: c.GetLeftMargin() + 0.02 + lw,
+        lambda c: 1.-c.GetTopMargin() - 0.01,
+        )
+    leg.SetNColumns(1)
+
+    titles = {
+        'srun2' : 'Run 2 (#times1/2)',
+        's1'    : 'Scenario 1',
+        's2'    : 'Scenario 2',
+        'sstat' : 'Stat. only',
+        }
+
+    for scandict, name, color in [
+            ( srun2, 'srun2', 1 ),
+            ( s1,    's1',    2 ),
+            ( s2,    's2',    4 ),
+            ( sstat, 'sstat', 8 ),
+            ]:
+        comb = get_comb(scandict, name, color)
+        htemp = comb.to_hist()
+
+        symm_unc = [ 100. * 0.5*(abs(up)+abs(down)) for up, down in zip(htemp.errs_up, htemp.errs_down)]
+        if name == 'srun2':
+            symm_unc = [ 0.5*s for s in symm_unc ]
+
+        H = differentials.plotting.pywrappers.Histogram(
+            'H' + name, 'H' + name,
+            range(htemp.n_bins+1), symm_unc,
+            color
+            )
+        objs = H.Draw('repr_basic')
+        leg.AddEntry(objs[0].GetName(), titles.get(name), 'l')
+
+
+    # Replacing bin labels
+    c.cd()
+    base.GetXaxis().SetLabelOffset(999.)
+    text_size = base.GetXaxis().GetLabelSize()
+
+    y = lambda c: c.GetBottomMargin() - 0.01
+    x_min = base.GetXaxis().GetXmin()
+    x_max = base.GetXaxis().GetXmax()
+    offset = 0.0
+    dx = x_max - x_min
+    left_margin = c.GetLeftMargin()
+    right_margin = c.GetRightMargin()
+    x_to_NDC = lambda x: left_margin + ((x/dx+offset) * (1.-left_margin-right_margin))
+
+    for i, lbl in enumerate([ '0', '15', '30', '45', '80', '120', '200', '350', '600', '#infty' ]):
+        x = x_to_NDC(i)
+        l = differentials.plotting.pywrappers.Latex(x, y, lbl)
+        l.SetNDC()
+        l.SetTextSize(text_size)
+        l.SetTextAlign(23)
+        l.SetTextFont(42)
+        l.Draw()
+
+    leg.Draw()
+
+    differentials.plotting.pywrappers.CMS_Latex_type(type_str='Projection').Draw()
+    differentials.plotting.pywrappers.CMS_Latex_lumi(lumi=3000).Draw()
+    c.save('hllhc-pth-unc-scenarios')
+    return
+
+
 
 
 def filter_hbb(hbb):

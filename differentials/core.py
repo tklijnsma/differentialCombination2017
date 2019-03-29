@@ -143,6 +143,7 @@ standard_titles = {
     'rapidity' : '|y_{H}|',
     # 
     'diff_pth' : '#Delta#sigma/#Deltap_{T}^{H} (pb/GeV)',
+    'unc_pth' : 'Unc. #Delta#sigma/#Deltap_{T}^{H} (%)',
     # 
     # 'SM_Vittorio'       : 'ggH aMC@NLO, NNLOPS + HX',
     'SM_Vittorio'       : 'aMC@NLO, NNLOPS',

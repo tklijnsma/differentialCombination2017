@@ -231,6 +231,7 @@ class CMS_Latex_type(Latex):
     CMS_type_str = 'Preliminary'
     apply_text_offset = True
     text_size    = 0.06
+    disable = False
 
     def __init__(self, type_str=None, text_size=None):
         if not(text_size is None):
@@ -251,6 +252,7 @@ class CMS_Latex_type(Latex):
             return 0.25 * self.text_size
 
     def Draw(self, *args, **kwargs):
+        if self.disable: return
         self.tlatex.SetNDC()
         self.tlatex.SetTextAlign(11)
         self.tlatex.SetTextFont(42)
@@ -684,9 +686,12 @@ class Histogram(BasicDrawable):
     #____________________________________________________________________
     # Draw methods
     def Draw(self, draw_style):
+        objs = []
         logging.debug('Drawing Histogram {0} with draw_style {1}; legend: {2}'.format(self, draw_style, self.legend))
         for obj, draw_str in getattr(self, draw_style)(self.legend):
             obj.Draw(draw_str)
+            objs.append(obj)
+        return objs
 
     # Basic line
     def repr_basic(self, leg=None):
@@ -1200,6 +1205,7 @@ class Histogram2D(BasicDrawable):
     color_cycle = global_color_cycle
     default_value = 999.
     contour_filter = utils.ContourFilter()
+    bestfitpoint_counter = 1
 
     def __init__(
             self,
@@ -1667,7 +1673,8 @@ class Histogram2D(BasicDrawable):
         Tg.SetMarkerSize(2)
         Tg.SetMarkerStyle(34)
         Tg.SetMarkerColor(self.color)
-        Tg.SetName(utils.get_unique_rootname())
+        Tg.SetName('bestfit{0}_'.format(self.bestfitpoint_counter) + utils.get_unique_rootname())
+        Histogram2D.bestfitpoint_counter += 1
         return [(Tg, 'PSAME')]
 
     def repr_1sigma_contours(self, leg=None):
@@ -1682,7 +1689,7 @@ class Histogram2D(BasicDrawable):
             Tg.SetLineWidth(2)
         if not(leg is None):
             Tg = Tgs[0]
-            Tg.SetName(utils.get_unique_rootname())
+            # Tg.SetName(utils.get_unique_rootname())
             leg.AddEntry(Tg.GetName(), self.title, 'l')
         return [ (Tg, 'LSAME') for Tg in Tgs ]
 
@@ -1699,7 +1706,7 @@ class Histogram2D(BasicDrawable):
             Tg.SetLineStyle(2)
         if not(leg is None):
             Tg = Tgs[0]
-            Tg.SetName(utils.get_unique_rootname())
+            # Tg.SetName(utils.get_unique_rootname())
             leg.AddEntry(Tg.GetName(), self.title, 'l')
         return [ (Tg, 'LSAME') for Tg in Tgs ]
 

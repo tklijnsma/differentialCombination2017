@@ -99,11 +99,12 @@ def new_color_cycle():
        )
 
 
-
+contourset_counter = 1
 def get_contours_from_H2(H2_original, threshold):
     # Open a temporary canvas so the contour business does not screw up other plots
     ctemp = ROOT.TCanvas('ctemp', 'ctemp', 1000, 800)
     ctemp.cd()
+    global contourset_counter
 
     H2 = H2_original.Clone()
     H2.SetName(get_unique_rootname())
@@ -128,6 +129,7 @@ def get_contours_from_H2(H2_original, threshold):
 
             TgClone = Tg.Clone()
             ROOT.SetOwnership(TgClone, False)
+            TgClone.SetName('contourset{0}_'.format(contourset_counter) + get_unique_rootname())
             Tgs.append(TgClone)
 
     logging.debug('{0} contours found for threshold {1}'.format(len(Tgs), threshold))
@@ -155,6 +157,7 @@ def get_contours_from_H2(H2_original, threshold):
     c.cd()
     ROOT.gPad.Update()
 
+    contourset_counter += 1
     return Tgs
 
 
@@ -256,3 +259,99 @@ def get_x_y_from_TGraphAsymmErrors(Tg, per_point=False):
         return points
     else:
         return xs, ys, xs_down, xs_up, ys_down, ys_up
+
+
+
+def dist(x1, y1, x2, y2):
+    return sqrt( (x2-x1)**2 + (y2-y1)**2 )
+
+def get_max_dist_point(x_center, y_center, xs, ys):
+    distances = [ dist(x_center, y_center, x, y) for x, y in zip(xs, ys) ]
+    i_max = distances.index(max(distances))
+    return xs[i_max], ys[i_max]
+
+def get_min_dist_point(x_center, y_center, xs, ys):
+    distances = [ dist(x_center, y_center, x, y) for x, y in zip(xs, ys) ]
+    i_min = distances.index(min(distances))
+    return xs[i_min], ys[i_min]
+
+
+class ExtremumGetter(object):
+    """docstring for ExtremumGetter"""
+    def __init__(self, Tg):
+        super(ExtremumGetter, self).__init__()
+        self.Tg = Tg
+        self.xs, self.ys = get_x_y_from_TGraph(self.Tg)
+
+    def extrema_x_y(self):
+        self.i_x_min = self.xs.index(min(self.xs))
+        self.i_x_max = self.xs.index(max(self.xs))
+        self.i_y_min = self.ys.index(min(self.ys))
+        self.i_y_max = self.ys.index(max(self.ys))
+        return [
+            (self.xs[self.i_x_min], self.ys[self.i_x_min]),
+            (self.xs[self.i_x_max], self.ys[self.i_x_max]),
+            (self.xs[self.i_y_min], self.ys[self.i_y_min]),
+            (self.xs[self.i_y_max], self.ys[self.i_y_max]),
+            ]
+
+    def get_left(self, x_center):
+        xs = []
+        ys = []
+        for x, y in zip(self.xs, self.ys):
+            if x <= x_center:
+                xs.append(x)
+                ys.append(y)
+        if len(xs) == 0:
+            logging.warning('No points left of x_center = {0}'.format(x_center))
+        return xs, ys
+
+    def get_right(self, x_center):
+        xs = []
+        ys = []
+        for x, y in zip(self.xs, self.ys):
+            if x >= x_center:
+                xs.append(x)
+                ys.append(y)
+        if len(xs) == 0:
+            logging.warning('No points right of x_center = {0}'.format(x_center))
+        return xs, ys
+
+    def get_down(self, y_center):
+        xs = []
+        ys = []
+        for x, y in zip(self.xs, self.ys):
+            if y <= y_center:
+                xs.append(x)
+                ys.append(y)
+        if len(xs) == 0:
+            logging.warning('No points down of y_center = {0}'.format(y_center))
+        return xs, ys
+
+    def get_up(self, y_center):
+        xs = []
+        ys = []
+        for x, y in zip(self.xs, self.ys):
+            if y >= y_center:
+                xs.append(x)
+                ys.append(y)
+        if len(xs) == 0:
+            logging.warning('No points up of y_center = {0}'.format(y_center))
+        return xs, ys
+
+    def extrema_to_center_downwarddiagonal(self, x_center, y_center):
+        points = []
+        points.append(tuple(get_max_dist_point(x_center, y_center, *self.get_left(x_center))))
+        points.append(tuple(get_max_dist_point(x_center, y_center, *self.get_right(x_center))))
+        points.append(tuple(get_min_dist_point(x_center, y_center, *self.get_down(y_center))))
+        points.append(tuple(get_min_dist_point(x_center, y_center, *self.get_up(y_center))))
+        return points
+
+
+
+
+
+
+
+
+
