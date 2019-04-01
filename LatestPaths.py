@@ -47,11 +47,8 @@ card.ptjet.hzz = 'suppliedInput/fromDavid/PTJET_NNLOPS_Nov28/smH/hzz4l_comb_13Te
 card.ptjet.combination = 'suppliedInput/combination_ptjet_Mar19.txt'
 
 card.inclusive = AttrDict()
-# Had unrenamed process names... this probably lead to unsimultaneous scaling of what should have been the same process!!
-# card.inclusive.hgg = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS.txt'
 card.inclusive.hgg = 'suppliedInput/fromVittorio/inclusive_Nov27/Datacard_13TeV_differential_InclusiveNNLOPS_renamedProcesses.txt'
 card.inclusive.hzz = 'suppliedInput/fromDavid/differential_Nov27/smH/hzz4l_comb_13TeV_xs.txt'
-# card.inclusive.combination = 'suppliedInput/combination_inclusive_Mar19.txt'
 card.inclusive.combination = 'suppliedInput/combination_inclusive_May09.txt'
 
 card.yukawa_noXHunc = AttrDict()
@@ -81,7 +78,6 @@ ws.pth_ggH.hgg = 'out/workspaces_Mar02/ws_pth_ggH_hgg.root'
 ws.pth_ggH.hzz = 'out/workspaces_Feb28/ws_pth_ggH_hzz.root'
 ws.pth_ggH.hbb = 'out/workspaces_Mar02/ws_pth_ggH_hbb.root'
 ws.pth_ggH.combination = 'out/workspaces_Mar01/ws_pth_ggH_combination.root'
-# ws.pth_ggH.combWithHbb = 'out/workspaces_Mar02/ws_pth_ggH_combWithHbb.root'
 ws.pth_ggH.combWithHbb = 'out/workspaces_May17/ws_pth_ggH_combWithHbb.root' # Contains a nuisance for xH
 
 ws.pth_smH = AttrDict()
@@ -111,10 +107,6 @@ ws.ratioOfBRs = 'out/workspaces_Apr12/combination_inclusive_Mar19_extendedMultiS
 
 ws.top = AttrDict()
 ws.top.nominal = AttrDict()
-# ws.top.nominal.combination = 'out/workspaces_Mar03/combination_Top_reweighted_nominal.root'
-# ws.top.nominal.combWithHbb = 'out/workspaces_Mar03/combWithHbb_Top_reweighted_nominal.root'
-# ws.top.nominal.hgg = 'out/workspaces_Mar03/hgg_Top_reweighted_nominal.root'
-# ws.top.nominal.hzz = 'out/workspaces_Mar03/hzz_Top_reweighted_nominal.root'
 ws.top.nominal.combination = 'out/workspaces_Mar13/combination_Top_reweighted_noBinsDropped.root'
 ws.top.nominal.combWithHbb = 'out/workspaces_Mar13/combWithHbb_Top_reweighted_noBinsDropped.root'
 ws.top.nominal.hbb = 'out/workspaces_Mar14/hbb_Top_reweighted_noBinsDropped.root'
@@ -226,17 +218,11 @@ scan.pth_smH.asimov.combination_statonly = 'out/Scan_Mar20_pth_smH_combination_s
 
 scan.njets = AttrDict()
 scan.njets.observed = AttrDict()
-# scan.njets.observed.hgg = 'out/Scan_njets_Feb06_hgg'
-# scan.njets.observed.hzz = 'out/Scan_njets_Feb06_hzz'
-# scan.njets.observed.combination = 'out/Scan_njets_Feb06_combination'
 scan.njets.observed.combination = 'out/Scan_Mar19_njets_combination'
 scan.njets.observed.hgg = 'out/Scan_Mar19_njets_hgg'
 scan.njets.observed.hzz = 'out/Scan_Mar19_njets_hzz'
 scan.njets.observed.combination_statonly = 'out/Scan_Mar19_njets_combination_statonly'
 scan.njets.asimov = AttrDict()
-# scan.njets.asimov.hgg = 'out/Scan_njets_Feb06_hgg_asimov'
-# scan.njets.asimov.hzz = 'out/Scan_njets_Feb06_hzz_asimov'
-# scan.njets.asimov.combination = 'out/Scan_njets_Feb06_combination_asimov'
 scan.njets.asimov.combination = 'out/Scan_Mar19_njets_combination_asimov'
 scan.njets.asimov.hgg = 'out/Scan_Mar19_njets_hgg_asimov'
 scan.njets.asimov.hzz = 'out/Scan_Mar19_njets_hzz_asimov'
@@ -244,17 +230,11 @@ scan.njets.asimov.combination_statonly = 'out/Scan_Mar19_njets_combination_stato
 
 scan.ptjet = AttrDict()
 scan.ptjet.observed = AttrDict()
-# scan.ptjet.observed.hgg = 'out/Scan_ptjet_Feb06_hgg'
-# scan.ptjet.observed.hzz = 'out/Scan_ptjet_Feb06_hzz'
-# scan.ptjet.observed.combination = 'out/Scan_ptjet_Feb06_combination'
 scan.ptjet.observed.combination = 'out/Scan_Mar19_ptjet_combination'
 scan.ptjet.observed.hgg = 'out/Scan_Mar19_ptjet_hgg'
 scan.ptjet.observed.hzz = 'out/Scan_Mar19_ptjet_hzz'
 scan.ptjet.observed.combination_statonly = 'out/Scan_Mar19_ptjet_combination_statonly'
 scan.ptjet.asimov = AttrDict()
-# scan.ptjet.asimov.hgg = 'out/Scan_ptjet_Feb06_hgg_asimov'
-# scan.ptjet.asimov.hzz = 'out/Scan_ptjet_Feb06_hzz_asimov'
-# scan.ptjet.asimov.combination = 'out/Scan_ptjet_Feb06_combination_asimov'
 scan.ptjet.asimov.combination = 'out/Scan_Mar19_ptjet_combination_asimov'
 scan.ptjet.asimov.hgg = 'out/Scan_Mar19_ptjet_hgg_asimov'
 scan.ptjet.asimov.hzz = 'out/Scan_Mar19_ptjet_hzz_asimov'
@@ -262,17 +242,11 @@ scan.ptjet.asimov.combination_statonly = 'out/Scan_Mar19_ptjet_combination_stato
 
 scan.rapidity = AttrDict()
 scan.rapidity.observed = AttrDict()
-# scan.rapidity.observed.hgg = 'out/Scan_rapidity_Feb06_hgg'
-# scan.rapidity.observed.hzz = 'out/Scan_rapidity_Feb06_hzz'
-# scan.rapidity.observed.combination = 'out/Scan_rapidity_Feb06_combination'
 scan.rapidity.observed.combination = 'out/Scan_Mar19_rapidity_combination'
 scan.rapidity.observed.hgg = 'out/Scan_Mar19_rapidity_hgg'
 scan.rapidity.observed.hzz = 'out/Scan_Mar19_rapidity_hzz'
 scan.rapidity.observed.combination_statonly = 'out/Scan_Mar19_rapidity_combination_statonly'
 scan.rapidity.asimov = AttrDict()
-# scan.rapidity.asimov.hgg = 'out/Scan_rapidity_Feb06_hgg_asimov'
-# scan.rapidity.asimov.hzz = 'out/Scan_rapidity_Feb06_hzz_asimov'
-# scan.rapidity.asimov.combination = 'out/Scan_rapidity_Feb06_combination_asimov'
 scan.rapidity.asimov.combination = 'out/Scan_Mar19_rapidity_combination_asimov'
 scan.rapidity.asimov.hgg = 'out/Scan_Mar19_rapidity_hgg_asimov'
 scan.rapidity.asimov.hzz = 'out/Scan_Mar19_rapidity_hzz_asimov'
