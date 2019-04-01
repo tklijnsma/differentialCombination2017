@@ -85,8 +85,6 @@ def main():
         'projections_plots_ktcgkb',
         # 
         'parametrization_plots',
-        # 
-        'thesis_plots'
         ])
 
     args = parser.parse_args()
