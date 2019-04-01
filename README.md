@@ -1,14 +1,6 @@
 
-## New page for differential combination
+## Code for differential combinations HIG-17-028
 
-test text
+See the documentation:
 
-### New header
-
-bla bla
-
-```Code
-
-dlksnvs
-```
-
+https://github.com/tklijnsma/differentialCombination2017/wiki
