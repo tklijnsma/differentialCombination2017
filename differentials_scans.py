@@ -324,7 +324,7 @@ def basic_t2ws(obsname, decay_channel):
 def pth_ggH_t2ws(args):
     t2ws = basic_t2ws('pth_ggH', differentialutils.get_decay_channel_tag(args))
     if args.hzz:
-        t2ws.make_maps_from_processes(add_overflow=True)
+        t2ws.make_maps_from_processes(binning=[0, 15, 30, 80, 200], add_overflow=True)
     else:
         t2ws.make_maps_from_processes()
     t2ws.run()
