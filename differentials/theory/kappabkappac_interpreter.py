@@ -149,7 +149,7 @@ class KappabKappacInterpreter(object):
         for d in self.coupling_variations_qi: # Careful not to include the scale variations
             theories.append(YukawaTheoryQuarkInduced(d))
 
-        parametrization = differentials.parametrization.Parametrization()
+        parametrization = differentials.parametrization.Parametrization2Dim()
         for theory in theories:
             parametrization.add_variation(theory.d.kappab, theory.d.kappac, theory.xs_per_GeV)
         parametrization.parametrize()

@@ -593,17 +593,8 @@ class Parametrization2Dim(ParametrizationMultiDim):
         inv_coupling_matrix = numpy.linalg.inv(coupling_matrix)
         return inv_coupling_matrix
 
-    # def get_parabola_for_given_coefficients(self, coefficients):
-    #     # if self.do_linear_terms:
-    #     #     A, B, C, D, E, F = coefficients
-    #     #     def parabola(c1, c2):
-    #     #         return A*c1**2 + B*c2**2 + C*c1*c2 + D*c1 + E*c2 + F
-    #     # else:
-    #     #     A, B, C = coefficients
-    #     #     def parabola(c1, c2):
-    #     #         return A*c1**2 + B*c2**2 + C*c1*c2
-    #     # setattr(parabola, 'coefficients', coefficients)
-    #     return Parabola(coefficients)
+    def get_parabola_for_given_coefficients(self, coefficients):
+        return Parabola(coefficients)
 
     def get_parabola(self):
         """
