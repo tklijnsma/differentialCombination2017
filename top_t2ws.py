@@ -30,6 +30,11 @@ datestr = strftime('%b%d')
 # Main
 ########################################
 
+@flag_as_option
+def make_theory_ctcg_files(args):
+    differentials.theory.ctcg_interpreter.create_all_ctcg()
+
+
 top_exp_binning = [ 0., 15., 30., 45., 80., 120., 200., 350., 600. ]
 
 
