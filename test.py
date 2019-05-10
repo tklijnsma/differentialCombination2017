@@ -37,6 +37,7 @@ def main():
     parser.add_argument( '--notAsimov',                       action='store_true' )
 
     parser.add_argument( '--table',   action='store_true' )
+    parser.add_argument( '--hepdata',   action='store_true' )
     parser.add_argument( '--saveroot',   action='store_true' )
     parser.add_argument( '--savepng',   action='store_true' )
     parser.add_argument( '--savepng_convert',   action='store_true' )

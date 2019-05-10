@@ -16,6 +16,7 @@ import onedimscanner
 import onedimscanfilter
 import observable
 import scan_accounting
+import hepdatamaker
 
 # Sub-packages
 import plotting

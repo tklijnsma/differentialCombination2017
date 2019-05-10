@@ -133,11 +133,21 @@ def pth_smH_plot(args):
     # Get SM histograms
     sm_xs, sm_ratio = get_sm_histograms(obstuple.combWithHbb, normalize_by_second_to_last_bin_width=True, x_max=x_max)
 
+    if args.hepdata:
+        for spectrum in [ hgg, hzz, hbb, combWithHbb ]:
+            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
+            hepdata.right_var.values[-1] = '\'$\\infty$\''
+            hepdata.parse_yaml_to_file(
+                'hepdata_{0}/{1}_{2}.yaml'
+                .format(differentials.core.datestr(), obs_name, spectrum.name)
+                )
+        return
+
     if args.table:
         rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combWithHbb.binning())
         rowproducer.do_xs = True
         table = differentials.plotting.newtables.BaseTable()
-        table.latex_mode(True)
+        # table.latex_mode(True)
         table.append(rowproducer.produce_binning_row('$\\pth$ (GeV)'))
         table.append(rowproducer.produce(hgg))
         table.append(rowproducer.produce(hzz))
@@ -261,6 +271,16 @@ def pth_ggH_plot(args):
         s.read()
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
+
+    if args.hepdata:
+        for spectrum in [ combWithHbb ]:
+            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
+            hepdata.right_var.values[-1] = '\'$\\infty$\''
+            hepdata.parse_yaml_to_file(
+                'hepdata_{0}/{1}_{2}.yaml'
+                .format(differentials.core.datestr(), obs_name, spectrum.name)
+                )
+        return
 
     if args.table:
         # table = differentials.plotting.tables.SpectraTable('pth_ggH', [combWithHbb])
@@ -403,6 +423,18 @@ def njets_plot(args):
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
 
+    if args.hepdata:
+        for spectrum in [ hgg, hzz, combination ]:
+            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
+            hepdata.use_single_var = True
+            hepdata.single_var.values = hepdata.left_var.values
+            hepdata.single_var.values[-1] = '\'$\\geq {0}$\''.format(hepdata.single_var.values[-1])
+            hepdata.parse_yaml_to_file(
+                'hepdata_{0}/{1}_{2}.yaml'
+                .format(differentials.core.datestr(), obs_name, spectrum.name)
+                )
+        return
+
     if args.table:
         # table = differentials.plotting.tables.SpectraTable('njets',
         #     spectra
@@ -534,6 +566,16 @@ def ptjet_plot(args):
         s.drop_first_bin()
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
+
+    if args.hepdata:
+        for spectrum in [ hgg, hzz, combination ]:
+            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
+            hepdata.right_var.values[-1] = '\'$\\infty$\''
+            hepdata.parse_yaml_to_file(
+                'hepdata_{0}/{1}_{2}.yaml'
+                .format(differentials.core.datestr(), obs_name, spectrum.name)
+                )
+        return
 
     if args.table:
         rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combination.binning(), last_bin_is_overflow=True)
@@ -675,6 +717,15 @@ def rapidity_plot(args):
         s.read()
         s.give_x_max(x_max)
         s.draw_method = 'repr_vertical_bar_with_horizontal_lines_dashed_onlymerged'
+
+    if args.hepdata:
+        for spectrum in [ hgg, hzz, combination ]:
+            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
+            hepdata.parse_yaml_to_file(
+                'hepdata_{0}/{1}_{2}.yaml'
+                .format(differentials.core.datestr(), obs_name, spectrum.name)
+                )
+        return
 
     if args.table:
         rowproducer = differentials.plotting.tableproducer.SpectrumRowProducer(combination.binning(), last_bin_is_overflow=False)
