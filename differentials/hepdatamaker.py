@@ -71,7 +71,7 @@ class Variable(object):
             out.append('  - errors:')
             out.append(
                 '    - asymerror: {{minus: {0}, plus: {1}}}'
-                .format(self.errs_down[i], self.errs_up[i])
+                .format(-abs(self.errs_down[i]), self.errs_up[i])
                 )
             out.append('      label: 1 s.d.')
             out.append('    value: {0}'.format(self.values[i]))
@@ -102,7 +102,7 @@ class HepDataMaker(object):
         'pth_ggH'  : '$p_T^H$ (ggH)',
         'njets'    : '$N_\\text{jets}$',
         'ptjet'    : '$p_T^{j}$',
-        'rapidity' : '$\\abs{\\eta_H}$',
+        'rapidity' : '$\\left | \\eta_H \\right |$',
         }
 
     obsname_unit = {
@@ -142,10 +142,16 @@ class HepDataMaker(object):
         self.cross_section.qualifiers = self.qualifiers
         self.signal_strength.qualifiers = self.qualifiers
 
-        self.use_single_var = False
+        # self.use_single_var = False
+
+        # Hardcode to True now; use text strings for the bins
+        self.use_single_var = True
+
+        self.value_floats = False
+        self.put_infinity_as_last_bound = True
 
 
-    def from_spectrum(self, spectrum, obsname=None):
+    def from_spectrum(self, spectrum, obsname=None, mkstr=None):
         self.spectrum = spectrum
         self.obsname = obsname
 
@@ -169,8 +175,26 @@ class HepDataMaker(object):
             left     = bin_boundaries[i_scan]
             right    = bin_boundaries[i_scan+1]
 
-            self.left_var.add_val(left)
-            self.right_var.add_val(right)
+            # self.left_var.add_val(left)
+            # self.right_var.add_val(right)
+
+            fstr = '.2f' if self.value_floats else 'd'
+            maybe_int = lambda val: val if self.value_floats else int(val)
+
+            if not mkstr is None:
+                self.single_var.add_val(
+                    mkstr(i_scan, left, right)
+                    )
+            elif self.put_infinity_as_last_bound and i_scan == len(spectrum.scans)-1:
+                self.single_var.add_val(
+                    '\'{0:{fstr}}-{1}\''
+                    .format(maybe_int(left), '$\\infty$', fstr=fstr)
+                    )
+            else:
+                self.single_var.add_val(
+                    '\'{0:{fstr}}-{1:{fstr}}\''
+                    .format(maybe_int(left), maybe_int(right), fstr=fstr)
+                    )
 
             center = scan.unc.x_min
             up     = scan.unc.right_error

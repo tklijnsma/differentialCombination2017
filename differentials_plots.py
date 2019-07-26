@@ -136,7 +136,6 @@ def pth_smH_plot(args):
     if args.hepdata:
         for spectrum in [ hgg, hzz, hbb, combWithHbb ]:
             hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
-            hepdata.right_var.values[-1] = '\'$\\infty$\''
             hepdata.parse_yaml_to_file(
                 'hepdata_{0}/{1}_{2}.yaml'
                 .format(differentials.core.datestr(), obs_name, spectrum.name)
@@ -275,7 +274,7 @@ def pth_ggH_plot(args):
     if args.hepdata:
         for spectrum in [ combWithHbb ]:
             hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
-            hepdata.right_var.values[-1] = '\'$\\infty$\''
+            # hepdata.right_var.values[-1] = '\'$\\infty$\''
             hepdata.parse_yaml_to_file(
                 'hepdata_{0}/{1}_{2}.yaml'
                 .format(differentials.core.datestr(), obs_name, spectrum.name)
@@ -425,10 +424,10 @@ def njets_plot(args):
 
     if args.hepdata:
         for spectrum in [ hgg, hzz, combination ]:
-            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
-            hepdata.use_single_var = True
-            hepdata.single_var.values = hepdata.left_var.values
-            hepdata.single_var.values[-1] = '\'$\\geq {0}$\''.format(hepdata.single_var.values[-1])
+            def mkstr(i, left, right):
+                return '{0:d}'.format(int(left))
+            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name, mkstr=mkstr)
+            hepdata.single_var.values[-1] = '\'$\\geq {0:d}$\''.format(int(spectrum.binning()[-2]))
             hepdata.parse_yaml_to_file(
                 'hepdata_{0}/{1}_{2}.yaml'
                 .format(differentials.core.datestr(), obs_name, spectrum.name)
@@ -570,7 +569,6 @@ def ptjet_plot(args):
     if args.hepdata:
         for spectrum in [ hgg, hzz, combination ]:
             hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
-            hepdata.right_var.values[-1] = '\'$\\infty$\''
             hepdata.parse_yaml_to_file(
                 'hepdata_{0}/{1}_{2}.yaml'
                 .format(differentials.core.datestr(), obs_name, spectrum.name)
@@ -720,7 +718,10 @@ def rapidity_plot(args):
 
     if args.hepdata:
         for spectrum in [ hgg, hzz, combination ]:
-            hepdata = differentials.hepdatamaker.HepDataMaker().from_spectrum(spectrum, obs_name)
+            hepdata = differentials.hepdatamaker.HepDataMaker()
+            hepdata.put_infinity_as_last_bound = False
+            hepdata.value_floats = True
+            hepdata.from_spectrum(spectrum, obs_name)
             hepdata.parse_yaml_to_file(
                 'hepdata_{0}/{1}_{2}.yaml'
                 .format(differentials.core.datestr(), obs_name, spectrum.name)
